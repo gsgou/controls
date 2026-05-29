@@ -9,7 +9,6 @@
       <_ShinyMauiControlsImplementationAssembly Remove="@(_ShinyMauiControlsImplementationAssembly)" Condition="!Exists('%(Identity)')" />
 
       <ReferencePath Remove="@(_ShinyMauiControlsReferencePath)" />
-      <ReferencePath Remove="@(_ShinyMauiControlsImplementationAssembly)" />
       <ReferencePath Include="@(_ShinyMauiControlsImplementationAssembly)" />
     </ItemGroup>
 
