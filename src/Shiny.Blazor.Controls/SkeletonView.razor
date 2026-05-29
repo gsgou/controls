@@ -1,0 +1,26 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="shiny-skeleton @CssClass" style="@RootStyle" @attributes="AdditionalAttributes">
+    @if (IsBusy)
+    {
+        <div class="shiny-skeleton__container @(ShimmerEnabled ? "shiny-skeleton--shimmer" : "")">
+            @if (SkeletonContent != null)
+            {
+                @SkeletonContent
+            }
+            else
+            {
+                @for (var i = 0; i < Math.Max(ItemCount, 1); i++)
+                {
+                    var isLast = i == Math.Max(ItemCount, 1) - 1 && ItemCount > 1;
+                    <div class="shiny-skeleton__shape shiny-skeleton__line"
+                         style="height: @(ItemHeight)px; border-radius: @(CornerRadius)px; width: @(isLast ? "60%" : "100%");"></div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>

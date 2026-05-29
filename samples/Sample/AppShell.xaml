@@ -26,6 +26,7 @@
                   xmlns:feedback="clr-namespace:Sample.Features.Feedback"
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
+                  xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
@@ -434,6 +435,14 @@
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Skeleton">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2630;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
     </FlyoutItem>
 
     <FlyoutItem Title="Progress Bar">

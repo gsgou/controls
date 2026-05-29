@@ -4,7 +4,7 @@ using Shiny;
 
 namespace Sample.Features.Pickers;
 
-public partial class DurationPickerPage : Shiny.Maui.Controls.FloatingPanel.ShinyContentPage
+public partial class DurationPickerPage : Shiny.Maui.Controls.ShinyContentPage
 {
     public DurationPickerPage()
     {

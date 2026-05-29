@@ -1,0 +1,49 @@
+.shiny-skeleton {
+    display: block;
+    width: 100%;
+}
+
+.shiny-skeleton__container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--shiny-skeleton-gap, 12px);
+}
+
+/*
+   Placeholder shapes: base fill with a sweeping highlight gradient layered on top.
+   ::deep is required so the styling also reaches shapes supplied via SkeletonContent
+   (child content does not receive the scoped-CSS attribute). CSS custom properties set
+   on the root element inherit down into that child content.
+*/
+.shiny-skeleton__container ::deep .shiny-skeleton__shape {
+    background-color: var(--shiny-skeleton-base, #e1e1e6);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--shiny-skeleton-highlight, rgba(255, 255, 255, 0.6)) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    background-position: -150% 0;
+}
+
+/* Shimmer is opt-in via the container class so it can be disabled. */
+.shiny-skeleton--shimmer ::deep .shiny-skeleton__shape {
+    animation: shiny-skeleton-shimmer var(--shiny-skeleton-duration, 1.4s) ease-in-out infinite;
+}
+
+@keyframes shiny-skeleton-shimmer {
+    0% {
+        background-position: -150% 0;
+    }
+    100% {
+        background-position: 250% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-skeleton--shimmer ::deep .shiny-skeleton__shape {
+        animation: none;
+    }
+}

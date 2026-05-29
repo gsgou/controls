@@ -1,6 +1,6 @@
 namespace Sample.Features.ImageViewer;
 
-public partial class ImageGalleryPage : Shiny.Maui.Controls.FloatingPanel.ShinyContentPage
+public partial class ImageGalleryPage : Shiny.Maui.Controls.ShinyContentPage
 {
     public ImageGalleryPage()
     {

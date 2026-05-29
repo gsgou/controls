@@ -1,0 +1,76 @@
+@page "/skeleton"
+
+<PageTitle>Skeleton</PageTitle>
+
+<h1>Skeleton</h1>
+
+<section class="demo-section">
+    <h2>Default Skeleton</h2>
+    <p>Wraps a content area and shows shimmer placeholder lines while IsBusy is true.</p>
+    <button class="btn btn-primary" @onclick="Reload">Reload</button>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px; margin-top:12px;">
+        <SkeletonView IsBusy="@isBusy" ItemCount="4">
+            <ChildContent>
+                <h3>Loaded Article</h3>
+                <p>
+                    This paragraph of real content appears once the data finishes loading.
+                    While loading, the shimmer skeleton lines stand in for it so the layout
+                    does not jump.
+                </p>
+                <p style="color:#6B7280;">Tap Reload to see the skeleton again.</p>
+            </ChildContent>
+        </SkeletonView>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Custom Skeleton (Card)</h2>
+    <p>Provide custom placeholder markup via <code>SkeletonContent</code>. Add the
+       <code>shiny-skeleton__shape</code> class to any element to give it the shimmer.</p>
+    <button class="btn btn-primary" @onclick="ReloadCard">Reload Card</button>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px; margin-top:12px;">
+        <SkeletonView IsBusy="@isCardBusy">
+            <SkeletonContent>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <div class="shiny-skeleton__shape" style="width:56px; height:56px; border-radius:50%;"></div>
+                    <div style="display:flex; flex-direction:column; gap:10px; flex:1;">
+                        <div class="shiny-skeleton__shape" style="height:14px; border-radius:6px; width:60%;"></div>
+                        <div class="shiny-skeleton__shape" style="height:14px; border-radius:6px; width:40%;"></div>
+                    </div>
+                </div>
+            </SkeletonContent>
+            <ChildContent>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:56px; height:56px; border-radius:50%; background:#7C3AED;"></div>
+                    <div>
+                        <strong>Allan Ritchie</strong>
+                        <div style="color:#6B7280;">Shiny Controls maintainer</div>
+                    </div>
+                </div>
+            </ChildContent>
+        </SkeletonView>
+    </div>
+</section>
+
+@code {
+    bool isBusy = true;
+    bool isCardBusy = true;
+
+    async Task Reload()
+    {
+        isBusy = true;
+        StateHasChanged();
+        await Task.Delay(2500);
+        isBusy = false;
+    }
+
+    async Task ReloadCard()
+    {
+        isCardBusy = true;
+        StateHasChanged();
+        await Task.Delay(2500);
+        isCardBusy = false;
+    }
+}

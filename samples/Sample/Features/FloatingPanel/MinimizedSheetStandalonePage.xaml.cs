@@ -1,6 +1,6 @@
 namespace Sample.Features.FloatingPanel;
 
-public partial class MinimizedSheetStandalonePage : Shiny.Maui.Controls.FloatingPanel.ShinyContentPage
+public partial class MinimizedSheetStandalonePage : Shiny.Maui.Controls.ShinyContentPage
 {
     public MinimizedSheetStandalonePage()
     {

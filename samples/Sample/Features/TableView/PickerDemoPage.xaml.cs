@@ -6,7 +6,7 @@ using Shiny;
 
 namespace Sample.Features.TableView;
 
-public partial class PickerDemoPage : Shiny.Maui.Controls.FloatingPanel.ShinyContentPage
+public partial class PickerDemoPage : Shiny.Maui.Controls.ShinyContentPage
 {
     public PickerDemoPage()
     {
