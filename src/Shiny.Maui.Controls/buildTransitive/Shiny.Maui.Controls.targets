@@ -1,0 +1,17 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target
+    Name="_ShinyMauiControlsAddImplementationAssemblyForXamlC"
+    BeforeTargets="XamlC"
+    Condition="'$(DesignTimeBuild)' != 'True' AND '@(MauiXaml)' != ''">
+    <ItemGroup>
+      <_ShinyMauiControlsReferencePath Include="@(ReferencePath)" Condition="'%(Filename)%(Extension)' == 'Shiny.Maui.Controls.dll'" />
+      <_ShinyMauiControlsImplementationAssembly Include="@(_ShinyMauiControlsReferencePath->Replace('\ref\', '\lib\')->Replace('/ref/', '/lib/'))" />
+      <_ShinyMauiControlsImplementationAssembly Remove="@(_ShinyMauiControlsImplementationAssembly)" Condition="!Exists('%(Identity)')" />
+
+      <ReferencePath Remove="@(_ShinyMauiControlsReferencePath)" />
+      <ReferencePath Include="@(_ShinyMauiControlsImplementationAssembly)" />
+    </ItemGroup>
+
+    <Message Importance="Low" Text="Shiny.Maui.Controls: no implementation assembly was added to ReferencePath for XamlC." Condition="'@(_ShinyMauiControlsImplementationAssembly)' == ''" />
+  </Target>
+</Project>
