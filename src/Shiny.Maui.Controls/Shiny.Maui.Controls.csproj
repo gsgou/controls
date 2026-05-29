@@ -11,4 +11,8 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls"/>
 	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="buildTransitive/Shiny.Maui.Controls.targets" Pack="true" PackagePath="buildTransitive/Shiny.Maui.Controls.targets" />
+	</ItemGroup>
 </Project>
