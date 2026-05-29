@@ -5,8 +5,10 @@
     Condition="'$(DesignTimeBuild)' != 'True' AND '@(MauiXaml)' != ''">
     <ItemGroup>
       <_ShinyMauiControlsReferencePath Include="@(ReferencePath)" Condition="'%(Filename)%(Extension)' == 'Shiny.Maui.Controls.dll'" />
-      <_ShinyMauiControlsImplementationAssembly Include="@(_ShinyMauiControlsReferencePath->Replace('\ref\', '\lib\')->Replace('/ref/', '/lib/'))" Condition="Exists('%(Identity)')" />
+      <_ShinyMauiControlsImplementationAssembly Include="@(_ShinyMauiControlsReferencePath->Replace('\ref\', '\lib\')->Replace('/ref/', '/lib/'))" />
+      <_ShinyMauiControlsImplementationAssembly Remove="@(_ShinyMauiControlsImplementationAssembly)" Condition="!Exists('%(Identity)')" />
 
+      <ReferencePath Remove="@(_ShinyMauiControlsReferencePath)" />
       <ReferencePath Remove="@(_ShinyMauiControlsImplementationAssembly)" />
       <ReferencePath Include="@(_ShinyMauiControlsImplementationAssembly)" />
     </ItemGroup>
