@@ -27,6 +27,7 @@
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
+                  xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
@@ -443,6 +444,14 @@
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Badge">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25CF;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
     </FlyoutItem>
 
     <FlyoutItem Title="Progress Bar">

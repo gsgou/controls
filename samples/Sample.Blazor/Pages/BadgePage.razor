@@ -1,0 +1,132 @@
+@page "/badge"
+
+<PageTitle>Badge</PageTitle>
+
+<h1>Badge</h1>
+
+<section class="demo-section">
+    <h2>Corner Positions</h2>
+    <p>Place a badge at any of the four corners by setting <code>Position</code>.</p>
+    <div style="display:flex; flex-wrap:wrap; gap:32px; margin-top:8px;">
+        <BadgeView Text="9" Position="BadgePosition.TopLeft">
+            <div class="demo-box">Top Left</div>
+        </BadgeView>
+        <BadgeView Text="9" Position="BadgePosition.TopRight">
+            <div class="demo-box">Top Right</div>
+        </BadgeView>
+        <BadgeView Text="9" Position="BadgePosition.BottomLeft">
+            <div class="demo-box">Bottom Left</div>
+        </BadgeView>
+        <BadgeView Text="9" Position="BadgePosition.BottomRight">
+            <div class="demo-box">Bottom Right</div>
+        </BadgeView>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Dynamic Count</h2>
+    <p>Setting <code>Text</code> to an empty string hides the badge. Increment to see the scale-in animation.</p>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <BadgeView Text="@mailCount" MaxCount="99">
+            <div class="demo-box demo-box--accent">📬 Inbox</div>
+        </BadgeView>
+        <button class="btn btn-primary" @onclick="Increment">+</button>
+        <button class="btn btn-secondary" @onclick="Clear">Clear</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>MaxCount Overflow</h2>
+    <p>Numeric values above <code>MaxCount</code> are displayed as "{MaxCount}+".</p>
+    <BadgeView Text="127" MaxCount="99" BadgeColor="#059669">
+        <div class="demo-box">🛒 Cart</div>
+    </BadgeView>
+</section>
+
+<section class="demo-section">
+    <h2>Dot Indicator</h2>
+    <p>A simple notification dot — set <code>IsDot</code> to true.</p>
+    <div style="display:flex; align-items:center; gap:20px;">
+        <BadgeView IsDot="@hasNew" BadgeColor="#3B82F6" OffsetX="2" OffsetY="2">
+            <div class="demo-avatar">👤</div>
+        </BadgeView>
+        <button class="btn btn-secondary" @onclick="() => hasNew = !hasNew">Toggle dot</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Pulse Animation</h2>
+    <p>Set <code>IsPulsing</code> to gently call attention to the badge.</p>
+    <div style="display:flex; align-items:center; gap:20px;">
+        <BadgeView Text="NEW" IsPulsing="@isPulsing" BadgeColor="#F59E0B" FontSize="9">
+            <div class="demo-box">✨ Features</div>
+        </BadgeView>
+        <button class="btn btn-secondary" @onclick="() => isPulsing = !isPulsing">Toggle pulse</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Custom Colors</h2>
+    <p><code>BadgeColor</code>, <code>BadgeTextColor</code>, <code>BadgeBorderColor</code>, <code>BadgeBorderThickness</code> are all configurable.</p>
+    <div style="display:flex; gap:16px;">
+        <BadgeView Text="PRO"
+                   BadgeColor="#1E1B4B"
+                   BadgeTextColor="#FBBF24"
+                   BadgeBorderColor="#FBBF24"
+                   BadgeBorderThickness="2"
+                   FontSize="9">
+            <div class="demo-box">Subscription</div>
+        </BadgeView>
+
+        <BadgeView Text="!"
+                   BadgeColor="#FEE2E2"
+                   BadgeTextColor="#991B1B"
+                   BadgeBorderColor="#FCA5A5"
+                   BadgeBorderThickness="1">
+            <div class="demo-box">Warning</div>
+        </BadgeView>
+    </div>
+</section>
+
+<style>
+    .demo-box {
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 14px 18px;
+        font-size: 15px;
+        background: white;
+    }
+
+    .demo-box--accent {
+        border-color: #7C3AED;
+        background: #F5F3FF;
+    }
+
+    .demo-avatar {
+        border: 1px solid #E5E7EB;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        background: white;
+    }
+</style>
+
+@code {
+    string mailCount = "3";
+    bool hasNew = true;
+    bool isPulsing = true;
+
+    void Increment()
+    {
+        if (int.TryParse(mailCount, out var n))
+            mailCount = (n + 1).ToString();
+        else
+            mailCount = "1";
+    }
+
+    void Clear() => mailCount = string.Empty;
+}

@@ -1,0 +1,16 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="shiny-badge-host @CssClass" style="@HostStyle" @attributes="AdditionalAttributes">
+    @ChildContent
+    @if (ShouldShow)
+    {
+        <span class="shiny-badge shiny-badge--@PositionClass @(IsDot ? "shiny-badge--dot" : "") @(IsPulsing ? "shiny-badge--pulse" : "") @(IsAnimated ? "shiny-badge--animated" : "")"
+              style="@BadgeStyle"
+              aria-label="@(IsDot ? "Indicator" : DisplayText)">
+            @if (!IsDot)
+            {
+                @DisplayText
+            }
+        </span>
+    }
+</div>

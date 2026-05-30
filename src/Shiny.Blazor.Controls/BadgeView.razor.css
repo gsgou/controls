@@ -1,0 +1,86 @@
+.shiny-badge-host {
+    position: relative;
+    display: inline-block;
+}
+
+.shiny-badge {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    white-space: nowrap;
+    pointer-events: none;
+    text-align: center;
+    z-index: 2;
+    transform-origin: center center;
+}
+
+/*
+   Corner anchoring. Each variant pins to one corner using top/left/right/bottom
+   and then nudges by the user-supplied --shiny-badge-offset-x / -y via translate.
+   On the left edges the X offset is inverted so "positive = outward".
+*/
+.shiny-badge--tl {
+    top: 0;
+    left: 0;
+    transform: translate(calc(-1 * var(--shiny-badge-offset-x, 4px) - 50%), calc(var(--shiny-badge-offset-y, -4px) - 50%));
+}
+
+.shiny-badge--tr {
+    top: 0;
+    right: 0;
+    transform: translate(calc(var(--shiny-badge-offset-x, 4px) + 50%), calc(var(--shiny-badge-offset-y, -4px) - 50%));
+}
+
+.shiny-badge--bl {
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-1 * var(--shiny-badge-offset-x, 4px) - 50%), calc(var(--shiny-badge-offset-y, 4px) + 50%));
+}
+
+.shiny-badge--br {
+    bottom: 0;
+    right: 0;
+    transform: translate(calc(var(--shiny-badge-offset-x, 4px) + 50%), calc(var(--shiny-badge-offset-y, 4px) + 50%));
+}
+
+/* Scale-in animation when the badge is first rendered. */
+.shiny-badge--animated {
+    animation: shiny-badge-in 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes shiny-badge-in {
+    0% {
+        opacity: 0;
+        scale: 0;
+    }
+    100% {
+        opacity: 1;
+        scale: 1;
+    }
+}
+
+/*
+   Pulse animation. Layered using a second transform via scale to avoid
+   fighting the corner-translate transforms above.
+*/
+.shiny-badge--pulse {
+    animation: shiny-badge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes shiny-badge-pulse {
+    0%, 100% {
+        scale: 1;
+    }
+    50% {
+        scale: 1.18;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-badge--animated,
+    .shiny-badge--pulse {
+        animation: none;
+    }
+}
