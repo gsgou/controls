@@ -12,7 +12,7 @@
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
         <ShinyMauiShell_GenerateNavExtensions>true</ShinyMauiShell_GenerateNavExtensions>
 
-        <ApplicationTitle>Shiny Controls (macOS)</ApplicationTitle>
+        <ApplicationTitle>Sample.MacOS</ApplicationTitle>
         <ApplicationId>org.shiny.controlsample.macos</ApplicationId>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
@@ -56,11 +56,35 @@
                   Link="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
+    <!--
+        The Microsoft.Maui.Platforms.MacOS workload currently only processes
+        MauiIcon (generates the .icns). MauiImage / MauiFont / MauiAsset are
+        ignored, so nothing else lands in Contents/Resources of the .app
+        bundle. We emit BundleResource items manually with a flat LogicalName
+        so MAUI's FileSystem / ImageSource.FromFile / font lookup all find
+        the files via NSBundle.MainBundle.
+    -->
     <ItemGroup>
-        <MauiImage Include="..\Sample\Resources\Images\*" Link="Resources\Images\%(Filename)%(Extension)" />
-        <MauiImage Update="..\Sample\Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
-        <MauiFont Include="..\Sample\Resources\Fonts\*" Link="Resources\Fonts\%(Filename)%(Extension)" />
-        <MauiAsset Include="..\Sample\Resources\Raw\**" Link="Resources\Raw\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-        <MauiAsset Include="..\..\README.md" LogicalName="README.md" />
+        <BundleResource Include="..\Sample\Resources\Images\*.png"
+                        Link="Resources\Images\%(Filename)%(Extension)">
+            <LogicalName>%(Filename)%(Extension)</LogicalName>
+        </BundleResource>
+        <BundleResource Include="..\Sample\Resources\Fonts\*.ttf"
+                        Link="Resources\Fonts\%(Filename)%(Extension)">
+            <LogicalName>%(Filename)%(Extension)</LogicalName>
+        </BundleResource>
+        <!--
+            Raw assets are addressed by filename via FileSystem.OpenAppPackageFile.
+            dotnet_bot.png is excluded because the same filename is already pulled
+            in from Resources/Images and would collide on LogicalName.
+        -->
+        <BundleResource Include="..\Sample\Resources\Raw\**\*"
+                        Exclude="..\Sample\Resources\Raw\AboutAssets.txt;..\Sample\Resources\Raw\dotnet_bot.png"
+                        Link="Resources\Raw\%(RecursiveDir)%(Filename)%(Extension)">
+            <LogicalName>%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+        </BundleResource>
+        <BundleResource Include="..\..\README.md">
+            <LogicalName>README.md</LogicalName>
+        </BundleResource>
     </ItemGroup>
 </Project>

@@ -114,7 +114,7 @@ public partial class TrayIconViewModel : ObservableObject
     void ClearLog() => this.EventLog.Clear();
 
     TrayMenu BuildMenu() => TrayMenu.Build(b => b
-        .Item("Increment counter", () => MainThread.BeginInvokeOnMainThread(this.Increment))
+        .Item("Increment counter", this.Increment)
         .Check("Notifications", this.NotificationsEnabled, v =>
         {
             this.NotificationsEnabled = v;
@@ -127,15 +127,15 @@ public partial class TrayIconViewModel : ObservableObject
             .Item("Away", () => this.LogEvent("Status → Away")))
         .Separator()
         .Item("About", () => this.LogEvent("About clicked"))
-        .Item("Quit sample tray", () => MainThread.BeginInvokeOnMainThread(this.Stop)));
+        .Item("Quit sample tray", this.Stop));
 
     void LogEvent(string message)
     {
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            this.EventLog.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
-            while (this.EventLog.Count > 30) this.EventLog.RemoveAt(this.EventLog.Count - 1);
-        });
+        // Tray menu callbacks fire on the platform UI thread, and
+        // MAUI MainThread is not wired up on the macOS AppKit host,
+        // so update the collection directly.
+        this.EventLog.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+        while (this.EventLog.Count > 30) this.EventLog.RemoveAt(this.EventLog.Count - 1);
     }
 
     static Stream OpenLogoStream()

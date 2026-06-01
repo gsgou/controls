@@ -225,8 +225,3 @@ sealed class MacCatalystTrayIcon : TrayIconBase
         base.Dispose();
     }
 }
-
-sealed class MacCatalystTrayIconFactory : ITrayIconFactory
-{
-    public ITrayIcon Create() => new MacCatalystTrayIcon();
-}

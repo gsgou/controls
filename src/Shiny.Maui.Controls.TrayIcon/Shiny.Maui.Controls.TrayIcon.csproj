@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-windows10.0.19041.0;$(BaseTargetFramework)-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);$(BaseTargetFramework)-macos</TargetFrameworks>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-windows10.0.19041.0;$(BaseTargetFramework)-maccatalyst;$(TargetFrameworks);$(BaseTargetFramework)-macos</TargetFrameworks>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <UseMaui>true</UseMaui>
         <IsAotCompatible>true</IsAotCompatible>
@@ -17,11 +16,7 @@
 
     <ItemGroup>
         <Compile Remove="Platforms/**/*.cs" />
-        <Compile Remove="LinuxImpl/**/*.cs" />
-        <Compile Remove="MacOSImpl/**/*.cs" />
         <None Include="Platforms/**/*.cs" />
-        <None Include="LinuxImpl/**/*.cs" />
-        <None Include="MacOSImpl/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
@@ -33,10 +28,33 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
-        <Compile Include="MacOSImpl/**/*.cs" />
+        <Compile Include="Platforms/MacOS/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == ''">
-        <Compile Include="LinuxImpl/**/*.cs" />
+        <Compile Include="Platforms/Linux/**/*.cs" />
     </ItemGroup>
+
+    <!--
+        MAUI's SingleProject targets tag every Platforms/**/*.cs file with
+        ExcludeFromCurrentConfiguration=true and only re-enable known platforms
+        (Android, iOS, MacCatalyst, Windows, Tizen). The AppKit MacOS host and
+        Linux aren't in that list, so _MauiRemovePlatformCompileItems deletes
+        our files at build time. This target re-enables them before that
+        removal runs.
+    -->
+    <Target Name="_ReincludeNonMauiPlatforms"
+            BeforeTargets="_MauiRemovePlatformCompileItems"
+            Condition="'$(SingleProject)' == 'true'">
+        <ItemGroup>
+            <Compile Update="Platforms/MacOS/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/Linux/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == ''">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+        </ItemGroup>
+    </Target>
 </Project>

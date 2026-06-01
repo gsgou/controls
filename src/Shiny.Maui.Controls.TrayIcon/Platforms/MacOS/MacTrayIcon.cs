@@ -5,17 +5,20 @@ namespace Shiny.Maui.Controls.TrayIcon;
 
 sealed class MacTrayIcon : TrayIconBase
 {
-    readonly NSStatusItem statusItem;
+    NSStatusItem statusItem = null!;
     NSMenu? nsMenu;
 
     public MacTrayIcon()
     {
-        this.statusItem = NSStatusBar.SystemStatusBar.CreateStatusItem(NSStatusItemLength.Variable);
-        if (this.statusItem.Button != null)
+        MacMainThread.Invoke(() =>
         {
-            this.statusItem.Button.Activated += this.OnButtonActivated;
-            this.statusItem.Button.SendActionOn(NSEventType.LeftMouseUp | NSEventType.RightMouseUp);
-        }
+            this.statusItem = NSStatusBar.SystemStatusBar.CreateStatusItem(NSStatusItemLength.Variable);
+            if (this.statusItem.Button != null)
+            {
+                this.statusItem.Button.Activated += this.OnButtonActivated;
+                this.statusItem.Button.SendActionOn(NSEventType.LeftMouseUp | NSEventType.RightMouseUp);
+            }
+        });
     }
 
     void OnButtonActivated(object? sender, EventArgs e)
@@ -38,40 +41,51 @@ sealed class MacTrayIcon : TrayIconBase
 
     protected override void OnIconChanged(Func<Stream> factory)
     {
-        if (this.statusItem.Button == null) return;
         using var ms = new MemoryStream();
         using (var src = factory()) src.CopyTo(ms);
-        using var data = NSData.FromArray(ms.ToArray());
-        var image = new NSImage(data);
-        image.Template = this.IsTemplateImage;
-        this.statusItem.Button.Image = image;
+        var bytes = ms.ToArray();
+        var isTemplate = this.IsTemplateImage;
+
+        MacMainThread.Invoke(() =>
+        {
+            if (this.statusItem.Button == null) return;
+            using var data = NSData.FromArray(bytes);
+            var image = new NSImage(data);
+            image.Template = isTemplate;
+            this.statusItem.Button.Image = image;
+        });
     }
 
     protected override void OnTooltipChanged(string? value)
-    {
-        if (this.statusItem.Button != null)
-            this.statusItem.Button.ToolTip = value ?? string.Empty;
-    }
+        => MacMainThread.Invoke(() =>
+        {
+            if (this.statusItem.Button != null)
+                this.statusItem.Button.ToolTip = value ?? string.Empty;
+        });
 
     protected override void OnTitleChanged(string? value)
-    {
-        if (this.statusItem.Button != null)
-            this.statusItem.Button.Title = value ?? string.Empty;
-    }
+        => MacMainThread.Invoke(() =>
+        {
+            if (this.statusItem.Button != null)
+                this.statusItem.Button.Title = value ?? string.Empty;
+        });
 
-    protected override void OnVisibilityChanged(bool visible) => this.statusItem.Visible = visible;
+    protected override void OnVisibilityChanged(bool visible)
+        => MacMainThread.Invoke(() => this.statusItem.Visible = visible);
 
     protected override void OnMenuChanged(object? sender, EventArgs e)
-    {
-        if (this.Menu == null) return;
-        this.nsMenu = BuildNSMenu(this.Menu.Items);
-        this.statusItem.Menu = this.nsMenu;
-    }
+        => MacMainThread.Invoke(() =>
+        {
+            if (this.Menu == null) return;
+            this.nsMenu = BuildNSMenu(this.Menu.Items);
+            this.statusItem.Menu = this.nsMenu;
+        });
 
     public override void ShowMenu()
-    {
-        if (this.nsMenu != null) this.statusItem.Menu = this.nsMenu;
-    }
+        => MacMainThread.Invoke(() =>
+        {
+            if (this.nsMenu != null) this.statusItem.Menu = this.nsMenu;
+        });
 
     static NSMenu BuildNSMenu(IEnumerable<TrayMenuItemBase> items)
     {
@@ -112,13 +126,11 @@ sealed class MacTrayIcon : TrayIconBase
 
     public override void Dispose()
     {
-        if (this.statusItem.Button != null) this.statusItem.Button.Activated -= this.OnButtonActivated;
-        NSStatusBar.SystemStatusBar.RemoveStatusItem(this.statusItem);
+        MacMainThread.Invoke(() =>
+        {
+            if (this.statusItem.Button != null) this.statusItem.Button.Activated -= this.OnButtonActivated;
+            NSStatusBar.SystemStatusBar.RemoveStatusItem(this.statusItem);
+        });
         base.Dispose();
     }
-}
-
-sealed class MacTrayIconFactory : ITrayIconFactory
-{
-    public ITrayIcon Create() => new MacTrayIcon();
 }

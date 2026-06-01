@@ -266,8 +266,3 @@ sealed class WindowsTrayIcon : TrayIconBase
         DestroyWindow(this.hwnd);
     }
 }
-
-sealed class WindowsTrayIconFactory : ITrayIconFactory
-{
-    public ITrayIcon Create() => new WindowsTrayIcon();
-}

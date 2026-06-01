@@ -157,8 +157,3 @@ sealed class LinuxTrayIcon : TrayIconBase
         base.Dispose();
     }
 }
-
-sealed class LinuxTrayIconFactory : ITrayIconFactory
-{
-    public ITrayIcon Create() => new LinuxTrayIcon();
-}
