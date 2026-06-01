@@ -10,10 +10,16 @@
         <File Path="SKILLS\shiny-controls\SKILL.md" />
         <File Path="version.json" />
     </Folder>
-    <Project Path="samples/Sample/Sample.csproj" />
-    <Project Path="samples/Sample.Blazor/Sample.Blazor.csproj" />
+    <Folder Name="/Tests/">
+        <Project Path="samples/Sample.Blazor/Sample.Blazor.csproj" />
+        <Project Path="samples/Sample/Sample.csproj" />
+        <Project Path="samples/Sample.MacOS/Sample.MacOS.csproj" />
+        <Project Path="samples/Sample.Linux/Sample.Linux.csproj" />
+        <Project Path="tests/Sample.UITests/Sample.UITests.csproj" />
+    </Folder>
     <Project Path="src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Maui.Controls/Shiny.Maui.Controls.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.TrayIcon/Shiny.Maui.Controls.TrayIcon.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.SpeechAddins/Shiny.Blazor.Controls.SpeechAddins.csproj" />
@@ -21,5 +27,4 @@
     <Project Path="src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
-    <Project Path="tests/Sample.UITests/Sample.UITests.csproj" />
 </Solution>

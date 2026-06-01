@@ -28,6 +28,7 @@
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
+                  xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
@@ -452,6 +453,14 @@
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="System Tray">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A3;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
     </FlyoutItem>
 
     <FlyoutItem Title="Progress Bar">

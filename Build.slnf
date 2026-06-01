@@ -3,6 +3,9 @@
         "path": "Shiny.Controls.slnx",
         "projects": [
             "src/Shiny.Maui.Controls/Shiny.Maui.Controls.csproj",
+            "src/Shiny.Maui.Controls.TrayIcon/Shiny.Maui.Controls.TrayIcon.csproj",
+            "samples/Sample.MacOS/Sample.MacOS.csproj",
+            "samples/Sample.Linux/Sample.Linux.csproj",
             "src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj",
             "src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj",
             "src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj",

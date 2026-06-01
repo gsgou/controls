@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shiny:ShinyShell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
+       xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon;assembly=Sample.MacOS"
+       xmlns:home="clr-namespace:Sample.Features.Home;assembly=Sample.MacOS"
+       xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.MacOS"
+       xmlns:pills="clr-namespace:Sample.Features.Pills;assembly=Sample.MacOS"
+       xmlns:toast="clr-namespace:Sample.Features.Toast;assembly=Sample.MacOS"
+       xmlns:textentry="clr-namespace:Sample.Features.TextEntry;assembly=Sample.MacOS"
+       xmlns:autocomplete="clr-namespace:Sample.Features.AutoComplete;assembly=Sample.MacOS"
+       xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.MacOS"
+       xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker;assembly=Sample.MacOS"
+       xmlns:slider="clr-namespace:Sample.Features.Slider;assembly=Sample.MacOS"
+       xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar;assembly=Sample.MacOS"
+       xmlns:skeleton="clr-namespace:Sample.Features.Skeleton;assembly=Sample.MacOS"
+       xmlns:imgviewer="clr-namespace:Sample.Features.ImageViewer;assembly=Sample.MacOS"
+       xmlns:imgeditor="clr-namespace:Sample.Features.ImageEditor;assembly=Sample.MacOS"
+       xmlns:sigpad="clr-namespace:Sample.Features.SignaturePad;assembly=Sample.MacOS"
+       xmlns:tv="clr-namespace:Sample.Features.TableView;assembly=Sample.MacOS"
+       xmlns:overlay="clr-namespace:Sample.Features.Overlay;assembly=Sample.MacOS"
+       xmlns:treeview="clr-namespace:Sample.Features.TreeView;assembly=Sample.MacOS"
+       xmlns:markdown="clr-namespace:Sample.Features.Markdown;assembly=Sample.MacOS"
+       x:Class="Sample.MacOS.AppShell"
+       Title="Shiny Controls (macOS)"
+       FlyoutBehavior="Locked"
+       FlyoutWidth="220">
+
+    <FlyoutItem Title="Home">
+        <ShellContent ContentTemplate="{DataTemplate home:HomePage}" Route="home" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="🖥 System Tray">
+        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+
+    <MenuItem Text="CONTROLS" IsEnabled="False" />
+
+    <FlyoutItem Title="Badge">
+        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    </FlyoutItem>
+    <FlyoutItem Title="Pills">
+        <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
+    </FlyoutItem>
+    <FlyoutItem Title="Toast">
+        <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
+    </FlyoutItem>
+    <FlyoutItem Title="Text Entry">
+        <ShellContent ContentTemplate="{DataTemplate textentry:TextEntryPage}" Route="textentry" />
+    </FlyoutItem>
+    <FlyoutItem Title="AutoComplete">
+        <ShellContent ContentTemplate="{DataTemplate autocomplete:AutoCompletePage}" Route="autocomplete" />
+    </FlyoutItem>
+    <FlyoutItem Title="Country / Address">
+        <ShellContent ContentTemplate="{DataTemplate countryaddress:CountryAddressPage}" Route="countryaddress" />
+    </FlyoutItem>
+    <FlyoutItem Title="Color Picker">
+        <ShellContent ContentTemplate="{DataTemplate colorpicker:ColorPickerPage}" Route="colorpicker" />
+    </FlyoutItem>
+    <FlyoutItem Title="Slider">
+        <ShellContent ContentTemplate="{DataTemplate slider:SliderPage}" Route="slider" />
+    </FlyoutItem>
+    <FlyoutItem Title="ProgressBar">
+        <ShellContent ContentTemplate="{DataTemplate progressbar:ProgressBarPage}" Route="progressbar" />
+    </FlyoutItem>
+    <FlyoutItem Title="Skeleton">
+        <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
+    </FlyoutItem>
+    <FlyoutItem Title="Overlay">
+        <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
+    </FlyoutItem>
+
+    <MenuItem Text="MEDIA" IsEnabled="False" />
+
+    <FlyoutItem Title="Image Viewer">
+        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageViewerPage}" Route="imageviewer" />
+    </FlyoutItem>
+    <FlyoutItem Title="Image Gallery">
+        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageGalleryPage}" Route="imagegallery" />
+    </FlyoutItem>
+    <FlyoutItem Title="Image Editor">
+        <ShellContent ContentTemplate="{DataTemplate imgeditor:ImageEditorPage}" Route="imageeditor" />
+    </FlyoutItem>
+    <FlyoutItem Title="Signature Pad">
+        <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />
+    </FlyoutItem>
+
+    <MenuItem Text="TABLE / TREE" IsEnabled="False" />
+
+    <FlyoutItem Title="TableView (Basic)">
+        <ShellContent ContentTemplate="{DataTemplate tv:BasicSettingsPage}" Route="tablebasic" />
+    </FlyoutItem>
+    <FlyoutItem Title="TableView (Picker)">
+        <ShellContent ContentTemplate="{DataTemplate tv:PickerDemoPage}" Route="tablepicker" />
+    </FlyoutItem>
+    <FlyoutItem Title="TableView (Styling)">
+        <ShellContent ContentTemplate="{DataTemplate tv:StylingPage}" Route="tablestyling" />
+    </FlyoutItem>
+    <FlyoutItem Title="TreeView">
+        <ShellContent ContentTemplate="{DataTemplate treeview:TreeViewPage}" Route="treeview" />
+    </FlyoutItem>
+
+    <MenuItem Text="CONTENT" IsEnabled="False" />
+
+    <FlyoutItem Title="Markdown Viewer">
+        <ShellContent ContentTemplate="{DataTemplate markdown:MarkdownViewPage}" Route="markdownview" />
+    </FlyoutItem>
+    <FlyoutItem Title="Markdown Editor">
+        <ShellContent ContentTemplate="{DataTemplate markdown:MarkdownEditorPage}" Route="markdowneditor" />
+    </FlyoutItem>
+</shiny:ShinyShell>

@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)-macos</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Sample.MacOS</RootNamespace>
+        <AssemblyName>Sample.MacOS</AssemblyName>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+        <ShinyMauiShell_GenerateNavExtensions>true</ShinyMauiShell_GenerateNavExtensions>
+
+        <ApplicationTitle>Shiny Controls (macOS)</ApplicationTitle>
+        <ApplicationId>org.shiny.controlsample.macos</ApplicationId>
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+        <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CommunityToolkit.Mvvm" />
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS" />
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS.Essentials" />
+        <!-- Packages required by source files linked from ..\Sample\ -->
+        <PackageReference Include="Plugin.Maui.Audio" />
+        <PackageReference Include="Shiny.Maui.Shell" />
+        <PackageReference Include="Shiny.Speech" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.TrayIcon\Shiny.Maui.Controls.TrayIcon.csproj" />
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
+        <!-- SpeechAddins is mobile-only (android/ios/maccatalyst) — Chat & speech pages are excluded below -->
+    </ItemGroup>
+
+    <!--
+        Share the pages, ViewModels, AppShell, and Resources from the main Sample head.
+        Each file is linked so it shows up in IDE under its original path; LinkBase keeps the
+        namespace structure when the C# tooling derives folders from file location.
+    -->
+    <ItemGroup>
+        <Compile Include="..\Sample\**\*.cs"
+                 Exclude="..\Sample\Platforms\**;..\Sample\MauiProgram.cs;..\Sample\MyCustomFeedbackService.cs;..\Sample\App.xaml.cs;..\Sample\AppShell.xaml.cs;..\Sample\Features\Chat\**;..\Sample\bin\**;..\Sample\obj\**"
+                 Link="%(RecursiveDir)%(Filename)%(Extension)" />
+        <MauiXaml Include="..\Sample\**\*.xaml"
+                  Exclude="..\Sample\Platforms\**;..\Sample\App.xaml;..\Sample\AppShell.xaml;..\Sample\Features\Chat\**;..\Sample\bin\**;..\Sample\obj\**"
+                  Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <MauiImage Include="..\Sample\Resources\Images\*" Link="Resources\Images\%(Filename)%(Extension)" />
+        <MauiImage Update="..\Sample\Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+        <MauiFont Include="..\Sample\Resources\Fonts\*" Link="Resources\Fonts\%(Filename)%(Extension)" />
+        <MauiAsset Include="..\Sample\Resources\Raw\**" Link="Resources\Raw\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <MauiAsset Include="..\..\README.md" LogicalName="README.md" />
+    </ItemGroup>
+</Project>

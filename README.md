@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, StaggeredGrid, and VirtualizedGrid. Markdown and Mermaid Diagrams ship as separate add-on packages per host.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, StaggeredGrid, and VirtualizedGrid. Markdown and Mermaid Diagrams ship as separate add-on packages per host. **System tray / status-bar icon** support for desktop is available as a separate `Shiny.Maui.Controls.TrayIcon` add-on (Windows, macOS AppKit, MacCatalyst, and Linux).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1554,3 +1554,73 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Built-in load-more button with loading state
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
+
+### Tray Icon (Desktop)
+
+`Shiny.Maui.Controls.TrayIcon` is a separate package that adds a cross-platform system tray / status-bar icon to your MAUI desktop app. It targets Windows, macOS (AppKit), MacCatalyst, and Linux (libayatana-appindicator).
+
+```bash
+dotnet add package Shiny.Maui.Controls.TrayIcon
+```
+
+Register in `MauiProgram.cs` — it picks the correct platform implementation automatically:
+
+```csharp
+using Shiny;
+
+builder
+    .UseMauiApp<App>()
+    .UseShinyControls()
+    .UseTrayIcon();
+```
+
+Resolve `ITrayIconFactory` from DI to create as many tray icons as you need. Build menus declaratively, set the icon from any `Stream`, and dispose to remove the icon cleanly. The same PNG asset works on every platform — Windows wraps it as an ICO internally.
+
+```csharp
+public class MyTrayHost
+{
+    readonly ITrayIcon icon;
+
+    public MyTrayHost(ITrayIconFactory factory)
+    {
+        this.icon = factory.Create();
+        this.icon.Tooltip = "My App";
+        this.icon.IsTemplateImage = true; // macOS dark/light auto-tint
+        this.icon.SetIcon(() => FileSystem.OpenAppPackageFileAsync("trayicon.png").Result);
+
+        this.icon.SetMenu(TrayMenu.Build(b => b
+            .Item("Show window", () => ShowMainWindow())
+            .Check("Notifications", true, on => SetNotifications(on))
+            .Separator()
+            .Submenu("Status", s => s
+                .Item("Available", () => SetStatus(Status.Available))
+                .Item("Busy", () => SetStatus(Status.Busy))
+                .Item("Away", () => SetStatus(Status.Away)))
+            .Separator()
+            .Item("Quit", () => Application.Current!.Quit())));
+
+        this.icon.PrimaryClick += (_, e) => ShowMainWindow();
+        this.icon.DoubleClick  += (_, e) => OpenSettings();
+    }
+}
+```
+
+| Member | Description |
+|---|---|
+| `SetIcon(Func<Stream>)` | Set the icon from a stream factory — the host re-reads it for DPI/theme changes. PNG or ICO bytes both work |
+| `Tooltip` | Hover tooltip (Windows / macOS) or accessible description (Linux) |
+| `Title` | Optional text label shown beside or instead of the icon on macOS and Linux (ignored on Windows) |
+| `IsVisible` | Show/hide without disposing |
+| `IsTemplateImage` | When `true`, macOS treats the icon as a template image and auto-tints for the light/dark menu bar |
+| `SetMenu(TrayMenu)` | Assign the context menu — mutate items at any time and the menu rebuilds |
+| `ShowMenu()` | Programmatically open the menu (useful from a left-click handler on Windows) |
+| `PrimaryClick` / `SecondaryClick` / `DoubleClick` | Click events with screen coordinates (`TrayClickEventArgs`) |
+| `Dispose()` | Removes the tray icon and frees native resources |
+
+`TrayMenu.Build(b => …)` supports `Item`, `Check`, `Separator`, and `Submenu`. Menu items expose `IsEnabled`, `IsVisible`, `Label`, and per-item `Accelerator` strings. Mutate any property on a menu item and the platform handler rebuilds automatically.
+
+**Platform notes:**
+- **Linux:** depends on `libayatana-appindicator3` and `libgtk-3` — install via your distro's package manager (`apt install libayatana-appindicator3-1 libgtk-3-0` on Debian/Ubuntu)
+- **MacCatalyst:** bridges to AppKit via the Objective-C runtime — your app needs permission to `dlopen` AppKit at runtime (granted by default in normal Catalyst apps)
+- **Windows:** uses `Shell_NotifyIcon` directly. Windows 11 hides new tray icons by default — users have to promote yours from the overflow flyout
+- **macOS template images:** set `IsTemplateImage = true` and supply a flat black-on-transparent PNG for the menu bar to auto-tint with the user's appearance

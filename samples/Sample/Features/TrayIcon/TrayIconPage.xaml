@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Sample.Features.TrayIcon"
+             x:Class="Sample.Features.TrayIcon.TrayIconPage"
+             x:DataType="local:TrayIconViewModel"
+             Title="System Tray"
+             AutomationId="TrayIconPage">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="20">
+
+            <Label Text="System Tray / Status Bar"
+                   FontSize="22"
+                   FontAttributes="Bold" />
+            <Label Text="Cross-platform tray icon. Set an icon, attach a context menu, listen to clicks. Works on Windows, macOS AppKit, MacCatalyst, and Linux (libayatana-appindicator)." />
+
+            <!-- Unsupported platform notice -->
+            <Border IsVisible="{Binding IsNotSupported}"
+                    BackgroundColor="#FEF3C7"
+                    Stroke="#F59E0B"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <Label Text="{Binding UnsupportedMessage}" TextColor="#78350F" />
+            </Border>
+
+            <!-- Status -->
+            <Border IsVisible="{Binding IsSupported}"
+                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Status" FontAttributes="Bold" FontSize="14" />
+                    <Label Text="{Binding Status}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Controls -->
+            <Grid IsVisible="{Binding IsSupported}"
+                  ColumnDefinitions="*,*" ColumnSpacing="10" RowSpacing="10">
+                <Button Grid.Column="0"
+                        Text="Start tray icon"
+                        Command="{Binding StartCommand}"
+                        IsEnabled="{Binding IsNotRunning}" />
+                <Button Grid.Column="1"
+                        Text="Stop &amp; dispose"
+                        Command="{Binding StopCommand}"
+                        IsEnabled="{Binding IsRunning}" />
+            </Grid>
+
+            <!-- Properties -->
+            <Border IsVisible="{Binding IsSupported}"
+                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Properties" FontAttributes="Bold" FontSize="14" />
+
+                    <Label Text="Tooltip" FontSize="12" />
+                    <Entry Text="{Binding Tooltip}" />
+
+                    <Label Text="Title (macOS / Linux label — ignored on Windows)" FontSize="12" />
+                    <Entry Text="{Binding Title}" Placeholder="empty = icon only" />
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Switch IsToggled="{Binding IsTemplate}" />
+                        <Label Text="Template image (macOS auto-tint for dark menu bar)"
+                               VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Switch IsToggled="{Binding IsVisible}" />
+                        <Label Text="Visible" VerticalTextAlignment="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Live demo buttons -->
+            <Border IsVisible="{Binding IsSupported}"
+                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Live updates" FontAttributes="Bold" FontSize="14" />
+                    <Label Text="{Binding Counter, StringFormat='Counter: {0} (also updates tooltip)'}" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0" Text="Increment"
+                                Command="{Binding IncrementCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                        <Button Grid.Column="1" Text="Rebuild menu"
+                                Command="{Binding RebuildMenuCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                        <Button Grid.Column="2" Text="Toggle visibility"
+                                Command="{Binding ToggleVisibilityCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Event log -->
+            <Border IsVisible="{Binding IsSupported}"
+                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Event log" FontAttributes="Bold" FontSize="14"
+                               VerticalTextAlignment="Center" />
+                        <Button Grid.Column="1" Text="Clear" Command="{Binding ClearLogCommand}"
+                                Padding="10,4" FontSize="12" />
+                    </Grid>
+                    <CollectionView ItemsSource="{Binding EventLog}" HeightRequest="220">
+                        <CollectionView.EmptyView>
+                            <Label Text="No events yet — click the tray icon, pick a menu item, or toggle a setting."
+                                   TextColor="{AppThemeBinding Light=#9CA3AF, Dark=#6B7280}"
+                                   HorizontalTextAlignment="Center"
+                                   VerticalOptions="Center" />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding .}" FontFamily="Consolas" FontSize="12" Padding="0,2" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

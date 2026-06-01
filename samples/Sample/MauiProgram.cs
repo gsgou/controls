@@ -25,6 +25,7 @@ public static class MauiProgram
                 cfg.SetCustomFeedback<MyCustomFeedbackService>(); // haptic is installed by default, but we want more fun
                 cfg.AddDefaultMauiControlFeedback();
             })
+            .UseTrayIcon()
             .UseShinyShell(x => x
                 .AddGeneratedMaps()
                 .Add<MinimizedSheetStandalonePage, MinimizedSheetViewModel>(registerRoute: false)
