@@ -8,6 +8,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Sample.Linux</RootNamespace>
         <AssemblyName>Sample.Linux</AssemblyName>
+        <IsPackable>false</IsPackable>
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
         <ShinyMauiShell_GenerateNavExtensions>true</ShinyMauiShell_GenerateNavExtensions>
     </PropertyGroup>
