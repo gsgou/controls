@@ -50,6 +50,24 @@ abstract class TrayIconBase : ITrayIcon
         }
     }
 
+    string? badge;
+    public string? Badge
+    {
+        get => this.badge;
+        set
+        {
+            if (this.badge == value) return;
+            this.badge = value;
+            this.OnBadgeChanged(value);
+        }
+    }
+
+    System.Threading.Timer? animationTimer;
+    IReadOnlyList<Func<Stream>>? animationFrames;
+    int animationFrameIndex;
+
+    public bool IsAnimating => this.animationTimer != null;
+
     public void SetIcon(Func<Stream> iconStreamFactory)
     {
         this.IconFactory = iconStreamFactory;
@@ -67,6 +85,49 @@ abstract class TrayIconBase : ITrayIcon
 
     public abstract void ShowMenu();
 
+    public abstract void ShowNotification(string title, string message);
+
+    public void StartAnimation(IReadOnlyList<Func<Stream>> frames, TimeSpan interval)
+    {
+        ArgumentNullException.ThrowIfNull(frames);
+        if (frames.Count == 0)
+            throw new ArgumentException("Animation requires at least one frame.", nameof(frames));
+        if (interval <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(interval), "Animation interval must be positive.");
+
+        this.StopAnimation();
+        this.animationFrames = frames;
+        this.animationFrameIndex = 0;
+        this.OnIconChanged(frames[0]);
+        this.animationTimer = new System.Threading.Timer(this.OnAnimationTick, null, interval, interval);
+    }
+
+    public void StopAnimation()
+    {
+        var t = this.animationTimer;
+        this.animationTimer = null;
+        t?.Dispose();
+        this.animationFrames = null;
+        if (this.IconFactory != null)
+            this.OnIconChanged(this.IconFactory);
+    }
+
+    void OnAnimationTick(object? state)
+    {
+        var frames = this.animationFrames;
+        if (frames == null || this.animationTimer == null)
+            return;
+        this.animationFrameIndex = (this.animationFrameIndex + 1) % frames.Count;
+        try
+        {
+            this.OnIconChanged(frames[this.animationFrameIndex]);
+        }
+        catch
+        {
+            // best-effort: never let a missing frame stream tear down the timer
+        }
+    }
+
     public event EventHandler<TrayClickEventArgs>? PrimaryClick;
     public event EventHandler<TrayClickEventArgs>? SecondaryClick;
     public event EventHandler<TrayClickEventArgs>? DoubleClick;
@@ -81,8 +142,16 @@ abstract class TrayIconBase : ITrayIcon
     protected abstract void OnVisibilityChanged(bool visible);
     protected abstract void OnMenuChanged(object? sender, EventArgs e);
 
+    /// <summary>Default implementation re-renders the current icon so platforms can composite the badge over it.</summary>
+    protected virtual void OnBadgeChanged(string? value)
+    {
+        if (this.IconFactory != null)
+            this.OnIconChanged(this.IconFactory);
+    }
+
     public virtual void Dispose()
     {
+        this.StopAnimation();
         if (this.Menu != null)
             this.Menu.Changed -= this.OnMenuChanged;
         GC.SuppressFinalize(this);

@@ -1,14 +1,34 @@
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using static Shiny.Maui.Controls.TrayIcon.NativeMethods;
+using SDImage = System.Drawing.Image;
+using SDBitmap = System.Drawing.Bitmap;
+using SDGraphics = System.Drawing.Graphics;
+using SDFont = System.Drawing.Font;
+using SDColor = System.Drawing.Color;
+using SDRectangle = System.Drawing.Rectangle;
+using SDRectangleF = System.Drawing.RectangleF;
+using SDFontStyle = System.Drawing.FontStyle;
+using SDGraphicsUnit = System.Drawing.GraphicsUnit;
+using SDSolidBrush = System.Drawing.SolidBrush;
+using SDStringFormat = System.Drawing.StringFormat;
+using SDStringFormatFlags = System.Drawing.StringFormatFlags;
+using SDStringAlignment = System.Drawing.StringAlignment;
+using SDSystemFonts = System.Drawing.SystemFonts;
+using SDPixelFormat = System.Drawing.Imaging.PixelFormat;
+using SDImageFormat = System.Drawing.Imaging.ImageFormat;
 
 namespace Shiny.Maui.Controls.TrayIcon;
 
+[SupportedOSPlatform("windows")]
 sealed class WindowsTrayIcon : TrayIconBase
 {
     static readonly Lazy<IntPtr> WindowClass = new(RegisterWindowClass);
     static readonly Dictionary<IntPtr, WindowsTrayIcon> Instances = new();
     static readonly WndProcDelegate StaticWndProc = StaticHandler;
     static uint NextId = 1;
+    static int NextHotKeyId = 0xB001;
 
     readonly uint id;
     readonly IntPtr hwnd;
@@ -17,6 +37,8 @@ sealed class WindowsTrayIcon : TrayIconBase
     bool added;
     bool disposed;
     Dictionary<int, Action>? menuActions;
+    readonly List<IntPtr> menuBitmaps = new();
+    readonly Dictionary<int, Action> hotKeyActions = new();
 
     public WindowsTrayIcon()
     {
@@ -70,21 +92,32 @@ sealed class WindowsTrayIcon : TrayIconBase
     {
         WindowsTrayIcon? icon;
         lock (Instances) Instances.TryGetValue(hWnd, out icon);
-        if (icon != null && msg == WM_TRAYICON)
+        if (icon != null)
         {
-            var ev = (uint)(lParam.ToInt64() & 0xFFFF);
-            GetCursorPos(out var pt);
-            switch (ev)
+            if (msg == WM_TRAYICON)
             {
-                case WM_LBUTTONUP: icon.RaisePrimary(pt.X, pt.Y); break;
-                case WM_RBUTTONUP:
-                case WM_CONTEXTMENU:
-                    icon.RaiseSecondary(pt.X, pt.Y);
-                    icon.ShowMenu();
-                    break;
-                case WM_LBUTTONDBLCLK: icon.RaiseDouble(pt.X, pt.Y); break;
+                var ev = (uint)(lParam.ToInt64() & 0xFFFF);
+                GetCursorPos(out var pt);
+                switch (ev)
+                {
+                    case WM_LBUTTONUP: icon.RaisePrimary(pt.X, pt.Y); break;
+                    case WM_RBUTTONUP:
+                    case WM_CONTEXTMENU:
+                        icon.RaiseSecondary(pt.X, pt.Y);
+                        icon.ShowMenu();
+                        break;
+                    case WM_LBUTTONDBLCLK: icon.RaiseDouble(pt.X, pt.Y); break;
+                }
+                return IntPtr.Zero;
             }
-            return IntPtr.Zero;
+            if (msg == WM_HOTKEY)
+            {
+                var hkId = wParam.ToInt32();
+                Action? action;
+                lock (icon.hotKeyActions) icon.hotKeyActions.TryGetValue(hkId, out action);
+                action?.Invoke();
+                return IntPtr.Zero;
+            }
         }
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
@@ -93,24 +126,30 @@ sealed class WindowsTrayIcon : TrayIconBase
     {
         _ = WindowClass.Value;
         var oldIcon = this.hIcon;
-        this.hIcon = LoadHIconFromStream(factory());
+        this.hIcon = LoadHIconFromStream(factory(), this.Badge);
         var data = this.BuildData(NIF_ICON);
         Shell_NotifyIcon(NIM_MODIFY, ref data);
         if (oldIcon != IntPtr.Zero) DestroyIcon(oldIcon);
     }
 
-    static IntPtr LoadHIconFromStream(Stream stream)
+    static IntPtr LoadHIconFromStream(Stream stream, string? badge)
     {
+        byte[] bytes;
+        using (var ms = new MemoryStream())
+        {
+            stream.CopyTo(ms);
+            bytes = ms.ToArray();
+        }
+        stream.Dispose();
+
+        if (!string.IsNullOrEmpty(badge))
+            bytes = ComposeBadge(bytes, badge);
+
         var tmp = Path.Combine(Path.GetTempPath(), "shinytray_" + Guid.NewGuid().ToString("N") + ".ico");
         try
         {
-            using (var ms = new MemoryStream())
-            {
-                stream.CopyTo(ms);
-                var bytes = ms.ToArray();
-                var icoBytes = IsIco(bytes) ? bytes : WrapPngAsIco(bytes);
-                File.WriteAllBytes(tmp, icoBytes);
-            }
+            var icoBytes = IsIco(bytes) ? bytes : WrapPngAsIco(bytes);
+            File.WriteAllBytes(tmp, icoBytes);
             var cx = GetSystemMetrics(SM_CXSMICON);
             var cy = GetSystemMetrics(SM_CYSMICON);
             return LoadImage(IntPtr.Zero, tmp, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
@@ -118,8 +157,88 @@ sealed class WindowsTrayIcon : TrayIconBase
         finally
         {
             try { File.Delete(tmp); } catch { }
-            stream.Dispose();
         }
+    }
+
+    static byte[] ComposeBadge(byte[] baseBytes, string badge)
+    {
+        // For ICO inputs we'd need a multi-image decoder; only composite over PNG sources.
+        if (IsIco(baseBytes))
+            return baseBytes;
+
+        using var srcMs = new MemoryStream(baseBytes);
+        using var src = SDImage.FromStream(srcMs);
+        var size = Math.Max(src.Width, src.Height);
+        using var bmp = new SDBitmap(size, size, SDPixelFormat.Format32bppArgb);
+        using (var g = SDGraphics.FromImage(bmp))
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(src, new SDRectangle(0, 0, size, size));
+
+            var text = badge.Length > 3 ? badge[..2] + "+" : badge;
+            var pillHeight = Math.Max(10, size * 55 / 100);
+            using var font = new SDFont(SDSystemFonts.MessageBoxFont!.FontFamily, pillHeight * 0.62f, SDFontStyle.Bold, SDGraphicsUnit.Pixel);
+            using var measureFmt = new SDStringFormat(SDStringFormat.GenericTypographic);
+            var textSize = g.MeasureString(text, font, int.MaxValue, measureFmt);
+
+            var horizPad = pillHeight * 0.32f;
+            var pillWidth = (float)Math.Max(pillHeight, textSize.Width + horizPad * 2);
+            var x = size - pillWidth;
+            var y = size - pillHeight;
+            var rect = new SDRectangleF(x, y, pillWidth, pillHeight);
+
+            using (var bg = new SDSolidBrush(SDColor.FromArgb(255, 220, 38, 38)))
+            using (var path = RoundedRect(rect, pillHeight / 2f))
+                g.FillPath(bg, path);
+
+            using var fg = new SDSolidBrush(SDColor.White);
+            using var fmt = new SDStringFormat
+            {
+                Alignment = SDStringAlignment.Center,
+                LineAlignment = SDStringAlignment.Center,
+                FormatFlags = SDStringFormatFlags.NoWrap
+            };
+            g.DrawString(text, font, fg, rect, fmt);
+        }
+
+        using var outMs = new MemoryStream();
+        bmp.Save(outMs, SDImageFormat.Png);
+        return outMs.ToArray();
+    }
+
+    static GraphicsPath RoundedRect(SDRectangleF r, float radius)
+    {
+        var p = new GraphicsPath();
+        var d = radius * 2;
+        p.AddArc(r.X, r.Y, d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+
+    static IntPtr LoadMenuHBitmapFromStream(Stream stream)
+    {
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        stream.Dispose();
+        ms.Position = 0;
+        using var src = SDImage.FromStream(ms);
+        var sz = Math.Max(16, GetSystemMetrics(SM_CXMENUCHECK));
+        var bmp = new SDBitmap(sz, sz, SDPixelFormat.Format32bppPArgb);
+        using (var g = SDGraphics.FromImage(bmp))
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(src, new SDRectangle(0, 0, sz, sz));
+        }
+        var hbmp = bmp.GetHbitmap(SDColor.FromArgb(0));
+        bmp.Dispose();
+        return hbmp;
     }
 
     static bool IsIco(byte[] bytes)
@@ -133,29 +252,23 @@ sealed class WindowsTrayIcon : TrayIconBase
         if (!IsPng(png))
             throw new NotSupportedException("Tray icon stream must be ICO or PNG on Windows.");
 
-        // PNG IHDR is at bytes 16-23 (width 16-19, height 20-23, big-endian).
         var width = (png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19];
         var height = (png[20] << 24) | (png[21] << 16) | (png[22] << 8) | png[23];
         var w = (byte)(width >= 256 ? 0 : width);
         var h = (byte)(height >= 256 ? 0 : height);
 
         var ico = new byte[6 + 16 + png.Length];
-        // ICONDIR
-        ico[2] = 1; // type = ICO
-        ico[4] = 1; // count = 1
-        // ICONDIRENTRY
+        ico[2] = 1;
+        ico[4] = 1;
         ico[6] = w;
         ico[7] = h;
-        // planes = 1, bpp = 32
         ico[10] = 1;
         ico[12] = 32;
-        // size
         var size = png.Length;
         ico[14] = (byte)(size & 0xFF);
         ico[15] = (byte)((size >> 8) & 0xFF);
         ico[16] = (byte)((size >> 16) & 0xFF);
         ico[17] = (byte)((size >> 24) & 0xFF);
-        // offset = 22
         ico[18] = 22;
         Buffer.BlockCopy(png, 0, ico, 22, png.Length);
         return ico;
@@ -177,12 +290,40 @@ sealed class WindowsTrayIcon : TrayIconBase
         Shell_NotifyIcon(NIM_MODIFY, ref data);
     }
 
+    public override void ShowNotification(string title, string message)
+    {
+        var data = this.BuildData(NIF_INFO);
+        data.szInfo = message ?? string.Empty;
+        data.szInfoTitle = title ?? string.Empty;
+        data.dwInfoFlags = NIIF_INFO;
+        Shell_NotifyIcon(NIM_MODIFY, ref data);
+    }
+
     protected override void OnMenuChanged(object? sender, EventArgs e)
+    {
+        this.ReleaseMenuResources();
+        this.UnregisterAllHotKeys();
+    }
+
+    void ReleaseMenuResources()
     {
         if (this.popupMenu != IntPtr.Zero)
             DestroyMenu(this.popupMenu);
         this.popupMenu = IntPtr.Zero;
         this.menuActions = null;
+        foreach (var hb in this.menuBitmaps)
+            DeleteObject(hb);
+        this.menuBitmaps.Clear();
+    }
+
+    void UnregisterAllHotKeys()
+    {
+        lock (this.hotKeyActions)
+        {
+            foreach (var hkId in this.hotKeyActions.Keys)
+                UnregisterHotKey(this.hwnd, hkId);
+            this.hotKeyActions.Clear();
+        }
     }
 
     public override void ShowMenu()
@@ -206,10 +347,10 @@ sealed class WindowsTrayIcon : TrayIconBase
         this.popupMenu = CreatePopupMenu();
         this.menuActions = new();
         var nextId = 1000;
-        AppendItems(this.popupMenu, this.Menu.Items, this.menuActions, ref nextId);
+        this.AppendItems(this.popupMenu, this.Menu.Items, this.menuActions, ref nextId);
     }
 
-    static void AppendItems(IntPtr menu, IEnumerable<TrayMenuItemBase> items, Dictionary<int, Action> actions, ref int nextId)
+    void AppendItems(IntPtr menu, IEnumerable<TrayMenuItemBase> items, Dictionary<int, Action> actions, ref int nextId)
     {
         foreach (var item in items)
         {
@@ -222,7 +363,7 @@ sealed class WindowsTrayIcon : TrayIconBase
                 case TraySubmenu sub:
                 {
                     var child = CreatePopupMenu();
-                    AppendItems(child, sub.Items, actions, ref nextId);
+                    this.AppendItems(child, sub.Items, actions, ref nextId);
                     var flags = MF_POPUP | (sub.IsEnabled ? 0 : MF_GRAYED);
                     AppendMenu(menu, flags, (UIntPtr)(ulong)child.ToInt64(), sub.Label);
                     break;
@@ -241,10 +382,85 @@ sealed class WindowsTrayIcon : TrayIconBase
                     var flags = MF_STRING | (mi.IsEnabled ? 0 : MF_GRAYED);
                     AppendMenu(menu, flags, (UIntPtr)id, FormatLabel(mi.Label, mi.Accelerator));
                     actions[id] = () => mi.RaiseClicked();
+
+                    if (mi.Icon != null)
+                    {
+                        try
+                        {
+                            var hbmp = LoadMenuHBitmapFromStream(mi.Icon());
+                            if (hbmp != IntPtr.Zero)
+                            {
+                                var mii = new MENUITEMINFO
+                                {
+                                    cbSize = (uint)Marshal.SizeOf<MENUITEMINFO>(),
+                                    fMask = MIIM_BITMAP,
+                                    hbmpItem = hbmp
+                                };
+                                SetMenuItemInfo(menu, (uint)id, false, ref mii);
+                                this.menuBitmaps.Add(hbmp);
+                            }
+                        }
+                        catch { /* best-effort */ }
+                    }
+
+                    if (!string.IsNullOrEmpty(mi.Accelerator) && mi.IsEnabled)
+                        this.TryRegisterHotKey(mi.Accelerator, () => mi.RaiseClicked());
+
                     break;
                 }
             }
         }
+    }
+
+    void TryRegisterHotKey(string acceleratorString, Action callback)
+    {
+        var accel = TrayAccelerator.Parse(acceleratorString);
+        if (accel == null) return;
+        var vk = MapVirtualKey(accel.Key);
+        if (vk == 0) return;
+
+        uint mods = 0;
+        if ((accel.Modifiers & TrayAcceleratorModifiers.Control) != 0) mods |= MOD_CONTROL;
+        if ((accel.Modifiers & TrayAcceleratorModifiers.Alt) != 0) mods |= MOD_ALT;
+        if ((accel.Modifiers & TrayAcceleratorModifiers.Shift) != 0) mods |= MOD_SHIFT;
+        if ((accel.Modifiers & TrayAcceleratorModifiers.Meta) != 0) mods |= MOD_WIN;
+
+        var hkId = Interlocked.Increment(ref NextHotKeyId);
+        if (RegisterHotKey(this.hwnd, hkId, mods, vk))
+        {
+            lock (this.hotKeyActions) this.hotKeyActions[hkId] = callback;
+        }
+    }
+
+    static uint MapVirtualKey(string key)
+    {
+        if (key.Length == 1)
+        {
+            var c = char.ToUpperInvariant(key[0]);
+            if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) return c;
+        }
+        if (key.Length >= 2 && (key[0] == 'F' || key[0] == 'f') && int.TryParse(key.AsSpan(1), out var fn) && fn >= 1 && fn <= 24)
+            return (uint)(0x70 + fn - 1);
+
+        return key.ToLowerInvariant() switch
+        {
+            "esc" or "escape" => 0x1B,
+            "enter" or "return" => 0x0D,
+            "tab" => 0x09,
+            "space" or "spacebar" => 0x20,
+            "back" or "backspace" => 0x08,
+            "delete" or "del" => 0x2E,
+            "insert" or "ins" => 0x2D,
+            "home" => 0x24,
+            "end" => 0x23,
+            "pgup" or "pageup" => 0x21,
+            "pgdn" or "pagedown" => 0x22,
+            "left" => 0x25,
+            "up" => 0x26,
+            "right" => 0x27,
+            "down" => 0x28,
+            _ => 0
+        };
     }
 
     static string FormatLabel(string label, string? accelerator)
@@ -255,12 +471,13 @@ sealed class WindowsTrayIcon : TrayIconBase
         if (this.disposed) return;
         this.disposed = true;
         base.Dispose();
+        this.UnregisterAllHotKeys();
         if (this.added)
         {
             var data = this.BuildData(0);
             Shell_NotifyIcon(NIM_DELETE, ref data);
         }
-        if (this.popupMenu != IntPtr.Zero) DestroyMenu(this.popupMenu);
+        this.ReleaseMenuResources();
         if (this.hIcon != IntPtr.Zero) DestroyIcon(this.hIcon);
         lock (Instances) Instances.Remove(this.hwnd);
         DestroyWindow(this.hwnd);

@@ -65,6 +65,9 @@
                     <Label Text="Title (macOS / Linux label — ignored on Windows)" FontSize="12" />
                     <Entry Text="{Binding Title}" Placeholder="empty = icon only" />
 
+                    <Label Text="Badge (Windows overlay, macOS/Linux beside icon)" FontSize="12" />
+                    <Entry Text="{Binding Badge}" Placeholder="empty = no badge" />
+
                     <HorizontalStackLayout Spacing="12">
                         <Switch IsToggled="{Binding IsTemplate}" />
                         <Label Text="Template image (macOS auto-tint for dark menu bar)"
@@ -96,6 +99,17 @@
                                 IsEnabled="{Binding IsRunning}" />
                         <Button Grid.Column="2" Text="Toggle visibility"
                                 Command="{Binding ToggleVisibilityCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0" Text="Clear badge"
+                                Command="{Binding ClearBadgeCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                        <Button Grid.Column="1" Text="Send notification"
+                                Command="{Binding SendNotificationCommand}"
+                                IsEnabled="{Binding IsRunning}" />
+                        <Button Grid.Column="2" Text="Toggle animation"
+                                Command="{Binding ToggleAnimationCommand}"
                                 IsEnabled="{Binding IsRunning}" />
                     </Grid>
                 </VerticalStackLayout>

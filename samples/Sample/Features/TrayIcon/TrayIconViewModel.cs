@@ -16,6 +16,7 @@ public partial class TrayIconViewModel : ObservableObject
     [ObservableProperty] string status = "Not running";
     [ObservableProperty] string tooltip = "Shiny Controls Sample";
     [ObservableProperty] string title = string.Empty;
+    [ObservableProperty] string badge = string.Empty;
     [ObservableProperty] bool isTemplate;
     [ObservableProperty] bool isVisible = true;
     [ObservableProperty]
@@ -31,6 +32,7 @@ public partial class TrayIconViewModel : ObservableObject
     [ObservableProperty] string unsupportedMessage = string.Empty;
     [ObservableProperty] bool notificationsEnabled = true;
     [ObservableProperty] int counter;
+    [ObservableProperty] bool isAnimating;
 
     public ObservableCollection<string> EventLog { get; } = new();
 
@@ -47,6 +49,7 @@ public partial class TrayIconViewModel : ObservableObject
 
     partial void OnTooltipChanged(string value) { if (this.icon != null) this.icon.Tooltip = value; }
     partial void OnTitleChanged(string value) { if (this.icon != null) this.icon.Title = value; }
+    partial void OnBadgeChanged(string value) { if (this.icon != null) this.icon.Badge = string.IsNullOrWhiteSpace(value) ? null : value; }
     partial void OnIsTemplateChanged(bool value) { if (this.icon != null) this.icon.IsTemplateImage = value; }
     partial void OnIsVisibleChanged(bool value) { if (this.icon != null) this.icon.IsVisible = value; }
 
@@ -62,6 +65,8 @@ public partial class TrayIconViewModel : ObservableObject
             this.icon.Title = this.Title;
             this.icon.IsTemplateImage = this.IsTemplate;
             this.icon.IsVisible = this.IsVisible;
+            if (!string.IsNullOrWhiteSpace(this.Badge))
+                this.icon.Badge = this.Badge;
             this.icon.SetMenu(this.BuildMenu());
             this.icon.PrimaryClick += (_, e) => this.LogEvent($"Primary click @ {e.X},{e.Y}");
             this.icon.SecondaryClick += (_, e) => this.LogEvent($"Secondary click @ {e.X},{e.Y}");
@@ -83,6 +88,7 @@ public partial class TrayIconViewModel : ObservableObject
         if (this.icon == null) return;
         this.icon.Dispose();
         this.icon = null;
+        this.IsAnimating = false;
         this.IsRunning = false;
         this.Status = "Stopped";
         this.LogEvent("Tray icon disposed");
@@ -95,8 +101,18 @@ public partial class TrayIconViewModel : ObservableObject
         if (this.icon != null)
         {
             this.icon.Tooltip = $"Counter: {this.Counter}";
+            this.icon.Badge = this.Counter > 0 ? this.Counter.ToString() : null;
+            this.Badge = this.icon.Badge ?? string.Empty;
             this.LogEvent($"Counter → {this.Counter}");
         }
+    }
+
+    [RelayCommand]
+    void ClearBadge()
+    {
+        this.Badge = string.Empty;
+        if (this.icon != null) this.icon.Badge = null;
+        this.LogEvent("Badge cleared");
     }
 
     [RelayCommand]
@@ -111,10 +127,44 @@ public partial class TrayIconViewModel : ObservableObject
     }
 
     [RelayCommand]
+    void SendNotification()
+    {
+        if (this.icon == null) return;
+        this.icon.ShowNotification("Shiny Controls", $"Hello from your tray icon at {DateTime.Now:HH:mm:ss}.");
+        this.LogEvent("Notification sent");
+    }
+
+    [RelayCommand]
+    void ToggleAnimation()
+    {
+        if (this.icon == null) return;
+        if (this.icon.IsAnimating)
+        {
+            this.icon.StopAnimation();
+            this.IsAnimating = false;
+            this.LogEvent("Animation stopped");
+        }
+        else
+        {
+            var frames = new Func<Stream>[]
+            {
+                OpenLogoStream,
+                OpenLogoStream,
+                OpenLogoStream,
+                OpenLogoStream
+            };
+            this.icon.StartAnimation(frames, TimeSpan.FromMilliseconds(400));
+            this.IsAnimating = true;
+            this.LogEvent("Animation started (4 frames @ 400ms)");
+        }
+    }
+
+    [RelayCommand]
     void ClearLog() => this.EventLog.Clear();
 
     TrayMenu BuildMenu() => TrayMenu.Build(b => b
-        .Item("Increment counter", this.Increment)
+        .Item(new TrayMenuItem("Increment counter", this.Increment) { Accelerator = "Ctrl+I", Icon = OpenLogoStream })
+        .Item(new TrayMenuItem("Send notification", () => this.SendNotification()) { Accelerator = "Ctrl+N", Icon = OpenLogoStream })
         .Check("Notifications", this.NotificationsEnabled, v =>
         {
             this.NotificationsEnabled = v;
@@ -126,8 +176,8 @@ public partial class TrayIconViewModel : ObservableObject
             .Item("Busy", () => this.LogEvent("Status → Busy"))
             .Item("Away", () => this.LogEvent("Status → Away")))
         .Separator()
-        .Item("About", () => this.LogEvent("About clicked"))
-        .Item("Quit sample tray", this.Stop));
+        .Item(new TrayMenuItem("About", () => this.LogEvent("About clicked")) { Accelerator = "F1" })
+        .Item(new TrayMenuItem("Quit sample tray", this.Stop) { Accelerator = "Ctrl+Q" }));
 
     void LogEvent(string message)
     {

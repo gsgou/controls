@@ -1589,7 +1589,8 @@ public class MyTrayHost
         this.icon.SetIcon(() => FileSystem.OpenAppPackageFileAsync("trayicon.png").Result);
 
         this.icon.SetMenu(TrayMenu.Build(b => b
-            .Item("Show window", () => ShowMainWindow())
+            .Item(new TrayMenuItem("Show window", ShowMainWindow) { Accelerator = "Ctrl+Shift+W", Icon = OpenIconStream })
+            .Item(new TrayMenuItem("New item", NewItem) { Accelerator = "Ctrl+N" })
             .Check("Notifications", true, on => SetNotifications(on))
             .Separator()
             .Submenu("Status", s => s
@@ -1597,10 +1598,14 @@ public class MyTrayHost
                 .Item("Busy", () => SetStatus(Status.Busy))
                 .Item("Away", () => SetStatus(Status.Away)))
             .Separator()
-            .Item("Quit", () => Application.Current!.Quit())));
+            .Item(new TrayMenuItem("Quit", () => Application.Current!.Quit()) { Accelerator = "Ctrl+Q" })));
 
         this.icon.PrimaryClick += (_, e) => ShowMainWindow();
         this.icon.DoubleClick  += (_, e) => OpenSettings();
+
+        // Badge, balloon/toast, animated icon — see the API table below
+        this.icon.Badge = "3";
+        this.icon.ShowNotification("Connected", "Background sync is running.");
     }
 }
 ```
@@ -1610,17 +1615,29 @@ public class MyTrayHost
 | `SetIcon(Func<Stream>)` | Set the icon from a stream factory — the host re-reads it for DPI/theme changes. PNG or ICO bytes both work |
 | `Tooltip` | Hover tooltip (Windows / macOS) or accessible description (Linux) |
 | `Title` | Optional text label shown beside or instead of the icon on macOS and Linux (ignored on Windows) |
+| `Badge` | String composited onto the icon as a red pill on Windows; rendered beside the icon on macOS / Linux. Set to `null` to clear |
 | `IsVisible` | Show/hide without disposing |
 | `IsTemplateImage` | When `true`, macOS treats the icon as a template image and auto-tints for the light/dark menu bar |
 | `SetMenu(TrayMenu)` | Assign the context menu — mutate items at any time and the menu rebuilds |
 | `ShowMenu()` | Programmatically open the menu (useful from a left-click handler on Windows) |
+| `ShowNotification(title, message)` | Best-effort balloon / toast via the native subsystem (Windows `NIF_INFO`, macOS / Catalyst `NSUserNotificationCenter`, Linux libnotify). For richer in-app toasts inside your MAUI UI use `Shiny.Maui.Controls.Toast` |
+| `StartAnimation(frames, interval)` / `StopAnimation()` / `IsAnimating` | Cycle a list of `Func<Stream>` frames on a shared timer; reverts to the last static icon on stop |
 | `PrimaryClick` / `SecondaryClick` / `DoubleClick` | Click events with screen coordinates (`TrayClickEventArgs`) |
 | `Dispose()` | Removes the tray icon and frees native resources |
 
-`TrayMenu.Build(b => …)` supports `Item`, `Check`, `Separator`, and `Submenu`. Menu items expose `IsEnabled`, `IsVisible`, `Label`, and per-item `Accelerator` strings. Mutate any property on a menu item and the platform handler rebuilds automatically.
+`TrayMenu.Build(b => …)` supports `Item`, `Check`, `Separator`, and `Submenu`. `TrayMenuItem` exposes `IsEnabled`, `IsVisible`, `Label`, optional `Icon` (`Func<Stream>` — rendered next to the label), and `Accelerator` (e.g. `"Ctrl+S"`, `"Cmd+Q"`, `"F1"`). The accelerator string is both the visual hint *and* the dispatch trigger — see the table below for per-platform behaviour. Use the shared `TrayAccelerator.Parse(string)` helper if you need the parsed `Modifiers` + `Key` yourself.
 
 **Platform notes:**
-- **Linux:** depends on `libayatana-appindicator3` and `libgtk-3` — install via your distro's package manager (`apt install libayatana-appindicator3-1 libgtk-3-0` on Debian/Ubuntu)
+- **Linux:** depends on `libayatana-appindicator3` and `libgtk-3` — install via your distro's package manager (`apt install libayatana-appindicator3-1 libgtk-3-0` on Debian/Ubuntu). `ShowNotification` additionally needs `libnotify` (usually pre-installed); if missing it silently no-ops
 - **MacCatalyst:** bridges to AppKit via the Objective-C runtime — your app needs permission to `dlopen` AppKit at runtime (granted by default in normal Catalyst apps)
-- **Windows:** uses `Shell_NotifyIcon` directly. Windows 11 hides new tray icons by default — users have to promote yours from the overflow flyout
+- **Windows:** uses `Shell_NotifyIcon` directly. Windows 11 hides new tray icons by default — users have to promote yours from the overflow flyout. Badge composition uses `System.Drawing.Common` (pulled in only for the Windows TFM)
 - **macOS template images:** set `IsTemplateImage = true` and supply a flat black-on-transparent PNG for the menu bar to auto-tint with the user's appearance
+
+**Accelerator dispatch matrix:**
+
+| Platform | Mechanism | Scope |
+|---|---|---|
+| Windows | `RegisterHotKey` on the tray host window | Global system hotkey while your process is running |
+| macOS (AppKit) | `NSMenuItem.KeyEquivalent` + modifier mask | App-wide while your app is foreground |
+| MacCatalyst | Same as AppKit via `objc_msgSend` | App-wide while your app is foreground |
+| Linux | `gtk_widget_add_accelerator` on a `GtkAccelGroup` | Best-effort — fires while the indicator menu is open or focused |

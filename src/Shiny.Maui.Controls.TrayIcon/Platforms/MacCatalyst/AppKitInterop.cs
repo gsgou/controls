@@ -54,8 +54,21 @@ static partial class AppKitInterop
     public static partial void MsgSendLong(IntPtr receiver, IntPtr selector, long arg1);
 
     [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
+    public static partial void MsgSendULong(IntPtr receiver, IntPtr selector, ulong arg1);
+
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
+    public static partial void MsgSendCGSize(IntPtr receiver, IntPtr selector, NSSize size);
+
+    [LibraryImport(Libobjc, EntryPoint = "objc_msgSend")]
     [return: MarshalAs(UnmanagedType.U1)]
     public static partial bool MsgSendBoolReturn(IntPtr receiver, IntPtr selector);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct NSSize
+    {
+        public double Width;
+        public double Height;
+    }
 
     static bool initialized;
     public static void EnsureLoaded()

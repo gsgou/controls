@@ -14,6 +14,10 @@
         <PackageReference Include="Microsoft.Maui.Controls" />
     </ItemGroup>
 
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
+        <PackageReference Include="System.Drawing.Common" />
+    </ItemGroup>
+
     <ItemGroup>
         <Compile Remove="Platforms/**/*.cs" />
         <None Include="Platforms/**/*.cs" />
