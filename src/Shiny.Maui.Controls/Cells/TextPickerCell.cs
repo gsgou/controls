@@ -109,8 +109,9 @@ public class TextPickerCell : CellBase
         hiddenPicker.Focused += (s, e) => ApplySelectionHighlight();
         hiddenPicker.Unfocused += (s, e) => ClearSelectionHighlight();
 
-        // Overlay the transparent picker across the entire cell so tapping
-        // anywhere opens the native picker dialog (Focus() is unreliable on Android)
+        // Overlay the transparent picker across the entire cell. On Android the overlay
+        // tap opens the native dialog directly. On iOS the parent TapGestureRecognizer
+        // consumes the touch first, so OnCellTapped explicitly focuses the picker.
         Grid.SetColumn(hiddenPicker, 0);
         Grid.SetColumnSpan(hiddenPicker, 3);
         Grid.SetRow(hiddenPicker, 0);
@@ -122,7 +123,8 @@ public class TextPickerCell : CellBase
 
     protected override void OnCellTapped(object? sender, TappedEventArgs e)
     {
-        // Native picker overlay handles all touch interaction
+        base.OnCellTapped(sender, e);
+        hiddenPicker?.Focus();
     }
 
     void UpdatePickerItems()
