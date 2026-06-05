@@ -1,6 +1,6 @@
 ---
 name: shiny-controls
-description: Generate UI for .NET MAUI (Shiny.Maui.Controls) and Blazor (Shiny.Blazor.Controls) - includes TableView with 14 cell types, TreeView with lazy loading and configurable expand/collapse icons, FloatingPanel/OverlayHost/ShinyContentPage (bottom/top overlay panels) with detents and header peek, ShinyDurationPicker (duration picker with FloatingPanel), FrostedGlassView (native blur/glass effect), Toast service (code-invoked toast notifications with queue/stack, auto-dismiss, spinner, progress bar, pill/fill modes), PillView status badges, BadgeView (content-wrapping corner badge with text/dot/count overflow and pulse), ImageViewer with pinch/pan/double-tap zoom, ImageEditor with crop/rotate/draw/text/undo/redo/export, ChatView with bubbles/typing/load-more/input-bar and custom MessageTemplate/MessageTemplateSelector for per-message rendering, SecurityPin entry, Fab and FabMenu (floating action button and expanding action menu), Scheduler views (calendar grid, agenda timeline, event list), Markdown controls (MarkdownView renderer, MarkdownEditor with toolbar), AutoCompleteEntry with debounced search and dropdown suggestions, CountryPicker with flag/dial code, AddressEntry with geocoding, SignaturePad for capturing signatures with canvas drawing and PNG export, TextEntry with animated floating placeholder/customizable border/tool slots/validation hints/character count, Slider with two-color gradient track and blended thumb, ProgressBar with gradient fill and Vista-style shimmer pulse sweep, ParallaxCollectionView (MAUI) / ParallaxList (Blazor) — a scrollable list with a hero header that translates at a configurable fraction of the scroll offset, with optional collapse-to-sticky and fade, Overlay/LoadingOverlay (full-screen overlay with configurable color/opacity, custom content template, and built-in loading mode with indeterminate spinner or determinate progress bar), SkeletonView (content-wrapping skeleton loader that shows animated shimmer placeholders while IsBusy is true, with built-in line placeholders or a custom placeholder template), Tray Icon for desktop (separate Shiny.Maui.Controls.TrayIcon package - cross-platform system tray / status-bar icon with context menus, click events, tooltips, and dynamic visibility on Windows/macOS AppKit/MacCatalyst/Linux), Feedback Service (extensible IFeedbackService with haptic default, replaceable with TTS/sound/analytics), and UseFeedback support across all interactive controls
+description: Generate UI for .NET MAUI (Shiny.Maui.Controls) and Blazor (Shiny.Blazor.Controls) - includes TableView with 14 cell types, TreeView with lazy loading and configurable expand/collapse icons, FloatingPanel/OverlayHost/ShinyContentPage (bottom/top overlay panels) with detents and header peek, ShinyDurationPicker (duration picker with FloatingPanel), FrostedGlassView (native blur/glass effect), Toast service (code-invoked toast notifications with queue/stack, auto-dismiss, spinner, progress bar, pill/fill modes), PillView status badges, BadgeView (content-wrapping corner badge with text/dot/count overflow and pulse), ImageViewer with pinch/pan/double-tap zoom, ImageEditor with crop/rotate/draw/text/undo/redo/export, ChatView with bubbles/typing/load-more/input-bar and custom MessageTemplate/MessageTemplateSelector for per-message rendering, SecurityPin entry, Fab and FabMenu (floating action button and expanding action menu), Scheduler views (calendar grid, agenda timeline, event list), Markdown controls (MarkdownView renderer, MarkdownEditor with toolbar), Barcodes & QR codes (separate Shiny.Maui.Controls.Barcodes / Shiny.Blazor.Controls.Barcodes packages — BarcodeView and QRCodeView with 13 symbologies including QR, Aztec, Data Matrix, PDF417, Code 128/39/93, Codabar, EAN-8/13, UPC-A/E, ITF — pure-managed ZXing.Net renderer, PNG output via built-in encoder on MAUI, SVG or PNG data-URI on Blazor, with a static BarcodeRenderer for raw bytes / SVG / data-URI from code), AutoCompleteEntry with debounced search and dropdown suggestions, CountryPicker with flag/dial code, AddressEntry with geocoding, SignaturePad for capturing signatures with canvas drawing and PNG export, TextEntry with animated floating placeholder/customizable border/tool slots/validation hints/character count, Slider with two-color gradient track and blended thumb, ProgressBar with gradient fill and Vista-style shimmer pulse sweep, ParallaxCollectionView (MAUI) / ParallaxList (Blazor) — a scrollable list with a hero header that translates at a configurable fraction of the scroll offset, with optional collapse-to-sticky and fade, Overlay/LoadingOverlay (full-screen overlay with configurable color/opacity, custom content template, and built-in loading mode with indeterminate spinner or determinate progress bar), SkeletonView (content-wrapping skeleton loader that shows animated shimmer placeholders while IsBusy is true, with built-in line placeholders or a custom placeholder template), Tray Icon for desktop (separate Shiny.Maui.Controls.TrayIcon package - cross-platform system tray / status-bar icon with context menus, click events, tooltips, and dynamic visibility on Windows/macOS AppKit/MacCatalyst/Linux), Feedback Service (extensible IFeedbackService with haptic default, replaceable with TTS/sound/analytics), and UseFeedback support across all interactive controls
 auto_invoke: true
 triggers:
   - tableview
@@ -270,6 +270,42 @@ triggers:
   - background app
   - tray menu
   - tray context menu
+  - barcode
+  - barcodes
+  - barcode view
+  - barcodeview
+  - qr code
+  - qrcode
+  - qr code view
+  - qrcodeview
+  - qr generator
+  - barcode generator
+  - barcode renderer
+  - ean
+  - ean-13
+  - ean13
+  - upc
+  - upc-a
+  - upca
+  - code128
+  - code 128
+  - code39
+  - code 39
+  - code93
+  - pdf417
+  - aztec
+  - data matrix
+  - datamatrix
+  - codabar
+  - itf
+  - itf-14
+  - zxing
+  - render barcode
+  - generate qr
+  - generate qr code
+  - blazor barcode
+  - blazor qr code
+  - blazor qrcode
 references:
   - tableview.md
   - treeview.md
@@ -296,6 +332,7 @@ references:
   - skeleton.md
   - badge.md
   - tray-icon.md
+  - barcodes.md
   - feedback-service.md
 ---
 
@@ -324,6 +361,7 @@ The library contains:
 - **SchedulerCalendarListView**: Vertically scrolling event list grouped by day with infinite scroll
 - **MarkdownView**: A read-only markdown renderer that converts markdown text to native MAUI controls with theming and link handling
 - **MarkdownEditor**: A markdown editor with formatting toolbar, live preview toggle, and customizable toolbar items
+- **BarcodeView / QRCodeView** (separate `Shiny.Maui.Controls.Barcodes` / `Shiny.Blazor.Controls.Barcodes` packages): Pure-managed barcode rendering powered by ZXing.Net. Supports 13 symbologies (`QRCode`, `Aztec`, `DataMatrix`, `Pdf417`, `Code128`, `Code39`, `Code93`, `Codabar`, `Ean8`, `Ean13`, `UpcA`, `UpcE`, `Itf`). MAUI renders to PNG via a built-in pure-managed encoder (no SkiaSharp / `System.Drawing` dependency, AOT-safe) and feeds an `Image`. Blazor renders inline SVG by default (crisp at any size, single-path output with `shape-rendering="crispEdges"`) or a PNG `data:` URI. `QRCodeView` is a `BarcodeView` subclass that locks `Format = QRCode` and adds `Size` (square edge length) and `ErrorCorrection` (`Low`/`Medium`/`Quartile`/`High`). The static `BarcodeRenderer` exposes `RenderPng`, `RenderSvg`, and `RenderDataUri` for raw output without a view. XAML namespace `xmlns:bc="http://shiny.net/maui/barcodes"`
 - **AutoCompleteEntry**: A text input with debounced search, dropdown suggestions, busy indicator, custom item templates, and full styling control via CSS custom properties (Blazor) or bindable properties (MAUI)
 - **CountryPicker**: A country search control built on AutoCompleteEntry with flag emoji, country name, and dial code
 - **AddressEntry**: An address search control built on AutoCompleteEntry with geocoding (Nominatim/OpenStreetMap by default) and structured address results
@@ -382,6 +420,12 @@ Invoke this skill when the user wants to:
 - Render markdown text as native MAUI controls
 - Build a markdown editor with formatting toolbar and live preview
 - Display documentation, notes, or rich text content from markdown strings
+- Render a QR code for a URL, vCard, Wi-Fi join code, or pairing token
+- Render a 1D barcode (EAN-13, UPC-A, Code 128, etc.) for retail / shipping / IDs
+- Render Aztec, Data Matrix, PDF417 codes for transit tickets, electronics labels, or driver's licenses
+- Generate barcode PNG bytes, SVG markup, or `data:` URIs from code without a view (e.g., for PDF export, file save, email attachment)
+- Pick a QR error-correction level (Low / Medium / Quartile / High) for printed labels or scuff-prone surfaces
+- Configure colors, quiet-zone margin, or output size on a barcode / QR code view
 - Add a search/autocomplete text input with dropdown suggestions
 - Build a typeahead or search-as-you-type control with debounce
 - Add a country picker or country selector with flag display
