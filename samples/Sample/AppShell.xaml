@@ -34,7 +34,9 @@
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
                   xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid"
                   xmlns:virtualizedgrid="clr-namespace:Sample.Features.VirtualizedGrid"
+                  xmlns:parallax="clr-namespace:Sample.Features.ParallaxCollectionView"
                   xmlns:treeview="clr-namespace:Sample.Features.TreeView"
+                  xmlns:barcodes="clr-namespace:Sample.Features.Barcodes"
                   Title="Shiny Controls"
                   FlyoutBackgroundColor="{AppThemeBinding Light=#F5F3FF, Dark=#0F0D1A}"
                   FlyoutWidth="310"
@@ -271,6 +273,14 @@
                              Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate virtualizedgrid:VirtualizedGridPage}" Route="virtualizedgrid" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Parallax Collection">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25B0;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate parallax:ParallaxCollectionViewPage}" Route="parallaxcollectionview" />
     </FlyoutItem>
 
     <FlyoutItem Title="Tree View">
@@ -731,6 +741,33 @@
                              Color="{AppThemeBinding Light=#E11D48, Dark=#FB7185}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate diagrams:InteractiveEditorPage}" Route="editor" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  BARCODES -->
+    <!-- ============================================================ -->
+    <MenuItem Text="BARCODES"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="QR Code">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A6;" Size="20"
+                             Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate barcodes:QRCodePage}" Route="qrcode" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Barcode Gallery">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2630;" Size="20"
+                             Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate barcodes:BarcodeGalleryPage}" Route="barcodegallery" />
     </FlyoutItem>
 
     <!-- Spacer so footer doesn't overlap last items -->

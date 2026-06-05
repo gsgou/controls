@@ -1,0 +1,14 @@
+@namespace Shiny.Blazor.Controls.Barcodes
+@inherits BarcodeView
+
+@code {
+    [Parameter] public int Size { get; set; } = 300;
+
+    protected override void OnParametersSet()
+    {
+        Format = BarcodeFormat.QRCode;
+        PixelWidth = Size;
+        PixelHeight = Size;
+        base.OnParametersSet();
+    }
+}

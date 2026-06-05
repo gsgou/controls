@@ -1,0 +1,79 @@
+@namespace Shiny.Blazor.Controls.Barcodes
+
+@if (ImageFormat == BarcodeImageFormat.Svg)
+{
+    <div class="shiny-barcode" style="@HostStyle">
+        @((MarkupString)svgMarkup)
+    </div>
+}
+else
+{
+    <img class="shiny-barcode" style="@HostStyle" src="@dataUri" alt="@AltText" />
+}
+
+@code {
+    string svgMarkup = string.Empty;
+    string dataUri = string.Empty;
+
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public BarcodeFormat Format { get; set; } = BarcodeFormat.Code128;
+    [Parameter] public BarcodeImageFormat ImageFormat { get; set; } = BarcodeImageFormat.Svg;
+    [Parameter] public int PixelWidth { get; set; } = 400;
+    [Parameter] public int PixelHeight { get; set; } = 150;
+    [Parameter] public int MarginPixels { get; set; } = 10;
+    [Parameter] public string ForegroundColor { get; set; } = "#000000";
+    [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
+    [Parameter] public string? AltText { get; set; }
+    [Parameter] public string? CssWidth { get; set; }
+    [Parameter] public string? CssHeight { get; set; }
+    [Parameter] public QRErrorCorrection QRErrorCorrection { get; set; } = QRErrorCorrection.Medium;
+
+    string HostStyle
+    {
+        get
+        {
+            var w = string.IsNullOrEmpty(CssWidth) ? $"{PixelWidth}px" : CssWidth!;
+            var h = string.IsNullOrEmpty(CssHeight) ? $"{PixelHeight}px" : CssHeight!;
+            return $"display:inline-block;width:{w};height:{h};";
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(Value))
+        {
+            svgMarkup = string.Empty;
+            dataUri = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var options = new BarcodeRenderOptions
+            {
+                PixelWidth = PixelWidth,
+                PixelHeight = PixelHeight,
+                Margin = MarginPixels,
+                ForegroundColor = ForegroundColor,
+                BackgroundColor = BackgroundColor,
+                QRErrorCorrection = QRErrorCorrection
+            };
+
+            if (ImageFormat == BarcodeImageFormat.Svg)
+            {
+                svgMarkup = BarcodeRenderer.RenderSvg(Value, Format, options);
+                dataUri = string.Empty;
+            }
+            else
+            {
+                dataUri = BarcodeRenderer.RenderDataUri(Value, Format, BarcodeImageFormat.Png, options);
+                svgMarkup = string.Empty;
+            }
+        }
+        catch
+        {
+            svgMarkup = string.Empty;
+            dataUri = string.Empty;
+        }
+    }
+}

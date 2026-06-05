@@ -1,0 +1,48 @@
+.shiny-parallax {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.shiny-parallax-scroll {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.shiny-parallax-hero {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 0;
+    will-change: transform, opacity;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Hero content gets pointer events back */
+.shiny-parallax-hero > * {
+    pointer-events: auto;
+}
+
+.shiny-parallax-body {
+    position: relative;
+    z-index: 1;
+    margin-top: var(--parallax-header-height, 0);
+}
+
+.shiny-parallax-item {
+    width: 100%;
+}
+
+.shiny-parallax-empty {
+    padding: 24px;
+    text-align: center;
+    color: #6b7280;
+}

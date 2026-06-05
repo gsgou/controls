@@ -1,0 +1,74 @@
+@page "/barcodes"
+
+<PageTitle>Barcode Gallery</PageTitle>
+
+<h1>Barcode Gallery</h1>
+
+<p>Each barcode is rendered inline as crisp SVG via the <code>BarcodeView</code> component.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;">
+
+    <div class="bc-card">
+        <h3>Code 128</h3>
+        <BarcodeView Value="SHINY-CONTROLS-123456" Format="BarcodeFormat.Code128"
+                     PixelWidth="500" PixelHeight="150"
+                     CssWidth="100%" CssHeight="120px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>EAN-13</h3>
+        <BarcodeView Value="5901234123457" Format="BarcodeFormat.Ean13"
+                     PixelWidth="500" PixelHeight="160"
+                     CssWidth="100%" CssHeight="120px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>UPC-A</h3>
+        <BarcodeView Value="036000291452" Format="BarcodeFormat.UpcA"
+                     PixelWidth="500" PixelHeight="160"
+                     CssWidth="100%" CssHeight="120px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>Code 39</h3>
+        <BarcodeView Value="HELLO-WORLD" Format="BarcodeFormat.Code39"
+                     PixelWidth="500" PixelHeight="150"
+                     CssWidth="100%" CssHeight="120px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>PDF417</h3>
+        <BarcodeView Value="https://github.com/shinyorg/controls" Format="BarcodeFormat.Pdf417"
+                     PixelWidth="500" PixelHeight="200"
+                     CssWidth="100%" CssHeight="160px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>Aztec</h3>
+        <BarcodeView Value="Shiny Aztec Demo" Format="BarcodeFormat.Aztec"
+                     PixelWidth="250" PixelHeight="250"
+                     CssWidth="220px" CssHeight="220px" />
+    </div>
+
+    <div class="bc-card">
+        <h3>Data Matrix</h3>
+        <BarcodeView Value="Shiny DataMatrix Demo" Format="BarcodeFormat.DataMatrix"
+                     PixelWidth="250" PixelHeight="250"
+                     CssWidth="220px" CssHeight="220px" />
+    </div>
+
+</div>
+
+<style>
+    .bc-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+    }
+    .bc-card h3 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #7C3AED;
+    }
+</style>

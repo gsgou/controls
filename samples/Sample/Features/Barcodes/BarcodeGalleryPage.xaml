@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:bc="http://shiny.net/maui/barcodes"
+             xmlns:local="clr-namespace:Sample.Features.Barcodes"
+             x:Class="Sample.Features.Barcodes.BarcodeGalleryPage"
+             Title="Barcode Gallery"
+             AutomationId="BarcodeGalleryPage">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="16">
+
+            <Label Text="Code 128" FontAttributes="Bold" />
+            <bc:BarcodeView Value="SHINY-CONTROLS-123456"
+                            Format="Code128"
+                            PixelWidth="500" PixelHeight="150"
+                            HeightRequest="120" />
+
+            <Label Text="EAN-13" FontAttributes="Bold" />
+            <bc:BarcodeView Value="5901234123457"
+                            Format="Ean13"
+                            PixelWidth="500" PixelHeight="160"
+                            HeightRequest="120" />
+
+            <Label Text="UPC-A" FontAttributes="Bold" />
+            <bc:BarcodeView Value="036000291452"
+                            Format="UpcA"
+                            PixelWidth="500" PixelHeight="160"
+                            HeightRequest="120" />
+
+            <Label Text="Code 39" FontAttributes="Bold" />
+            <bc:BarcodeView Value="HELLO-WORLD"
+                            Format="Code39"
+                            PixelWidth="500" PixelHeight="150"
+                            HeightRequest="120" />
+
+            <Label Text="PDF417" FontAttributes="Bold" />
+            <bc:BarcodeView Value="https://github.com/shinyorg/controls"
+                            Format="Pdf417"
+                            PixelWidth="500" PixelHeight="200"
+                            HeightRequest="150" />
+
+            <Label Text="Aztec" FontAttributes="Bold" />
+            <bc:BarcodeView Value="Shiny Aztec Demo"
+                            Format="Aztec"
+                            PixelWidth="250" PixelHeight="250"
+                            HeightRequest="200" WidthRequest="200"
+                            HorizontalOptions="Center" />
+
+            <Label Text="Data Matrix" FontAttributes="Bold" />
+            <bc:BarcodeView Value="Shiny DataMatrix Demo"
+                            Format="DataMatrix"
+                            PixelWidth="250" PixelHeight="250"
+                            HeightRequest="200" WidthRequest="200"
+                            HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

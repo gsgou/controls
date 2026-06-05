@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Barcodes</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web"/>
+        <PackageReference Include="ZXing.Net"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\Shiny.Controls.Barcodes.Shared\*.cs" LinkBase="Shared" />
+    </ItemGroup>
+</Project>

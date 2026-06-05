@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, StaggeredGrid, and VirtualizedGrid. Markdown and Mermaid Diagrams ship as separate add-on packages per host. **System tray / status-bar icon** support for desktop is available as a separate `Shiny.Maui.Controls.TrayIcon` add-on (Windows, macOS AppKit, MacCatalyst, and Linux).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown and Mermaid Diagrams ship as separate add-on packages per host. **System tray / status-bar icon** support for desktop is available as a separate `Shiny.Maui.Controls.TrayIcon` add-on (Windows, macOS AppKit, MacCatalyst, and Linux).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -8,6 +8,8 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![Blazor Markdown NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Markdown.svg?label=Shiny.Blazor.Controls.Markdown)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Markdown)
 [![MAUI Mermaid NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MermaidDiagrams.svg?label=Shiny.Maui.Controls.MermaidDiagrams)](https://www.nuget.org/packages/Shiny.Maui.Controls.MermaidDiagrams)
 [![Blazor Mermaid NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MermaidDiagrams.svg?label=Shiny.Blazor.Controls.MermaidDiagrams)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MermaidDiagrams)
+[![MAUI Barcodes NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Barcodes.svg?label=Shiny.Maui.Controls.Barcodes)](https://www.nuget.org/packages/Shiny.Maui.Controls.Barcodes)
+[![Blazor Barcodes NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Barcodes.svg?label=Shiny.Blazor.Controls.Barcodes)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Barcodes)
 
 ## Getting Started
 
@@ -52,12 +54,30 @@ dotnet add package Shiny.Maui.Controls.MermaidDiagrams
 xmlns:diagram="http://shiny.net/maui/diagrams"
 ```
 
+For Barcodes & QR codes (separate package):
+
+```bash
+dotnet add package Shiny.Maui.Controls.Barcodes
+```
+
+```xml
+xmlns:bc="http://shiny.net/maui/barcodes"
+```
+
+```xml
+<bc:QRCodeView Value="https://shinylib.net" Size="300" />
+<bc:BarcodeView Value="5901234123457" Format="Ean13" />
+```
+
+Supported formats: QR Code, Aztec, Data Matrix, PDF417, Code 128/39/93, Codabar, EAN-8/13, UPC-A/E, ITF. Output is rendered as PNG via a pure-managed encoder (no SkiaSharp / System.Drawing dependency). Need an SVG string? Call `BarcodeRenderer.RenderSvg(...)` directly.
+
 ### Blazor
 
 ```bash
 dotnet add package Shiny.Blazor.Controls
 dotnet add package Shiny.Blazor.Controls.Markdown       # optional
 dotnet add package Shiny.Blazor.Controls.MermaidDiagrams # optional
+dotnet add package Shiny.Blazor.Controls.Barcodes       # optional
 ```
 
 Add the `@using` directives — typically in `_Imports.razor`:
@@ -69,6 +89,8 @@ Add the `@using` directives — typically in `_Imports.razor`:
 @using Shiny.Blazor.Controls.Scheduler
 @using Shiny.Blazor.Controls.Markdown
 @using Shiny.Blazor.Controls.MermaidDiagrams
+@using Shiny.Blazor.Controls.Barcodes
+@using Shiny.Controls.Barcodes
 ```
 
 No DI registration is required — drop the components into any `.razor` page.
@@ -88,6 +110,7 @@ No DI registration is required — drop the components into any `.razor` page.
 | `Color` type (e.g. `Colors.Blue`) | CSS color string (e.g. `"#2196F3"`) |
 | `Fab.Icon="add.png"` (ImageSource) | `<Fab Icon="+">` (inline text/SVG string) |
 | `shiny:CarouselGallery` | `<CarouselGallery>` — `PeekAreaInsets` → `PeekAmount`; adds `ShowIndicators` |
+| `shiny:ParallaxCollectionView` | `<ParallaxList>` — `HeaderTemplate` → `HeroTemplate`; Blazor uses a JS scroll listener for the transform |
 | `shiny:StaggeredGrid` | `<StaggeredGrid>` — `ItemSelectedCommand` → `ItemSelected` EventCallback |
 | `shiny:VirtualizedGrid` | `<VirtualizedGrid>` — `CellPadding` → individual padding props; adds `EnableVirtualization`, `GroupedItems` |
 | `ItemTemplate` as `DataTemplate` | `ItemTemplate` as `RenderFragment<object>` |
@@ -1503,6 +1526,85 @@ A Pinterest-style masonry/waterfall layout that arranges variable-height items i
 | `RowSpacing` | `double` | `0` | Vertical gap between items |
 
 Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, `ItemTemplateSelector`, `HeaderTemplate`, `FooterTemplate`, `EmptyViewTemplate`, `ItemSelectedCommand`, `LoadMoreCommand`, `LoadMoreThreshold`, `ItemSpacing`.
+
+### ParallaxCollectionView (MAUI) / ParallaxList (Blazor)
+
+A scrollable list with a hero header that translates at a configurable fraction of the scroll offset — the App-Store / profile-page parallax effect. Pure cross-platform implementation: MAUI wraps a real `CollectionView` and drives the hero from `CollectionView.Scrolled` (no platform handlers); Blazor uses a small JS scroll listener that mutates `transform`/`opacity` directly via `requestAnimationFrame`, so the parallax runs at native scroll framerate without re-rendering Razor components.
+
+```xml
+<shiny:ParallaxCollectionView ItemsSource="{Binding Items}"
+                              HeaderHeight="260"
+                              MinHeaderHeight="96"
+                              ParallaxFactor="0.5"
+                              CollapseToSticky="True"
+                              FadeHeaderOnScroll="False"
+                              SelectionMode="Single"
+                              ItemSelectedCommand="{Binding SelectCommand}">
+    <shiny:ParallaxCollectionView.HeaderTemplate>
+        <DataTemplate>
+            <Grid>
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#7C3AED" Offset="0.0" />
+                        <GradientStop Color="#2563EB" Offset="0.5" />
+                        <GradientStop Color="#0EA5E9" Offset="1.0" />
+                    </LinearGradientBrush>
+                </Grid.Background>
+                <Label Text="Destinations" FontSize="28" FontAttributes="Bold"
+                       TextColor="White" VerticalOptions="Center" HorizontalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </shiny:ParallaxCollectionView.HeaderTemplate>
+    <shiny:ParallaxCollectionView.ItemTemplate>
+        <DataTemplate>
+            <Border Margin="16,6" Padding="16">
+                <Label Text="{Binding Title}" FontAttributes="Bold" />
+            </Border>
+        </DataTemplate>
+    </shiny:ParallaxCollectionView.ItemTemplate>
+</shiny:ParallaxCollectionView>
+```
+
+```razor
+<div style="height:600px;">
+    <ParallaxList TItem="DestinationItem"
+                  Items="@items"
+                  HeaderHeight="260"
+                  MinHeaderHeight="96"
+                  ParallaxFactor="0.5"
+                  CollapseToSticky="true"
+                  Scrolled="@(e => visible = e.HeaderVisibleHeight)">
+        <HeroTemplate>
+            <div style="height:100%;background:linear-gradient(135deg,#7C3AED,#2563EB,#0EA5E9);
+                        color:white;display:flex;align-items:center;justify-content:center;
+                        font-size:28px;font-weight:700;">Destinations</div>
+        </HeroTemplate>
+        <ItemTemplate Context="item">
+            <div style="margin:6px 16px;padding:16px;background:white;border-radius:14px;">
+                <strong>@item.Title</strong>
+            </div>
+        </ItemTemplate>
+    </ParallaxList>
+</div>
+```
+
+| Property | MAUI Type | Blazor Type | Default | Description |
+|---|---|---|---|---|
+| `ItemsSource` / `Items` | `IEnumerable` | `IReadOnlyList<TItem>` | — | Collection of items |
+| `ItemTemplate` | `DataTemplate` | `RenderFragment<TItem>` | — | Template per row |
+| `HeaderTemplate` / `HeroTemplate` | `DataTemplate` | `RenderFragment` | — | Parallax hero template |
+| `EmptyView` / `EmptyTemplate` | `object` / `DataTemplate` | `RenderFragment` | — | Empty state |
+| `HeaderHeight` | `double` | `double` | 240 | Hero height (px) |
+| `MinHeaderHeight` | `double` | `double` | 0 | Minimum visible hero height when collapsed |
+| `ParallaxFactor` | `double` | `double` | 0.5 | Fraction of scroll offset applied to hero translation (0 = pinned, 1 = scrolls with content) |
+| `CollapseToSticky` | `bool` | `bool` | false | Clamp hero to `MinHeaderHeight` once scrolled that far |
+| `FadeHeaderOnScroll` | `bool` | `bool` | false | Fade hero from 100% → 0% opacity as it scrolls past |
+| `ItemsLayout` (MAUI) | `IItemsLayout` | — | Vertical | Passthrough to inner `CollectionView` — use `GridItemsLayout` for multi-column lists |
+| `SelectionMode` / `SelectedItem` / `ItemSelectedCommand` (MAUI) | — | — | — | Passthrough to inner `CollectionView` |
+| `ItemSelected` (Blazor) | — | `EventCallback<TItem>` | — | Fired on row click |
+| `Height` (Blazor) | — | `string` | — | CSS height for the scroll container; omit to fill parent |
+
+Both hosts fire a `Scrolled` event with `ParallaxScrollEventArgs(verticalOffset, headerTranslation, headerVisibleHeight)` so you can drive sticky titles, fading nav chrome, etc.
 
 ### VirtualizedGrid
 

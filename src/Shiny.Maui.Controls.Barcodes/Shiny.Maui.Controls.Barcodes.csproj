@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(BaseTargetFramework)</TargetFrameworks>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Barcodes</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls"/>
+        <PackageReference Include="ZXing.Net"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\Shiny.Controls.Barcodes.Shared\*.cs" LinkBase="Shared" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,42 @@
+@namespace Shiny.Blazor.Controls
+@typeparam TItem
+@inject Microsoft.JSInterop.IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="shiny-parallax @CssClass" style="@ContainerStyle" @attributes="AdditionalAttributes">
+    <div class="shiny-parallax-scroll" @ref="scrollRef">
+        <div class="shiny-parallax-hero" @ref="heroRef" style="@HeroStyle">
+            @if (HeroTemplate is not null)
+            {
+                @HeroTemplate
+            }
+        </div>
+
+        <div class="shiny-parallax-body" style="margin-top:@(HeaderHeight)px;">
+            @if (Items is null || !Items.Any())
+            {
+                @if (EmptyTemplate is not null)
+                {
+                    <div class="shiny-parallax-empty">@EmptyTemplate</div>
+                }
+            }
+            else
+            {
+                @foreach (var item in Items)
+                {
+                    var localItem = item;
+                    <div class="shiny-parallax-item" @onclick="() => OnItemClicked(localItem)">
+                        @if (ItemTemplate is not null)
+                        {
+                            @ItemTemplate(localItem)
+                        }
+                        else
+                        {
+                            @localItem?.ToString()
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>

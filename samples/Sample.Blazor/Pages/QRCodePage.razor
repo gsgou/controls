@@ -1,0 +1,44 @@
+@page "/qrcode"
+
+<PageTitle>QR Code</PageTitle>
+
+<h1>QR Code</h1>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+    <div>
+        <label style="display:block;margin-bottom:6px;font-weight:600;">Content</label>
+        <input type="text" @bind="content" @bind:event="oninput"
+               style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;" />
+
+        <label style="display:block;margin-top:16px;margin-bottom:6px;font-weight:600;">Error correction</label>
+        <select @bind="ecLevel" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;">
+            @foreach (var l in Enum.GetValues<QRErrorCorrection>())
+            {
+                <option value="@l">@l</option>
+            }
+        </select>
+
+        <label style="display:block;margin-top:16px;margin-bottom:6px;font-weight:600;">Size: @size px</label>
+        <input type="range" min="150" max="500" step="10" @bind="size" @bind:event="oninput" style="width:100%;" />
+
+        <label style="display:block;margin-top:16px;margin-bottom:6px;font-weight:600;">Image format</label>
+        <select @bind="imageFormat" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;">
+            <option value="@BarcodeImageFormat.Svg">SVG (vector)</option>
+            <option value="@BarcodeImageFormat.Png">PNG (raster)</option>
+        </select>
+    </div>
+
+    <div style="display:flex;justify-content:center;align-items:center;padding:16px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;">
+        <QRCodeView Value="@content"
+                    Size="size"
+                    QRErrorCorrection="ecLevel"
+                    ImageFormat="imageFormat" />
+    </div>
+</div>
+
+@code {
+    string content = "https://shinylib.net/controls/";
+    int size = 300;
+    QRErrorCorrection ecLevel = QRErrorCorrection.Medium;
+    BarcodeImageFormat imageFormat = BarcodeImageFormat.Svg;
+}
