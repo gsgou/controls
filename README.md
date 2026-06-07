@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1759,7 +1759,7 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 
 ### Desktop (Tray Icon + Docking)
 
-`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines two features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). Blazor gets the same docking shape via `Shiny.Blazor.Controls.Kiosk`.
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines three features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and a touch / kiosk **on-screen keyboard** (US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows on input focus). Blazor gets the docking + on-screen keyboard via `Shiny.Blazor.Controls.Kiosk`.
 
 ```bash
 dotnet add package Shiny.Maui.Controls.Desktop
@@ -1776,10 +1776,15 @@ builder
     .UseTrayIcon()         // tray / status-bar icon
     .UseShinyDocking()     // docking host
     .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
-    .AddDockPanel<OutputPanel>("output");
+    .AddDockPanel<OutputPanel>("output")
+    .UseOnScreenKeyboard(opts =>  // touch / kiosk soft keyboard
+    {
+        opts.AutoShowOnFocus = true;
+        opts.PushContent     = true;
+    });
 ```
 
-> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API and `using Shiny.Maui.Controls.Desktop.Docking;` for the docking API. The extension methods themselves live in the `Shiny` namespace.
+> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API, `using Shiny.Maui.Controls.Desktop.Docking;` for docking, and `using Shiny.Maui.Controls.Desktop.OnScreenKeyboard;` for the on-screen keyboard. The extension methods themselves live in the `Shiny` namespace.
 
 #### Tray Icon
 
@@ -1913,3 +1918,59 @@ builder.Services
 ```
 
 Blazor v1 supports in-app floating only; popping panels out to separate browser windows is roadmap. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
+
+#### On-Screen Keyboard
+
+Touch / kiosk soft keyboard. US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows when an `Entry` / `Editor` (MAUI) or `<input>` / `<textarea>` (Blazor) gains focus, and — critically — does **not** steal focus when keys are tapped. v0.1 is planned, not yet implemented; the public surface below is the v0.1 contract.
+
+```csharp
+// MAUI registration
+using Shiny;
+using Shiny.Maui.Controls.Desktop.OnScreenKeyboard;
+
+builder
+    .UseMauiApp<App>()
+    .UseOnScreenKeyboard(opts =>
+    {
+        opts.AutoShowOnFocus = true;
+        opts.AutoHideOnBlur  = true;
+        opts.Height          = 280;
+        opts.PushContent     = true;     // shrinks the page above by Height (false = overlay)
+        opts.Theme           = OnScreenKeyboardTheme.Light;
+    });
+```
+
+Drive visibility from code via DI:
+
+```csharp
+public class MyPageViewModel(IOnScreenKeyboard keyboard)
+{
+    public void StartKioskMode() => keyboard.Show();
+}
+```
+
+##### Blazor
+
+```bash
+dotnet add package Shiny.Blazor.Controls.Kiosk
+```
+
+```csharp
+using Shiny.Blazor.Controls.Kiosk.OnScreenKeyboard;
+
+builder.Services.AddShinyOnScreenKeyboard(opts =>
+{
+    opts.AutoShowOnFocus = true;
+    opts.HeightPx        = 280;
+    opts.PushContent     = true;
+});
+```
+
+```razor
+@using Shiny.Blazor.Controls.Kiosk.OnScreenKeyboard
+
+@* Place once in MainLayout.razor *@
+<OnScreenKeyboardHost />
+```
+
+Limitations (v0.1): MAUI / DOM inputs only — no system-wide injection until v0.4 ships an opt-in `IKeyDispatcher`. No Shadow DOM. No IME / dead-key composition. English US-QWERTY only; multilingual layouts arrive in v0.3 via JSON layout files. Full AutomationPeer (MAUI) / ARIA (Blazor) tree for switch-input accessibility from day one.
