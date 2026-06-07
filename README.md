@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **System tray / status-bar icon** support for desktop is available as a separate `Shiny.Maui.Controls.TrayIcon` add-on (Windows, macOS AppKit, MacCatalyst, and Linux).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Docking` for the web.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1757,15 +1757,15 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
 
-### Tray Icon (Desktop)
+### Desktop (Tray Icon + Docking)
 
-`Shiny.Maui.Controls.TrayIcon` is a separate package that adds a cross-platform system tray / status-bar icon to your MAUI desktop app. It targets Windows, macOS (AppKit), MacCatalyst, and Linux (libayatana-appindicator).
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines two features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). Blazor gets the same docking shape via `Shiny.Blazor.Controls.Docking`.
 
 ```bash
-dotnet add package Shiny.Maui.Controls.TrayIcon
+dotnet add package Shiny.Maui.Controls.Desktop
 ```
 
-Register in `MauiProgram.cs` — it picks the correct platform implementation automatically:
+Register in `MauiProgram.cs` — call one or both extensions depending on what you need:
 
 ```csharp
 using Shiny;
@@ -1773,8 +1773,15 @@ using Shiny;
 builder
     .UseMauiApp<App>()
     .UseShinyControls()
-    .UseTrayIcon();
+    .UseTrayIcon()         // tray / status-bar icon
+    .UseShinyDocking()     // docking host
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<OutputPanel>("output");
 ```
+
+> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API and `using Shiny.Maui.Controls.Desktop.Docking;` for the docking API. The extension methods themselves live in the `Shiny` namespace.
+
+#### Tray Icon
 
 Resolve `ITrayIconFactory` from DI to create as many tray icons as you need. Build menus declaratively, set the icon from any `Stream`, and dispose to remove the icon cleanly. The same PNG asset works on every platform — Windows wraps it as an ICO internally.
 
@@ -1843,3 +1850,66 @@ public class MyTrayHost
 | macOS (AppKit) | `NSMenuItem.KeyEquivalent` + modifier mask | App-wide while your app is foreground |
 | MacCatalyst | Same as AppKit via `objc_msgSend` | App-wide while your app is foreground |
 | Linux | `gtk_widget_add_accelerator` on a `GtkAccelGroup` | Best-effort — fires while the indicator menu is open or focused |
+
+#### Docking
+
+Visual-Studio-style docking host for MAUI desktop apps. v0.1 ships the package surface — schema, contracts, and the in-window `DockHostView`. Drag-drop, splitters, auto-hide rails, and tear-off floating windows land in v0.2+.
+
+```csharp
+using Shiny;
+using Sample.Features.Docking;  // SolutionExplorerPanel, OutputPanel
+
+builder
+    .UseMauiApp<App>()
+    .UseShinyDocking()
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<OutputPanel>("output");
+```
+
+`DockHostView` attaches to any existing `ContentPage` — it does not subclass `ContentPage`, so your Shell / page architecture stays unchanged:
+
+```xml
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:docking="clr-namespace:Shiny.Maui.Controls.Desktop.Docking;assembly=Shiny.Maui.Controls.Desktop">
+    <docking:DockHostView />
+</ContentPage>
+```
+
+| Building block | Purpose |
+|---|---|
+| `DockHostView` | Root dock surface (attaches inside any page) |
+| `DockGroupView` | Tabbed group of panels |
+| `DockTabStrip` | Tab strip with overflow + drag-to-reorder |
+| `DockSplitter` | Draggable splitter between adjacent dock children |
+| `IDockHost` | Per-window controller: `LoadAsync`, `Snapshot`, `ShowPanelAsync`, `IsLocked` |
+| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` — registered via `AddDockPanel<T>` |
+| `IDockLayoutStore` | Bring-your-own persistence contract — load/save the layout tree as JSON |
+| `IDockEvents` | `LayoutChanged`, `PanelActivated`, `DragStarted/Completed/Cancelled` |
+| `IDockCommandScope` | Scopes Ctrl+W / Ctrl+Tab / Ctrl+Alt+PgUp/Dn to the dock surface |
+
+The layout schema (`DockRoot`, `DockWindowState`, `DockSplit`, `DockGroup`, `DockTab`) is a pure POCO tree with a source-generated `System.Text.Json` context — round-trip your dock layout to disk with `DockSerialization.Serialize` / `Deserialize`. Schema versioning (`SchemaVersion` + `MinReadableVersion`) and an `IDockLayoutMigrator` hook are wired in from day one so saved layouts survive future schema changes.
+
+##### Blazor
+
+Same shape, same contracts — different host:
+
+```bash
+dotnet add package Shiny.Blazor.Controls.Docking
+```
+
+```csharp
+using Shiny.Blazor.Controls.Docking;
+
+builder.Services
+    .AddShinyDocking()
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<OutputPanel>("output");
+```
+
+```razor
+@using Shiny.Blazor.Controls.Docking
+
+<DockHost />
+```
+
+Blazor v1 supports in-app floating only; popping panels out to separate browser windows is roadmap. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.

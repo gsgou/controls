@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:docking="clr-namespace:Shiny.Maui.Controls.Desktop.Docking;assembly=Shiny.Maui.Controls.Desktop"
+             x:Class="Sample.Features.Docking.DockingPage"
+             Title="Docking"
+             AutomationId="DockingPage">
+    <Grid RowDefinitions="Auto,*" Padding="0">
+        <Label Grid.Row="0"
+               Text="Visual-Studio-style docking host. v0.1 skeleton — real layout rendering, drag-drop, splitters, auto-hide, and floating windows land in v0.2+."
+               Padding="16"
+               FontSize="13"
+               TextColor="Gray" />
+
+        <docking:DockHostView Grid.Row="1" />
+    </Grid>
+</ContentPage>

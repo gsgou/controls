@@ -1,0 +1,25 @@
+.shiny-dock-host {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: auto 1fr auto;
+    width: 100%;
+    height: 100%;
+    min-height: 240px;
+    background: var(--shiny-dock-host-bg, transparent);
+    color: var(--shiny-dock-host-fg, inherit);
+    font-family: inherit;
+}
+
+.shiny-dock-host__placeholder {
+    grid-row: 2;
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--shiny-dock-placeholder-fg, #888);
+    font-size: 14px;
+    font-style: italic;
+    border: 1px dashed var(--shiny-dock-placeholder-border, #ccc);
+    border-radius: 4px;
+    margin: 8px;
+}

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Audio;
 using Sample.Features.Diagrams;
+using Sample.Features.Docking;
 using Sample.Features.FloatingPanel;
 using Sample.Features.Scheduler;
 using Sample.Features.TableView;
@@ -26,6 +27,9 @@ public static class MauiProgram
                 cfg.AddDefaultMauiControlFeedback();
             })
             .UseTrayIcon()
+            .UseShinyDocking()
+            .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+            .AddDockPanel<OutputPanel>("output")
             .UseShinyShell(x => x
                 .AddGeneratedMaps()
                 .Add<MinimizedSheetStandalonePage, MinimizedSheetViewModel>(registerRoute: false)

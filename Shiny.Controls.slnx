@@ -19,7 +19,7 @@
     </Folder>
     <Project Path="src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Maui.Controls/Shiny.Maui.Controls.csproj" />
-    <Project Path="src/Shiny.Maui.Controls.TrayIcon/Shiny.Maui.Controls.TrayIcon.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Desktop/Shiny.Maui.Controls.Desktop.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Barcodes/Shiny.Maui.Controls.Barcodes.csproj" />
@@ -28,5 +28,6 @@
     <Project Path="src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj" />
+    <Project Path="src/Shiny.Blazor.Controls.Docking/Shiny.Blazor.Controls.Docking.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
 </Solution>

@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Storage;
 using Shiny;
-using Shiny.Maui.Controls.TrayIcon;
+using Shiny.Maui.Controls.Desktop.TrayIcon;
 
 namespace Sample.Features.TrayIcon;
 
@@ -11,7 +11,7 @@ namespace Sample.Features.TrayIcon;
 public partial class TrayIconViewModel : ObservableObject
 {
     readonly ITrayIconFactory? factory;
-    Shiny.Maui.Controls.TrayIcon.ITrayIcon? icon;
+    Shiny.Maui.Controls.Desktop.TrayIcon.ITrayIcon? icon;
 
     [ObservableProperty] string status = "Not running";
     [ObservableProperty] string tooltip = "Shiny Controls Sample";

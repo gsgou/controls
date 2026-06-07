@@ -3,7 +3,7 @@
         "path": "Shiny.Controls.slnx",
         "projects": [
             "src/Shiny.Maui.Controls/Shiny.Maui.Controls.csproj",
-            "src/Shiny.Maui.Controls.TrayIcon/Shiny.Maui.Controls.TrayIcon.csproj",
+            "src/Shiny.Maui.Controls.Desktop/Shiny.Maui.Controls.Desktop.csproj",
             "src/Shiny.Maui.Controls.Barcodes/Shiny.Maui.Controls.Barcodes.csproj",
             "src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj",
             "src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj",
@@ -12,6 +12,7 @@
             "src/Shiny.Blazor.Controls.SpeechAddins/Shiny.Blazor.Controls.SpeechAddins.csproj",
             "src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj",
             "src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj",
+            "src/Shiny.Blazor.Controls.Docking/Shiny.Blazor.Controls.Docking.csproj",
             "src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj"
         ]
     }
