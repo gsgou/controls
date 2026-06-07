@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Shiny.Blazor.Controls.Docking;
+namespace Shiny.Blazor.Controls.Kiosk.Docking;
 
 public partial class DockHost : ComponentBase, IDockHost
 {

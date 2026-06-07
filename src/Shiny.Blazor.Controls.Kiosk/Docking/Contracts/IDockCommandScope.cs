@@ -1,4 +1,4 @@
-namespace Shiny.Blazor.Controls.Docking;
+namespace Shiny.Blazor.Controls.Kiosk.Docking;
 
 public interface IDockCommandScope
 {

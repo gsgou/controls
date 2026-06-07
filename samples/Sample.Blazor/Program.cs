@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sample.Blazor;
-using Shiny.Blazor.Controls.Docking;
+using Shiny.Blazor.Controls.Kiosk.Docking;
 using Shiny.Blazor.Controls.Toast;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

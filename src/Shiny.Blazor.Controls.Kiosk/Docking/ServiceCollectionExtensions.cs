@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Shiny.Blazor.Controls.Docking;
+namespace Shiny.Blazor.Controls.Kiosk.Docking;
 
 public static class DockingServiceCollectionExtensions
 {

@@ -16,6 +16,6 @@
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Markdown\Shiny.Blazor.Controls.Markdown.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.MermaidDiagrams\Shiny.Blazor.Controls.MermaidDiagrams.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Barcodes\Shiny.Blazor.Controls.Barcodes.csproj"/>
-        <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Docking\Shiny.Blazor.Controls.Docking.csproj"/>
+        <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Kiosk\Shiny.Blazor.Controls.Kiosk.csproj"/>
     </ItemGroup>
 </Project>

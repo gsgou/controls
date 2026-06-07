@@ -28,6 +28,6 @@
     <Project Path="src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj" />
-    <Project Path="src/Shiny.Blazor.Controls.Docking/Shiny.Blazor.Controls.Docking.csproj" />
+    <Project Path="src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
 </Solution>

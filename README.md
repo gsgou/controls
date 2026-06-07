@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Docking` for the web.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1759,7 +1759,7 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 
 ### Desktop (Tray Icon + Docking)
 
-`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines two features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). Blazor gets the same docking shape via `Shiny.Blazor.Controls.Docking`.
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines two features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). Blazor gets the same docking shape via `Shiny.Blazor.Controls.Kiosk`.
 
 ```bash
 dotnet add package Shiny.Maui.Controls.Desktop
@@ -1894,11 +1894,11 @@ The layout schema (`DockRoot`, `DockWindowState`, `DockSplit`, `DockGroup`, `Doc
 Same shape, same contracts — different host:
 
 ```bash
-dotnet add package Shiny.Blazor.Controls.Docking
+dotnet add package Shiny.Blazor.Controls.Kiosk
 ```
 
 ```csharp
-using Shiny.Blazor.Controls.Docking;
+using Shiny.Blazor.Controls.Kiosk.Docking;
 
 builder.Services
     .AddShinyDocking()
@@ -1907,7 +1907,7 @@ builder.Services
 ```
 
 ```razor
-@using Shiny.Blazor.Controls.Docking
+@using Shiny.Blazor.Controls.Kiosk.Docking
 
 <DockHost />
 ```

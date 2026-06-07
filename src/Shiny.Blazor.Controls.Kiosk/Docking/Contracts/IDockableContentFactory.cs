@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Shiny.Blazor.Controls.Docking;
+namespace Shiny.Blazor.Controls.Kiosk.Docking;
 
 /// <summary>
 /// Resolves a panel's render fragment by panel-type ID. Registered via
