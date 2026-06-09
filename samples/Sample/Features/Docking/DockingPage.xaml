@@ -7,7 +7,7 @@
              AutomationId="DockingPage">
     <Grid RowDefinitions="Auto,*" Padding="0">
         <Label Grid.Row="0"
-               Text="Visual-Studio-style docking host. v0.1 skeleton — real layout rendering, drag-drop, splitters, auto-hide, and floating windows land in v0.2+."
+               Text="Visual-Studio-style docking host with tabbed groups, splitters, auto-hide rails, and tear-off floating windows."
                Padding="16"
                FontSize="13"
                TextColor="Gray" />

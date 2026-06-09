@@ -80,6 +80,7 @@
                         MyBubbleColor="#DCF8C6"
                         OtherBubbleColor="White"
                         PlaceholderText="Type a message..."
+                        AdjustForKeyboard="False"
                         HeightRequest="500">
             <shiny:ChatView.MessageTemplateSelector>
                 <local:KitchenSinkMessageTemplateSelector>

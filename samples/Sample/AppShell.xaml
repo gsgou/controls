@@ -29,6 +29,7 @@
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
+                  xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
@@ -480,6 +481,14 @@
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="On-Screen Keyboard">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2328;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
     </FlyoutItem>
 
     <FlyoutItem Title="Progress Bar">

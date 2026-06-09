@@ -1757,7 +1757,7 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
 
-### Desktop (Tray Icon + Docking)
+### Desktop (Tray Icon + Docking + On-Screen Keyboard)
 
 `Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines three features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and a touch / kiosk **on-screen keyboard** (US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows on input focus). Blazor gets the docking + on-screen keyboard via `Shiny.Blazor.Controls.Kiosk`.
 
@@ -1858,7 +1858,7 @@ public class MyTrayHost
 
 #### Docking
 
-Visual-Studio-style docking host for MAUI desktop apps. v0.1 ships the package surface — schema, contracts, and the in-window `DockHostView`. Drag-drop, splitters, auto-hide rails, and tear-off floating windows land in v0.2+.
+Visual-Studio-style docking host for MAUI desktop apps — schema, contracts, the in-window `DockHostView`, drag-drop, splitters, auto-hide rails, and tear-off floating windows.
 
 ```csharp
 using Shiny;
@@ -1917,11 +1917,11 @@ builder.Services
 <DockHost />
 ```
 
-Blazor v1 supports in-app floating only; popping panels out to separate browser windows is roadmap. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
+CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
 
 #### On-Screen Keyboard
 
-Touch / kiosk soft keyboard. US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows when an `Entry` / `Editor` (MAUI) or `<input>` / `<textarea>` (Blazor) gains focus, and — critically — does **not** steal focus when keys are tapped. v0.1 is planned, not yet implemented; the public surface below is the v0.1 contract.
+Touch / kiosk soft keyboard. US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows when an `Entry` / `Editor` (MAUI) or `<input>` / `<textarea>` (Blazor) gains focus, and — critically — does **not** steal focus when keys are tapped.
 
 ```csharp
 // MAUI registration
@@ -1973,4 +1973,4 @@ builder.Services.AddShinyOnScreenKeyboard(opts =>
 <OnScreenKeyboardHost />
 ```
 
-Limitations (v0.1): MAUI / DOM inputs only — no system-wide injection until v0.4 ships an opt-in `IKeyDispatcher`. No Shadow DOM. No IME / dead-key composition. English US-QWERTY only; multilingual layouts arrive in v0.3 via JSON layout files. Full AutomationPeer (MAUI) / ARIA (Blazor) tree for switch-input accessibility from day one.
+Limitations: MAUI / DOM inputs only — no system-wide injection. No Shadow DOM. No IME / dead-key composition. English US-QWERTY only. Full AutomationPeer (MAUI) / ARIA (Blazor) tree for switch-input accessibility from day one.

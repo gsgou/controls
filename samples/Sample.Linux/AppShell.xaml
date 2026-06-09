@@ -3,6 +3,7 @@
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
        xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon;assembly=Sample.Linux"
+       xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard;assembly=Sample.Linux"
        xmlns:home="clr-namespace:Sample.Features.Home;assembly=Sample.Linux"
        xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.Linux"
        xmlns:pills="clr-namespace:Sample.Features.Pills;assembly=Sample.Linux"
@@ -32,6 +33,10 @@
 
     <FlyoutItem Title="🖥 System Tray">
         <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="⌨ On-Screen Keyboard">
+        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
     </FlyoutItem>
 
     <MenuItem Text="CONTROLS" IsEnabled="False" />

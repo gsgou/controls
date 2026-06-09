@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Sample.Features.OnScreenKeyboard.OnScreenKeyboardPage"
+             Title="On-Screen Keyboard"
+             AutomationId="OnScreenKeyboardPage">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label Text="Touch / kiosk soft keyboard. US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows when an Entry or Editor gains focus."
+                   FontSize="13"
+                   TextColor="Gray" />
+
+            <Entry Placeholder="Tap to focus — the OSK auto-shows" />
+            <Editor Placeholder="Multi-line input"
+                    HeightRequest="120"
+                    AutoSize="Disabled" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -375,7 +375,6 @@ public partial class FloatingPanel : ContentView
             finished: (_, _) =>
             {
                 isAnimating = false;
-                UpdateScrollEnabled();
 
                 if (UseFeedback)
                     FeedbackHelper.Execute(this, nameof(Opened));
@@ -549,7 +548,6 @@ public partial class FloatingPanel : ContentView
         animation.Commit(this, "SnapPanel", length: (uint)(AnimationDuration * 0.75), easing: Easing.CubicOut,
             finished: (_, _) =>
             {
-                UpdateScrollEnabled();
                 isAnimating = false;
 
                 if (UseFeedback)
@@ -573,16 +571,6 @@ public partial class FloatingPanel : ContentView
         return list;
     }
 
-    void UpdateScrollEnabled()
-    {
-        var sortedDetents = GetSortedDetents();
-        var highestDetent = sortedDetents.Last();
-        var available = GetAvailableHeight();
-        var highestHeight = highestDetent.Ratio * available;
-        var currentHeight = HeightRequest > 0 ? HeightRequest : Height;
-        scrollView.IsEnabled = Math.Abs(currentHeight - highestHeight) < 5;
-    }
-
     public async Task AnimateToDetentAsync(DetentValue detent)
     {
         if (isAnimating) return;
@@ -600,7 +588,6 @@ public partial class FloatingPanel : ContentView
         animation.Commit(this, "SnapPanel", length: (uint)AnimationDuration, easing: Easing.CubicOut,
             finished: (_, _) =>
             {
-                UpdateScrollEnabled();
                 isAnimating = false;
                 DetentChanged?.Invoke(this, detent);
             });
@@ -668,12 +655,15 @@ public partial class FloatingPanel : ContentView
     {
         if (!IsOpen || !ExpandOnInputFocus) return;
 
+        var sortedDetents = GetSortedDetents();
+        // Already at the top — let the platform keyboard avoidance do its job
+        // without triggering a competing height animation that drops keystrokes.
+        if (currentDetentIndex >= sortedDetents.Count - 1) return;
+
         if (detentIndexBeforeKeyboard < 0)
             detentIndexBeforeKeyboard = currentDetentIndex;
 
-        var sortedDetents = GetSortedDetents();
-        var highestDetent = sortedDetents.Last();
-        _ = AnimateToDetentAsync(highestDetent);
+        _ = AnimateToDetentAsync(sortedDetents.Last());
     }
 
     void OnInputUnfocused(object? sender, FocusEventArgs e)
