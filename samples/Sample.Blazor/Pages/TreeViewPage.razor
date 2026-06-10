@@ -116,7 +116,7 @@
     void OnCollapsed(TreeItemEventArgs<FileNode> e) => status = $"Collapsed: {e.Item.Name}";
     void OnLoadFailed(TreeLoadFailedEventArgs<FileNode> e) => status = $"Load failed: {e.Exception.Message}";
 
-    void OnDropped(TreeItemDroppedEventArgs<FileNode> e)
+    async Task OnDropped(TreeItemDroppedEventArgs<FileNode> e)
     {
         var srcList = FindParentList(e.SourceItem);
         var tgtList = FindParentList(e.TargetItem);
@@ -125,7 +125,7 @@
         var idx = tgtList.IndexOf(e.TargetItem);
         tgtList.Insert(idx + 1, e.SourceItem);
         status = $"Moved {e.SourceItem.Name} after {e.TargetItem.Name}";
-        StateHasChanged();
+        if (tree != null) await tree.ReloadAsync();
     }
 
     List<FileNode>? FindParentList(FileNode item)

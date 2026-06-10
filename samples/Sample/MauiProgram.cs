@@ -28,8 +28,10 @@ public static class MauiProgram
             })
             .UseTrayIcon()
             .UseShinyDocking()
-            .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
-            .AddDockPanel<OutputPanel>("output")
+            .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer")
+            .AddDockPanel<OutputPanel>("output", "Output")
+            .AddDockPanel<PropertiesPanel>("properties", "Properties")
+            .AddDockPanel<EditorPanel>("editor")
             .UseShinyShell(x => x
                 .AddGeneratedMaps()
                 .Add<MinimizedSheetStandalonePage, MinimizedSheetViewModel>(registerRoute: false)

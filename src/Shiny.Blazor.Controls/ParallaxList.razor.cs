@@ -10,6 +10,7 @@ public partial class ParallaxList<TItem> : IAsyncDisposable
     IJSObjectReference? module;
     DotNetObjectReference<ParallaxList<TItem>>? dotnetRef;
     bool initialized;
+    (double Factor, double Header, double MinHeader, bool Collapse, bool Fade) pushedOptions;
 
     [Parameter] public IReadOnlyList<TItem>? Items { get; set; }
     [Parameter] public RenderFragment<TItem>? ItemTemplate { get; set; }
@@ -46,8 +47,11 @@ public partial class ParallaxList<TItem> : IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        var options = (ParallaxFactor, HeaderHeight, MinHeaderHeight, CollapseToSticky, FadeHeaderOnScroll);
+
         if (firstRender)
         {
+            pushedOptions = options;
             module = await JS.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/Shiny.Blazor.Controls/parallax-list.js");
             dotnetRef = DotNetObjectReference.Create(this);
@@ -61,8 +65,11 @@ public partial class ParallaxList<TItem> : IAsyncDisposable
             });
             initialized = true;
         }
-        else if (initialized && module is not null)
+        else if (initialized && module is not null && options != pushedOptions)
         {
+            // only push when an option actually changed — pushing on every render
+            // re-enters update() which raises Scrolled, re-rendering forever
+            pushedOptions = options;
             await module.InvokeVoidAsync("update_", scrollRef, new
             {
                 factor = ParallaxFactor,

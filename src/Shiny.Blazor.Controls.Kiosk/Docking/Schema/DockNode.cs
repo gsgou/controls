@@ -16,6 +16,9 @@ public sealed class DockSplit : DockNode
     public double Ratio { get; set; } = 0.5;
     public DockNode First { get; set; } = new DockEmpty();
     public DockNode Second { get; set; } = new DockEmpty();
+
+    // identifies the rendered splitter element across JS interop; never persisted
+    internal string RuntimeId { get; } = Guid.NewGuid().ToString("N");
 }
 
 public sealed class DockGroup : DockNode

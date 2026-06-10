@@ -53,21 +53,25 @@
     }
     else if (EnableVirtualization)
     {
-        <div class="shiny-vgrid-grid" style="@GridStyle">
-            <Virtualize Items="@Items.ToList()" Context="item" OverscanCount="@LoadMoreThreshold">
-                <div class="shiny-vgrid-cell" style="@CellStyle"
-                     @onclick="() => OnItemClicked(item)">
-                    @if (ItemTemplate is not null)
-                    {
-                        @ItemTemplate(item)
-                    }
-                    else
-                    {
-                        @item?.ToString()
-                    }
-                </div>
-            </Virtualize>
-        </div>
+        <Virtualize Items="@itemRows" Context="row" OverscanCount="@LoadMoreThreshold">
+            <div class="shiny-vgrid-grid shiny-vgrid-row" style="@GridStyle">
+                @foreach (var item in row)
+                {
+                    var localItem = item;
+                    <div class="shiny-vgrid-cell" style="@CellStyle"
+                         @onclick="() => OnItemClicked(localItem)">
+                        @if (ItemTemplate is not null)
+                        {
+                            @ItemTemplate(localItem)
+                        }
+                        else
+                        {
+                            @localItem?.ToString()
+                        }
+                    </div>
+                }
+            </div>
+        </Virtualize>
     }
     else
     {

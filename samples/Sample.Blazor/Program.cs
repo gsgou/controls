@@ -10,6 +10,12 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddShinyToast();
 builder.Services.AddShinyDocking();
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ExplorerPanel>("explorer", "Explorer");
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.PropertiesPanel>("properties", "Properties");
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.OutputPanel>("output", "Output");
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ErrorListPanel>("errors", "Error List");
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.EditorPanel>("editor", "Program.cs");
+builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ReadmePanel>("readme", "README.md");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 await builder.Build().RunAsync();

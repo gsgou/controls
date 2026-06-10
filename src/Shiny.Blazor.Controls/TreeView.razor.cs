@@ -8,6 +8,7 @@ public partial class TreeView<TItem>
     readonly List<BlazorTreeNode<TItem>> rootNodes = new();
     BlazorTreeNode<TItem>? focusedNode;
     BlazorTreeNode<TItem>? dragSource;
+    IEnumerable<TItem>? lastItemsSource;
     bool isLoadingRoot;
     bool rootLoaderInvoked;
     Exception? rootError;
@@ -55,12 +56,17 @@ public partial class TreeView<TItem>
 
     protected override async Task OnParametersSetAsync()
     {
-        if (RootLoader != null && !rootLoaderInvoked)
+        if (RootLoader != null)
         {
-            await EnsureRootLoadedAsync();
+            if (!rootLoaderInvoked)
+                await EnsureRootLoadedAsync();
         }
-        else if (RootLoader == null)
+        // only rebuild when the source actually changes — parameters re-set on
+        // every parent render (lambdas are fresh instances), and rebuilding
+        // recreates the nodes, wiping all expansion/selection state
+        else if (!ReferenceEquals(ItemsSource, lastItemsSource))
         {
+            lastItemsSource = ItemsSource;
             RebuildRootNodes();
         }
     }
@@ -68,6 +74,7 @@ public partial class TreeView<TItem>
     void RebuildRootNodes()
     {
         rootNodes.Clear();
+        focusedNode = null;
         if (ItemsSource == null) return;
         foreach (var item in ItemsSource)
             rootNodes.Add(new BlazorTreeNode<TItem>(item, null, 0));

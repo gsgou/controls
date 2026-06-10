@@ -29,6 +29,11 @@
     background: var(--vgrid-sticky-bg, white);
 }
 
+/* padding (not margin) so Virtualize height measurement includes the row spacing */
+.shiny-vgrid-row {
+    padding-bottom: var(--vgrid-spacing, 8px);
+}
+
 .shiny-vgrid-cell {
     cursor: pointer;
     min-width: 0;

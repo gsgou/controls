@@ -13,4 +13,7 @@ public interface IDockHost
     Task HidePanelAsync(string panelInstanceId, CancellationToken ct = default);
     Task ActivatePanelAsync(string panelInstanceId, CancellationToken ct = default);
     Task ResetLayoutAsync(CancellationToken ct = default);
+
+    /// <summary>Collapse a rail to a slim edge bar of panel titles, or expand it back.</summary>
+    Task SetRailCollapsedAsync(DockArea area, bool collapsed, CancellationToken ct = default);
 }

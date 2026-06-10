@@ -37,22 +37,25 @@
 <section class="demo-section">
     <h2>Grouped Grid with Sticky Headers</h2>
 
-    <VirtualizedGrid TItem="GridItem" Items="@(groupedData.SelectMany(g => g.Items).ToList())"
-                     IsGroupingEnabled="true" GroupedItems="@groupedData"
-                     HasStickyHeaders="true" ColumnCount="3" ItemSpacing="8"
-                     CellPaddingLeft="4" CellPaddingRight="4" CellPaddingTop="4" CellPaddingBottom="4">
-        <GroupHeaderTemplate Context="key">
-            <div style="padding:8px 12px;background:#2D3748;color:white;border-radius:6px;font-weight:600;">
-                @key
-            </div>
-        </GroupHeaderTemplate>
-        <ItemTemplate Context="item">
-            <div style="padding:12px;border-radius:8px;background:@item.Color;color:white;text-align:center;">
-                <div style="font-size:20px;">@item.Icon</div>
-                <div style="font-size:13px;margin-top:4px;">@item.Name</div>
-            </div>
-        </ItemTemplate>
-    </VirtualizedGrid>
+    <div style="height:360px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:0 8px;">
+        <VirtualizedGrid TItem="GridItem" Items="@(groupedData.SelectMany(g => g.Items).ToList())"
+                         IsGroupingEnabled="true" GroupedItems="@groupedData"
+                         HasStickyHeaders="true" ColumnCount="3" ItemSpacing="8"
+                         CellPaddingLeft="4" CellPaddingRight="4" CellPaddingTop="4" CellPaddingBottom="4">
+            <GroupHeaderTemplate Context="key">
+                <div style="padding:8px 12px;background:#2D3748;color:white;border-radius:6px;font-weight:600;">
+                    @key
+                </div>
+            </GroupHeaderTemplate>
+            <ItemTemplate Context="item">
+                <div style="padding:12px;border-radius:8px;background:@item.Color;color:white;text-align:center;">
+                    <div style="font-size:20px;">@item.Icon</div>
+                    <div style="font-size:13px;margin-top:4px;">@item.Name</div>
+                </div>
+            </ItemTemplate>
+        </VirtualizedGrid>
+    </div>
+    <p style="margin-top:4px;font-size:13px;color:#718096;">Scroll within the box — group headers pin to the top until the next group pushes them out</p>
 </section>
 
 <section class="demo-section">
@@ -113,24 +116,29 @@
 
     List<VirtualizedGridGroup<GridItem>> groupedData = new()
     {
-        new("Fruits", new List<GridItem>
+        new("Fruits", Expand(new List<GridItem>
         {
             new("Apple", "#E53E3E", "🍎"), new("Banana", "#DD6B20", "🍌"),
             new("Cherry", "#C53030", "🍒"), new("Grape", "#805AD5", "🍇"),
             new("Kiwi", "#38A169", "🥝"), new("Mango", "#D69E2E", "🥭"),
-        }),
-        new("Vegetables", new List<GridItem>
+        })),
+        new("Vegetables", Expand(new List<GridItem>
         {
             new("Carrot", "#ED8936", "🥕"), new("Broccoli", "#48BB78", "🥦"),
             new("Corn", "#ECC94B", "🌽"), new("Pepper", "#FC8181", "🌶️"),
             new("Tomato", "#F56565", "🍅"),
-        }),
-        new("Snacks", new List<GridItem>
+        })),
+        new("Snacks", Expand(new List<GridItem>
         {
             new("Cookie", "#B7791F", "🍪"), new("Donut", "#D53F8C", "🍩"),
             new("Popcorn", "#F6E05E", "🍿"), new("Candy", "#F687B3", "🍬"),
-        }),
+        })),
     };
+
+    // repeat the base items so each group is tall enough to scroll past its sticky header
+    static List<GridItem> Expand(List<GridItem> source) => Enumerable.Range(0, 18)
+        .Select(i => source[i % source.Count] with { Name = $"{source[i % source.Count].Name} {i / source.Count + 1}" })
+        .ToList();
 
     List<GridItem> largeDataset = Enumerable.Range(1, 500)
         .Select(i => new GridItem($"#{i}", colors[(i - 1) % colors.Length], icons[(i - 1) % icons.Length]))

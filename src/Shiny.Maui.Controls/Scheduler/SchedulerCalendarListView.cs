@@ -6,10 +6,12 @@ public class SchedulerCalendarListView : ContentView
 {
     readonly CollectionView collectionView;
     readonly ContentView loaderOverlay;
+    readonly ContentView stickyHeader;
     readonly ObservableCollection<CalendarListDayGroup> groups = [];
 
     DateOnly rangeStart;
     DateOnly rangeEnd;
+    int lastFirstVisibleIndex;
     bool isLoadingMore;
     CancellationTokenSource? loadCts;
     PinchGestureRecognizer? pinchGesture;
@@ -28,10 +30,16 @@ public class SchedulerCalendarListView : ContentView
         propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).LoadInitial());
 
     public static readonly BindableProperty EventItemTemplateProperty = BindableProperty.Create(
-        nameof(EventItemTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView));
+        nameof(EventItemTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
+        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).ApplyTemplates());
 
     public static readonly BindableProperty DayHeaderTemplateProperty = BindableProperty.Create(
-        nameof(DayHeaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView));
+        nameof(DayHeaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
+        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).ApplyTemplates());
+
+    public static readonly BindableProperty StickyDayHeadersProperty = BindableProperty.Create(
+        nameof(StickyDayHeaders), typeof(bool), typeof(SchedulerCalendarListView), true,
+        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).UpdateStickyHeader());
 
     public static readonly BindableProperty LoaderTemplateProperty = BindableProperty.Create(
         nameof(LoaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView));
@@ -91,6 +99,12 @@ public class SchedulerCalendarListView : ContentView
     {
         get => (DataTemplate?)GetValue(LoaderTemplateProperty);
         set => SetValue(LoaderTemplateProperty, value);
+    }
+
+    public bool StickyDayHeaders
+    {
+        get => (bool)GetValue(StickyDayHeadersProperty);
+        set => SetValue(StickyDayHeadersProperty, value);
     }
 
     public int DaysPerPage
@@ -173,8 +187,18 @@ public class SchedulerCalendarListView : ContentView
             IsVisible = false
         };
 
+        // input-transparent so pan/scroll gestures over the pinned header reach the list
+        stickyHeader = new ContentView
+        {
+            VerticalOptions = LayoutOptions.Start,
+            InputTransparent = true,
+            CascadeInputTransparent = true,
+            IsVisible = false
+        };
+
         var rootGrid = new Grid();
         rootGrid.Add(collectionView);
+        rootGrid.Add(stickyHeader);
         rootGrid.Add(loaderOverlay);
 
         HorizontalOptions = LayoutOptions.Fill;
@@ -185,11 +209,43 @@ public class SchedulerCalendarListView : ContentView
 
     void ApplyTemplates()
     {
-        collectionView.GroupHeaderTemplate = DayHeaderTemplate
+        var headerTemplate = DayHeaderTemplate
             ?? DefaultTemplates.CreateCalendarListDayHeaderTemplate();
 
+        collectionView.GroupHeaderTemplate = headerTemplate;
         collectionView.ItemTemplate = EventItemTemplate
             ?? DefaultTemplates.CreateCalendarListEventItemTemplate();
+
+        stickyHeader.Content = (View)headerTemplate.CreateContent();
+        UpdateStickyHeader();
+    }
+
+    void UpdateStickyHeader(CalendarListDayGroup? group = null)
+    {
+        group ??= GroupAtScrollIndex(lastFirstVisibleIndex);
+        if (stickyHeader.Content is not null)
+            stickyHeader.Content.BindingContext = group;
+        stickyHeader.IsVisible = StickyDayHeaders && group is not null;
+    }
+
+    CalendarListDayGroup? GroupAtScrollIndex(int index)
+    {
+        if (groups.Count == 0)
+            return null;
+        if (index <= 0)
+            return groups[0];
+
+        // Android reports adapter positions (group headers occupy a slot);
+        // other platforms report item-only indexes
+        var headerSlot = DeviceInfo.Platform == DevicePlatform.Android ? 1 : 0;
+        var pos = 0;
+        foreach (var g in groups)
+        {
+            pos += g.Count + headerSlot;
+            if (index < pos)
+                return g;
+        }
+        return groups[^1];
     }
 
     void UpdateZoomGesture()
@@ -254,6 +310,7 @@ public class SchedulerCalendarListView : ContentView
             foreach (var g in loadedGroups)
                 groups.Add(g);
 
+            UpdateStickyHeader(groups.FirstOrDefault(g => g.Date == SelectedDate) ?? groups.FirstOrDefault());
             ScrollToSelectedDate();
         }
         catch (TaskCanceledException) { }
@@ -290,6 +347,10 @@ public class SchedulerCalendarListView : ContentView
 
     async void OnScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
+        lastFirstVisibleIndex = e.FirstVisibleItemIndex;
+        if (StickyDayHeaders)
+            UpdateStickyHeader();
+
         if (isLoadingMore || Provider == null) return;
         if (e.FirstVisibleItemIndex > 3) return;
         if (MinDate.HasValue && rangeStart <= MinDate.Value) return;

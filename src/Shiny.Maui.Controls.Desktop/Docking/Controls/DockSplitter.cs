@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 
 namespace Shiny.Maui.Controls.Desktop.Docking;
 
@@ -8,6 +9,11 @@ namespace Shiny.Maui.Controls.Desktop.Docking;
 /// </summary>
 public class DockSplitter : ContentView
 {
+    public const double Thickness = 5;
+
+    readonly BoxView bar;
+    double startRatio;
+
     public static readonly BindableProperty OrientationProperty = BindableProperty.Create(
         nameof(Orientation), typeof(DockOrientation), typeof(DockSplitter), DockOrientation.Horizontal);
 
@@ -24,5 +30,69 @@ public class DockSplitter : ContentView
     {
         get => (double)GetValue(RatioProperty);
         set => SetValue(RatioProperty, value);
+    }
+
+    public static readonly BindableProperty IsLockedProperty = BindableProperty.Create(
+        nameof(IsLocked), typeof(bool), typeof(DockSplitter), false);
+
+    public bool IsLocked
+    {
+        get => (bool)GetValue(IsLockedProperty);
+        set => SetValue(IsLockedProperty, value);
+    }
+
+    /// <summary>Raised continuously while dragging with the live ratio.</summary>
+    public event EventHandler<double>? RatioChanging;
+
+    /// <summary>Raised once at the end of a drag with the final ratio.</summary>
+    public event EventHandler<double>? RatioCommitted;
+
+    /// <summary>The extent (width or height) of the area the splitter divides. Set by the host.</summary>
+    public Func<double>? ExtentProvider { get; set; }
+
+    public DockSplitter()
+    {
+        BackgroundColor = Colors.Transparent;
+        bar = new BoxView
+        {
+            Color = Colors.Transparent,
+            CornerRadius = 2
+        };
+        Content = bar;
+
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += OnPan;
+        GestureRecognizers.Add(pan);
+
+        var pointer = new PointerGestureRecognizer();
+        pointer.PointerEntered += (_, _) => { if (!IsLocked) bar.Color = Color.FromRgba(59, 130, 246, 110); };
+        pointer.PointerExited += (_, _) => bar.Color = Colors.Transparent;
+        GestureRecognizers.Add(pointer);
+    }
+
+    void OnPan(object? sender, PanUpdatedEventArgs e)
+    {
+        if (IsLocked) return;
+        var extent = ExtentProvider?.Invoke() ?? 0;
+        if (extent <= 0) return;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                startRatio = Ratio;
+                break;
+            case GestureStatus.Running:
+            {
+                var delta = Orientation == DockOrientation.Horizontal ? e.TotalX : e.TotalY;
+                var ratio = Math.Clamp(startRatio + delta / extent, 0.08, 0.92);
+                Ratio = ratio;
+                RatioChanging?.Invoke(this, ratio);
+                break;
+            }
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                RatioCommitted?.Invoke(this, Ratio);
+                break;
+        }
     }
 }

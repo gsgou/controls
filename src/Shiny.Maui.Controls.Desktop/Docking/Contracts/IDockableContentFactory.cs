@@ -9,5 +9,10 @@ namespace Shiny.Maui.Controls.Desktop.Docking;
 public interface IDockableContentFactory
 {
     string PanelTypeId { get; }
+
+    /// <summary>Human-readable tab title; defaults to the panel type id. Views
+    /// implementing <see cref="IDockableContent"/> override this with their Title.</summary>
+    string DisplayName => PanelTypeId;
+
     Task<View> CreateAsync(string instanceId, CancellationToken ct = default);
 }

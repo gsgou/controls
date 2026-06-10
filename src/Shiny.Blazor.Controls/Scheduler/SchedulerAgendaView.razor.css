@@ -11,6 +11,7 @@
 }
 
 .shiny-agenda-allday {
+    flex: 0 0 auto;
     display: flex;
     gap: 8px;
     padding: 8px 12px;
@@ -38,6 +39,9 @@
 }
 
 .shiny-agenda-datepicker {
+    /* flex-basis auto + no shrink: overflow-x:auto zeroes the automatic
+       minimum size, letting the fixed-height agenda squash this row */
+    flex: 0 0 auto;
     display: flex;
     gap: 4px;
     padding: 8px 12px;

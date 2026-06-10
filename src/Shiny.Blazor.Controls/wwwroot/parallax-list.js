@@ -59,12 +59,22 @@ function update(state) {
 export function update_(scrollEl, options) {
     const state = states.get(scrollEl);
     if (!state) return;
+
+    const changed =
+        (options.factor != null && options.factor !== state.factor) ||
+        (options.headerHeight != null && options.headerHeight !== state.headerHeight) ||
+        (options.minHeaderHeight != null && options.minHeaderHeight !== state.minHeaderHeight) ||
+        (options.collapse != null && !!options.collapse !== state.collapse) ||
+        (options.fade != null && !!options.fade !== state.fade);
+    if (!changed) return;
+
     if (options.factor != null) state.factor = options.factor;
     if (options.headerHeight != null) state.headerHeight = options.headerHeight;
     if (options.minHeaderHeight != null) state.minHeaderHeight = options.minHeaderHeight;
     if (options.collapse != null) state.collapse = !!options.collapse;
     if (options.fade != null) state.fade = !!options.fade;
     state.lastOffset = -1;
+    if (!state.fade) state.heroEl.style.opacity = '';
     update(state);
 }
 

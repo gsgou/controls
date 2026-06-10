@@ -1,7 +1,161 @@
 @namespace Shiny.Blazor.Controls.Kiosk.Docking
 
-<div class="shiny-dock-host" style="@HostStyle">
-    <div class="shiny-dock-host__placeholder">
-        DockHost (v0.1 skeleton)
-    </div>
+<div class="shiny-dock-host" style="@HostStyle" @ref="hostRef">
+    @if (layout is null)
+    {
+        <div class="shiny-dock-host__placeholder">
+            No dock layout loaded
+        </div>
+    }
+    else
+    {
+        var win = layout.MainWindow;
+
+        @if (win.TopRail is not null)
+        {
+            @RenderRail(win.TopRail, DockArea.Top)
+        }
+        @if (win.LeftRail is not null)
+        {
+            @RenderRail(win.LeftRail, DockArea.Left)
+        }
+
+        <div class="shiny-dock-doc">@RenderNode(win.DocumentArea)</div>
+
+        @if (win.RightRail is not null)
+        {
+            @RenderRail(win.RightRail, DockArea.Right)
+        }
+        @if (win.BottomRail is not null)
+        {
+            @RenderRail(win.BottomRail, DockArea.Bottom)
+        }
+
+        @for (var w = 0; w < layout.FloatingWindows.Count; w++)
+        {
+            var windowIndex = w;
+            var fw = layout.FloatingWindows[w];
+            var bounds = fw.Bounds ?? new DockRect(60 + w * 30, 40 + w * 30, 360, 260);
+            <div class="shiny-dock-float"
+                 data-dock-float="@windowIndex"
+                 style="@FloatStyle(bounds)"
+                 @key="fw">
+                <div class="shiny-dock-float__header" data-dock-float-header>
+                    <span class="shiny-dock-float__title">@FloatTitle(fw)</span>
+                    <span class="shiny-dock-float__actions">
+                        <button type="button" class="shiny-dock-float__btn" data-dock-float-btn
+                                title="Dock back into the layout"
+                                @onclick="() => DockFloatingAsync(windowIndex)">⇤</button>
+                        <button type="button" class="shiny-dock-float__btn" data-dock-float-btn
+                                title="Close"
+                                @onclick="() => CloseFloatingAsync(windowIndex)">×</button>
+                    </span>
+                </div>
+                <div class="shiny-dock-float__body">@RenderNode(fw.DocumentArea)</div>
+            </div>
+        }
+    }
 </div>
+
+@code {
+    RenderFragment RenderRail(DockNode node, DockArea area) => __builder =>
+    {
+        var areaName = area.ToString().ToLowerInvariant();
+        @if (IsRailCollapsed(area))
+        {
+            <div class="shiny-dock-railbar shiny-dock-railbar--@areaName">
+                @foreach (var group in GroupsIn(node))
+                {
+                    foreach (var tab in group.Tabs)
+                    {
+                        var captured = tab;
+                        <button type="button" class="shiny-dock-railbar__item"
+                                title="@GetTabTitle(captured)"
+                                @onclick="() => ExpandRailToPanelAsync(area, captured.PanelInstanceId)">
+                            @GetTabTitle(captured)
+                        </button>
+                    }
+                }
+            </div>
+        }
+        else
+        {
+            <div class="shiny-dock-rail shiny-dock-rail--@areaName">@RenderNode(node, area)</div>
+        }
+    };
+
+    RenderFragment RenderNode(DockNode node) => RenderNode(node, null);
+
+    RenderFragment RenderNode(DockNode node, DockArea? rail) => __builder =>
+    {
+        switch (node)
+        {
+            case DockSplit split:
+                var dirClass = split.Orientation == DockOrientation.Horizontal
+                    ? "shiny-dock-split--h"
+                    : "shiny-dock-split--v";
+                <div class="shiny-dock-split @dirClass">
+                    <div class="shiny-dock-split__child" style="@FlexStyle(split.Ratio)">@RenderNode(split.First, rail)</div>
+                    <div class="shiny-dock-split__separator @(IsLocked ? "" : "shiny-dock-split__separator--live")"
+                         data-dock-splitter="@split.RuntimeId"></div>
+                    <div class="shiny-dock-split__child" style="@FlexStyle(1 - split.Ratio)">@RenderNode(split.Second, rail)</div>
+                </div>
+                break;
+
+            case DockGroup group:
+                var activeIndex = Math.Clamp(group.ActiveTabIndex, 0, Math.Max(0, group.Tabs.Count - 1));
+                <div class="shiny-dock-group" data-dock-group="@group.GroupId">
+                    <div class="shiny-dock-tabs" role="tablist" data-dock-tabstrip="@group.GroupId">
+                        @for (var i = 0; i < group.Tabs.Count; i++)
+                        {
+                            var tabIndex = i;
+                            var tab = group.Tabs[i];
+                            <div @key="tab.PanelInstanceId"
+                                 class="shiny-dock-tab @(tabIndex == activeIndex ? "shiny-dock-tab--active" : "")"
+                                 role="tab"
+                                 data-dock-tab="@tab.PanelInstanceId"
+                                 aria-selected="@(tabIndex == activeIndex ? "true" : "false")"
+                                 @onclick="() => ActivateTab(group, tabIndex)">
+                                <span class="shiny-dock-tab__title">@GetTabTitle(tab)</span>
+                                @if (!IsLocked)
+                                {
+                                    <span class="shiny-dock-tab__close"
+                                          title="Close"
+                                          @onclick="() => HidePanelAsync(tab.PanelInstanceId)"
+                                          @onclick:stopPropagation="true">×</span>
+                                }
+                            </div>
+                        }
+                        @if (rail is { } railArea && !IsLocked)
+                        {
+                            <span class="shiny-dock-tabs__spacer"></span>
+                            <button type="button" class="shiny-dock-collapse" title="Collapse"
+                                    @onclick="() => SetRailCollapsedAsync(railArea, true)">−</button>
+                        }
+                    </div>
+                    <div class="shiny-dock-group__content" data-dock-group-content="@group.GroupId">
+                        @for (var i = 0; i < group.Tabs.Count; i++)
+                        {
+                            var tab = group.Tabs[i];
+                            <div @key="tab.PanelInstanceId"
+                                 class="shiny-dock-panel @(i == activeIndex ? "shiny-dock-panel--active" : "")">
+                                @if (fragments.TryGetValue(tab.PanelInstanceId, out var fragment))
+                                {
+                                    @fragment
+                                }
+                                else
+                                {
+                                    <div class="shiny-dock-missing">Unknown panel type '@tab.PanelTypeId'</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+                break;
+
+            default:
+                <div class="shiny-dock-empty"></div>
+                break;
+        }
+    };
+}

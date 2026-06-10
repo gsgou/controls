@@ -21,7 +21,8 @@
     flex: 1;
     padding: 28px 36px;
     max-width: 100%;
-    overflow-x: hidden;
+    /* clip (not hidden) — hidden creates a scroll container, which kills position:sticky in descendants */
+    overflow-x: clip;
 }
 
 #blazor-error-ui {

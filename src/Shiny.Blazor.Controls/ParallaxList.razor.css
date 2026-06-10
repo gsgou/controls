@@ -14,11 +14,12 @@
     -webkit-overflow-scrolling: touch;
 }
 
+/* Sticky pins the hero to the top of the scroll viewport so the JS
+   translate(-offset * factor) moves it at exactly `factor` speed;
+   an in-flow/absolute hero would scroll away on its own and double up. */
 .shiny-parallax-hero {
-    position: absolute;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     width: 100%;
     z-index: 0;
     will-change: transform, opacity;
@@ -27,14 +28,13 @@
 }
 
 /* Hero content gets pointer events back */
-.shiny-parallax-hero > * {
+.shiny-parallax-hero ::deep > * {
     pointer-events: auto;
 }
 
 .shiny-parallax-body {
     position: relative;
     z-index: 1;
-    margin-top: var(--parallax-header-height, 0);
 }
 
 .shiny-parallax-item {

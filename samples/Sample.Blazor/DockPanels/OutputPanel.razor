@@ -1,0 +1,18 @@
+<div style="padding:8px 10px;font-family:ui-monospace,monospace;font-size:11px;line-height:1.7;color:#374151;">
+    @foreach (var line in lines)
+    {
+        <div>@line</div>
+    }
+    <div style="color:#16a34a;">Build succeeded — 0 errors, 0 warnings</div>
+</div>
+
+@code {
+    readonly string[] lines =
+    {
+        "[09:14:01] Restoring packages...",
+        "[09:14:02] Restored Shiny.Blazor.Controls.Kiosk",
+        "[09:14:03] Compiling DockHost.razor...",
+        "[09:14:04] Generating scoped CSS bundle",
+        "[09:14:05] Emitting Sample.Blazor.dll"
+    };
+}

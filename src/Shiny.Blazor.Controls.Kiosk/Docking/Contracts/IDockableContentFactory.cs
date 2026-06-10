@@ -9,5 +9,9 @@ namespace Shiny.Blazor.Controls.Kiosk.Docking;
 public interface IDockableContentFactory
 {
     string PanelTypeId { get; }
+
+    /// <summary>Human-readable tab title; defaults to the panel type id.</summary>
+    string DisplayName => PanelTypeId;
+
     Task<RenderFragment> CreateAsync(string instanceId, CancellationToken ct = default);
 }

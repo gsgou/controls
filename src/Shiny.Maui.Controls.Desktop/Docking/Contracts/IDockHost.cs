@@ -20,4 +20,7 @@ public interface IDockHost
 
     /// <summary>Reset to the default layout supplied at startup.</summary>
     Task ResetLayoutAsync(CancellationToken ct = default);
+
+    /// <summary>Collapse a rail to a slim edge bar of panel titles, or expand it back.</summary>
+    Task SetRailCollapsedAsync(DockArea area, bool collapsed, CancellationToken ct = default);
 }

@@ -19,4 +19,7 @@ public sealed class DockWindowState
 
     /// <summary>Panel instance ID to restore focus to on load.</summary>
     public string? ActivePanelId { get; set; }
+
+    /// <summary>Rails currently collapsed to a slim edge bar of panel titles.</summary>
+    public List<DockArea> CollapsedRails { get; set; } = new();
 }

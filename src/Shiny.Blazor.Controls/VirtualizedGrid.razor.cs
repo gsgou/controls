@@ -39,6 +39,30 @@ public partial class VirtualizedGrid<TItem>
     [Parameter(CaptureUnmatchedValues = true)]
     public IDictionary<string, object>? AdditionalAttributes { get; set; }
 
+    // Virtualize requires a stable collection and items that stack vertically, so we
+    // virtualize rows (chunks of ColumnCount) rather than individual grid cells
+    List<TItem[]> itemRows = new();
+    IReadOnlyList<TItem>? lastRowSource;
+    int lastRowColumns;
+    int lastRowCount;
+
+    protected override void OnParametersSet()
+    {
+        if (!EnableVirtualization)
+            return;
+
+        var columns = Math.Max(1, ColumnCount);
+        var count = Items?.Count ?? 0;
+
+        if (ReferenceEquals(lastRowSource, Items) && lastRowColumns == columns && lastRowCount == count)
+            return;
+
+        lastRowSource = Items;
+        lastRowColumns = columns;
+        lastRowCount = count;
+        itemRows = Items is null ? new() : Items.Chunk(columns).ToList();
+    }
+
     string ContainerStyle => $"--vgrid-spacing:{ItemSpacing}px;--vgrid-columns:{ColumnCount};";
 
     string GridStyle =>

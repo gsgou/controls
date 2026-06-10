@@ -5,13 +5,30 @@
              x:Class="Sample.Features.Docking.DockingPage"
              Title="Docking"
              AutomationId="DockingPage">
-    <Grid RowDefinitions="Auto,*" Padding="0">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="0">
         <Label Grid.Row="0"
-               Text="Visual-Studio-style docking host with tabbed groups, splitters, auto-hide rails, and tear-off floating windows."
-               Padding="16"
+               Text="Visual-Studio-style docking. Drag tabs between groups (middle merges, edges split, empty space tears off a floating pane); drag the separators to resize."
+               Padding="16,12"
                FontSize="13"
                TextColor="Gray" />
 
-        <docking:DockHostView Grid.Row="1" />
+        <HorizontalStackLayout Grid.Row="1" Padding="16,0,16,8" Spacing="8">
+            <Button Text="Show Explorer" FontSize="12" Clicked="OnShowExplorer" />
+            <Button Text="Show Output" FontSize="12" Clicked="OnShowOutput" />
+            <Button Text="Reset" FontSize="12" Clicked="OnReset" />
+            <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                <CheckBox x:Name="LockCheck" CheckedChanged="OnLockChanged" />
+                <Label Text="Lock" FontSize="12" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </HorizontalStackLayout>
+
+        <docking:DockHostView x:Name="Dock" Grid.Row="2" />
+
+        <Label x:Name="Status"
+               Grid.Row="3"
+               Padding="16,8"
+               FontSize="11"
+               TextColor="Gray"
+               Text="Tap tabs to switch panels." />
     </Grid>
 </ContentPage>

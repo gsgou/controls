@@ -13,4 +13,7 @@ public sealed class DockWindowState
     public DockNode? BottomRail { get; set; }
 
     public string? ActivePanelId { get; set; }
+
+    /// <summary>Rails currently collapsed to a slim edge bar of panel titles.</summary>
+    public List<DockArea> CollapsedRails { get; set; } = new();
 }

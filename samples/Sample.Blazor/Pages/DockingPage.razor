@@ -1,13 +1,125 @@
 @page "/docking"
 @using Shiny.Blazor.Controls.Kiosk.Docking
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Docking</PageTitle>
 
 <div style="padding: 16px;">
     <h2>Docking</h2>
     <p style="color: gray; font-size: 13px;">
-        Visual-Studio-style docking host. v0.1 skeleton — real layout rendering, drag-drop,
-        splitters, auto-hide, and in-app floating panels land in v0.2+.
+        Visual-Studio-style docking host. Drag tabs between groups (drop on the middle to merge,
+        on an edge to split, on empty space to tear off a floating window), drag the separators
+        to resize, and the layout persists to localStorage across reloads.
     </p>
-    <div style="height: 480px; border: 1px solid #ddd; border-radius: 4px;">
-        <DockHost />
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+        <button @onclick="ShowExplorer">Show Explorer (left)</button>
+        <button @onclick="ShowOutput">Show Output (bottom)</button>
+        <button @onclick="ResetLayout">Reset layout</button>
+        <button @onclick="ClearSaved">Clear saved layout</button>
+        <label style="font-size:13px;">
+            <input type="checkbox" @bind="locked" /> Lock layout
+        </label>
     </div>
+
+    <div style="height: 560px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden;">
+        <DockHost @ref="host" InitialLayout="@initialLayout" IsLocked="@locked" LayoutStore="@store" />
+    </div>
+
+    <p class="status" style="margin-top:10px;font-size:12px;color:#666;">@status</p>
 </div>
+
+@code {
+    DockHost? host;
+    LocalStorageDockLayoutStore? store;
+    bool locked;
+    bool subscribed;
+    string status = "Click tabs to switch panels; × closes a panel.";
+
+    protected override void OnInitialized()
+        => store = new LocalStorageDockLayoutStore(JS);
+
+    async Task ClearSaved()
+    {
+        if (store != null) await store.ClearAsync();
+        status = "Saved layout cleared — reload to start from the initial layout.";
+    }
+
+    readonly DockRoot initialLayout = new()
+    {
+        MainWindow = new DockWindowState
+        {
+            LeftRail = new DockGroup
+            {
+                Tabs =
+                {
+                    new DockTab { PanelTypeId = "explorer" }
+                }
+            },
+            RightRail = new DockGroup
+            {
+                Tabs =
+                {
+                    new DockTab { PanelTypeId = "properties" }
+                }
+            },
+            DocumentArea = new DockSplit
+            {
+                Orientation = DockOrientation.Vertical,
+                Ratio = 0.66,
+                First = new DockGroup
+                {
+                    Tabs =
+                    {
+                        new DockTab { PanelTypeId = "editor" },
+                        new DockTab { PanelTypeId = "readme" }
+                    }
+                },
+                Second = new DockGroup
+                {
+                    Tabs =
+                    {
+                        new DockTab { PanelTypeId = "output" },
+                        new DockTab { PanelTypeId = "errors" }
+                    }
+                }
+            }
+        }
+    };
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && host is not null && !subscribed)
+        {
+            subscribed = true;
+            host.Events.PanelActivated += OnPanelActivated;
+            host.Events.LayoutChanged += OnLayoutChanged;
+        }
+    }
+
+    void OnPanelActivated(object? sender, PanelActivatedEventArgs e)
+    {
+        status = $"Activated: {e.PanelTypeId}";
+        StateHasChanged();
+    }
+
+    void OnLayoutChanged(object? sender, LayoutChangedEventArgs e)
+    {
+        status = $"Layout changed: {e.Reason}";
+        StateHasChanged();
+    }
+
+    Task ShowExplorer() => host?.ShowPanelAsync("explorer", DockArea.Left) ?? Task.CompletedTask;
+    Task ShowOutput() => host?.ShowPanelAsync("output", DockArea.Bottom) ?? Task.CompletedTask;
+    Task ResetLayout() => host?.ResetLayoutAsync() ?? Task.CompletedTask;
+
+    public void Dispose()
+    {
+        if (host is not null && subscribed)
+        {
+            host.Events.PanelActivated -= OnPanelActivated;
+            host.Events.LayoutChanged -= OnLayoutChanged;
+        }
+    }
+}

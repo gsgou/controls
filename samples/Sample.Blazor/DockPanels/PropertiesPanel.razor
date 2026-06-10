@@ -1,0 +1,24 @@
+<div style="padding:10px;font-size:12px;">
+    <table style="width:100%;border-collapse:collapse;">
+        @foreach (var (key, value) in props)
+        {
+            <tr>
+                <td style="padding:4px 8px;color:#6b7280;border-bottom:1px solid #f3f4f6;">@key</td>
+                <td style="padding:4px 8px;border-bottom:1px solid #f3f4f6;">@value</td>
+            </tr>
+        }
+    </table>
+</div>
+
+@code {
+    readonly (string, string)[] props =
+    {
+        ("Name", "DockHost"),
+        ("Width", "Auto"),
+        ("Height", "480px"),
+        ("Background", "#F3F4F6"),
+        ("IsLocked", "False"),
+        ("Panels", "6"),
+        ("SchemaVersion", "1")
+    };
+}
