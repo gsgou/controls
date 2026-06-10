@@ -21,24 +21,26 @@ public static class DockingServiceCollectionExtensions
     /// Registers a Razor component as a dock panel under <paramref name="panelTypeId"/>.
     /// </summary>
     public static IServiceCollection AddDockPanel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TComponent>(
-        this IServiceCollection services, string panelTypeId, string? displayName = null)
+        this IServiceCollection services, string panelTypeId, string? displayName = null, string? icon = null)
         where TComponent : ComponentBase
     {
-        services.AddSingleton<IDockableContentFactory>(_ => new ComponentPanelFactory<TComponent>(panelTypeId, displayName));
+        services.AddSingleton<IDockableContentFactory>(_ => new ComponentPanelFactory<TComponent>(panelTypeId, displayName, icon));
         return services;
     }
 
     sealed class ComponentPanelFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TComponent>
         : IDockableContentFactory where TComponent : ComponentBase
     {
-        public ComponentPanelFactory(string panelTypeId, string? displayName)
+        public ComponentPanelFactory(string panelTypeId, string? displayName, string? icon)
         {
             PanelTypeId = panelTypeId;
             DisplayName = displayName ?? panelTypeId;
+            Icon = icon;
         }
 
         public string PanelTypeId { get; }
         public string DisplayName { get; }
+        public string? Icon { get; }
 
         public Task<RenderFragment> CreateAsync(string instanceId, CancellationToken ct = default)
         {

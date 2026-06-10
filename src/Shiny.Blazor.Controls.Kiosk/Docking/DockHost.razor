@@ -11,22 +11,22 @@
     {
         var win = layout.MainWindow;
 
-        @if (win.TopRail is not null)
+        @if (win.TopRail is not null || HasCollapsed(DockArea.Top))
         {
             @RenderRail(win.TopRail, DockArea.Top)
         }
-        @if (win.LeftRail is not null)
+        @if (win.LeftRail is not null || HasCollapsed(DockArea.Left))
         {
             @RenderRail(win.LeftRail, DockArea.Left)
         }
 
         <div class="shiny-dock-doc">@RenderNode(win.DocumentArea)</div>
 
-        @if (win.RightRail is not null)
+        @if (win.RightRail is not null || HasCollapsed(DockArea.Right))
         {
             @RenderRail(win.RightRail, DockArea.Right)
         }
-        @if (win.BottomRail is not null)
+        @if (win.BottomRail is not null || HasCollapsed(DockArea.Bottom))
         {
             @RenderRail(win.BottomRail, DockArea.Bottom)
         }
@@ -58,35 +58,46 @@
 </div>
 
 @code {
-    RenderFragment RenderRail(DockNode node, DockArea area) => __builder =>
+    RenderFragment RenderRail(DockNode? node, DockArea area) => __builder =>
     {
         var areaName = area.ToString().ToLowerInvariant();
-        @if (IsRailCollapsed(area))
-        {
-            <div class="shiny-dock-railbar shiny-dock-railbar--@areaName">
-                @foreach (var group in GroupsIn(node))
-                {
-                    foreach (var tab in group.Tabs)
+        var collapsed = CollapsedFor(area);
+        <div class="shiny-dock-railwrap shiny-dock-railwrap--@areaName">
+            @if (collapsed.Count > 0)
+            {
+                <div class="shiny-dock-railbar shiny-dock-railbar--@areaName">
+                    @foreach (var item in collapsed)
                     {
-                        var captured = tab;
+                        var captured = item;
                         <button type="button" class="shiny-dock-railbar__item"
-                                title="@GetTabTitle(captured)"
-                                @onclick="() => ExpandRailToPanelAsync(area, captured.PanelInstanceId)">
-                            @GetTabTitle(captured)
+                                title="@GetTabTitle(captured.Tab)"
+                                @onclick="() => RestoreCollapsedAsync(captured)">
+                            @if (GetTabIcon(captured.Tab) is { } barIcon)
+                            {
+                                <span class="shiny-dock-railbar__icon">@barIcon</span>
+                            }
+                            <span class="shiny-dock-railbar__text">@GetTabTitle(captured.Tab)</span>
                         </button>
                     }
-                }
-            </div>
-        }
-        else
+                </div>
+            }
+            @if (node is not null)
+            {
+                <div class="shiny-dock-rail shiny-dock-rail--@areaName" style="@RailSizeStyle(area)">@RenderNode(node, area)</div>
+            }
+        </div>
+        @if (node is not null)
         {
-            <div class="shiny-dock-rail shiny-dock-rail--@areaName">@RenderNode(node, area)</div>
+            <div class="shiny-dock-rail-rsz shiny-dock-rail-rsz--@areaName @(IsLocked ? "" : "shiny-dock-rail-rsz--live")"
+                 data-dock-rail-resizer="@(IsLocked ? null : areaName)"></div>
         }
     };
 
-    RenderFragment RenderNode(DockNode node) => RenderNode(node, null);
+    RenderFragment RenderNode(DockNode node) => RenderNode(node, null, false);
 
-    RenderFragment RenderNode(DockNode node, DockArea? rail) => __builder =>
+    RenderFragment RenderNode(DockNode node, DockArea? rail) => RenderNode(node, rail, false);
+
+    RenderFragment RenderNode(DockNode node, DockArea? rail, bool inSplit) => __builder =>
     {
         switch (node)
         {
@@ -94,17 +105,31 @@
                 var dirClass = split.Orientation == DockOrientation.Horizontal
                     ? "shiny-dock-split--h"
                     : "shiny-dock-split--v";
+                var firstCollapsed = split.First is DockGroup { IsCollapsed: true };
+                var secondCollapsed = split.Second is DockGroup { IsCollapsed: true };
+                var anyCollapsed = firstCollapsed || secondCollapsed;
                 <div class="shiny-dock-split @dirClass">
-                    <div class="shiny-dock-split__child" style="@FlexStyle(split.Ratio)">@RenderNode(split.First, rail)</div>
-                    <div class="shiny-dock-split__separator @(IsLocked ? "" : "shiny-dock-split__separator--live")"
-                         data-dock-splitter="@split.RuntimeId"></div>
-                    <div class="shiny-dock-split__child" style="@FlexStyle(1 - split.Ratio)">@RenderNode(split.Second, rail)</div>
+                    <div class="shiny-dock-split__child"
+                         style="@(firstCollapsed ? "flex:0 0 auto;" : anyCollapsed ? "flex:1 1 0%;" : FlexStyle(split.Ratio))">@RenderNode(split.First, rail, true)</div>
+                    @if (anyCollapsed)
+                    {
+                        @* no resizing against a collapsed pane *@
+                        <div class="shiny-dock-split__separator"></div>
+                    }
+                    else
+                    {
+                        <div class="shiny-dock-split__separator @(IsLocked ? "" : "shiny-dock-split__separator--live")"
+                             data-dock-splitter="@split.RuntimeId"></div>
+                    }
+                    <div class="shiny-dock-split__child"
+                         style="@(secondCollapsed ? "flex:0 0 auto;" : anyCollapsed ? "flex:1 1 0%;" : FlexStyle(1 - split.Ratio))">@RenderNode(split.Second, rail, true)</div>
                 </div>
                 break;
 
             case DockGroup group:
                 var activeIndex = Math.Clamp(group.ActiveTabIndex, 0, Math.Max(0, group.Tabs.Count - 1));
-                <div class="shiny-dock-group" data-dock-group="@group.GroupId">
+                <div class="shiny-dock-group @(group.IsCollapsed ? "shiny-dock-group--collapsed" : "")"
+                     data-dock-group="@group.GroupId">
                     <div class="shiny-dock-tabs" role="tablist" data-dock-tabstrip="@group.GroupId">
                         @for (var i = 0; i < group.Tabs.Count; i++)
                         {
@@ -116,6 +141,10 @@
                                  data-dock-tab="@tab.PanelInstanceId"
                                  aria-selected="@(tabIndex == activeIndex ? "true" : "false")"
                                  @onclick="() => ActivateTab(group, tabIndex)">
+                                @if (GetTabIcon(tab) is { } tabIcon)
+                                {
+                                    <span class="shiny-dock-tab__icon">@tabIcon</span>
+                                }
                                 <span class="shiny-dock-tab__title">@GetTabTitle(tab)</span>
                                 @if (!IsLocked)
                                 {
@@ -126,11 +155,22 @@
                                 }
                             </div>
                         }
-                        @if (rail is { } railArea && !IsLocked)
+                        @if (!IsLocked)
                         {
-                            <span class="shiny-dock-tabs__spacer"></span>
-                            <button type="button" class="shiny-dock-collapse" title="Collapse"
-                                    @onclick="() => SetRailCollapsedAsync(railArea, true)">−</button>
+                            @* one collapse button, collapsing toward where the panel is docked *@
+                            @if (rail is { } railArea)
+                            {
+                                <span class="shiny-dock-tabs__spacer"></span>
+                                <button type="button" class="shiny-dock-collapse" title="Collapse panel"
+                                        @onclick="() => CollapseActiveTabAsync(railArea, group)">@RailCollapseGlyph(railArea)</button>
+                            }
+                            else if (inSplit || group.IsCollapsed)
+                            {
+                                <span class="shiny-dock-tabs__spacer"></span>
+                                <button type="button" class="shiny-dock-collapse"
+                                        title="@(group.IsCollapsed ? "Expand panel" : "Collapse panel")"
+                                        @onclick="() => ToggleGroupCollapsedAsync(group)">@(group.IsCollapsed ? "▸" : "▾")</button>
+                            }
                         }
                     </div>
                     <div class="shiny-dock-group__content" data-dock-group-content="@group.GroupId">
@@ -154,7 +194,9 @@
                 break;
 
             default:
-                <div class="shiny-dock-empty"></div>
+                <div class="shiny-dock-empty" data-dock-empty>
+                    <span class="shiny-dock-empty__hint">Drop a panel here</span>
+                </div>
                 break;
         }
     };

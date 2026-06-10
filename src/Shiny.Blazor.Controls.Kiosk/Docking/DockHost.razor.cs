@@ -108,10 +108,37 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
         if (captureAsPristine || pristineJson is null)
             pristineJson = InitialLayout is not null ? DockSerialization.Serialize(Migrate(InitialLayout)) : json;
         layout = DockSerialization.Deserialize(json)!;
+        ConvertLegacyCollapsedRails();
         fragments.Clear();
         await ResolveFragmentsAsync(ct);
         events.RaiseLayoutChanged(new LayoutChangedEventArgs { Snapshot = Snapshot(), Reason = "load" });
         StateHasChanged();
+    }
+
+    // older layouts collapsed whole rails via CollapsedRails — convert to per-panel entries
+    void ConvertLegacyCollapsedRails()
+    {
+        var win = layout!.MainWindow;
+        foreach (var area in win.CollapsedRails.ToList())
+        {
+            var node = area switch
+            {
+                DockArea.Top => win.TopRail,
+                DockArea.Right => win.RightRail,
+                DockArea.Bottom => win.BottomRail,
+                _ => win.LeftRail
+            };
+            foreach (var tab in GroupsIn(node).SelectMany(g => g.Tabs))
+                win.CollapsedTabs.Add(new DockCollapsedPanel { Area = area, Tab = tab });
+            switch (area)
+            {
+                case DockArea.Top: win.TopRail = null; break;
+                case DockArea.Right: win.RightRail = null; break;
+                case DockArea.Bottom: win.BottomRail = null; break;
+                default: win.LeftRail = null; break;
+            }
+        }
+        win.CollapsedRails.Clear();
     }
 
     DockRoot Migrate(DockRoot root)
@@ -148,11 +175,32 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
             return;
         }
 
+        var collapsedExisting = layout.MainWindow.CollapsedTabs
+            .FirstOrDefault(c => c.Tab.PanelTypeId == panelTypeId);
+        if (collapsedExisting is not null)
+        {
+            await RestoreCollapsedAsync(collapsedExisting);
+            return;
+        }
+
         var tab = new DockTab { PanelTypeId = panelTypeId };
         await ResolveFragmentAsync(tab, ct);
 
-        var win = layout.MainWindow;
-        var rail = preferredArea switch
+        DockIntoRail(preferredArea, tab);
+        layout.MainWindow.ActivePanelId = tab.PanelInstanceId;
+        OnLayoutMutated("show-panel");
+        events.RaisePanelActivated(new PanelActivatedEventArgs
+        {
+            PanelInstanceId = tab.PanelInstanceId,
+            PanelTypeId = tab.PanelTypeId
+        });
+        StateHasChanged();
+    }
+
+    void DockIntoRail(DockArea area, DockTab tab)
+    {
+        var win = layout!.MainWindow;
+        var rail = area switch
         {
             DockArea.Top => win.TopRail,
             DockArea.Right => win.RightRail,
@@ -167,29 +215,31 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
         }
         else
         {
-            rail = new DockGroup { Tabs = { tab } };
-            switch (preferredArea)
+            DockNode newRail = new DockGroup { Tabs = { tab } };
+            switch (area)
             {
-                case DockArea.Top: win.TopRail = rail; break;
-                case DockArea.Right: win.RightRail = rail; break;
-                case DockArea.Bottom: win.BottomRail = rail; break;
-                default: win.LeftRail = rail; break;
+                case DockArea.Top: win.TopRail = newRail; break;
+                case DockArea.Right: win.RightRail = newRail; break;
+                case DockArea.Bottom: win.BottomRail = newRail; break;
+                default: win.LeftRail = newRail; break;
             }
         }
-
-        win.ActivePanelId = tab.PanelInstanceId;
-        OnLayoutMutated("show-panel");
-        events.RaisePanelActivated(new PanelActivatedEventArgs
-        {
-            PanelInstanceId = tab.PanelInstanceId,
-            PanelTypeId = tab.PanelTypeId
-        });
-        StateHasChanged();
     }
 
     public Task HidePanelAsync(string panelInstanceId, CancellationToken ct = default)
     {
         if (layout is null) return Task.CompletedTask;
+
+        var collapsedEntry = layout.MainWindow.CollapsedTabs
+            .FirstOrDefault(c => c.Tab.PanelInstanceId == panelInstanceId);
+        if (collapsedEntry is not null)
+        {
+            layout.MainWindow.CollapsedTabs.Remove(collapsedEntry);
+            fragments.Remove(panelInstanceId);
+            OnLayoutMutated("hide-panel");
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
 
         foreach (var group in AllGroups())
         {
@@ -232,29 +282,141 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
         StateHasChanged();
     }
 
-    public Task SetRailCollapsedAsync(DockArea area, bool collapsed, CancellationToken ct = default)
+    /// <summary>Collapse or restore every panel on a rail at once. Individual panels
+    /// collapse via their tab-strip button; this is the bulk/programmatic form.</summary>
+    public async Task SetRailCollapsedAsync(DockArea area, bool collapsed, CancellationToken ct = default)
     {
-        if (layout is null) return Task.CompletedTask;
-        var rails = layout.MainWindow.CollapsedRails;
-        if (collapsed && !rails.Contains(area))
-            rails.Add(area);
-        else if (!collapsed)
-            rails.Remove(area);
+        if (layout is null) return;
+        var win = layout.MainWindow;
+
+        if (collapsed)
+        {
+            var node = area switch
+            {
+                DockArea.Top => win.TopRail,
+                DockArea.Right => win.RightRail,
+                DockArea.Bottom => win.BottomRail,
+                _ => win.LeftRail
+            };
+            var tabs = GroupsIn(node).SelectMany(g => g.Tabs).ToList();
+            if (tabs.Count == 0) return;
+            foreach (var tab in tabs)
+                win.CollapsedTabs.Add(new DockCollapsedPanel { Area = area, Tab = tab });
+            switch (area)
+            {
+                case DockArea.Top: win.TopRail = null; break;
+                case DockArea.Right: win.RightRail = null; break;
+                case DockArea.Bottom: win.BottomRail = null; break;
+                default: win.LeftRail = null; break;
+            }
+            OnLayoutMutated("rail-collapse");
+            StateHasChanged();
+        }
         else
-            return Task.CompletedTask;
-        OnLayoutMutated(collapsed ? "rail-collapse" : "rail-expand");
+        {
+            var items = CollapsedFor(area);
+            if (items.Count == 0) return;
+            foreach (var item in items)
+            {
+                win.CollapsedTabs.Remove(item);
+                await ResolveFragmentAsync(item.Tab, ct);
+                DockIntoRail(area, item.Tab);
+            }
+            OnLayoutMutated("rail-expand");
+            StateHasChanged();
+        }
+    }
+
+    Task CollapseActiveTabAsync(DockArea area, DockGroup group)
+    {
+        if (layout is null || group.Tabs.Count == 0) return Task.CompletedTask;
+        var idx = Math.Clamp(group.ActiveTabIndex, 0, group.Tabs.Count - 1);
+        var tab = group.Tabs[idx];
+        group.Tabs.RemoveAt(idx);
+        // the next tab becomes active; the group stays expanded while tabs remain
+        group.ActiveTabIndex = Math.Clamp(idx, 0, Math.Max(0, group.Tabs.Count - 1));
+        layout.MainWindow.CollapsedTabs.Add(new DockCollapsedPanel { Area = area, Tab = tab });
+        SimplifyAll();
+        OnLayoutMutated("panel-collapse");
         StateHasChanged();
         return Task.CompletedTask;
     }
 
-    bool IsRailCollapsed(DockArea area)
-        => layout?.MainWindow.CollapsedRails.Contains(area) == true;
-
-    async Task ExpandRailToPanelAsync(DockArea area, string panelInstanceId)
+    async Task RestoreCollapsedAsync(DockCollapsedPanel item)
     {
-        await SetRailCollapsedAsync(area, false);
-        await ActivatePanelAsync(panelInstanceId);
+        if (layout is null) return;
+        layout.MainWindow.CollapsedTabs.Remove(item);
+        await ResolveFragmentAsync(item.Tab, CancellationToken.None);
+        DockIntoRail(item.Area, item.Tab);
+        OnLayoutMutated("panel-expand");
+        await ActivatePanelAsync(item.Tab.PanelInstanceId);
+        StateHasChanged();
     }
+
+    List<DockCollapsedPanel> CollapsedFor(DockArea area)
+        => layout?.MainWindow.CollapsedTabs.Where(c => c.Area == area).ToList() ?? new();
+
+    bool HasCollapsed(DockArea area)
+        => layout?.MainWindow.CollapsedTabs.Any(c => c.Area == area) == true;
+
+    public Task SetGroupCollapsedAsync(string groupId, bool collapsed, CancellationToken ct = default)
+    {
+        var group = AllGroups().FirstOrDefault(g => g.GroupId == groupId);
+        if (group is null || group.IsCollapsed == collapsed) return Task.CompletedTask;
+        group.IsCollapsed = collapsed;
+        OnLayoutMutated(collapsed ? "group-collapse" : "group-expand");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    Task ToggleGroupCollapsedAsync(DockGroup group)
+        => SetGroupCollapsedAsync(group.GroupId, !group.IsCollapsed);
+
+    double RailSize(DockArea area)
+    {
+        var win = layout!.MainWindow;
+        return area switch
+        {
+            DockArea.Left => win.LeftRailSize ?? 230,
+            DockArea.Right => win.RightRailSize ?? 230,
+            DockArea.Top => win.TopRailSize ?? 170,
+            _ => win.BottomRailSize ?? 180
+        };
+    }
+
+    string RailSizeStyle(DockArea area)
+    {
+        var size = RailSize(area).ToString("0.##", CultureInfo.InvariantCulture);
+        return area is DockArea.Left or DockArea.Right
+            ? $"width:{size}px;"
+            : $"height:{size}px;";
+    }
+
+    [JSInvokable]
+    public void OnRailResizedJs(string areaName, double size)
+    {
+        if (IsLocked || layout is null) return;
+        if (!Enum.TryParse<DockArea>(areaName, ignoreCase: true, out var area)) return;
+        size = Math.Clamp(size, 80, 1200);
+        var win = layout.MainWindow;
+        switch (area)
+        {
+            case DockArea.Left: win.LeftRailSize = size; break;
+            case DockArea.Right: win.RightRailSize = size; break;
+            case DockArea.Top: win.TopRailSize = size; break;
+            default: win.BottomRailSize = size; break;
+        }
+        OnLayoutMutated("rail-resize");
+        StateHasChanged();
+    }
+
+    static string RailCollapseGlyph(DockArea area) => area switch
+    {
+        DockArea.Left => "◂",
+        DockArea.Right => "▸",
+        DockArea.Top => "▴",
+        _ => "▾"
+    };
 
     // ----------------------------------------------------------------- JS callbacks
     [JSInvokable]
@@ -316,6 +478,14 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
                 targetGroup.ActiveTabIndex = targetGroup.Tabs.Count - 1;
                 break;
             }
+            // dropped on an empty well (the document area with no panels left)
+            case DockZone.Center:
+            {
+                if (layout.MainWindow.DocumentArea is not DockEmpty) return;
+                sourceGroup.Tabs.Remove(tab);
+                layout.MainWindow.DocumentArea = new DockGroup { Tabs = { tab } };
+                break;
+            }
             case DockZone.Left or DockZone.Right or DockZone.Top or DockZone.Bottom when targetGroup is not null:
             {
                 // splitting yourself when you're the only tab is a no-op
@@ -340,6 +510,19 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
                     split.Second = newGroup;
                 }
                 ReplaceNode(targetGroup, split);
+                break;
+            }
+            // dropped on a host edge band → dock into (or re-create) that rail
+            case DockZone.Left or DockZone.Right or DockZone.Top or DockZone.Bottom:
+            {
+                sourceGroup.Tabs.Remove(tab);
+                DockIntoRail(zone switch
+                {
+                    DockZone.Top => DockArea.Top,
+                    DockZone.Right => DockArea.Right,
+                    DockZone.Bottom => DockArea.Bottom,
+                    _ => DockArea.Left
+                }, tab);
                 break;
             }
             case DockZone.TearOff:
@@ -493,6 +676,11 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
     void ActivateTab(DockGroup group, int index)
     {
         if (index < 0 || index >= group.Tabs.Count) return;
+        if (group.IsCollapsed)
+        {
+            group.IsCollapsed = false;
+            OnLayoutMutated("group-expand");
+        }
         group.ActiveTabIndex = index;
         group.FocusHistory.Remove(index);
         group.FocusHistory.Add(index);
@@ -515,6 +703,9 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
 
     string GetTabTitle(DockTab tab)
         => registry?.Resolve(tab.PanelTypeId)?.DisplayName ?? tab.PanelTypeId;
+
+    string? GetTabIcon(DockTab tab)
+        => registry?.Resolve(tab.PanelTypeId)?.Icon;
 
     static string FlexStyle(double ratio)
         => $"flex:{ratio.ToString("0.####", CultureInfo.InvariantCulture)} 1 0%;";
@@ -627,6 +818,14 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
             else
                 layout.FloatingWindows[i].DocumentArea = area;
         }
+
+        // a group left alone in a document well has nothing to collapse against —
+        // auto-expand so it can't get stuck as a strip-only sliver
+        if (win.DocumentArea is DockGroup lone)
+            lone.IsCollapsed = false;
+        foreach (var fw in layout.FloatingWindows)
+            if (fw.DocumentArea is DockGroup floatLone)
+                floatLone.IsCollapsed = false;
     }
 
     static DockNode? Simplify(DockNode? node)

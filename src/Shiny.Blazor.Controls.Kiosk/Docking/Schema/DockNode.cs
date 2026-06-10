@@ -27,6 +27,9 @@ public sealed class DockGroup : DockNode
     public List<DockTab> Tabs { get; set; } = new();
     public int ActiveTabIndex { get; set; }
     public List<int> FocusHistory { get; set; } = new();
+
+    /// <summary>Collapsed groups render only their tab strip; activating a tab expands.</summary>
+    public bool IsCollapsed { get; set; }
 }
 
 public sealed class DockEmpty : DockNode

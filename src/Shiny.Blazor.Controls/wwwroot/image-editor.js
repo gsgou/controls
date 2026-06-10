@@ -178,8 +178,9 @@ export async function exportImage(root, format, quality, targetWidth, targetHeig
     const state = states.get(root);
     if (!state || !state.image) return new Uint8Array(0);
 
-    const w = targetWidth || state.image.naturalWidth;
-    const h = targetHeight || state.image.naturalHeight;
+    const eff = computeEffective(state.image, state.actions);
+    const w = targetWidth || Math.max(1, Math.round(eff.needsSwap ? eff.sh : eff.sw));
+    const h = targetHeight || Math.max(1, Math.round(eff.needsSwap ? eff.sw : eff.sh));
 
     const offscreen = document.createElement('canvas');
     offscreen.width = w;
@@ -240,10 +241,6 @@ function redraw(state) {
         return;
     }
 
-    // Calculate fit rect
-    const ir = calculateFitRect(state.image.naturalWidth, state.image.naturalHeight, w, h);
-    state.imageRect = ir;
-
     // Apply view transform
     const cx = w / 2, cy = h / 2;
     const vt = state.viewTransform;
@@ -251,8 +248,10 @@ function redraw(state) {
     ctx.scale(vt.scale, vt.scale);
     ctx.translate(-cx, -cy);
 
-    // Draw image with all committed actions
-    replayActions(ctx, state.image, state.actions, w, h, ir);
+    // Draw image with all committed actions; the returned rect is where the
+    // (cropped/rotated) image actually landed, which pointer handlers need
+    const ir = replayActions(ctx, state.image, state.actions, w, h);
+    state.imageRect = ir;
 
     // Draw in-progress crop overlay
     if (state.mode === 'crop' && state.cropRect) {
@@ -272,61 +271,68 @@ function redraw(state) {
     ctx.restore();
 }
 
-function replayActions(ctx, image, actions, canvasW, canvasH, ir) {
-    if (!ir) {
-        ir = calculateFitRect(image.naturalWidth, image.naturalHeight, canvasW, canvasH);
-    }
+function computeEffective(image, actions) {
+    // Cumulative crop as a normalized source-image rect, plus total rotation.
+    // Crop rects are captured in displayed (possibly rotated) space, so each
+    // one is mapped back through the rotation in effect when it was applied.
+    let src = { x: 0, y: 0, w: 1, h: 1 };
+    let rotation = 0;
 
-    let currentRect = { ...ir };
-    let cumulativeRotation = 0;
-
-    // First pass: compute effective crop & rotation
     for (const action of actions) {
         if (action.type === 'rotate') {
-            cumulativeRotation = (cumulativeRotation + action.angle) % 360;
-            if (cumulativeRotation < 0) cumulativeRotation += 360;
+            rotation = ((rotation + action.angle) % 360 + 360) % 360;
         } else if (action.type === 'crop') {
-            const c = action.rect;
-            currentRect = {
-                x: currentRect.x + c.x * currentRect.w,
-                y: currentRect.y + c.y * currentRect.h,
-                w: c.w * currentRect.w,
-                h: c.h * currentRect.h
+            const m = mapCropToSource(action.rect, rotation);
+            src = {
+                x: src.x + m.x * src.w,
+                y: src.y + m.y * src.h,
+                w: m.w * src.w,
+                h: m.h * src.h
             };
         }
     }
 
-    // Draw image with rotation
-    const needsSwap = Math.abs(cumulativeRotation % 180 - 90) < 0.1;
-    let drawRect = currentRect;
-    if (needsSwap) {
-        const nw = currentRect.h, nh = currentRect.w;
-        drawRect = {
-            x: currentRect.x + currentRect.w / 2 - nw / 2,
-            y: currentRect.y + currentRect.h / 2 - nh / 2,
-            w: nw, h: nh
-        };
+    return {
+        sx: src.x * image.naturalWidth,
+        sy: src.y * image.naturalHeight,
+        sw: src.w * image.naturalWidth,
+        sh: src.h * image.naturalHeight,
+        rotation,
+        needsSwap: Math.abs(rotation % 180 - 90) < 0.1
+    };
+}
+
+function mapCropToSource(c, rotation) {
+    const r = ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
+    switch (r) {
+        case 90: return { x: c.y, y: 1 - c.x - c.w, w: c.h, h: c.w };
+        case 180: return { x: 1 - c.x - c.w, y: 1 - c.y - c.h, w: c.w, h: c.h };
+        case 270: return { x: 1 - c.y - c.h, y: c.x, w: c.h, h: c.w };
+        default: return { ...c };
     }
+}
+
+function replayActions(ctx, image, actions, canvasW, canvasH) {
+    const eff = computeEffective(image, actions);
+
+    // Fit the cropped (and possibly 90°-swapped) region into the canvas
+    const fitW = eff.needsSwap ? eff.sh : eff.sw;
+    const fitH = eff.needsSwap ? eff.sw : eff.sh;
+    const drawRect = calculateFitRect(fitW, fitH, canvasW, canvasH);
 
     const cx = drawRect.x + drawRect.w / 2;
     const cy = drawRect.y + drawRect.h / 2;
 
-    if (Math.abs(cumulativeRotation) > 0.1) {
+    if (Math.abs(eff.rotation) > 0.1) {
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(cumulativeRotation * Math.PI / 180);
-        ctx.translate(-cx, -cy);
-
-        if (needsSwap) {
-            const ux = cx - currentRect.w / 2;
-            const uy = cy - currentRect.h / 2;
-            ctx.drawImage(image, ux, uy, currentRect.w, currentRect.h);
-        } else {
-            ctx.drawImage(image, drawRect.x, drawRect.y, drawRect.w, drawRect.h);
-        }
+        ctx.rotate(eff.rotation * Math.PI / 180);
+        const uw = eff.needsSwap ? drawRect.h : drawRect.w;
+        const uh = eff.needsSwap ? drawRect.w : drawRect.h;
+        ctx.drawImage(image, eff.sx, eff.sy, eff.sw, eff.sh, -uw / 2, -uh / 2, uw, uh);
         ctx.restore();
     } else {
-        ctx.drawImage(image, drawRect.x, drawRect.y, drawRect.w, drawRect.h);
+        ctx.drawImage(image, eff.sx, eff.sy, eff.sw, eff.sh, drawRect.x, drawRect.y, drawRect.w, drawRect.h);
     }
 
     // Second pass: draw overlays (strokes, text)
@@ -356,6 +362,8 @@ function replayActions(ctx, image, actions, canvasW, canvasH, ir) {
             drawLine(ctx, start, end, action.color, action.width, action.isArrow);
         }
     }
+
+    return drawRect;
 }
 
 function drawCropOverlay(ctx, crop, ir) {

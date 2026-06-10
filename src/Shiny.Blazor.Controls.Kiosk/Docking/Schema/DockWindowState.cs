@@ -14,6 +14,22 @@ public sealed class DockWindowState
 
     public string? ActivePanelId { get; set; }
 
-    /// <summary>Rails currently collapsed to a slim edge bar of panel titles.</summary>
+    /// <summary>Legacy whole-rail collapse state; converted to <see cref="CollapsedTabs"/> on load.</summary>
     public List<DockArea> CollapsedRails { get; set; } = new();
+
+    /// <summary>Panels individually collapsed to an edge bar, keyed by dock side.</summary>
+    public List<DockCollapsedPanel> CollapsedTabs { get; set; } = new();
+
+    /// <summary>Rail sizes in pixels (width for left/right, height for top/bottom); null = default.</summary>
+    public double? LeftRailSize { get; set; }
+    public double? TopRailSize { get; set; }
+    public double? RightRailSize { get; set; }
+    public double? BottomRailSize { get; set; }
+}
+
+/// <summary>A panel collapsed to an edge bar, remembering which side it docks back to.</summary>
+public sealed class DockCollapsedPanel
+{
+    public DockArea Area { get; set; }
+    public DockTab Tab { get; set; } = new();
 }

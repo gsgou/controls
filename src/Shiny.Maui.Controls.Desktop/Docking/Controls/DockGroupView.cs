@@ -37,7 +37,7 @@ public class DockGroupView : ContentView
     {
         BackgroundColor = Colors.White;
 
-        strip = new DockTabStrip { ShowCollapseButton = false };
+        strip = new DockTabStrip { CollapseGlyph = null };
         strip.TabTapped += (_, tab) => TabActivateRequested?.Invoke(this, tab);
         strip.TabCloseTapped += (_, tab) => TabCloseRequested?.Invoke(this, tab);
         strip.TabPan += (_, e) => TabPan?.Invoke(this, e);
@@ -71,14 +71,16 @@ public class DockGroupView : ContentView
         Func<DockTab, View?> viewResolver,
         Func<DockTab, string> titleSelector,
         bool isLocked,
-        bool showCollapse = false)
+        string? collapseGlyph = null,
+        Func<DockTab, string?>? iconSelector = null)
     {
         Group = group;
         GroupId = group.GroupId;
 
-        strip.ShowCollapseButton = showCollapse && !isLocked;
-        strip.SetTabs(group, titleSelector, CanClose, isLocked);
+        strip.CollapseGlyph = isLocked ? null : collapseGlyph;
+        strip.SetTabs(group, titleSelector, CanClose, isLocked, iconSelector);
 
+        content.IsVisible = !group.IsCollapsed;
         content.Children.Clear();
         panelViews.Clear();
         var activeIndex = Math.Clamp(group.ActiveTabIndex, 0, Math.Max(0, group.Tabs.Count - 1));

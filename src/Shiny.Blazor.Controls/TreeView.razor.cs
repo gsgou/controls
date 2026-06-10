@@ -110,8 +110,15 @@ public partial class TreeView<TItem> : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Rebuilds the tree from the current data, preserving expansion and selection
+    /// state for items that still exist (matched with the default equality comparer).
+    /// </summary>
     public async Task ReloadAsync()
     {
+        var expanded = EnumerateAll(rootNodes).Where(n => n.IsExpanded).Select(n => n.Item).ToList();
+        var selected = EnumerateAll(rootNodes).Where(n => n.IsSelected).Select(n => n.Item).ToList();
+
         if (RootLoader != null)
         {
             rootLoaderInvoked = false;
@@ -120,7 +127,39 @@ public partial class TreeView<TItem> : IAsyncDisposable
         else
         {
             RebuildRootNodes();
-            StateHasChanged();
+        }
+
+        await RestoreStateAsync(expanded, selected);
+        StateHasChanged();
+    }
+
+    async Task RestoreStateAsync(List<TItem> expanded, List<TItem> selected)
+    {
+        // Children are built lazily, so an item nested under a not-yet-expanded
+        // node can't be found until its ancestors expand — keep sweeping until a
+        // pass makes no progress.
+        var progress = true;
+        while (progress && expanded.Count > 0)
+        {
+            progress = false;
+            for (var i = expanded.Count - 1; i >= 0; i--)
+            {
+                var node = FindNode(expanded[i]);
+                if (node == null)
+                    continue;
+
+                expanded.RemoveAt(i);
+                progress = true;
+                if (!node.IsExpanded && HasChildren(node.Item) && CanExpand(node.Item))
+                    await ExpandNodeAsync(node, raiseEvents: false);
+            }
+        }
+
+        foreach (var item in selected)
+        {
+            var node = FindNode(item);
+            if (node != null)
+                node.IsSelected = true;
         }
     }
 
@@ -163,6 +202,11 @@ public partial class TreeView<TItem> : IAsyncDisposable
             return;
         }
 
+        await ExpandNodeAsync(node, raiseEvents: true);
+    }
+
+    async Task<bool> ExpandNodeAsync(BlazorTreeNode<TItem> node, bool raiseEvents)
+    {
         if (node.Children == null)
         {
             var syncKids = ChildrenSelector?.Invoke(node.Item);
@@ -191,7 +235,7 @@ public partial class TreeView<TItem> : IAsyncDisposable
                     node.LoadState = BlazorTreeLoadState.Error;
                     await LoadFailed.InvokeAsync(new TreeLoadFailedEventArgs<TItem>(node, ex));
                     StateHasChanged();
-                    return;
+                    return false;
                 }
             }
             else
@@ -202,8 +246,10 @@ public partial class TreeView<TItem> : IAsyncDisposable
         }
 
         node.IsExpanded = true;
-        await ItemExpanded.InvokeAsync(new TreeItemEventArgs<TItem>(node));
+        if (raiseEvents)
+            await ItemExpanded.InvokeAsync(new TreeItemEventArgs<TItem>(node));
         StateHasChanged();
+        return true;
     }
 
     async Task RetryAsync(BlazorTreeNode<TItem> node)

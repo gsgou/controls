@@ -14,5 +14,8 @@ public interface IDockableContentFactory
     /// implementing <see cref="IDockableContent"/> override this with their Title.</summary>
     string DisplayName => PanelTypeId;
 
+    /// <summary>Optional glyph (emoji/unicode) shown in the tab and in collapsed edge bars.</summary>
+    string? Icon => null;
+
     Task<View> CreateAsync(string instanceId, CancellationToken ct = default);
 }

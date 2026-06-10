@@ -121,12 +121,14 @@
         var srcList = FindParentList(e.SourceItem);
         if (srcList == null) return;
 
-        if (e.Position == BlazorTreeDropPosition.Into)
+        string moveMessage;
+        var intoFolder = e.Position == BlazorTreeDropPosition.Into;
+        if (intoFolder)
         {
             srcList.Remove(e.SourceItem);
             e.TargetItem.Children ??= new();
             e.TargetItem.Children.Add(e.SourceItem);
-            status = $"Moved {e.SourceItem.Name} into {e.TargetItem.Name}";
+            moveMessage = $"Moved {e.SourceItem.Name} into {e.TargetItem.Name}";
         }
         else
         {
@@ -136,9 +138,17 @@
             var idx = tgtList.IndexOf(e.TargetItem);
             var before = e.Position == BlazorTreeDropPosition.Above;
             tgtList.Insert(before ? idx : idx + 1, e.SourceItem);
-            status = $"Moved {e.SourceItem.Name} {(before ? "before" : "after")} {e.TargetItem.Name}";
+            moveMessage = $"Moved {e.SourceItem.Name} {(before ? "before" : "after")} {e.TargetItem.Name}";
         }
-        if (tree != null) await tree.ReloadAsync();
+
+        if (tree != null)
+        {
+            await tree.ReloadAsync();
+            // open the destination so the moved item is immediately visible
+            if (intoFolder)
+                await tree.ExpandAsync(e.TargetItem);
+        }
+        status = moveMessage;
     }
 
     List<FileNode>? FindParentList(FileNode item)

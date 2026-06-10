@@ -52,12 +52,12 @@ public static class DesktopMauiAppBuilderExtensions
     /// <typeparam name="TView">The panel content view type.</typeparam>
     /// <param name="builder">The MAUI app builder.</param>
     /// <param name="panelTypeId">Stable string ID stored in persisted layouts.</param>
-    public static MauiAppBuilder AddDockPanel<TView>(this MauiAppBuilder builder, string panelTypeId, string? displayName = null)
+    public static MauiAppBuilder AddDockPanel<TView>(this MauiAppBuilder builder, string panelTypeId, string? displayName = null, string? icon = null)
         where TView : View
     {
         builder.Services.AddTransient<TView>();
         builder.Services.AddSingleton<IDockableContentFactory>(sp =>
-            new ServiceProviderPanelFactory<TView>(panelTypeId, displayName, sp));
+            new ServiceProviderPanelFactory<TView>(panelTypeId, displayName, icon, sp));
         return builder;
     }
 
@@ -65,15 +65,17 @@ public static class DesktopMauiAppBuilderExtensions
     {
         readonly IServiceProvider sp;
 
-        public ServiceProviderPanelFactory(string panelTypeId, string? displayName, IServiceProvider sp)
+        public ServiceProviderPanelFactory(string panelTypeId, string? displayName, string? icon, IServiceProvider sp)
         {
             PanelTypeId = panelTypeId;
             DisplayName = displayName ?? panelTypeId;
+            Icon = icon;
             this.sp = sp;
         }
 
         public string PanelTypeId { get; }
         public string DisplayName { get; }
+        public string? Icon { get; }
 
         public Task<View> CreateAsync(string instanceId, CancellationToken ct = default)
             => Task.FromResult<View>(sp.GetRequiredService<TView>());

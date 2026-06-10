@@ -1,4 +1,5 @@
 @namespace Shiny.Blazor.Controls.Scheduler
+@using System.Globalization
 @implements IDisposable
 
 <div class="shiny-agenda">
@@ -18,7 +19,7 @@
         </div>
     }
 
-    @if (ShowCarouselDatePicker)
+    @if (ShowCarouselDatePicker && DatePickerMode == AgendaDatePickerMode.Carousel)
     {
         <div class="shiny-agenda-datepicker">
             @for (var i = -3; i <= 3; i++)
@@ -26,8 +27,9 @@
                 var d = SelectedDate.AddDays(i);
                 var captured = d;
                 var isSel = d == SelectedDate;
+                var inRange = !isSel && d > SelectedDate && d < SelectedDate.AddDays(Days);
                 var isToday = d == DateOnly.FromDateTime(DateTime.Today);
-                <div class="shiny-agenda-date @(isSel ? "is-selected" : "") @(isToday ? "is-today" : "")"
+                <div class="shiny-agenda-date @(isSel ? "is-selected" : "") @(inRange ? "is-inrange" : "") @(isToday ? "is-today" : "")"
                      @onclick="() => SetSelectedDateAsync(captured)">
                     <div class="shiny-agenda-date-name">@d.ToString("ddd")</div>
                     <div class="shiny-agenda-date-num">@d.Day</div>
@@ -35,35 +37,120 @@
             }
         </div>
     }
+    else if (ShowCarouselDatePicker && DatePickerMode == AgendaDatePickerMode.Calendar)
+    {
+        <div class="shiny-agenda-calendar">
+            <div class="shiny-agenda-calendar-head">
+                <button type="button" @onclick="() => ShiftMonth(-1)">‹</button>
+                <span>@calendarMonth.ToString("MMMM yyyy")</span>
+                <button type="button" @onclick="() => ShiftMonth(1)">›</button>
+            </div>
+            <div class="shiny-agenda-calendar-grid">
+                @foreach (var dowName in DayOfWeekNames)
+                {
+                    <div class="shiny-agenda-calendar-dow">@dowName</div>
+                }
+                @foreach (var cell in CalendarCells())
+                {
+                    if (cell is null)
+                    {
+                        <div></div>
+                    }
+                    else
+                    {
+                        var captured = cell.Value;
+                        var isSel = captured == SelectedDate;
+                        var isToday = captured == DateOnly.FromDateTime(DateTime.Today);
+                        <div class="shiny-agenda-calendar-cell @(isSel ? "is-selected" : "") @(isToday ? "is-today" : "")"
+                             @onclick="() => SelectCalendarDateAsync(captured)">@captured.Day</div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    <div class="shiny-agenda-dayheaders" style="@GridColumnsStyle">
+        <div class="shiny-agenda-tzabbr">
+            @if (ShowTz)
+            {
+                @foreach (var line in TzAbbreviation(TimeZoneInfo.Local))
+                {
+                    <div>@line</div>
+                }
+            }
+        </div>
+        @if (ShowTz)
+        {
+            @foreach (var tz in AdditionalTimezones!)
+            {
+                <div class="shiny-agenda-tzabbr shiny-agenda-tzabbr--extra">
+                    @foreach (var line in TzAbbreviation(tz))
+                    {
+                        <div>@line</div>
+                    }
+                </div>
+            }
+        }
+        @for (var i = 0; i < Days; i++)
+        {
+            var date = SelectedDate.AddDays(i);
+            <div class="shiny-agenda-dayheader @(Days > 1 ? "shiny-agenda-dayheader--multi" : "")">
+                @date.ToString(Days > 1 ? "ddd, MMM d" : "dddd, MMMM d, yyyy")
+            </div>
+        }
+    </div>
 
     <div class="shiny-agenda-day">
-        <div class="shiny-agenda-day-header">@SelectedDate.ToString("dddd, MMMM d, yyyy")</div>
-        <div class="shiny-agenda-timeline" style="--slot-h:@(TimeSlotHeight)px;">
-            @for (var hour = 0; hour < 24; hour++)
+        <div class="shiny-agenda-timeline" style="@GridColumnsStyle">
+            <div class="shiny-agenda-timecol">
+                @for (var hour = 0; hour < 24; hour++)
+                {
+                    <div class="shiny-agenda-timecell" style="height:@(TimeSlotHeight)px;">@FormatHour(hour)</div>
+                }
+            </div>
+            @if (ShowTz)
             {
-                var hCaptured = hour;
-                <div class="shiny-agenda-row" style="height:@(TimeSlotHeight)px;"
-                     @onclick="() => OnTimeSlotTappedAsync(hCaptured)">
-                    <div class="shiny-agenda-timecol">@FormatHour(hour)</div>
-                    <div class="shiny-agenda-slot"></div>
-                </div>
+                @foreach (var tz in AdditionalTimezones!)
+                {
+                    var capturedTz = tz;
+                    <div class="shiny-agenda-timecol shiny-agenda-timecol--extra">
+                        @for (var hour = 0; hour < 24; hour++)
+                        {
+                            <div class="shiny-agenda-timecell" style="height:@(TimeSlotHeight)px;">@FormatHourIn(hour, capturedTz)</div>
+                        }
+                    </div>
+                }
             }
-            @foreach (var (evt, top, height) in PositionedEvents())
+            @for (var i = 0; i < Days; i++)
             {
-                var captured = evt;
-                <div class="shiny-agenda-event"
-                     style="top:@(top)px;height:@(height)px;background:@(evt.Color ?? DefaultEventColor);"
-                     @onclick:stopPropagation
-                     @onclick="() => OnEventTapped(captured)">
-                    <div class="shiny-agenda-event-title">@evt.Title</div>
-                    <div class="shiny-agenda-event-time">@evt.Start.LocalDateTime.ToString(TimeFormat) – @evt.End.LocalDateTime.ToString(TimeFormat)</div>
+                var date = SelectedDate.AddDays(i);
+                var isToday = date == DateOnly.FromDateTime(DateTime.Today);
+                <div class="shiny-agenda-daycol" style="height:@(TimeSlotHeight * 24)px;">
+                    @for (var hour = 0; hour < 24; hour++)
+                    {
+                        var hCaptured = hour;
+                        var dCaptured = date;
+                        <div class="shiny-agenda-hourcell" style="height:@(TimeSlotHeight)px;"
+                             @onclick="() => OnTimeSlotTappedAsync(dCaptured, hCaptured)"></div>
+                    }
+                    @foreach (var p in PositionedEvents(date))
+                    {
+                        var captured = p.Event;
+                        <div class="shiny-agenda-event"
+                             style="top:@(Px(p.Top))px;height:@(Px(p.Height))px;left:@(Px(p.LeftPct))%;width:calc(@(Px(p.WidthPct))% - 4px);background:@(p.Event.Color ?? DefaultEventColor);"
+                             @onclick:stopPropagation
+                             @onclick="() => OnEventTapped(captured)">
+                            <div class="shiny-agenda-event-title">@p.Event.Title</div>
+                            <div class="shiny-agenda-event-time">@p.Event.Start.LocalDateTime.ToString(TimeFormat) – @p.Event.End.LocalDateTime.ToString(TimeFormat)</div>
+                        </div>
+                    }
+                    @if (ShowCurrentTimeMarker && isToday)
+                    {
+                        var minutes = DateTime.Now.TimeOfDay.TotalMinutes;
+                        var top = minutes * (TimeSlotHeight / 60.0);
+                        <div class="shiny-agenda-now" style="top:@(Px(top))px;background:@CurrentTimeMarkerColor;"></div>
+                    }
                 </div>
-            }
-            @if (ShowCurrentTimeMarker && SelectedDate == DateOnly.FromDateTime(DateTime.Today))
-            {
-                var minutes = DateTime.Now.TimeOfDay.TotalMinutes;
-                var top = minutes * (TimeSlotHeight / 60.0);
-                <div class="shiny-agenda-now" style="top:@(top.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))px;background:@CurrentTimeMarkerColor;"></div>
             }
         </div>
     </div>
@@ -75,15 +162,23 @@
 </div>
 
 @code {
-    List<SchedulerEvent> allDayEvents = new();
-    List<SchedulerEvent> timedEvents = new();
+    static readonly string[] DayOfWeekNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    readonly List<SchedulerEvent> allDayEvents = new();
+    readonly List<SchedulerEvent> timedEvents = new();
     bool isLoading;
     CancellationTokenSource? loadCts;
+    System.Threading.Timer? markerTimer;
+    DateOnly calendarMonth = DateOnly.FromDateTime(DateTime.Today);
 
     [Parameter] public ISchedulerEventProvider? Provider { get; set; }
     [Parameter] public DateOnly SelectedDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     [Parameter] public EventCallback<DateOnly> SelectedDateChanged { get; set; }
+    [Parameter] public int DaysToShow { get; set; } = 1;
     [Parameter] public bool ShowCarouselDatePicker { get; set; } = true;
+    [Parameter] public AgendaDatePickerMode DatePickerMode { get; set; } = AgendaDatePickerMode.Carousel;
+    [Parameter] public bool ShowAdditionalTimezones { get; set; }
+    [Parameter] public IList<TimeZoneInfo>? AdditionalTimezones { get; set; }
     [Parameter] public bool ShowCurrentTimeMarker { get; set; } = true;
     [Parameter] public string CurrentTimeMarkerColor { get; set; } = "#EF4444";
     [Parameter] public string DefaultEventColor { get; set; } = "#6366F1";
@@ -92,34 +187,157 @@
     [Parameter] public DateOnly? MaxDate { get; set; }
     [Parameter] public bool Use24HourTime { get; set; } = true;
 
+    int Days => Math.Clamp(DaysToShow, 1, 7);
+    bool ShowTz => ShowAdditionalTimezones && (AdditionalTimezones?.Count ?? 0) > 0;
     string TimeFormat => Use24HourTime ? "HH:mm" : "h:mm tt";
+
+    string GridColumnsStyle
+    {
+        get
+        {
+            var tzCols = ShowTz ? string.Concat(Enumerable.Repeat(" 56px", AdditionalTimezones!.Count)) : "";
+            return $"grid-template-columns: 56px{tzCols} repeat({Days}, minmax(0, 1fr));";
+        }
+    }
+
+    static string Px(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
     ISchedulerEventProvider? lastProvider;
     DateOnly lastSelectedDate;
+    int lastDays;
+
+    protected override void OnInitialized()
+        => markerTimer = new System.Threading.Timer(
+            _ => _ = InvokeAsync(StateHasChanged), null,
+            TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(Provider, lastProvider) || SelectedDate != lastSelectedDate)
+        if (!ReferenceEquals(Provider, lastProvider) || SelectedDate != lastSelectedDate || Days != lastDays)
         {
             lastProvider = Provider;
             lastSelectedDate = SelectedDate;
+            lastDays = Days;
+            calendarMonth = new DateOnly(SelectedDate.Year, SelectedDate.Month, 1);
             _ = LoadEventsAsync();
         }
     }
 
     string FormatHour(int hour) => Use24HourTime ? $"{hour:D2}:00" : new TimeOnly(hour, 0).ToString("h tt");
 
-    IEnumerable<(SchedulerEvent Event, double Top, double Height)> PositionedEvents()
+    string FormatHourIn(int hour, TimeZoneInfo tz)
     {
-        foreach (var evt in timedEvents)
+        var localDt = DateTime.SpecifyKind(
+            SelectedDate.ToDateTime(new TimeOnly(hour, 0)), DateTimeKind.Local);
+        var converted = TimeZoneInfo.ConvertTime(localDt, TimeZoneInfo.Local, tz);
+        return converted.ToString(Use24HourTime ? "HH:mm" : "h tt");
+    }
+
+    static IEnumerable<string> TzAbbreviation(TimeZoneInfo tz)
+    {
+        var offset = tz.BaseUtcOffset;
+        var sign = offset >= TimeSpan.Zero ? "+" : "-";
+        var abs = offset.Duration();
+        var offsetStr = abs.Minutes == 0
+            ? $"UTC{sign}{abs.Hours}"
+            : $"UTC{sign}{abs.Hours}:{abs.Minutes:D2}";
+
+        var id = tz.Id;
+        if (id.Contains('/'))
+            id = id[(id.LastIndexOf('/') + 1)..].Replace("_", " ");
+
+        if (id.Length <= 10)
         {
-            var s = evt.Start.LocalDateTime;
-            var e = evt.End.LocalDateTime;
-            if (s.Date < SelectedDate.ToDateTime(TimeOnly.MinValue)) s = SelectedDate.ToDateTime(TimeOnly.MinValue);
-            if (e.Date > SelectedDate.ToDateTime(TimeOnly.MinValue)) e = SelectedDate.ToDateTime(new TimeOnly(23, 59));
-            var top = s.TimeOfDay.TotalMinutes * (TimeSlotHeight / 60.0);
-            var height = Math.Max(20, (e - s).TotalMinutes * (TimeSlotHeight / 60.0));
-            yield return (evt, top, height);
+            yield return id;
+            yield return offsetStr;
+        }
+        else
+        {
+            yield return offsetStr;
+        }
+    }
+
+    // ------------- calendar sheet picker -------------
+    void ShiftMonth(int delta) => calendarMonth = calendarMonth.AddMonths(delta);
+
+    IEnumerable<DateOnly?> CalendarCells()
+    {
+        var first = new DateOnly(calendarMonth.Year, calendarMonth.Month, 1);
+        for (var i = 0; i < (int)first.DayOfWeek; i++)
+            yield return null;
+        var days = DateTime.DaysInMonth(calendarMonth.Year, calendarMonth.Month);
+        for (var d = 1; d <= days; d++)
+            yield return new DateOnly(calendarMonth.Year, calendarMonth.Month, d);
+    }
+
+    async Task SelectCalendarDateAsync(DateOnly d)
+    {
+        if (Provider?.CanCalendarSelect(d) == false) return;
+        await SetSelectedDateAsync(d);
+        Provider?.OnCalendarDateSelected(d);
+    }
+
+    // ------------- event layout (overlap-aware) -------------
+    IEnumerable<(SchedulerEvent Event, double Top, double Height, double LeftPct, double WidthPct)> PositionedEvents(DateOnly date)
+    {
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+        var items = timedEvents
+            .Where(e => DateOnly.FromDateTime(e.Start.LocalDateTime) <= date
+                     && DateOnly.FromDateTime(e.End.LocalDateTime) >= date)
+            .Select(e =>
+            {
+                var s = e.Start.LocalDateTime < dayStart ? dayStart : e.Start.LocalDateTime;
+                var en = e.End.LocalDateTime > dayStart.AddDays(1) ? dayStart.AddDays(1) : e.End.LocalDateTime;
+                var startMin = (s - dayStart).TotalMinutes;
+                var endMin = Math.Max(startMin + 20, (en - dayStart).TotalMinutes);
+                return (Event: e, StartMin: startMin, EndMin: endMin, Col: 0);
+            })
+            .OrderBy(x => x.StartMin)
+            .ThenByDescending(x => x.EndMin)
+            .ToArray();
+
+        // cluster chain-overlapping events, assign columns greedily within each cluster
+        var i = 0;
+        while (i < items.Length)
+        {
+            var clusterEnd = items[i].EndMin;
+            var clusterStartIdx = i;
+            var j = i + 1;
+            while (j < items.Length && items[j].StartMin < clusterEnd)
+            {
+                clusterEnd = Math.Max(clusterEnd, items[j].EndMin);
+                j++;
+            }
+
+            var colEnds = new List<double>();
+            for (var k = clusterStartIdx; k < j; k++)
+            {
+                var col = colEnds.FindIndex(end => items[k].StartMin >= end);
+                if (col < 0)
+                {
+                    col = colEnds.Count;
+                    colEnds.Add(items[k].EndMin);
+                }
+                else
+                {
+                    colEnds[col] = items[k].EndMin;
+                }
+                items[k].Col = col;
+            }
+
+            var colCount = Math.Max(1, colEnds.Count);
+            for (var k = clusterStartIdx; k < j; k++)
+            {
+                var pxPerMin = TimeSlotHeight / 60.0;
+                yield return (
+                    items[k].Event,
+                    items[k].StartMin * pxPerMin,
+                    Math.Max(20, (items[k].EndMin - items[k].StartMin) * pxPerMin),
+                    items[k].Col * 100.0 / colCount,
+                    100.0 / colCount);
+            }
+
+            i = j;
         }
     }
 
@@ -131,9 +349,9 @@
         await SelectedDateChanged.InvokeAsync(d);
     }
 
-    Task OnTimeSlotTappedAsync(int hour)
+    Task OnTimeSlotTappedAsync(DateOnly date, int hour)
     {
-        var dt = new DateTimeOffset(SelectedDate.ToDateTime(new TimeOnly(hour, 0)));
+        var dt = new DateTimeOffset(date.ToDateTime(new TimeOnly(hour, 0)));
         if (Provider is not null && Provider.CanSelectAgendaTime(dt))
             Provider.OnAgendaTimeSelected(dt);
         return Task.CompletedTask;
@@ -152,17 +370,16 @@
         try
         {
             var startDto = new DateTimeOffset(SelectedDate.ToDateTime(TimeOnly.MinValue));
-            var endDto = new DateTimeOffset(SelectedDate.AddDays(1).ToDateTime(TimeOnly.MinValue));
+            var endDto = new DateTimeOffset(SelectedDate.AddDays(Days).ToDateTime(TimeOnly.MinValue));
             var events = await Provider.GetEvents(startDto, endDto);
             if (token.IsCancellationRequested) return;
 
-            allDayEvents = events.Where(e => e.IsAllDay).ToList();
-            timedEvents = events
+            allDayEvents.Clear();
+            allDayEvents.AddRange(events.Where(e => e.IsAllDay));
+            timedEvents.Clear();
+            timedEvents.AddRange(events
                 .Where(e => !e.IsAllDay)
-                .Where(e => DateOnly.FromDateTime(e.Start.LocalDateTime) <= SelectedDate
-                         && DateOnly.FromDateTime(e.End.LocalDateTime) >= SelectedDate)
-                .OrderBy(e => e.Start)
-                .ToList();
+                .OrderBy(e => e.Start));
         }
         catch (OperationCanceledException) { }
         finally
@@ -175,5 +392,9 @@
         }
     }
 
-    public void Dispose() => loadCts?.Cancel();
+    public void Dispose()
+    {
+        loadCts?.Cancel();
+        markerTimer?.Dispose();
+    }
 }

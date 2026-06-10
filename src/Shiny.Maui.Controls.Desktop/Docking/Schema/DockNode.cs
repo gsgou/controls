@@ -32,6 +32,9 @@ public sealed class DockGroup : DockNode
 
     /// <summary>Indexes into <see cref="Tabs"/> in most-recently-focused order. Used for Ctrl+Tab MRU.</summary>
     public List<int> FocusHistory { get; set; } = new();
+
+    /// <summary>Collapsed groups render only their tab strip; activating a tab expands.</summary>
+    public bool IsCollapsed { get; set; }
 }
 
 public sealed class DockEmpty : DockNode

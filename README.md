@@ -154,13 +154,15 @@ Calendar and agenda views for displaying events and appointments, powered by `IS
 
 **DatePickerMode** options: `Carousel` (default horizontal day picker), `Calendar` (collapsible month calendar with pull-to-expand), `None` (no picker).
 
-**SchedulerCalendarListView** - Scrollable event list grouped by day with infinite scroll loading.
+**SchedulerCalendarListView** - Scrollable event list grouped by day with infinite scroll loading and sticky day headers (`StickyDayHeaders`, on by default, pins the current day's header to the top while scrolling).
 
 ```xml
 <shiny:SchedulerCalendarListView
     Provider="{Binding Provider}"
     SelectedDate="{Binding SelectedDate}" />
 ```
+
+The Blazor `SchedulerAgendaView` has the same feature set — `DaysToShow` (1–7 day columns), `DatePickerMode` (`Carousel` / `Calendar` / `None`), `ShowAdditionalTimezones` + `AdditionalTimezones` side-by-side timezone columns, overlap-aware event layout, and an auto-updating current time marker — using CSS color strings instead of `Color`.
 
 **ISchedulerEventProvider** - Implement this interface to supply event data:
 
@@ -1363,11 +1365,13 @@ Tree.CanSelectSelector   = item => item is FileNode f && !f.IsLocked;
 | ExpandedIcon / CollapsedIcon / RetryIcon | ImageSource? | Fall back to ▼ / ▶ / ↻ glyphs |
 | IndentSize | double | Pixels of indent per depth level (default 20) |
 | ShowGuideLines | bool | Vertical connector lines between parent and children |
-| EnableDragDrop | bool | Adds drag source + drop target gestures; event-only, never mutates data |
+| EnableDragDrop | bool | Drag/drop with above/below/into drop positions and visual drop indicators; event-only, never mutates data |
 
 **Events + Commands (MAUI):** `ItemSelected` / `ItemExpanded` / `ItemCollapsed` / `LoadFailed` / `ItemDropped` each have a matching `*Command` bindable property.
 
-**Public methods:** `ExpandAll`, `ExpandAllAsync`, `CollapseAll`, `Expand(item)`, `Collapse(item)`, `Refresh(item)`, `ReloadAsync`.
+`ItemDropped` reports `Source`, `Target`, and `Position` (`Above` / `Below` reorder among siblings, `Into` drops into a folder) — your handler moves the data, then rebinds `ItemsSource` (MAUI) or calls `ReloadAsync()` (Blazor, which preserves expansion/selection state). Blazor drag/drop runs on native HTML5 drag events via a small JS module (required for Safari/Firefox `dataTransfer` support); MAUI uses platform drag gestures with a pan-gesture fallback on Mac Catalyst, AppKit, and GTK4 where those are broken or missing.
+
+**Public methods:** `ExpandAll`, `ExpandAllAsync`, `CollapseAll`, `Expand(item)`, `Collapse(item)`, `Refresh(item)`, `ReloadAsync`, `FindNode(item)` — Blazor mirrors these as `ExpandAsync` / `CollapseAsync` / `ExpandAllAsync` / `CollapseAll` / `RefreshAsync` / `ReloadAsync` / `FindNode`.
 
 ### Markdown Controls
 
@@ -1708,7 +1712,7 @@ Both hosts fire a `Scrolled` event with `ParallaxScrollEventArgs(verticalOffset,
 
 ### VirtualizedGrid
 
-A full-featured grouped grid with sticky section headers, virtualization, orientation-aware column counts, load-more, and cell padding. Uses native grid layouts on MAUI (Android `GridLayoutManager` with `StickyHeaderDecoration`, iOS `UICollectionViewCompositionalLayout` with pinned headers, Windows `ItemsRepeater` with `UniformGridLayout`) and CSS Grid with Blazor `Virtualize<T>` on Blazor.
+A full-featured grouped grid with sticky section headers, virtualization, orientation-aware column counts, load-more, and cell padding. Uses native grid layouts on MAUI (Android `GridLayoutManager` with `StickyHeaderDecoration`, iOS `UICollectionViewCompositionalLayout` with pinned headers, Windows `ItemsRepeater` with `UniformGridLayout`) and CSS Grid with Blazor `Virtualize<T>` on Blazor (items are chunked into rows of `ColumnCount` cells and the rows are virtualized, so virtualization works correctly at any column count).
 
 ```xml
 <shiny:VirtualizedGrid ItemsSource="{Binding Items}"
@@ -1775,7 +1779,7 @@ builder
     .UseShinyControls()
     .UseTrayIcon()         // tray / status-bar icon
     .UseShinyDocking()     // docking host
-    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
     .AddDockPanel<OutputPanel>("output")
     .UseOnScreenKeyboard(opts =>  // touch / kiosk soft keyboard
     {
@@ -1867,30 +1871,37 @@ using Sample.Features.Docking;  // SolutionExplorerPanel, OutputPanel
 builder
     .UseMauiApp<App>()
     .UseShinyDocking()
-    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
     .AddDockPanel<OutputPanel>("output");
 ```
+
+`AddDockPanel` takes optional `displayName` (tab title, defaults to the panel ID) and `icon` (emoji / unicode glyph) arguments. A panel view can also implement `IDockableContent` to control its own per-instance `Title`, `Icon`, `CanClose` / `CanFloat`, and receive `OnActivated` / `OnDeactivated` callbacks.
 
 `DockHostView` attaches to any existing `ContentPage` — it does not subclass `ContentPage`, so your Shell / page architecture stays unchanged:
 
 ```xml
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:docking="clr-namespace:Shiny.Maui.Controls.Desktop.Docking;assembly=Shiny.Maui.Controls.Desktop">
-    <docking:DockHostView />
+    <docking:DockHostView InitialLayout="{Binding StartupLayout}"
+                          LayoutStore="{Binding LayoutStore}"
+                          IsLocked="{Binding IsLayoutLocked}" />
 </ContentPage>
 ```
 
 | Building block | Purpose |
 |---|---|
-| `DockHostView` | Root dock surface (attaches inside any page) |
+| `DockHostView` | Root dock surface (attaches inside any page); bindable `InitialLayout`, `LayoutStore`, `IsLocked` |
 | `DockGroupView` | Tabbed group of panels |
 | `DockTabStrip` | Tab strip with overflow + drag-to-reorder |
 | `DockSplitter` | Draggable splitter between adjacent dock children |
-| `IDockHost` | Per-window controller: `LoadAsync`, `Snapshot`, `ShowPanelAsync`, `IsLocked` |
-| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` — registered via `AddDockPanel<T>` |
-| `IDockLayoutStore` | Bring-your-own persistence contract — load/save the layout tree as JSON |
+| `IDockHost` | Per-window controller: `LoadAsync`, `Snapshot`, `ShowPanelAsync` / `HidePanelAsync` / `ActivatePanelAsync`, `ResetLayoutAsync`, `SetRailCollapsedAsync`, `IsLocked` |
+| `IDockableContent` | Optional interface on panel views — per-instance title/icon, close/float gating, activation callbacks, pointer-down claim for embedded editors |
+| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` + `DisplayName` / `Icon` — registered via `AddDockPanel<T>` |
+| `IDockLayoutStore` | Bring-your-own persistence contract — load/save the layout tree as JSON; saves are debounced via `SaveDebounceMs` |
 | `IDockEvents` | `LayoutChanged`, `PanelActivated`, `DragStarted/Completed/Cancelled` |
 | `IDockCommandScope` | Scopes Ctrl+W / Ctrl+Tab / Ctrl+Alt+PgUp/Dn to the dock surface |
+
+Everything is interactive end-to-end: drag a tab onto another group's center to merge, onto an edge to split, or outside the host to tear off a floating window (move, resize, re-dock, close); drag splitters to resize; collapse individual panels (or whole rails via `SetRailCollapsedAsync`) to slim edge bars that restore on click. The full state — splits, ratios, collapsed panels, floating-window bounds — round-trips through `Snapshot()` / `LoadAsync()` and auto-saves through the attached `IDockLayoutStore`. `IsLocked = true` freezes the layout (tab switching still works) for kiosk / demo scenarios.
 
 The layout schema (`DockRoot`, `DockWindowState`, `DockSplit`, `DockGroup`, `DockTab`) is a pure POCO tree with a source-generated `System.Text.Json` context — round-trip your dock layout to disk with `DockSerialization.Serialize` / `Deserialize`. Schema versioning (`SchemaVersion` + `MinReadableVersion`) and an `IDockLayoutMigrator` hook are wired in from day one so saved layouts survive future schema changes.
 
@@ -1907,17 +1918,20 @@ using Shiny.Blazor.Controls.Kiosk.Docking;
 
 builder.Services
     .AddShinyDocking()
-    .AddDockPanel<SolutionExplorerPanel>("solution-explorer")
+    .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
     .AddDockPanel<OutputPanel>("output");
 ```
 
 ```razor
 @using Shiny.Blazor.Controls.Kiosk.Docking
 
-<DockHost />
+<DockHost @ref="host"
+          InitialLayout="@layout"
+          LayoutStore="@layoutStore"
+          IsLocked="@locked" />
 ```
 
-CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
+The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling.
 
 #### On-Screen Keyboard
 

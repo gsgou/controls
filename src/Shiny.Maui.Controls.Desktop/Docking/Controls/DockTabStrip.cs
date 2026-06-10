@@ -57,15 +57,26 @@ public class DockTabStrip : ContentView
 
     readonly Label collapse;
 
-    public bool ShowCollapseButton
+    /// <summary>Glyph for the collapse button, or null to hide it. The host picks
+    /// a direction-appropriate arrow based on where the group is docked.</summary>
+    public string? CollapseGlyph
     {
-        get => collapse.IsVisible;
-        set => collapse.IsVisible = value;
+        get => collapse.IsVisible ? collapse.Text : null;
+        set
+        {
+            collapse.IsVisible = value is not null;
+            collapse.Text = value ?? string.Empty;
+        }
     }
 
     public IReadOnlyList<(DockTab Tab, Border View)> TabViews => tabViews;
 
-    public void SetTabs(DockGroup group, Func<DockTab, string> titleSelector, Func<DockTab, bool> canClose, bool isLocked)
+    public void SetTabs(
+        DockGroup group,
+        Func<DockTab, string> titleSelector,
+        Func<DockTab, bool> canClose,
+        bool isLocked,
+        Func<DockTab, string?>? iconSelector = null)
     {
         stack.Children.Clear();
         tabViews.Clear();
@@ -85,7 +96,17 @@ public class DockTabStrip : ContentView
                 VerticalOptions = LayoutOptions.Center
             };
 
-            var row = new HorizontalStackLayout { Spacing = 6, Children = { title } };
+            var row = new HorizontalStackLayout { Spacing = 6 };
+            if (iconSelector?.Invoke(tab) is { } icon)
+            {
+                row.Children.Add(new Label
+                {
+                    Text = icon,
+                    FontSize = 12,
+                    VerticalOptions = LayoutOptions.Center
+                });
+            }
+            row.Children.Add(title);
 
             if (!isLocked && canClose(tab))
             {
