@@ -119,12 +119,25 @@
     async Task OnDropped(TreeItemDroppedEventArgs<FileNode> e)
     {
         var srcList = FindParentList(e.SourceItem);
-        var tgtList = FindParentList(e.TargetItem);
-        if (srcList == null || tgtList == null) return;
-        srcList.Remove(e.SourceItem);
-        var idx = tgtList.IndexOf(e.TargetItem);
-        tgtList.Insert(idx + 1, e.SourceItem);
-        status = $"Moved {e.SourceItem.Name} after {e.TargetItem.Name}";
+        if (srcList == null) return;
+
+        if (e.Position == BlazorTreeDropPosition.Into)
+        {
+            srcList.Remove(e.SourceItem);
+            e.TargetItem.Children ??= new();
+            e.TargetItem.Children.Add(e.SourceItem);
+            status = $"Moved {e.SourceItem.Name} into {e.TargetItem.Name}";
+        }
+        else
+        {
+            var tgtList = FindParentList(e.TargetItem);
+            if (tgtList == null) return;
+            srcList.Remove(e.SourceItem);
+            var idx = tgtList.IndexOf(e.TargetItem);
+            var before = e.Position == BlazorTreeDropPosition.Above;
+            tgtList.Insert(before ? idx : idx + 1, e.SourceItem);
+            status = $"Moved {e.SourceItem.Name} {(before ? "before" : "after")} {e.TargetItem.Name}";
+        }
         if (tree != null) await tree.ReloadAsync();
     }
 

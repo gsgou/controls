@@ -8,12 +8,12 @@ const states = new WeakMap();
 const DRAG_THRESHOLD = 5;
 const EDGE_BAND = 0.28; // fraction of group size that counts as an edge dock zone
 
-export function init(hostEl, dotnetRef, options) {
+export function init(hostEl, dotnetRef, locked) {
     if (!hostEl || states.has(hostEl)) return;
     const state = {
         hostEl,
         dotnet: dotnetRef,
-        locked: !!(options && options.locked),
+        locked: !!locked,
         pointerDown: null,
         drag: null,
         resizeObserver: null,

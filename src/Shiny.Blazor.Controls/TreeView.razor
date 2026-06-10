@@ -1,7 +1,7 @@
 @namespace Shiny.Blazor.Controls
 @typeparam TItem
 
-<div class="shiny-treeview @CssClass" tabindex="0" @onkeydown="OnKeyDown" @attributes="AdditionalAttributes">
+<div class="shiny-treeview @CssClass" tabindex="0" @ref="rootElement" @onkeydown="OnKeyDown" @attributes="AdditionalAttributes">
     @if (isLoadingRoot)
     {
         <div class="shiny-treeview-loading">
@@ -44,14 +44,13 @@
         <li class="shiny-treeview-item @(node.IsSelected ? "selected" : "")" role="treeitem"
             aria-expanded="@(hasChildren ? node.IsExpanded.ToString().ToLowerInvariant() : null)"
             aria-selected="@node.IsSelected.ToString().ToLowerInvariant()">
+            @* drag/drop is wired natively in tree-view.js — Blazor's synthetic drag
+               events can't call dataTransfer.setData(), which Safari/Firefox require *@
             <div class="shiny-treeview-row @(node == focusedNode ? "focused" : "")"
                  style="@indent"
                  draggable="@(EnableDragDrop ? "true" : "false")"
-                 @ondragstart="@(e => OnDragStart(e, node))"
-                 @ondragover="@(e => OnDragOver(e, node))"
-                 @ondragover:preventDefault="EnableDragDrop"
-                 @ondrop="@(e => OnDrop(e, node))"
-                 @ondrop:preventDefault="EnableDragDrop"
+                 data-treenode-id="@node.Id"
+                 data-treenode-folder="@(hasChildren ? "true" : "false")"
                  @onclick="@(e => OnRowClick(e, node, canSelect))">
 
                 @if (ShowGuideLines && node.Depth > 0)

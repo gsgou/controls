@@ -65,14 +65,16 @@ public partial class ImageEditor : IAsyncDisposable
 
             selfRef = DotNetObjectReference.Create(this);
 
-            await module.InvokeVoidAsync("init", rootEl, canvasEl, selfRef, new
+            // a named DTO, not an anonymous type: trimmed/AOT publish strips anonymous-type
+            // constructor parameter names, which the JS interop serializer requires
+            await module.InvokeVoidAsync("init", rootEl, canvasEl, selfRef, new ImageEditorJsOptions
             {
-                drawColor = activeColor,
-                drawWidth = DrawStrokeWidth,
-                textColor = activeColor,
-                textSize = TextFontSize,
-                textFont = TextFontFamily,
-                allowZoom = AllowZoom
+                DrawColor = activeColor,
+                DrawWidth = DrawStrokeWidth,
+                TextColor = activeColor,
+                TextSize = TextFontSize,
+                TextFont = TextFontFamily,
+                AllowZoom = AllowZoom
             });
 
             initialized = true;
@@ -320,5 +322,15 @@ public partial class ImageEditor : IAsyncDisposable
             catch (JSDisconnectedException) { }
         }
         selfRef?.Dispose();
+    }
+
+    sealed class ImageEditorJsOptions
+    {
+        public string? DrawColor { get; set; }
+        public double DrawWidth { get; set; }
+        public string? TextColor { get; set; }
+        public double TextSize { get; set; }
+        public string? TextFont { get; set; }
+        public bool AllowZoom { get; set; }
     }
 }

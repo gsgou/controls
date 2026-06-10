@@ -9,7 +9,7 @@ public class FileNode : INotifyPropertyChanged
     public bool IsFolder { get; init; }
     public bool IsLocked { get; init; }
     public bool LazyLoad { get; init; }
-    public List<FileNode>? Children { get; init; }
+    public List<FileNode>? Children { get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -259,6 +259,29 @@ internal class TreeNodeView : Grid
     }
 
     // ------------- Drag/drop -------------
+    public void ShowDropIndicator(TreeDropPosition zone)
+    {
+        dropIndicatorAbove.IsVisible = zone == TreeDropPosition.Above;
+        dropIndicatorBelow.IsVisible = zone == TreeDropPosition.Below;
+        dropIndicatorInto.IsVisible = zone == TreeDropPosition.Into;
+    }
+
+    public void HideDropIndicators()
+    {
+        dropIndicatorAbove.IsVisible = false;
+        dropIndicatorBelow.IsVisible = false;
+        dropIndicatorInto.IsVisible = false;
+    }
+
+    public void SetDragging(bool dragging)
+    {
+        Opacity = dragging ? 0.6 : 1.0;
+        ZIndex = dragging ? 1 : 0;
+        if (!dragging)
+            TranslationY = 0;
+    }
+
+#if IOS || ANDROID || WINDOWS
     void WireDragDrop()
     {
         var drag = new DragGestureRecognizer { CanDrag = true };
@@ -279,31 +302,18 @@ internal class TreeNodeView : Grid
 
     void OnDragOver(object? sender, DragEventArgs e)
     {
-        // We can't read pointer position reliably from DragEventArgs across all platforms,
-        // so we expose three equal vertical thirds via separate sub-targets is overkill —
-        // instead we cycle: tap-over toggles by relative time. Default to "below" for the
-        // simplest case (reorder as next sibling). The user can re-arrange by dropping
-        // again. Visual indicator below shows the chosen zone.
-        // For now, show "below" indicator; cross-parent "into" handled by HasChildren.
+        // DragEventArgs doesn't expose a reliable pointer position on every platform,
+        // so the platform-gesture path always targets "below" (reorder as next sibling).
         currentZone = TreeDropPosition.Below;
-        dropIndicatorAbove.IsVisible = false;
-        dropIndicatorBelow.IsVisible = true;
-        dropIndicatorInto.IsVisible = false;
+        ShowDropIndicator(currentZone);
         e.AcceptedOperation = DataPackageOperation.Copy;
     }
 
-    void OnDragLeave(object? sender, DragEventArgs e)
-    {
-        dropIndicatorAbove.IsVisible = false;
-        dropIndicatorBelow.IsVisible = false;
-        dropIndicatorInto.IsVisible = false;
-    }
+    void OnDragLeave(object? sender, DragEventArgs e) => HideDropIndicators();
 
     void OnDrop(object? sender, DropEventArgs e)
     {
-        dropIndicatorAbove.IsVisible = false;
-        dropIndicatorBelow.IsVisible = false;
-        dropIndicatorInto.IsVisible = false;
+        HideDropIndicators();
 
         if (e.Data?.Properties != null &&
             e.Data.Properties.TryGetValue("TreeNodeView", out var src) &&
@@ -313,4 +323,35 @@ internal class TreeNodeView : Grid
             owner.HandleDrop(srcView.Node, Node, currentZone);
         }
     }
+#else
+    // Plain net10.0 serves Mac Catalyst, the AppKit (macOS) host and the GTK4 (Linux)
+    // host. Catalyst's Drag/DropGestureRecognizers are broken (dotnet/maui#23627) and
+    // the labs hosts don't implement them at all, so the drag is driven by a pan
+    // gesture and the TreeView resolves the drop target from row geometry.
+    void WireDragDrop()
+    {
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += OnPanUpdated;
+        background.GestureRecognizers.Add(pan);
+    }
+
+    void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                owner.BeginPointerDrag(this);
+                break;
+            case GestureStatus.Running:
+                owner.UpdatePointerDrag(this, e.TotalY);
+                break;
+            case GestureStatus.Completed:
+                owner.CompletePointerDrag(this);
+                break;
+            case GestureStatus.Canceled:
+                owner.CancelPointerDrag(this);
+                break;
+        }
+    }
+#endif
 }

@@ -1,17 +1,22 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace Shiny.Blazor.Controls;
 
-public partial class TreeView<TItem>
+public partial class TreeView<TItem> : IAsyncDisposable
 {
     readonly List<BlazorTreeNode<TItem>> rootNodes = new();
     BlazorTreeNode<TItem>? focusedNode;
-    BlazorTreeNode<TItem>? dragSource;
+    ElementReference rootElement;
+    IJSObjectReference? dragModule;
+    DotNetObjectReference<TreeView<TItem>>? selfRef;
     IEnumerable<TItem>? lastItemsSource;
     bool isLoadingRoot;
     bool rootLoaderInvoked;
     Exception? rootError;
+
+    [Inject] IJSRuntime JS { get; set; } = null!;
 
     // ------------- Data -------------
     [Parameter] public IEnumerable<TItem>? ItemsSource { get; set; }
@@ -330,34 +335,61 @@ public partial class TreeView<TItem>
     }
 
     // ------------- Drag/drop -------------
-    void OnDragStart(DragEventArgs e, BlazorTreeNode<TItem> node)
+    // Native DOM listeners in tree-view.js drive the drag (Blazor's synthetic drag
+    // events can't call dataTransfer.setData(), which Safari/Firefox require to
+    // start a drag at all) and report the finished drop back here.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!EnableDragDrop) return;
-        dragSource = node;
-    }
-
-    void OnDragOver(DragEventArgs e, BlazorTreeNode<TItem> node)
-    {
-        if (!EnableDragDrop) return;
-        // visual handled via CSS hover on .shiny-treeview-row
-    }
-
-    async Task OnDrop(DragEventArgs e, BlazorTreeNode<TItem> target)
-    {
-        if (!EnableDragDrop || dragSource == null || ReferenceEquals(dragSource, target))
+        if (EnableDragDrop && dragModule == null)
         {
-            dragSource = null;
-            return;
+            selfRef = DotNetObjectReference.Create(this);
+            dragModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls/tree-view.js");
+            await dragModule.InvokeVoidAsync("init", rootElement, selfRef);
         }
+    }
+
+    [JSInvokable]
+    public async Task OnJsDrop(string sourceId, string targetId, string zone)
+    {
+        if (!EnableDragDrop) return;
+
+        var all = EnumerateAll(rootNodes).ToList();
+        var source = all.FirstOrDefault(n => n.Id == sourceId);
+        var target = all.FirstOrDefault(n => n.Id == targetId);
+        if (source == null || target == null || ReferenceEquals(source, target))
+            return;
+
         // Disallow dropping onto descendants
         var probe = target;
         while (probe != null)
         {
-            if (ReferenceEquals(probe, dragSource)) { dragSource = null; return; }
+            if (ReferenceEquals(probe, source)) return;
             probe = probe.Parent;
         }
-        await ItemDropped.InvokeAsync(new TreeItemDroppedEventArgs<TItem>(dragSource, target, BlazorTreeDropPosition.Below));
-        dragSource = null;
+
+        var position = zone switch
+        {
+            "above" => BlazorTreeDropPosition.Above,
+            "into" => BlazorTreeDropPosition.Into,
+            _ => BlazorTreeDropPosition.Below
+        };
+        await ItemDropped.InvokeAsync(new TreeItemDroppedEventArgs<TItem>(source, target, position));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (dragModule != null)
+            {
+                await dragModule.InvokeVoidAsync("dispose", rootElement);
+                await dragModule.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException) { }
+        selfRef?.Dispose();
     }
 
     // ------------- Keyboard nav -------------

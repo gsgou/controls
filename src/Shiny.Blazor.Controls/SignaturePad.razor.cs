@@ -78,11 +78,13 @@ public partial class SignaturePad : IAsyncDisposable
 
         try
         {
-            await module.InvokeVoidAsync("init", canvasHost, canvasEl, selfRef, new
+            // a named DTO, not an anonymous type: trimmed/AOT publish strips anonymous-type
+            // constructor parameter names, which the JS interop serializer requires
+            await module.InvokeVoidAsync("init", canvasHost, canvasEl, selfRef, new SignaturePadJsOptions
             {
-                strokeColor = StrokeColor,
-                strokeWidth = StrokeWidth,
-                backgroundColor = SignatureBackgroundColor
+                StrokeColor = StrokeColor,
+                StrokeWidth = StrokeWidth,
+                BackgroundColor = SignatureBackgroundColor
             });
             initialized = true;
         }
@@ -153,5 +155,12 @@ public partial class SignaturePad : IAsyncDisposable
             catch (JSDisconnectedException) { }
         }
         selfRef?.Dispose();
+    }
+
+    sealed class SignaturePadJsOptions
+    {
+        public string? StrokeColor { get; set; }
+        public double StrokeWidth { get; set; }
+        public string? BackgroundColor { get; set; }
     }
 }

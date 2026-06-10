@@ -377,6 +377,109 @@ public partial class TreeView : ContentView
         finally { suppressSelectedItemSync = false; }
     }
 
+    // ------------- Pointer-based drag (Catalyst / AppKit / GTK4 fallback) -------------
+    TreeNodeView? pointerDragSource;
+    TreeNodeView? pointerDropTarget;
+    TreeDropPosition pointerDropZone;
+
+    internal void BeginPointerDrag(TreeNodeView source)
+    {
+        pointerDragSource = source;
+        source.SetDragging(true);
+    }
+
+    internal void UpdatePointerDrag(TreeNodeView source, double totalY)
+    {
+        if (!ReferenceEquals(pointerDragSource, source))
+            return;
+
+        source.TranslationY = totalY;
+
+        // Pan deltas are relative to the grab point; approximate the pointer with the
+        // row's vertical centre shifted by the pan amount.
+        var pointerY = source.Frame.Y + (source.Frame.Height / 2) + totalY;
+        var target = FindDropTarget(source, pointerY, out var zone);
+
+        if (!ReferenceEquals(target, pointerDropTarget))
+            pointerDropTarget?.HideDropIndicators();
+
+        pointerDropTarget = target;
+        pointerDropZone = zone;
+        target?.ShowDropIndicator(zone);
+    }
+
+    internal void CompletePointerDrag(TreeNodeView source)
+    {
+        var target = pointerDropTarget;
+        var zone = pointerDropZone;
+        CancelPointerDrag(source);
+        if (target != null)
+            HandleDrop(source.Node, target.Node, zone);
+    }
+
+    internal void CancelPointerDrag(TreeNodeView source)
+    {
+        source.SetDragging(false);
+        pointerDropTarget?.HideDropIndicators();
+        pointerDragSource = null;
+        pointerDropTarget = null;
+    }
+
+    TreeNodeView? FindDropTarget(TreeNodeView source, double pointerY, out TreeDropPosition zone)
+    {
+        zone = TreeDropPosition.Below;
+        TreeNodeView? first = null, last = null, hit = null;
+
+        foreach (var child in rowLayout.Children)
+        {
+            if (child is not TreeNodeView row ||
+                ReferenceEquals(row, source) ||
+                IsDescendantOf(source.Node, row.Node))
+                continue;
+
+            first ??= row;
+            last = row;
+            var f = row.Frame;
+            if (hit == null && pointerY >= f.Y && pointerY < f.Y + f.Height)
+                hit = row;
+        }
+
+        if (hit != null)
+        {
+            var f = hit.Frame;
+            var rel = (pointerY - f.Y) / Math.Max(f.Height, 1);
+            if (HasChildren(hit.Node.Item) && rel is >= 0.25 and <= 0.75)
+                zone = TreeDropPosition.Into;
+            else
+                zone = rel < 0.5 ? TreeDropPosition.Above : TreeDropPosition.Below;
+            return hit;
+        }
+
+        if (first != null && pointerY < first.Frame.Y)
+        {
+            zone = TreeDropPosition.Above;
+            return first;
+        }
+        if (last != null && pointerY >= last.Frame.Y + last.Frame.Height)
+        {
+            zone = TreeDropPosition.Below;
+            return last;
+        }
+        return null;
+    }
+
+    static bool IsDescendantOf(TreeNode source, TreeNode candidate)
+    {
+        var probe = candidate.Parent;
+        while (probe != null)
+        {
+            if (ReferenceEquals(probe, source))
+                return true;
+            probe = probe.Parent;
+        }
+        return false;
+    }
+
     // ------------- Drag/drop dispatch -------------
     internal void HandleDrop(TreeNode source, TreeNode target, TreeDropPosition position)
     {

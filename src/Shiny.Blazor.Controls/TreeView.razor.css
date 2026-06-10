@@ -38,6 +38,32 @@
     outline-offset: -2px;
 }
 
+.shiny-treeview-row.drop-above::after,
+.shiny-treeview-row.drop-below::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #0078D7;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.shiny-treeview-row.drop-above::after {
+    top: -1px;
+}
+
+.shiny-treeview-row.drop-below::after {
+    bottom: -1px;
+}
+
+.shiny-treeview-row.drop-into {
+    background-color: rgba(0, 120, 215, 0.15);
+    outline: 1px solid #0078D7;
+    outline-offset: -1px;
+}
+
 .shiny-treeview-chevron {
     display: inline-flex;
     align-items: center;

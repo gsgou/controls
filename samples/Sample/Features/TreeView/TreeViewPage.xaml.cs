@@ -85,19 +85,32 @@ public partial class TreeViewPage : ContentPage
 
         // Pop the source from its current parent collection
         var sourceList = FindParentList(src);
-        var targetList = FindParentList(tgt);
-        if (sourceList == null || targetList == null)
+        if (sourceList == null)
             return;
 
-        sourceList.Remove(src);
-        var targetIndex = targetList.IndexOf(tgt);
-        targetList.Insert(targetIndex + 1, src);
+        if (e.Position == TreeDropPosition.Into)
+        {
+            sourceList.Remove(src);
+            tgt.Children ??= new();
+            tgt.Children.Add(src);
+            StatusLabel.Text = $"Moved {src.Name} into {tgt.Name}";
+        }
+        else
+        {
+            var targetList = FindParentList(tgt);
+            if (targetList == null)
+                return;
+
+            sourceList.Remove(src);
+            var targetIndex = targetList.IndexOf(tgt);
+            var before = e.Position == TreeDropPosition.Above;
+            targetList.Insert(before ? targetIndex : targetIndex + 1, src);
+            StatusLabel.Text = $"Moved {src.Name} {(before ? "before" : "after")} {tgt.Name}";
+        }
 
         // Re-bind so the tree re-flattens with the new order
         Tree.ItemsSource = null;
         Tree.ItemsSource = data;
-
-        StatusLabel.Text = $"Moved {src.Name} after {tgt.Name}";
     }
 
     List<FileNode>? FindParentList(FileNode item)

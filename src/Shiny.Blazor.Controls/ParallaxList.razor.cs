@@ -55,14 +55,7 @@ public partial class ParallaxList<TItem> : IAsyncDisposable
             module = await JS.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/Shiny.Blazor.Controls/parallax-list.js");
             dotnetRef = DotNetObjectReference.Create(this);
-            await module.InvokeVoidAsync("init", scrollRef, heroRef, dotnetRef, new
-            {
-                factor = ParallaxFactor,
-                headerHeight = HeaderHeight,
-                minHeaderHeight = MinHeaderHeight,
-                collapse = CollapseToSticky,
-                fade = FadeHeaderOnScroll
-            });
+            await module.InvokeVoidAsync("init", scrollRef, heroRef, dotnetRef, BuildJsOptions());
             initialized = true;
         }
         else if (initialized && module is not null && options != pushedOptions)
@@ -70,15 +63,28 @@ public partial class ParallaxList<TItem> : IAsyncDisposable
             // only push when an option actually changed — pushing on every render
             // re-enters update() which raises Scrolled, re-rendering forever
             pushedOptions = options;
-            await module.InvokeVoidAsync("update_", scrollRef, new
-            {
-                factor = ParallaxFactor,
-                headerHeight = HeaderHeight,
-                minHeaderHeight = MinHeaderHeight,
-                collapse = CollapseToSticky,
-                fade = FadeHeaderOnScroll
-            });
+            await module.InvokeVoidAsync("update_", scrollRef, BuildJsOptions());
         }
+    }
+
+    // a named DTO, not an anonymous type: trimmed/AOT publish strips anonymous-type
+    // constructor parameter names, which the JS interop serializer requires
+    ParallaxJsOptions BuildJsOptions() => new()
+    {
+        Factor = ParallaxFactor,
+        HeaderHeight = HeaderHeight,
+        MinHeaderHeight = MinHeaderHeight,
+        Collapse = CollapseToSticky,
+        Fade = FadeHeaderOnScroll
+    };
+
+    sealed class ParallaxJsOptions
+    {
+        public double Factor { get; set; }
+        public double HeaderHeight { get; set; }
+        public double MinHeaderHeight { get; set; }
+        public bool Collapse { get; set; }
+        public bool Fade { get; set; }
     }
 
     [JSInvokable]

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace Shiny.Blazor.Controls.Kiosk.Docking;
@@ -22,6 +23,7 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
 
     [Inject] IServiceProvider Services { get; set; } = null!;
     [Inject] IJSRuntime JS { get; set; } = null!;
+    [Inject] ILogger<IDockHost> Logger { get; set; } = null!;
 
     [Parameter] public DockRoot? InitialLayout { get; set; }
     [Parameter] public bool IsLocked { get; set; }
@@ -58,22 +60,37 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        try
         {
-            lastLocked = IsLocked;
-            module = await JS.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/Shiny.Blazor.Controls.Kiosk/docking.js");
-            dotnetRef = DotNetObjectReference.Create(this);
-            await module.InvokeVoidAsync("init", hostRef, dotnetRef, new { locked = IsLocked });
-        }
-        else if (module is not null)
-        {
-            if (lastLocked != IsLocked)
+            if (firstRender)
             {
                 lastLocked = IsLocked;
-                await module.InvokeVoidAsync("setLocked", hostRef, IsLocked);
+                module = await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/Shiny.Blazor.Controls.Kiosk/docking.js");
+                dotnetRef = DotNetObjectReference.Create(this);
+                // primitives only over interop — anonymous types break trimmed/AOT publish
+                await module.InvokeVoidAsync("init", hostRef, dotnetRef, IsLocked);
             }
-            await module.InvokeVoidAsync("refreshFloating", hostRef);
+            else if (module is not null)
+            {
+                if (lastLocked != IsLocked)
+                {
+                    lastLocked = IsLocked;
+                    await module.InvokeVoidAsync("setLocked", hostRef, IsLocked);
+                }
+                await module.InvokeVoidAsync("refreshFloating", hostRef);
+            }
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException ex)
+        {
+            // a stale build/server can 404 the script asset — render still works,
+            // only drag/resize interactions are unavailable
+            module = null;
+            Logger.LogError(ex,
+                "Failed to load the docking interaction script (_content/Shiny.Blazor.Controls.Kiosk/docking.js). " +
+                "Splitter/tab dragging is disabled. Rebuild the app and hard-refresh the browser — " +
+                "this usually means the running server or browser cache predates the script asset.");
         }
     }
 

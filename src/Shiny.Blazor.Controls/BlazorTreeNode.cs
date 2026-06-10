@@ -21,6 +21,9 @@ public class BlazorTreeNode<TItem>
     public BlazorTreeNode<TItem>? Parent { get; }
     public int Depth { get; }
 
+    /// <summary>Stable identity used to correlate DOM rows with nodes during drag/drop.</summary>
+    internal string Id { get; } = Guid.NewGuid().ToString("N");
+
     public bool IsExpanded { get; internal set; }
     public bool IsSelected { get; internal set; }
     public BlazorTreeLoadState LoadState { get; internal set; }
