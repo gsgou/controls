@@ -1,0 +1,115 @@
+@page "/tabbar"
+@using Shiny.Blazor.Controls
+
+<PageTitle>Tab Bar</PageTitle>
+
+<h1>Tab Bar</h1>
+<p>A mobile-style tab bar that docks to the bottom. Two-way bind <code>SelectedKey</code> for the active
+   tab, give items an <code>ActiveIcon</code> for a filled selected state, add <code>Badge</code> counts,
+   and flip <code>Frosted</code> to turn it into glass.</p>
+
+<section class="demo-section">
+    <h2>Bottom tab bar with selection &amp; badges</h2>
+    <div class="phone">
+        <div class="phone-body phone-body--photo">
+            <h3>@CurrentLabel</h3>
+            @for (var i = 1; i <= 14; i++)
+            {
+                <div class="phone-row">@CurrentLabel item @i</div>
+            }
+        </div>
+        <ShinyTabBar Items="@tabs"
+                     @bind-SelectedKey="selected"
+                     Fixed="false"
+                     Frosted="true"
+                     ActiveColor="#7C3AED" />
+    </div>
+    <p class="state">Selected key: <strong>@selected</strong></p>
+</section>
+
+<section class="demo-section">
+    <h2>Solid, icon-only (no labels)</h2>
+    <div class="phone">
+        <div class="phone-body">
+            @for (var i = 1; i <= 14; i++)
+            {
+                <div class="phone-row">Row @i</div>
+            }
+        </div>
+        <ShinyTabBar Items="@tabs"
+                     @bind-SelectedKey="selected2"
+                     Fixed="false"
+                     ShowLabels="false"
+                     BackgroundColor="#0F172A"
+                     ActiveColor="#38BDF8"
+                     InactiveColor="#64748B" />
+    </div>
+</section>
+
+@code {
+    string? selected = "home";
+    string? selected2 = "home";
+
+    string CurrentLabel => tabs.FirstOrDefault(t => t.Key == selected)?.Label ?? "Home";
+
+    const string Home = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/></svg>";
+    const string HomeFill = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 3l9 8h-2v9h-5v-6h-4v6H5v-9H3l9-8z'/></svg>";
+    const string Search = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3' stroke-linecap='round'/></svg>";
+    const string Chat = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'/></svg>";
+    const string ChatFill = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M3 5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H7l-4 4z'/></svg>";
+    const string Profile = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0116 0'/></svg>";
+    const string ProfileFill = "<svg viewBox='0 0 24 24' fill='currentColor'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0116 0z'/></svg>";
+
+    List<TabBarItem> tabs = new()
+    {
+        new() { Key = "home", Label = "Home", Icon = Home, ActiveIcon = HomeFill },
+        new() { Key = "search", Label = "Search", Icon = Search },
+        new() { Key = "chat", Label = "Chat", Icon = Chat, ActiveIcon = ChatFill, Badge = "5" },
+        new() { Key = "profile", Label = "Profile", Icon = Profile, ActiveIcon = ProfileFill, Badge = "" }
+    };
+}
+
+<style>
+    .phone {
+        position: relative;
+        width: 300px;
+        height: 420px;
+        margin: 0 auto;
+        border-radius: 28px;
+        border: 8px solid #111827;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .phone-body {
+        height: 100%;
+        overflow-y: auto;
+        padding: 16px 14px 70px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .phone-body h3 {
+        margin: 4px 0 8px;
+        color: #1E1B4B;
+    }
+
+    .phone-body--photo {
+        background: linear-gradient(160deg, #8B5CF6 0%, #EC4899 60%, #F97316 100%);
+        color: #fff;
+    }
+
+    .phone-body--photo h3 {
+        color: #fff;
+    }
+
+    .phone-row {
+        background: rgba(255, 255, 255, 0.85);
+        color: #1E293B;
+        border-radius: 9px;
+        padding: 12px 12px;
+        font-weight: 500;
+    }
+</style>

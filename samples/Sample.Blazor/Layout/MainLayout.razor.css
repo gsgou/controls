@@ -19,10 +19,38 @@
 
 .content {
     flex: 1;
-    padding: 28px 36px;
+    /* min-width:0 lets the flex child shrink so the sticky/frosted header tracks the viewport correctly */
+    min-width: 0;
     max-width: 100%;
     /* clip (not hidden) — hidden creates a scroll container, which kills position:sticky in descendants */
     overflow-x: clip;
+}
+
+/* page padding lives here so the docked toolbar above can span the full content width
+   and page content scrolls *under* the frosted header */
+.content-inner {
+    padding: 28px 36px;
+}
+
+/* the bottom tab bar is a mobile affordance — hidden on desktop where the sidebar is shown.
+   ::deep reaches the child ShinyTabBar's root element from this scoped stylesheet. */
+.content ::deep .mobile-tabbar {
+    display: none;
+}
+
+@media (max-width: 820px) {
+    .sidebar {
+        display: none;
+    }
+
+    .content ::deep .mobile-tabbar {
+        display: block;
+    }
+
+    /* clear the fixed bottom tab bar so it never covers the last row of content */
+    .content-inner {
+        padding-bottom: calc(56px + env(safe-area-inset-bottom) + 16px);
+    }
 }
 
 #blazor-error-ui {

@@ -1,5 +1,8 @@
 @namespace Sample.Blazor.Layout
 @inherits LayoutComponentBase
+@using Shiny.Blazor.Controls
+@inject NavigationManager Nav
+@implements IDisposable
 
 <div class="page">
     <aside class="sidebar">
@@ -7,7 +10,25 @@
     </aside>
 
     <main class="content">
-        @Body
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Frosted="true"
+                      TintColor="rgba(245, 243, 255, 0.72)"
+                      TextColor="#1E1B4B"
+                      Height="52"
+                      Title="Shiny Controls"
+                      Items="@headerItems" />
+
+        <div class="content-inner">
+            @Body
+        </div>
+
+        <ShinyTabBar CssClass="mobile-tabbar"
+                     Items="@tabs"
+                     SelectedKey="@SelectedTabKey"
+                     ActiveColor="#7C3AED"
+                     InactiveColor="#9CA3AF"
+                     Frosted="true"
+                     TintColor="rgba(255, 255, 255, 0.82)" />
     </main>
 </div>
 
@@ -18,3 +39,36 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    string SelectedTabKey
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
+            return path.Length == 0 ? "home" : path;
+        }
+    }
+
+    protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+    void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => StateHasChanged();
+
+    const string IconGitHub = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.73 1.27 3.4.97.1-.76.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.42.36.8 1.08.8 2.18v3.23c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z'/></svg>";
+    const string IconHome = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/></svg>";
+    const string IconHomeFill = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 3l9 8h-2v9h-5v-6h-4v6H5v-9H3l9-8z'/></svg>";
+    const string IconToolbar = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='4' width='18' height='4' rx='1'/><path d='M5 13h6M5 17h10'/></svg>";
+    const string IconTabBar = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='16' width='18' height='5' rx='1'/><path d='M7 18.5h.01M12 18.5h.01M17 18.5h.01M5 4h14'/></svg>";
+
+    List<ToolbarItem> headerItems = new()
+    {
+        new() { Icon = IconGitHub, Href = "https://github.com/shinyorg/controls", Target = "_blank" }
+    };
+
+    List<TabBarItem> tabs = new()
+    {
+        new() { Key = "home", Label = "Home", Icon = IconHome, ActiveIcon = IconHomeFill, Href = "" },
+        new() { Key = "toolbar", Label = "Toolbar", Icon = IconToolbar, Href = "toolbar" },
+        new() { Key = "tabbar", Label = "Tabs", Icon = IconTabBar, Href = "tabbar" }
+    };
+}

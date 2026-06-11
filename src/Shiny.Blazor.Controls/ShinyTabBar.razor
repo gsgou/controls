@@ -1,0 +1,197 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="@RootClass" style="@RootStyle">
+    <div class="shiny-tabbar-inner">
+        @if (Items != null)
+        {
+            foreach (var item in Items)
+            {
+                var active = IsActive(item);
+                var glyph = active && !string.IsNullOrEmpty(item.ActiveIcon) ? item.ActiveIcon : item.Icon;
+                var color = active ? ActiveColor : InactiveColor;
+
+                if (!string.IsNullOrEmpty(item.Href))
+                {
+                    <a class="@ItemClass(active)"
+                       href="@item.Href"
+                       style="@($"color:{color};")"
+                       @onclick="@(_ => OnItemClicked(item))">
+                        @TabBody(item, glyph)
+                    </a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="@ItemClass(active)"
+                            style="@($"color:{color};")"
+                            disabled="@item.IsDisabled"
+                            @onclick="@(_ => OnItemClicked(item))">
+                        @TabBody(item, glyph)
+                    </button>
+                }
+            }
+        }
+    </div>
+</div>
+
+@code {
+    string? selectedKey;
+
+    [Parameter] public List<TabBarItem>? Items { get; set; }
+
+    [Parameter]
+    public string? SelectedKey
+    {
+        get => selectedKey;
+        set
+        {
+            if (selectedKey == value) return;
+            selectedKey = value;
+            _ = SelectedKeyChanged.InvokeAsync(selectedKey);
+        }
+    }
+    [Parameter] public EventCallback<string?> SelectedKeyChanged { get; set; }
+    [Parameter] public EventCallback<TabBarItem> ItemClicked { get; set; }
+
+    [Parameter] public ToolbarDock Dock { get; set; } = ToolbarDock.Bottom;
+
+    /// <summary>When true (default) the bar is pinned to the viewport via position:fixed.</summary>
+    [Parameter] public bool Fixed { get; set; } = true;
+
+    [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
+    [Parameter] public string ActiveColor { get; set; } = "#2196F3";
+    [Parameter] public string InactiveColor { get; set; } = "#9CA3AF";
+
+    [Parameter] public bool ShowLabels { get; set; } = true;
+    [Parameter] public double Height { get; set; } = 56;
+    [Parameter] public double IconSize { get; set; } = 24;
+
+    // frosted glass
+    [Parameter] public bool Frosted { get; set; }
+    [Parameter] public double BlurRadius { get; set; } = 20;
+    [Parameter] public string TintColor { get; set; } = "rgba(255, 255, 255, 0.7)";
+
+    [Parameter] public bool HasShadow { get; set; } = true;
+    [Parameter] public string? BorderColor { get; set; }
+    [Parameter] public double BorderThickness { get; set; }
+    [Parameter] public bool SafeArea { get; set; } = true;
+    [Parameter] public int ZIndex { get; set; } = 100;
+
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    bool IsTop => Dock == ToolbarDock.Top;
+
+    bool IsActive(TabBarItem item) => item.Key != null && item.Key == selectedKey;
+
+    string RootClass
+    {
+        get
+        {
+            var c = "shiny-tabbar";
+            c += IsTop ? " shiny-tabbar--top" : " shiny-tabbar--bottom";
+            if (Frosted) c += " shiny-tabbar--frosted";
+            if (HasShadow) c += " shiny-tabbar--shadow";
+            if (!ShowLabels) c += " shiny-tabbar--no-labels";
+            if (!string.IsNullOrEmpty(CssClass)) c += " " + CssClass;
+            return c;
+        }
+    }
+
+    string RootStyle
+    {
+        get
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("position:").Append(Fixed ? "fixed" : "sticky").Append(';');
+            if (Fixed)
+            {
+                sb.Append("left:0;right:0;");
+                sb.Append(IsTop ? "top:0;" : "bottom:0;");
+            }
+            else
+            {
+                sb.Append(IsTop ? "top:0;" : "bottom:0;");
+            }
+            sb.Append("z-index:").Append(ZIndex).Append(';');
+            sb.Append("--shiny-tabbar-icon-size:").Append(IconSize.ToInv()).Append("px;");
+            sb.Append("min-height:").Append(Height.ToInv()).Append("px;");
+
+            if (Frosted)
+            {
+                sb.Append("background-color:").Append(TintColor).Append(';');
+                sb.Append("backdrop-filter:blur(").Append(BlurRadius.ToInv()).Append("px);");
+                sb.Append("-webkit-backdrop-filter:blur(").Append(BlurRadius.ToInv()).Append("px);");
+            }
+            else
+            {
+                sb.Append("background-color:").Append(BackgroundColor).Append(';');
+            }
+
+            if (BorderThickness > 0 && !string.IsNullOrEmpty(BorderColor))
+            {
+                var edge = IsTop ? "border-bottom" : "border-top";
+                sb.Append(edge).Append(':').Append(BorderThickness.ToInv()).Append("px solid ").Append(BorderColor).Append(';');
+            }
+
+            if (SafeArea)
+                sb.Append(IsTop ? "padding-top:env(safe-area-inset-top);" : "padding-bottom:env(safe-area-inset-bottom);");
+
+            if (!string.IsNullOrEmpty(Style)) sb.Append(Style);
+            return sb.ToString();
+        }
+    }
+
+    string ItemClass(bool active)
+    {
+        var c = "shiny-tabbar-item";
+        if (active) c += " shiny-tabbar-item--active";
+        return c;
+    }
+
+    RenderFragment TabBody(TabBarItem item, string? glyph) =>
+        @<text>
+            <span class="shiny-tabbar-item-icon">
+                @if (!string.IsNullOrEmpty(glyph))
+                {
+                    if (IsImageUrl(glyph!))
+                    {
+                        <img src="@glyph" alt="" />
+                    }
+                    else
+                    {
+                        @((MarkupString)glyph!)
+                    }
+                }
+                @if (item.Badge != null)
+                {
+                    <span class="@(item.Badge.Length == 0 ? "shiny-tabbar-item-badge shiny-tabbar-item-badge--dot" : "shiny-tabbar-item-badge")">@item.Badge</span>
+                }
+            </span>
+            @if (ShowLabels && !string.IsNullOrEmpty(item.Label))
+            {
+                <span class="shiny-tabbar-item-label">@item.Label</span>
+            }
+        </text>;
+
+    async Task OnItemClicked(TabBarItem item)
+    {
+        if (item.IsDisabled) return;
+
+        if (item.Key != null && item.Key != selectedKey)
+        {
+            selectedKey = item.Key;
+            await SelectedKeyChanged.InvokeAsync(selectedKey);
+        }
+        if (ItemClicked.HasDelegate)
+            await ItemClicked.InvokeAsync(item);
+    }
+
+    static bool IsImageUrl(string s)
+        => s.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+           || s.StartsWith("/")
+           || s.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
+}

@@ -1,0 +1,171 @@
+@page "/toolbar"
+@using Shiny.Blazor.Controls
+
+<PageTitle>Toolbar</PageTitle>
+
+<h1>Docked Toolbar</h1>
+<p>A toolbar that docks to the top or bottom of its scroll container. Using <code>position:sticky</code>,
+   a top toolbar reserves its own space (so content never starts underneath it) yet content scrolls
+   <em>under</em> it as you scroll — and with <code>Frosted</code> the content blurs through the glass.</p>
+
+<section class="demo-section">
+    <h2>Frosted top toolbar — content scrolls under (scroll the panel)</h2>
+    <div class="scroll-demo">
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Frosted="true"
+                      Title="Inbox"
+                      Items="@mailItems"
+                      ItemClicked="OnItemClicked" />
+
+        <div class="scroll-body scroll-body--photo">
+            @for (var i = 1; i <= 12; i++)
+            {
+                <div class="fake-row">Message @i</div>
+            }
+        </div>
+    </div>
+    <p class="state">Last tapped: <strong>@lastAction</strong></p>
+</section>
+
+<section class="demo-section">
+    <h2>Solid colors &amp; a title</h2>
+    <div class="scroll-demo">
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      BackgroundColor="#7C3AED"
+                      TextColor="#FFFFFF"
+                      Title="Dashboard"
+                      Items="@actionItems"
+                      ItemClicked="OnItemClicked" />
+        <div class="scroll-body">
+            @for (var i = 1; i <= 10; i++)
+            {
+                <div class="fake-row">Card @i</div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Custom content (StartContent / ChildContent / EndContent)</h2>
+    <div class="scroll-demo">
+        <ShinyToolbar Dock="ToolbarDock.Top" BackgroundColor="#0F172A" TextColor="#E2E8F0">
+            <StartContent>
+                <button class="ghost-btn" @onclick="@(() => lastAction = "Back")">&#x2190;</button>
+                <strong>Project Atlas</strong>
+            </StartContent>
+            <EndContent>
+                <Pill Text="Live" PillColor="#10B981" PillTextColor="#06281B" />
+            </EndContent>
+        </ShinyToolbar>
+        <div class="scroll-body">
+            @for (var i = 1; i <= 10; i++)
+            {
+                <div class="fake-row">Task @i</div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Bottom-docked action bar</h2>
+    <div class="scroll-demo">
+        <div class="scroll-body">
+            @for (var i = 1; i <= 10; i++)
+            {
+                <div class="fake-row">Photo @i</div>
+            }
+        </div>
+        <ShinyToolbar Dock="ToolbarDock.Bottom"
+                      BackgroundColor="#FFFFFF"
+                      ShowItemLabels="true"
+                      Items="@bottomItems"
+                      ItemClicked="OnItemClicked" />
+    </div>
+</section>
+
+@code {
+    string lastAction = "—";
+
+    void OnItemClicked(ToolbarItem item)
+    {
+        lastAction = item.Text ?? item.Tag?.ToString() ?? "(icon)";
+        StateHasChanged();
+    }
+
+    const string IconSearch = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3' stroke-linecap='round'/></svg>";
+    const string IconBell = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9'/><path d='M13.7 21a2 2 0 01-3.4 0'/></svg>";
+    const string IconCompose = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z'/></svg>";
+    const string IconShare = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='18' cy='5' r='3'/><circle cx='6' cy='12' r='3'/><circle cx='18' cy='19' r='3'/><path d='M8.6 13.5l6.8 4M15.4 6.5l-6.8 4'/></svg>";
+    const string IconTrash = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14'/></svg>";
+    const string IconStar = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2l2.39 6.95H22l-6 4.36 2.3 7.05L12 16l-6.3 4.36 2.3-7.05-6-4.36h7.61L12 2z'/></svg>";
+
+    List<ToolbarItem> mailItems = new()
+    {
+        new() { Icon = IconSearch, Text = "Search" },
+        new() { Icon = IconBell, Text = "Alerts", Badge = "3" },
+        new() { Icon = IconCompose, Text = "Compose" }
+    };
+
+    List<ToolbarItem> actionItems = new()
+    {
+        new() { Icon = IconStar, Text = "Star" },
+        new() { Icon = IconShare, Text = "Share" }
+    };
+
+    List<ToolbarItem> bottomItems = new()
+    {
+        new() { Icon = IconShare, Text = "Share" },
+        new() { Icon = IconStar, Text = "Favorite" },
+        new() { Icon = IconTrash, Text = "Delete", IconColor = "#EF4444" }
+    };
+}
+
+<style>
+    .scroll-demo {
+        position: relative;
+        height: 320px;
+        overflow-y: auto;
+        border: 1px solid #E5E7EB;
+        border-radius: 14px;
+        background: #F8FAFC;
+    }
+
+    .scroll-body {
+        padding: 12px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* a colorful backdrop so the frosted blur is obvious as content slides under */
+    .scroll-body--photo {
+        background: linear-gradient(135deg, #6366F1 0%, #EC4899 45%, #F59E0B 100%);
+    }
+
+    .scroll-body--photo .fake-row {
+        background: rgba(255, 255, 255, 0.82);
+    }
+
+    .fake-row {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        padding: 16px 14px;
+        font-weight: 500;
+        color: #1E293B;
+    }
+
+    .ghost-btn {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 8px;
+    }
+
+    .ghost-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+</style>

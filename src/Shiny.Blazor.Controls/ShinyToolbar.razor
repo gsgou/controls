@@ -1,0 +1,190 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="@RootClass" style="@RootStyle">
+    <div class="shiny-toolbar-inner">
+        @if (StartContent != null)
+        {
+            <div class="shiny-toolbar-start">@StartContent</div>
+        }
+        else if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="shiny-toolbar-title">@Title</div>
+        }
+
+        @if (ChildContent != null)
+        {
+            <div class="shiny-toolbar-content">@ChildContent</div>
+        }
+
+        @if (EndContent != null)
+        {
+            <div class="shiny-toolbar-end">@EndContent</div>
+        }
+        else if (Items is { Count: > 0 })
+        {
+            <div class="shiny-toolbar-end shiny-toolbar-items">
+                @foreach (var item in Items)
+                {
+                    if (!string.IsNullOrEmpty(item.Href))
+                    {
+                        <a class="shiny-toolbar-item"
+                           href="@item.Href"
+                           target="@item.Target"
+                           style="@ItemStyle(item)"
+                           @onclick="@(_ => OnItemClicked(item))">
+                            @ItemBody(item)
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="shiny-toolbar-item"
+                                style="@ItemStyle(item)"
+                                disabled="@item.IsDisabled"
+                                @onclick="@(_ => OnItemClicked(item))"
+                                @onclick:stopPropagation="true">
+                            @ItemBody(item)
+                        </button>
+                    }
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public ToolbarDock Dock { get; set; } = ToolbarDock.Top;
+
+    /// <summary>When true (default) the bar pins via position:sticky so page content scrolls under it.</summary>
+    [Parameter] public bool Sticky { get; set; } = true;
+
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public List<ToolbarItem>? Items { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? StartContent { get; set; }
+    [Parameter] public RenderFragment? EndContent { get; set; }
+
+    [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
+    [Parameter] public string TextColor { get; set; } = "#1F2937";
+    [Parameter] public double Height { get; set; } = 56;
+    [Parameter] public double IconSize { get; set; } = 22;
+    [Parameter] public bool ShowItemLabels { get; set; }
+
+    // frosted glass
+    [Parameter] public bool Frosted { get; set; }
+    [Parameter] public double BlurRadius { get; set; } = 20;
+    [Parameter] public string TintColor { get; set; } = "rgba(255, 255, 255, 0.7)";
+
+    // chrome
+    [Parameter] public bool HasShadow { get; set; } = true;
+    [Parameter] public string? BorderColor { get; set; }
+    [Parameter] public double BorderThickness { get; set; }
+    [Parameter] public bool SafeArea { get; set; } = true;
+    [Parameter] public int ZIndex { get; set; } = 100;
+
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    [Parameter] public EventCallback<ToolbarItem> ItemClicked { get; set; }
+
+    bool IsTop => Dock == ToolbarDock.Top;
+
+    string RootClass
+    {
+        get
+        {
+            var c = "shiny-toolbar";
+            c += IsTop ? " shiny-toolbar--top" : " shiny-toolbar--bottom";
+            if (Frosted) c += " shiny-toolbar--frosted";
+            if (HasShadow) c += " shiny-toolbar--shadow";
+            if (ShowItemLabels) c += " shiny-toolbar--labelled";
+            if (!string.IsNullOrEmpty(CssClass)) c += " " + CssClass;
+            return c;
+        }
+    }
+
+    string RootStyle
+    {
+        get
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("position:").Append(Sticky ? "sticky" : "relative").Append(';');
+            sb.Append(IsTop ? "top:0;" : "bottom:0;");
+            sb.Append("z-index:").Append(ZIndex).Append(';');
+            sb.Append("color:").Append(TextColor).Append(';');
+            sb.Append("min-height:").Append(Height.ToInv()).Append("px;");
+
+            if (Frosted)
+            {
+                sb.Append("background-color:").Append(TintColor).Append(';');
+                sb.Append("backdrop-filter:blur(").Append(BlurRadius.ToInv()).Append("px);");
+                sb.Append("-webkit-backdrop-filter:blur(").Append(BlurRadius.ToInv()).Append("px);");
+            }
+            else
+            {
+                sb.Append("background-color:").Append(BackgroundColor).Append(';');
+            }
+
+            if (BorderThickness > 0 && !string.IsNullOrEmpty(BorderColor))
+            {
+                var edge = IsTop ? "border-bottom" : "border-top";
+                sb.Append(edge).Append(':').Append(BorderThickness.ToInv()).Append("px solid ").Append(BorderColor).Append(';');
+            }
+
+            if (SafeArea)
+                sb.Append(IsTop ? "padding-top:env(safe-area-inset-top);" : "padding-bottom:env(safe-area-inset-bottom);");
+
+            if (!string.IsNullOrEmpty(Style)) sb.Append(Style);
+            return sb.ToString();
+        }
+    }
+
+    string ItemStyle(ToolbarItem item)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("--shiny-toolbar-icon-size:").Append(IconSize.ToInv()).Append("px;");
+        if (!string.IsNullOrEmpty(item.IconColor)) sb.Append("color:").Append(item.IconColor).Append(';');
+        return sb.ToString();
+    }
+
+    RenderFragment ItemBody(ToolbarItem item) =>
+        @<text>
+            <span class="shiny-toolbar-item-icon">
+                @if (!string.IsNullOrEmpty(item.Icon))
+                {
+                    if (IsImageUrl(item.Icon!))
+                    {
+                        <img src="@item.Icon" alt="" />
+                    }
+                    else
+                    {
+                        @((MarkupString)item.Icon!)
+                    }
+                }
+            </span>
+            @if (ShowItemLabels && !string.IsNullOrEmpty(item.Text))
+            {
+                <span class="shiny-toolbar-item-label">@item.Text</span>
+            }
+            @if (item.Badge != null)
+            {
+                <span class="shiny-toolbar-item-badge">@item.Badge</span>
+            }
+        </text>;
+
+    async Task OnItemClicked(ToolbarItem item)
+    {
+        if (item.IsDisabled) return;
+        if (ItemClicked.HasDelegate)
+            await ItemClicked.InvokeAsync(item);
+    }
+
+    static bool IsImageUrl(string s)
+        => s.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+           || s.StartsWith("/")
+           || s.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)
+           || s.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
+}

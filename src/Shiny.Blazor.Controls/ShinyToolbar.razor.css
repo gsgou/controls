@@ -1,0 +1,126 @@
+.shiny-toolbar {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    /* clip the backdrop-filter to this box so the blur edge is crisp */
+    overflow: hidden;
+}
+
+.shiny-toolbar--shadow.shiny-toolbar--top {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.shiny-toolbar--shadow.shiny-toolbar--bottom {
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.shiny-toolbar-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+    min-height: inherit;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.shiny-toolbar-title {
+    font-size: 17px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.shiny-toolbar-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.shiny-toolbar-start {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.shiny-toolbar-end {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.shiny-toolbar-item {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    text-decoration: none;
+    font: inherit;
+    line-height: 1;
+    transition: background-color 120ms ease, opacity 120ms ease, transform 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shiny-toolbar-item:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.shiny-toolbar-item:active {
+    transform: scale(0.94);
+}
+
+.shiny-toolbar-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.shiny-toolbar-item-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--shiny-toolbar-icon-size, 22px);
+    height: var(--shiny-toolbar-icon-size, 22px);
+}
+
+.shiny-toolbar-item-icon img,
+.shiny-toolbar-item-icon svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.shiny-toolbar-item-label {
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.shiny-toolbar-item-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+}
