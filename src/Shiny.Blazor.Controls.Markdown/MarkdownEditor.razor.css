@@ -3,10 +3,10 @@
     flex-direction: column;
     width: 100%;
     min-height: 320px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
     border-radius: 8px;
     overflow: hidden;
-    background: white;
+    background: var(--shiny-color-surface, white);
 }
 
 .shiny-md-editor.is-split { flex-direction: row; }
@@ -18,7 +18,7 @@
 }
 
 .shiny-md-editor.is-split .shiny-md-editor-input {
-    border-right: 1px solid #E5E7EB;
+    border-right: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-md-editor-textarea {
@@ -31,8 +31,8 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 13px;
     line-height: 1.5;
-    color: #111827;
-    background: white;
+    color: var(--shiny-color-on-surface, #111827);
+    background: var(--shiny-color-surface, white);
 }
 
 .shiny-md-editor-preview {

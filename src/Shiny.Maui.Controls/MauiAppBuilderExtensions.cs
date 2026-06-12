@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Toast;
 #if ANDROID || IOS || MACCATALYST || WINDOWS
 using Shiny.Maui.Controls.CarouselGallery;
@@ -18,13 +19,19 @@ public static class ControlsMauiAppBuilderExtensions
         Action<ShinyControlConfiguration>? configure = null
     )
     {
-        if (configure != null)
-        {
-            var cfg = new ShinyControlConfiguration(builder.Services);
-            configure.Invoke(cfg);
-        }
+        var cfg = new ShinyControlConfiguration(builder.Services);
+        configure?.Invoke(cfg);
+
+        // Always have a theme so token resources resolve; default to Basic if none chosen.
+        if (ShinyThemeManager.CurrentTheme is null)
+            cfg.UseBasicTheme();
+
         builder.Services.TryAddSingleton<IFeedbackService, HapticFeedbackService>();
         builder.Services.TryAddSingleton<IToaster, Toaster>();
+
+        // Application.Current is not available during builder configuration, so defer applying
+        // the theme until the first page is created (same pattern as MauiControlFeedbackIntegrator).
+        PageHandler.Mapper.AppendToMapping("ShinyThemeApply", (_, _) => ShinyThemeManager.EnsureApplied());
 
 #if ANDROID || IOS || MACCATALYST || WINDOWS
         builder.ConfigureMauiHandlers(handlers =>
@@ -113,4 +120,18 @@ public class ShinyControlConfiguration(IServiceCollection services)
         services.AddSingleton<IFeedbackService, NoFeedbackService>();
         return this;
     }
+
+    /// <summary>
+    /// Apply a Shiny theme to the app. The theme's token resources are merged into the
+    /// application and kept in sync with the OS light/dark appearance. Controls pick the colors
+    /// up automatically. Call <see cref="ShinyThemeManager.SetTheme"/> to switch at runtime.
+    /// </summary>
+    public ShinyControlConfiguration UseTheme(IShinyTheme theme)
+    {
+        ShinyThemeManager.SetTheme(theme);
+        return this;
+    }
+
+    /// <summary>Apply the built-in <see cref="BasicTheme"/> (the default).</summary>
+    public ShinyControlConfiguration UseBasicTheme() => this.UseTheme(new BasicTheme());
 }

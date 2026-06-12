@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -45,9 +46,10 @@ public class AutoCompleteEntry : ContentView
             WidthRequest = 20,
             HeightRequest = 20,
             VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.End,
-            Color = Colors.Grey
+            HorizontalOptions = LayoutOptions.End
         };
+        // Theme default — overridden if the consumer sets SpinnerColor explicitly.
+        spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var entryGrid = new Grid
         {
@@ -81,8 +83,6 @@ public class AutoCompleteEntry : ContentView
         {
             IsVisible = false,
             StrokeThickness = 1,
-            Stroke = Colors.LightGray,
-            BackgroundColor = Colors.White,
             Padding = 0,
             StrokeShape = dropDownShape,
             MaximumHeightRequest = DefaultMaxDropDownHeight,
@@ -95,6 +95,11 @@ public class AutoCompleteEntry : ContentView
                 Offset = new Point(0, 3)
             }
         };
+        // Theme defaults — overridden if the consumer sets DropDownBackgroundColor / DropDownBorderColor explicitly.
+        dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        var dropDownStrokeBrush = new SolidColorBrush();
+        dropDownStrokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
+        dropDownBorder.Stroke = dropDownStrokeBrush;
 
         rootGrid = new Grid
         {
@@ -291,8 +296,15 @@ public class AutoCompleteEntry : ContentView
         nameof(DropDownBackgroundColor),
         typeof(Color),
         typeof(AutoCompleteEntry),
-        Colors.White,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AutoCompleteEntry)b).dropDownBorder.BackgroundColor = c; });
+        null,
+        propertyChanged: (b, _, n) =>
+        {
+            var ctrl = (AutoCompleteEntry)b;
+            if (n is Color c)
+                ctrl.dropDownBorder.BackgroundColor = c;
+            else
+                ctrl.dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        });
     public Color? DropDownBackgroundColor
     {
         get => (Color?)GetValue(DropDownBackgroundColorProperty);
@@ -303,8 +315,21 @@ public class AutoCompleteEntry : ContentView
         nameof(DropDownBorderColor),
         typeof(Color),
         typeof(AutoCompleteEntry),
-        Colors.LightGray,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AutoCompleteEntry)b).dropDownBorder.Stroke = c; });
+        null,
+        propertyChanged: (b, _, n) =>
+        {
+            var ctrl = (AutoCompleteEntry)b;
+            if (n is Color c)
+            {
+                ctrl.dropDownBorder.Stroke = c;
+            }
+            else
+            {
+                var brush = new SolidColorBrush();
+                brush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
+                ctrl.dropDownBorder.Stroke = brush;
+            }
+        });
     public Color? DropDownBorderColor
     {
         get => (Color?)GetValue(DropDownBorderColorProperty);
@@ -315,8 +340,15 @@ public class AutoCompleteEntry : ContentView
         nameof(SpinnerColor),
         typeof(Color),
         typeof(AutoCompleteEntry),
-        Colors.Grey,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AutoCompleteEntry)b).spinner.Color = c; });
+        null,
+        propertyChanged: (b, _, n) =>
+        {
+            var ctrl = (AutoCompleteEntry)b;
+            if (n is Color c)
+                ctrl.spinner.Color = c;
+            else
+                ctrl.spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        });
     public Color? SpinnerColor
     {
         get => (Color?)GetValue(SpinnerColorProperty);

@@ -1,0 +1,19 @@
+{
+    "$schema": "./shiny-theme.schema.json",
+    "name": "Basic",
+    "slug": "basic",
+    "description": "The default Shiny Controls theme. A clean, modern blue-accented neutral palette that ships built into the core packages.",
+    "seeds": {
+        "primary": "#2563EB",
+        "secondary": "#5B6472",
+        "tertiary": "#7C5CBF",
+        "neutral": "#5F6368",
+        "neutralVariant": "#5C6370",
+        "error": "#DC2626",
+        "success": "#16A34A",
+        "info": "#2563EB",
+        "warning": "#D97706",
+        "caution": "#EA580C",
+        "critical": "#DC2626"
+    }
+}

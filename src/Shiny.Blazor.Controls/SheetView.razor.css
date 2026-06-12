@@ -8,7 +8,7 @@
 .shiny-sheet-backdrop {
     position: absolute;
     inset: 0;
-    background: black;
+    background: var(--shiny-color-scrim, black);
     transition: opacity 200ms ease;
 }
 

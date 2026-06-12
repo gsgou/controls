@@ -1,0 +1,19 @@
+{
+    "$schema": "./shiny-theme.schema.json",
+    "name": "Ocean",
+    "slug": "ocean",
+    "description": "A cool, calm teal/cyan palette inspired by deep water and Nordic tones.",
+    "seeds": {
+        "primary": "#0E7490",
+        "secondary": "#0F766E",
+        "tertiary": "#1D4ED8",
+        "neutral": "#475569",
+        "neutralVariant": "#3F5560",
+        "error": "#BE123C",
+        "success": "#0D9488",
+        "info": "#0891B2",
+        "warning": "#CA8A04",
+        "caution": "#C2410C",
+        "critical": "#BE123C"
+    }
+}

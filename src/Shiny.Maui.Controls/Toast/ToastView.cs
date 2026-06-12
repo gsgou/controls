@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Toast;
 
 sealed class ToastView : ContentView
@@ -21,6 +23,15 @@ sealed class ToastView : ContentView
         this.config = config;
         InputTransparent = false;
 
+        // Resolve theme token keys for this toast type (if typed). Explicit colors on the
+        // config (set by the consumer or a ToastTypeStyle) always win; otherwise we bind the
+        // matching token via dynamic resources so a runtime theme/appearance switch restyles.
+        (string Bg, string Text, string Border)? tokens = null;
+        if (config.Type is ToastType type && ToastStyles.TypeTokens.TryGetValue(type, out var t))
+            tokens = t;
+
+        // Text color is used by both the label and the spinner. When no explicit color and no
+        // token is available, fall back to the hardcoded default.
         var textColor = config.TextColor ?? DefaultTextColor;
         var bgColor = config.BackgroundColor ?? DefaultBackground;
 
@@ -184,6 +195,41 @@ sealed class ToastView : ContentView
                 }
                 : null
         };
+
+        // Apply theme tokens via dynamic resources for any color the consumer did not set
+        // explicitly. This keeps runtime theme/appearance switches live.
+        if (tokens is { } tk)
+        {
+            // Seed per-type hex fallbacks first so non-Application (no theme dictionary) contexts
+            // keep the original look; the dynamic resource overrides when the key resolves.
+            var (bgHex, textHex, borderHex) = ToastStyles.DefaultColors[config.Type!.Value];
+
+            if (config.BackgroundColor is null)
+            {
+                border.BackgroundColor = Color.FromArgb(bgHex);
+                border.SetDynamicResource(VisualElement.BackgroundColorProperty, tk.Bg);
+            }
+
+            if (config.TextColor is null)
+            {
+                var fallbackText = Color.FromArgb(textHex);
+                label.TextColor = fallbackText;
+                label.SetDynamicResource(Label.TextColorProperty, tk.Text);
+                if (spinner is not null)
+                {
+                    spinner.Color = fallbackText;
+                    spinner.SetDynamicResource(ActivityIndicator.ColorProperty, tk.Text);
+                }
+            }
+
+            if (config.BorderColor is null && config.BorderThickness > 0)
+            {
+                // Stroke is a Brush; drive its Color from the token so theme swaps propagate.
+                var strokeBrush = new SolidColorBrush(Color.FromArgb(borderHex));
+                strokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, tk.Border);
+                border.Stroke = strokeBrush;
+            }
+        }
 
         // Tap gesture
         if (config.DismissOnTap || config.TapCommand is not null)

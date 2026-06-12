@@ -3,7 +3,7 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: #f0f0f0;
+    background: var(--shiny-color-background, #f0f0f0);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -20,17 +20,17 @@
 .shiny-chat-loadmore {
     align-self: center;
     background: transparent;
-    border: 1px solid #ccc;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
     border-radius: 16px;
     padding: 6px 16px;
     font-size: 13px;
-    color: #666;
+    color: var(--shiny-color-on-surface-variant, #666);
     cursor: pointer;
     margin-bottom: 12px;
 }
 
 .shiny-chat-loadmore:hover {
-    background: #e0e0e0;
+    background: var(--shiny-color-surface-container-high, #e0e0e0);
 }
 
 /* Bubble wrap */
@@ -72,7 +72,7 @@
     justify-content: center;
     font-size: 11px;
     font-weight: 600;
-    color: white;
+    color: var(--shiny-color-on-primary, white);
     overflow: hidden;
     flex-shrink: 0;
 }
@@ -85,7 +85,7 @@
 
 .shiny-chat-name {
     font-size: 12px;
-    color: #666;
+    color: var(--shiny-color-on-surface-variant, #666);
     font-weight: 500;
 }
 
@@ -109,7 +109,7 @@
 }
 
 .shiny-chat-bubble a {
-    color: #007AFF;
+    color: var(--shiny-color-primary, #007AFF);
     text-decoration: underline;
 }
 
@@ -130,7 +130,7 @@
 /* Timestamp */
 .shiny-chat-time {
     font-size: 11px;
-    color: #999;
+    color: var(--shiny-color-on-surface-variant, #999);
     margin-top: 2px;
     padding: 0 4px;
 }
@@ -138,8 +138,8 @@
 /* New Messages pill */
 .shiny-chat-newmessages {
     align-self: center;
-    background: #007AFF;
-    color: white;
+    background: var(--shiny-color-primary, #007AFF);
+    color: var(--shiny-color-on-primary, white);
     border: none;
     border-radius: 16px;
     padding: 8px 16px;
@@ -162,7 +162,7 @@
     gap: 6px;
     padding: 6px 16px;
     font-size: 13px;
-    color: #888;
+    color: var(--shiny-color-on-surface-variant, #888);
 }
 
 .shiny-chat-typing-dots {
@@ -175,7 +175,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #999;
+    background: var(--shiny-color-on-surface-variant, #999);
     animation: shiny-chat-dot-bounce 1s infinite;
 }
 
@@ -198,13 +198,13 @@
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: #fff;
-    border-top: 1px solid #e0e0e0;
+    background: var(--shiny-color-surface, #fff);
+    border-top: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
 }
 
 .shiny-chat-input {
     flex: 1;
-    border: 1px solid #ddd;
+    border: 1px solid var(--shiny-color-outline-variant, #ddd);
     border-radius: 20px;
     padding: 8px 16px;
     font-size: 15px;
@@ -213,12 +213,12 @@
 }
 
 .shiny-chat-input:focus {
-    border-color: #007AFF;
+    border-color: var(--shiny-color-primary, #007AFF);
 }
 
 .shiny-chat-send {
-    background: #007AFF;
-    color: white;
+    background: var(--shiny-color-primary, #007AFF);
+    color: var(--shiny-color-on-primary, white);
     border: none;
     border-radius: 18px;
     padding: 8px 16px;
@@ -237,7 +237,7 @@
     border: none;
     font-size: 22px;
     font-weight: bold;
-    color: #007AFF;
+    color: var(--shiny-color-primary, #007AFF);
     cursor: pointer;
     padding: 4px 8px;
     line-height: 1;
@@ -254,7 +254,7 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    background: #E5E7EB;
+    background: var(--shiny-color-surface-container-high, #E5E7EB);
     border-radius: 10px;
     padding: 2px 6px;
     font-size: 12px;
@@ -266,5 +266,5 @@
 
 .shiny-chat-ack-count {
     font-size: 11px;
-    color: #666;
+    color: var(--shiny-color-on-surface-variant, #666);
 }

@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -27,14 +28,23 @@ public partial class ProgressBar
 
     // Appearance
     public static readonly BindableProperty TrackColorProperty = BindableProperty.Create(
-        nameof(TrackColor), typeof(Color), typeof(ProgressBar), Color.FromArgb("#E5E7EB"),
-        propertyChanged: (b, _, n) => ((ProgressBar)b).trackBackground.BackgroundColor = (Color)n);
-    public Color TrackColor { get => (Color)GetValue(TrackColorProperty); set => SetValue(TrackColorProperty, value); }
+        nameof(TrackColor), typeof(Color), typeof(ProgressBar), null,
+        propertyChanged: (b, _, n) =>
+        {
+            var pb = (ProgressBar)b;
+            if (n is Color c)
+                pb.trackBackground.BackgroundColor = c;
+            else
+                pb.trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+        });
+    /// <summary>Track background color. When null, the theme SurfaceContainerHighest token is used.</summary>
+    public Color? TrackColor { get => (Color?)GetValue(TrackColorProperty); set => SetValue(TrackColorProperty, value); }
 
     public static readonly BindableProperty BarColorProperty = BindableProperty.Create(
-        nameof(BarColor), typeof(Color), typeof(ProgressBar), Color.FromArgb("#3B82F6"),
+        nameof(BarColor), typeof(Color), typeof(ProgressBar), null,
         propertyChanged: (b, _, _) => ((ProgressBar)b).UpdateVisuals());
-    public Color BarColor { get => (Color)GetValue(BarColorProperty); set => SetValue(BarColorProperty, value); }
+    /// <summary>Progress fill color. When null, the theme Primary token is used.</summary>
+    public Color? BarColor { get => (Color?)GetValue(BarColorProperty); set => SetValue(BarColorProperty, value); }
 
     public static readonly BindableProperty TrackHeightProperty = BindableProperty.Create(
         nameof(TrackHeight), typeof(double), typeof(ProgressBar), 8.0,
@@ -106,9 +116,17 @@ public partial class ProgressBar
     public string TextFormat { get => (string)GetValue(TextFormatProperty); set => SetValue(TextFormatProperty, value); }
 
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
-        nameof(TextColor), typeof(Color), typeof(ProgressBar), Colors.White,
-        propertyChanged: (b, _, n) => ((ProgressBar)b).progressLabel.TextColor = (Color)n);
-    public Color TextColor { get => (Color)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
+        nameof(TextColor), typeof(Color), typeof(ProgressBar), null,
+        propertyChanged: (b, _, n) =>
+        {
+            var pb = (ProgressBar)b;
+            if (n is Color c)
+                pb.progressLabel.TextColor = c;
+            else
+                pb.progressLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        });
+    /// <summary>Progress text color. When null, the theme OnPrimary token is used.</summary>
+    public Color? TextColor { get => (Color?)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(ProgressBar), 11.0,

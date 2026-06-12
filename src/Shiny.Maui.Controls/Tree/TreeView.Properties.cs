@@ -168,12 +168,13 @@ public partial class TreeView
     }
 
     public static readonly BindableProperty ChevronColorProperty = BindableProperty.Create(
-        nameof(ChevronColor), typeof(Color), typeof(TreeView), Colors.Gray,
+        nameof(ChevronColor), typeof(Color), typeof(TreeView), null,
         propertyChanged: (b, _, _) => ((TreeView)b).RefreshChevrons());
 
-    public Color ChevronColor
+    /// <summary>Chevron/glyph color. When unset, binds the OnSurfaceVariant theme token.</summary>
+    public Color? ChevronColor
     {
-        get => (Color)GetValue(ChevronColorProperty);
+        get => (Color?)GetValue(ChevronColorProperty);
         set => SetValue(ChevronColorProperty, value);
     }
 
@@ -230,23 +231,25 @@ public partial class TreeView
     }
 
     public static readonly BindableProperty GuideLineColorProperty = BindableProperty.Create(
-        nameof(GuideLineColor), typeof(Color), typeof(TreeView), Color.FromArgb("#E0E0E0"),
+        nameof(GuideLineColor), typeof(Color), typeof(TreeView), null,
         propertyChanged: (b, _, _) => ((TreeView)b).Rebuild());
 
-    public Color GuideLineColor
+    /// <summary>Guideline color. When unset, binds the OutlineVariant theme token.</summary>
+    public Color? GuideLineColor
     {
-        get => (Color)GetValue(GuideLineColorProperty);
+        get => (Color?)GetValue(GuideLineColorProperty);
         set => SetValue(GuideLineColorProperty, value);
     }
 
     // ------------- Visuals -------------
     public static readonly BindableProperty SelectedBackgroundColorProperty = BindableProperty.Create(
-        nameof(SelectedBackgroundColor), typeof(Color), typeof(TreeView), Color.FromArgb("#E3F2FD"),
+        nameof(SelectedBackgroundColor), typeof(Color), typeof(TreeView), null,
         propertyChanged: (b, _, _) => ((TreeView)b).RefreshSelectionVisuals());
 
-    public Color SelectedBackgroundColor
+    /// <summary>Selected row background. When unset, binds the SecondaryContainer theme token.</summary>
+    public Color? SelectedBackgroundColor
     {
-        get => (Color)GetValue(SelectedBackgroundColorProperty);
+        get => (Color?)GetValue(SelectedBackgroundColorProperty);
         set => SetValue(SelectedBackgroundColorProperty, value);
     }
 

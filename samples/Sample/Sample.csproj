@@ -53,6 +53,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.SpeechAddins\Shiny.Maui.Controls.SpeechAddins.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Themes.Ocean\Shiny.Maui.Controls.Themes.Ocean.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Themes.Material\Shiny.Maui.Controls.Themes.Material.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Desktop\Shiny.Maui.Controls.Desktop.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />

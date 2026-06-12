@@ -4,7 +4,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<div class="page">
+<div class="page @(dark ? "shiny-theme-dark" : null)">
     <aside class="sidebar">
         <NavMenu />
     </aside>
@@ -17,6 +17,8 @@
                       Height="52"
                       Title="Shiny Controls"
                       Items="@headerItems" />
+
+        <ThemeSwitcher DarkChanged="d => dark = d" />
 
         <div class="content-inner">
             @Body
@@ -41,6 +43,8 @@
 </div>
 
 @code {
+    bool dark;
+
     string SelectedTabKey
     {
         get

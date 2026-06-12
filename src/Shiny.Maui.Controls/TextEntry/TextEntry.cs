@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -44,7 +45,6 @@ public partial class TextEntry : ContentView
         placeholderLabel = new Label
         {
             FontSize = 16,
-            TextColor = Color.FromArgb("#6C757D"),
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Start,
             InputTransparent = true,
@@ -54,12 +54,12 @@ public partial class TextEntry : ContentView
         entry = new BorderlessEntry
         {
             FontSize = 16,
-            TextColor = Color.FromArgb("#212529"),
-            PlaceholderColor = Color.FromArgb("#6C757D"),
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Fill,
             BackgroundColor = Colors.Transparent
         };
+        entry.SetDynamicResource(Entry.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+        entry.SetDynamicResource(Entry.PlaceholderColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         entry.TextChanged += OnEntryTextChanged;
         entry.Focused += OnEntryFocused;
         entry.Unfocused += OnEntryUnfocused;
@@ -71,26 +71,25 @@ public partial class TextEntry : ContentView
             Children = { placeholderLabel, entry }
         };
 
-        // Bootstrap input-group uses a #e9ecef "addon" surface
+        // Tool "addon" surface → surface-container-high token (was #E9ECEF)
         leftToolsLayout = new HorizontalStackLayout
         {
             Spacing = 0,
-            VerticalOptions = LayoutOptions.Fill,
-            BackgroundColor = Color.FromArgb("#E9ECEF")
+            VerticalOptions = LayoutOptions.Fill
         };
+        leftToolsLayout.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         rightToolsLayout = new HorizontalStackLayout
         {
             Spacing = 0,
-            VerticalOptions = LayoutOptions.Fill,
-            BackgroundColor = Color.FromArgb("#E9ECEF")
+            VerticalOptions = LayoutOptions.Fill
         };
+        rightToolsLayout.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         leftSeparator = new BoxView
         {
             WidthRequest = 1,
             VerticalOptions = LayoutOptions.Fill,
-            Color = Color.FromArgb("#CED4DA"),
             IsVisible = false
         };
 
@@ -98,7 +97,6 @@ public partial class TextEntry : ContentView
         {
             WidthRequest = 1,
             VerticalOptions = LayoutOptions.Fill,
-            Color = Color.FromArgb("#CED4DA"),
             IsVisible = false
         };
 
@@ -125,18 +123,16 @@ public partial class TextEntry : ContentView
         outerBorder = new Border
         {
             StrokeShape = borderShape,
-            Stroke = Color.FromArgb("#CED4DA"),
             StrokeThickness = 1,
-            BackgroundColor = Colors.White,
             Padding = 0,
             Content = contentGrid,
             MinimumHeightRequest = ClassicMinHeight
         };
+        outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         hintLabel = new Label
         {
             FontSize = 12,
-            TextColor = Color.FromArgb("#6C757D"),
             Margin = new Thickness(2, 4, 2, 0),
             IsVisible = false
         };
@@ -160,6 +156,98 @@ public partial class TextEntry : ContentView
 
         // Apply default variant (Classic) so the placeholder lives on the native entry.
         ApplyVariant();
+
+        // Seed resting border/separator + placeholder colors (explicit-or-theme-token).
+        ApplyBorderState();
+        ApplyPlaceholderRestColor();
+    }
+
+    // ---- Theme token defaults for each logical color (used when no explicit Color is set) ----
+    const string PlaceholderColorToken = ShinyThemeKeys.Color.OnSurfaceVariant;
+    const string FocusedPlaceholderColorToken = ShinyThemeKeys.Color.Primary;
+    const string BorderColorToken = ShinyThemeKeys.Color.Outline;
+    const string FocusedBorderColorToken = ShinyThemeKeys.Color.Primary;
+    const string ErrorColorToken = ShinyThemeKeys.Color.Error;
+    const string HintColorToken = ShinyThemeKeys.Color.OnSurfaceVariant;
+
+    // Applies an explicit color when set, otherwise binds the theme token, to the border stroke
+    // (a Brush, so we drive a SolidColorBrush's Color) and the tool separators.
+    void ApplyStroke(Color? explicitColor, string token)
+    {
+        if (explicitColor is Color c)
+        {
+            outerBorder.Stroke = c;
+            leftSeparator.Color = c;
+            rightSeparator.Color = c;
+        }
+        else
+        {
+            var brush = new SolidColorBrush();
+            brush.SetDynamicResource(SolidColorBrush.ColorProperty, token);
+            outerBorder.Stroke = brush;
+            leftSeparator.SetDynamicResource(BoxView.ColorProperty, token);
+            rightSeparator.SetDynamicResource(BoxView.ColorProperty, token);
+        }
+    }
+
+    // Re-applies the border/separator color for the current state (error > focused > resting).
+    void ApplyBorderState()
+    {
+        if (HasError)
+            ApplyStroke(ErrorColor, ErrorColorToken);
+        else if (entry.IsFocused)
+            ApplyStroke(FocusedBorderColor, FocusedBorderColorToken);
+        else
+            ApplyStroke(BorderColor, BorderColorToken);
+    }
+
+    // Resting (down) placeholder color.
+    void ApplyPlaceholderRestColor()
+    {
+        if (PlaceholderColor is Color c)
+            placeholderLabel.TextColor = c;
+        else
+            placeholderLabel.SetDynamicResource(Label.TextColorProperty, PlaceholderColorToken);
+    }
+
+    // Floated (up) placeholder color — error wins, else focused accent.
+    void ApplyPlaceholderFloatColor()
+    {
+        if (HasError)
+        {
+            if (ErrorColor is Color ec)
+                placeholderLabel.TextColor = ec;
+            else
+                placeholderLabel.SetDynamicResource(Label.TextColorProperty, ErrorColorToken);
+        }
+        else if (FocusedPlaceholderColor is Color fc)
+        {
+            placeholderLabel.TextColor = fc;
+        }
+        else
+        {
+            placeholderLabel.SetDynamicResource(Label.TextColorProperty, FocusedPlaceholderColorToken);
+        }
+    }
+
+    // Hint label color for the current state.
+    void ApplyHintColor(bool error)
+    {
+        if (error)
+        {
+            if (ErrorColor is Color ec)
+                hintLabel.TextColor = ec;
+            else
+                hintLabel.SetDynamicResource(Label.TextColorProperty, ErrorColorToken);
+        }
+        else if (HintColor is Color hc)
+        {
+            hintLabel.TextColor = hc;
+        }
+        else
+        {
+            hintLabel.SetDynamicResource(Label.TextColorProperty, HintColorToken);
+        }
     }
 
     void ApplyVariant()
@@ -194,13 +282,26 @@ public partial class TextEntry : ContentView
             entry.Placeholder = text;
     }
 
-    Shadow BuildFocusGlow(Color color) => new Shadow
+    Shadow BuildFocusGlow(Color? color, string token)
     {
-        Brush = new SolidColorBrush(color),
-        Offset = Point.Zero,
-        Radius = 8,
-        Opacity = 0.35f
-    };
+        SolidColorBrush brush;
+        if (color is Color c)
+        {
+            brush = new SolidColorBrush(c);
+        }
+        else
+        {
+            brush = new SolidColorBrush();
+            brush.SetDynamicResource(SolidColorBrush.ColorProperty, token);
+        }
+        return new Shadow
+        {
+            Brush = brush,
+            Offset = Point.Zero,
+            Radius = 8,
+            Opacity = 0.35f
+        };
+    }
 
     void OnEntryTextChanged(object? sender, TextChangedEventArgs e)
     {
@@ -244,11 +345,15 @@ public partial class TextEntry : ContentView
         if (Variant == TextEntryVariant.Floating)
             AnimatePlaceholder(true);
 
-        var color = HasError ? ErrorColor : FocusedBorderColor;
-        outerBorder.Stroke = color;
+        if (HasError)
+            ApplyStroke(ErrorColor, ErrorColorToken);
+        else
+            ApplyStroke(FocusedBorderColor, FocusedBorderColorToken);
+
         outerBorder.StrokeThickness = FocusedBorderThickness;
-        outerBorder.Shadow = BuildFocusGlow(HasError ? ErrorColor : FocusedBorderColor);
-        UpdateSeparatorColors(color);
+        outerBorder.Shadow = HasError
+            ? BuildFocusGlow(ErrorColor, ErrorColorToken)
+            : BuildFocusGlow(FocusedBorderColor, FocusedBorderColorToken);
     }
 
     void OnEntryUnfocused(object? sender, FocusEventArgs e)
@@ -256,17 +361,13 @@ public partial class TextEntry : ContentView
         if (Variant == TextEntryVariant.Floating && string.IsNullOrEmpty(entry.Text))
             AnimatePlaceholder(false);
 
-        var color = HasError ? ErrorColor : BorderColor;
-        outerBorder.Stroke = color;
-        outerBorder.StrokeThickness = BorderThickness;
-        outerBorder.Shadow = HasError ? BuildFocusGlow(ErrorColor) : null!;
-        UpdateSeparatorColors(color);
-    }
+        if (HasError)
+            ApplyStroke(ErrorColor, ErrorColorToken);
+        else
+            ApplyStroke(BorderColor, BorderColorToken);
 
-    void UpdateSeparatorColors(Color color)
-    {
-        leftSeparator.Color = color;
-        rightSeparator.Color = color;
+        outerBorder.StrokeThickness = BorderThickness;
+        outerBorder.Shadow = HasError ? BuildFocusGlow(ErrorColor, ErrorColorToken) : null!;
     }
 
     void OnEntryCompleted(object? sender, EventArgs e)
@@ -288,7 +389,7 @@ public partial class TextEntry : ContentView
                 placeholderLabel.TranslateToAsync(0, PlaceholderTranslationY, AnimationDuration, Easing.CubicOut),
                 placeholderLabel.ScaleToAsync(PlaceholderScaledSize, AnimationDuration, Easing.CubicOut)
             );
-            placeholderLabel.TextColor = HasError ? ErrorColor : FocusedPlaceholderColor;
+            ApplyPlaceholderFloatColor();
         }
         else
         {
@@ -296,7 +397,7 @@ public partial class TextEntry : ContentView
                 placeholderLabel.TranslateToAsync(0, 0, AnimationDuration, Easing.CubicOut),
                 placeholderLabel.ScaleToAsync(1, AnimationDuration, Easing.CubicOut)
             );
-            placeholderLabel.TextColor = PlaceholderColor;
+            ApplyPlaceholderRestColor();
         }
     }
 
@@ -308,46 +409,46 @@ public partial class TextEntry : ContentView
         if (!HasError)
         {
             hintLabel.Text = $"{count}/{MaxLength}";
-            hintLabel.TextColor = count >= MaxLength ? ErrorColor : HintColor;
+            ApplyHintColor(count >= MaxLength);
             hintLabel.IsVisible = true;
         }
     }
 
     void SyncHint()
     {
-        Color borderColor;
         if (HasError && !string.IsNullOrEmpty(HintText))
         {
             hintLabel.Text = HintText;
-            hintLabel.TextColor = ErrorColor;
+            ApplyHintColor(true);
             hintLabel.IsVisible = true;
-            borderColor = ErrorColor;
         }
         else if (!string.IsNullOrEmpty(HintText))
         {
             hintLabel.Text = HintText;
-            hintLabel.TextColor = HintColor;
+            ApplyHintColor(false);
             hintLabel.IsVisible = true;
-            borderColor = entry.IsFocused ? FocusedBorderColor : BorderColor;
         }
         else if (ShowCharacterCount && MaxLength > 0)
         {
             UpdateCharacterCount();
-            borderColor = entry.IsFocused ? FocusedBorderColor : BorderColor;
         }
         else
         {
             hintLabel.IsVisible = false;
-            borderColor = entry.IsFocused ? FocusedBorderColor : BorderColor;
         }
 
-        outerBorder.Stroke = borderColor;
-        UpdateSeparatorColors(borderColor);
+        // Border color: error > focused > resting.
+        if (HasError)
+            ApplyStroke(ErrorColor, ErrorColorToken);
+        else if (entry.IsFocused)
+            ApplyStroke(FocusedBorderColor, FocusedBorderColorToken);
+        else
+            ApplyStroke(BorderColor, BorderColorToken);
 
         if (HasError)
-            outerBorder.Shadow = BuildFocusGlow(ErrorColor);
+            outerBorder.Shadow = BuildFocusGlow(ErrorColor, ErrorColorToken);
         else if (entry.IsFocused)
-            outerBorder.Shadow = BuildFocusGlow(FocusedBorderColor);
+            outerBorder.Shadow = BuildFocusGlow(FocusedBorderColor, FocusedBorderColorToken);
         else
             outerBorder.Shadow = null!;
     }

@@ -66,16 +66,16 @@
 }
 
 .shiny-te-tools--left {
-    border-right: 1px solid var(--shiny-te-border-color, #CCCCCC);
+    border-right: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
 }
 
 .shiny-te-tools--right {
-    border-left: 1px solid var(--shiny-te-border-color, #CCCCCC);
+    border-left: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
 }
 
 .shiny-te-tool-btn {
     border: none;
-    background: var(--shiny-te-addon-bg, #f8f9fa);
+    background: var(--shiny-te-addon-bg, var(--shiny-color-surface-container-high, #f8f9fa));
     cursor: pointer;
     font-size: 14px;
     padding: 0 12px;
@@ -91,15 +91,15 @@
 }
 
 .shiny-te-tool-btn + .shiny-te-tool-btn {
-    border-left: 1px solid var(--shiny-te-border-color, #CCCCCC);
+    border-left: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
 }
 
 .shiny-te-tool-btn:hover {
-    background: var(--shiny-te-addon-hover-bg, #e9ecef);
+    background: var(--shiny-te-addon-hover-bg, var(--shiny-color-surface-container-highest, #e9ecef));
 }
 
 .shiny-te-tool-btn:active {
-    background: var(--shiny-te-addon-active-bg, #dee2e6);
+    background: var(--shiny-te-addon-active-bg, var(--shiny-color-surface-container-highest, #dee2e6));
 }
 
 .shiny-te-hint {
@@ -110,11 +110,11 @@
 
 /* Focus state */
 .shiny-te--focused .shiny-te-border {
-    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+    box-shadow: 0 0 0 2px var(--shiny-color-primary, rgba(0, 122, 255, 0.15));
 }
 
 .shiny-te--error .shiny-te-border {
-    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.15);
+    box-shadow: 0 0 0 2px var(--shiny-color-error, rgba(220, 53, 69, 0.15));
 }
 
 .shiny-te-tool-icon {

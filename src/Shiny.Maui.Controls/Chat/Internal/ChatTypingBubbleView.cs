@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Chat.Internal;
 
 class ChatTypingBubbleView : ContentView
@@ -46,10 +48,10 @@ class ChatTypingBubbleView : ContentView
         nameLabel = new Label
         {
             FontSize = 12,
-            TextColor = Colors.Grey,
             Margin = new Thickness(4, 0, 0, 2),
             VerticalOptions = LayoutOptions.Center
         };
+        nameLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         avatarNameRow = new Grid
         {
@@ -100,14 +102,18 @@ class ChatTypingBubbleView : ContentView
         Content = rootLayout;
     }
 
-    static BoxView CreateDot() => new()
+    static BoxView CreateDot()
     {
-        WidthRequest = 8,
-        HeightRequest = 8,
-        CornerRadius = 4,
-        Color = Colors.Grey,
-        VerticalOptions = LayoutOptions.Center
-    };
+        var dot = new BoxView
+        {
+            WidthRequest = 8,
+            HeightRequest = 8,
+            CornerRadius = 4,
+            VerticalOptions = LayoutOptions.Center
+        };
+        dot.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        return dot;
+    }
 
     protected override void OnBindingContextChanged()
     {

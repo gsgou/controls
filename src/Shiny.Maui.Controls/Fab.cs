@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -59,7 +60,6 @@ public class Fab : ContentView
             {
                 CornerRadius = new CornerRadius(DefaultSize / 2)
             },
-            BackgroundColor = Color.FromArgb("#2196F3"),
             Content = innerGrid,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.End,
@@ -71,6 +71,10 @@ public class Fab : ContentView
                 Offset = new Point(0, 4)
             }
         };
+
+        // Theme defaults — overridden if the consumer sets FabBackgroundColor / TextColor explicitly.
+        border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
 
         tap = new TapGestureRecognizer();
         tap.Tapped += OnTapped;
@@ -146,11 +150,14 @@ public class Fab : ContentView
         nameof(FabBackgroundColor),
         typeof(Color),
         typeof(Fab),
-        Color.FromArgb("#2196F3"),
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var fab = (Fab)b;
             if (n is Color c)
-                ((Fab)b).border.BackgroundColor = c;
+                fab.border.BackgroundColor = c;
+            else
+                fab.border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         });
     public Color? FabBackgroundColor
     {
@@ -191,11 +198,14 @@ public class Fab : ContentView
         nameof(TextColor),
         typeof(Color),
         typeof(Fab),
-        Colors.White,
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var fab = (Fab)b;
             if (n is Color c)
-                ((Fab)b).textLabel.TextColor = c;
+                fab.textLabel.TextColor = c;
+            else
+                fab.textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         });
     public Color? TextColor
     {

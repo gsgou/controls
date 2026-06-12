@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Themes.Material</RootNamespace>
+        <Description>Material theme pack for Shiny.Blazor.Controls — a Material Design 3 purple palette. Link _content/Shiny.Blazor.Controls.Themes.Material/css/shiny-theme-material.css after the core theme.</Description>
+        <PackageTags>blazor shiny controls theme material material3</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+    </ItemGroup>
+
+</Project>

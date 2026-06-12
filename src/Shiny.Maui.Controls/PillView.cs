@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls;
 
 public class PillView : ContentView
@@ -53,14 +55,15 @@ public class PillView : ContentView
         [PillType.Critical] = CriticalStyleKey,
     };
 
-    static readonly Dictionary<PillType, (string Bg, string Text, string Border)> DefaultColors = new()
+    // Theme token keys per pill type: (container background, on-container text, role border).
+    static readonly Dictionary<PillType, (string Bg, string Text, string Border)> TypeTokens = new()
     {
-        [PillType.None] = ("#F3F4F6", "#374151", "#D1D5DB"),
-        [PillType.Success] = ("#DCFCE7", "#166534", "#86EFAC"),
-        [PillType.Info] = ("#DBEAFE", "#1E40AF", "#93C5FD"),
-        [PillType.Warning] = ("#FEF9C3", "#854D0E", "#FDE047"),
-        [PillType.Caution] = ("#FFEDD5", "#9A3412", "#FDBA74"),
-        [PillType.Critical] = ("#FEE2E2", "#991B1B", "#FCA5A5"),
+        [PillType.None] = (ShinyThemeKeys.Color.SurfaceContainerHigh, ShinyThemeKeys.Color.OnSurfaceVariant, ShinyThemeKeys.Color.OutlineVariant),
+        [PillType.Success] = (ShinyThemeKeys.Color.SuccessContainer, ShinyThemeKeys.Color.OnSuccessContainer, ShinyThemeKeys.Color.Success),
+        [PillType.Info] = (ShinyThemeKeys.Color.InfoContainer, ShinyThemeKeys.Color.OnInfoContainer, ShinyThemeKeys.Color.Info),
+        [PillType.Warning] = (ShinyThemeKeys.Color.WarningContainer, ShinyThemeKeys.Color.OnWarningContainer, ShinyThemeKeys.Color.Warning),
+        [PillType.Caution] = (ShinyThemeKeys.Color.CautionContainer, ShinyThemeKeys.Color.OnCautionContainer, ShinyThemeKeys.Color.Caution),
+        [PillType.Critical] = (ShinyThemeKeys.Color.CriticalContainer, ShinyThemeKeys.Color.OnCriticalContainer, ShinyThemeKeys.Color.Critical),
     };
 
 
@@ -216,14 +219,31 @@ public class PillView : ContentView
             return;
         }
 
-        // Fall back to built-in defaults — apply directly to visuals
+        // Fall back to theme tokens — bound via dynamic resources so a runtime theme/appearance
+        // switch restyles the pill automatically. Explicit Pill*Color properties still win.
         Style = null;
-        var (bgHex, textHex, borderHex) = DefaultColors[type];
+        var (bgKey, textKey, borderKey) = TypeTokens[type];
 
         isUpdatingFromType = true;
-        border.BackgroundColor = Color.FromArgb(bgHex);
-        border.Stroke = PillBorderColor ?? Color.FromArgb(borderHex);
-        label.TextColor = PillTextColor ?? Color.FromArgb(textHex);
+        border.SetDynamicResource(VisualElement.BackgroundColorProperty, bgKey);
+
+        if (PillBorderColor is Color borderColor)
+        {
+            border.Stroke = borderColor;
+        }
+        else
+        {
+            // Stroke is a Brush; drive its Color from the token so theme swaps propagate.
+            var strokeBrush = new SolidColorBrush();
+            strokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, borderKey);
+            border.Stroke = strokeBrush;
+        }
+
+        if (PillTextColor is Color textColor)
+            label.TextColor = textColor;
+        else
+            label.SetDynamicResource(Label.TextColorProperty, textKey);
+
         isUpdatingFromType = false;
     }
 

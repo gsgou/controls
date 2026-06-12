@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -40,20 +41,21 @@ public partial class TextEntry
         propertyChanged: (b, _, n) => ((TextEntry)b).ApplyPlaceholder((string)n));
     public string Placeholder { get => (string)GetValue(PlaceholderProperty); set => SetValue(PlaceholderProperty, value); }
 
-    // PlaceholderColor — Bootstrap text-muted #6C757D
+    // PlaceholderColor — muted placeholder/text → on-surface-variant token (was #6C757D)
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
-        nameof(PlaceholderColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#6C757D"),
-        propertyChanged: (b, _, n) =>
+        nameof(PlaceholderColor), typeof(Color), typeof(TextEntry), null,
+        propertyChanged: (b, _, _) =>
         {
-            if (n is Color c && !((TextEntry)b).isPlaceholderUp)
-                ((TextEntry)b).placeholderLabel.TextColor = c;
+            var te = (TextEntry)b;
+            if (!te.isPlaceholderUp)
+                te.ApplyPlaceholderRestColor();
         });
-    public Color PlaceholderColor { get => (Color)GetValue(PlaceholderColorProperty); set => SetValue(PlaceholderColorProperty, value); }
+    public Color? PlaceholderColor { get => (Color?)GetValue(PlaceholderColorProperty); set => SetValue(PlaceholderColorProperty, value); }
 
-    // FocusedPlaceholderColor — Bootstrap primary #0D6EFD
+    // FocusedPlaceholderColor — accent → primary token (was #0D6EFD)
     public static readonly BindableProperty FocusedPlaceholderColorProperty = BindableProperty.Create(
-        nameof(FocusedPlaceholderColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#0D6EFD"));
-    public Color FocusedPlaceholderColor { get => (Color)GetValue(FocusedPlaceholderColorProperty); set => SetValue(FocusedPlaceholderColorProperty, value); }
+        nameof(FocusedPlaceholderColor), typeof(Color), typeof(TextEntry), null);
+    public Color? FocusedPlaceholderColor { get => (Color?)GetValue(FocusedPlaceholderColorProperty); set => SetValue(FocusedPlaceholderColorProperty, value); }
 
     // Variant — picks Classic (.form-control) or Floating (.form-floating)
     public static readonly BindableProperty VariantProperty = BindableProperty.Create(
@@ -61,21 +63,21 @@ public partial class TextEntry
         propertyChanged: (b, _, _) => ((TextEntry)b).ApplyVariant());
     public TextEntryVariant Variant { get => (TextEntryVariant)GetValue(VariantProperty); set => SetValue(VariantProperty, value); }
 
-    // Border — Bootstrap #CED4DA
+    // Border — resting/valid border → outline token (was #CED4DA)
     public static readonly BindableProperty BorderColorProperty = BindableProperty.Create(
-        nameof(BorderColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#CED4DA"),
-        propertyChanged: (b, _, n) =>
+        nameof(BorderColor), typeof(Color), typeof(TextEntry), null,
+        propertyChanged: (b, _, _) =>
         {
             var te = (TextEntry)b;
-            if (n is Color c && !te.entry.IsFocused && !te.HasError)
-                te.outerBorder.Stroke = c;
+            if (!te.entry.IsFocused && !te.HasError)
+                te.ApplyBorderState();
         });
-    public Color BorderColor { get => (Color)GetValue(BorderColorProperty); set => SetValue(BorderColorProperty, value); }
+    public Color? BorderColor { get => (Color?)GetValue(BorderColorProperty); set => SetValue(BorderColorProperty, value); }
 
-    // Focused border — Bootstrap #86B7FE
+    // Focused border → primary token (was #86B7FE)
     public static readonly BindableProperty FocusedBorderColorProperty = BindableProperty.Create(
-        nameof(FocusedBorderColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#86B7FE"));
-    public Color FocusedBorderColor { get => (Color)GetValue(FocusedBorderColorProperty); set => SetValue(FocusedBorderColorProperty, value); }
+        nameof(FocusedBorderColor), typeof(Color), typeof(TextEntry), null);
+    public Color? FocusedBorderColor { get => (Color?)GetValue(FocusedBorderColorProperty); set => SetValue(FocusedBorderColorProperty, value); }
 
     public static readonly BindableProperty BorderThicknessProperty = BindableProperty.Create(
         nameof(BorderThickness), typeof(double), typeof(TextEntry), 1.0,
@@ -97,15 +99,18 @@ public partial class TextEntry
         propertyChanged: (b, _, n) => ((TextEntry)b).borderShape.CornerRadius = (CornerRadius)n);
     public CornerRadius CornerRadius { get => (CornerRadius)GetValue(CornerRadiusProperty); set => SetValue(CornerRadiusProperty, value); }
 
-    // Bootstrap inputs sit on a white surface by default
+    // Entry surface — defaults to the surface token (was white)
     public static readonly BindableProperty EntryBackgroundColorProperty = BindableProperty.Create(
-        nameof(EntryBackgroundColor), typeof(Color), typeof(TextEntry), Colors.White,
+        nameof(EntryBackgroundColor), typeof(Color), typeof(TextEntry), null,
         propertyChanged: (b, _, n) =>
         {
+            var te = (TextEntry)b;
             if (n is Color c)
-                ((TextEntry)b).outerBorder.BackgroundColor = c;
+                te.outerBorder.BackgroundColor = c;
+            else
+                te.outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
         });
-    public Color EntryBackgroundColor { get => (Color)GetValue(EntryBackgroundColorProperty); set => SetValue(EntryBackgroundColorProperty, value); }
+    public Color? EntryBackgroundColor { get => (Color?)GetValue(EntryBackgroundColorProperty); set => SetValue(EntryBackgroundColorProperty, value); }
 
     // Font — Bootstrap base 1rem = 16
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
@@ -134,15 +139,18 @@ public partial class TextEntry
         propertyChanged: (b, _, n) => ((TextEntry)b).entry.FontAttributes = (FontAttributes)n);
     public FontAttributes FontAttributes { get => (FontAttributes)GetValue(FontAttributesProperty); set => SetValue(FontAttributesProperty, value); }
 
-    // TextColor — Bootstrap body color #212529
+    // TextColor — entry body text → on-surface token (was #212529)
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
-        nameof(TextColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#212529"),
+        nameof(TextColor), typeof(Color), typeof(TextEntry), null,
         propertyChanged: (b, _, n) =>
         {
+            var te = (TextEntry)b;
             if (n is Color c)
-                ((TextEntry)b).entry.TextColor = c;
+                te.entry.TextColor = c;
+            else
+                te.entry.SetDynamicResource(Entry.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
         });
-    public Color TextColor { get => (Color)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
+    public Color? TextColor { get => (Color?)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
 
     // Entry behavior
     public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
@@ -180,20 +188,22 @@ public partial class TextEntry
         propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
     public string? HintText { get => (string?)GetValue(HintTextProperty); set => SetValue(HintTextProperty, value); }
 
+    // Hint/helper text → on-surface-variant token (was Grey)
     public static readonly BindableProperty HintColorProperty = BindableProperty.Create(
-        nameof(HintColor), typeof(Color), typeof(TextEntry), Colors.Grey,
+        nameof(HintColor), typeof(Color), typeof(TextEntry), null,
         propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
-    public Color HintColor { get => (Color)GetValue(HintColorProperty); set => SetValue(HintColorProperty, value); }
+    public Color? HintColor { get => (Color?)GetValue(HintColorProperty); set => SetValue(HintColorProperty, value); }
 
     public static readonly BindableProperty HasErrorProperty = BindableProperty.Create(
         nameof(HasError), typeof(bool), typeof(TextEntry), false,
         propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
     public bool HasError { get => (bool)GetValue(HasErrorProperty); set => SetValue(HasErrorProperty, value); }
 
+    // Error/validation → error token (was #DC3545)
     public static readonly BindableProperty ErrorColorProperty = BindableProperty.Create(
-        nameof(ErrorColor), typeof(Color), typeof(TextEntry), Color.FromArgb("#DC3545"),
+        nameof(ErrorColor), typeof(Color), typeof(TextEntry), null,
         propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
-    public Color ErrorColor { get => (Color)GetValue(ErrorColorProperty); set => SetValue(ErrorColorProperty, value); }
+    public Color? ErrorColor { get => (Color?)GetValue(ErrorColorProperty); set => SetValue(ErrorColorProperty, value); }
 
     public static readonly BindableProperty ShowCharacterCountProperty = BindableProperty.Create(
         nameof(ShowCharacterCount), typeof(bool), typeof(TextEntry), false,

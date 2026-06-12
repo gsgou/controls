@@ -21,22 +21,22 @@ public partial class BadgeView
     public BadgePosition Position { get => (BadgePosition)GetValue(PositionProperty); set => SetValue(PositionProperty, value); }
 
     public static readonly BindableProperty BadgeColorProperty = BindableProperty.Create(
-        nameof(BadgeColor), typeof(Color), typeof(BadgeView), Color.FromArgb("#DC2626"),
+        nameof(BadgeColor), typeof(Color), typeof(BadgeView), null,
         propertyChanged: (b, _, _) => ((BadgeView)b).OnBadgeVisualChanged());
-    /// <summary>Badge fill color.</summary>
-    public Color BadgeColor { get => (Color)GetValue(BadgeColorProperty); set => SetValue(BadgeColorProperty, value); }
+    /// <summary>Badge fill color. When null, the theme Error token is used.</summary>
+    public Color? BadgeColor { get => (Color?)GetValue(BadgeColorProperty); set => SetValue(BadgeColorProperty, value); }
 
     public static readonly BindableProperty BadgeTextColorProperty = BindableProperty.Create(
-        nameof(BadgeTextColor), typeof(Color), typeof(BadgeView), Colors.White,
+        nameof(BadgeTextColor), typeof(Color), typeof(BadgeView), null,
         propertyChanged: (b, _, _) => ((BadgeView)b).OnBadgeVisualChanged());
-    /// <summary>Badge text color.</summary>
-    public Color BadgeTextColor { get => (Color)GetValue(BadgeTextColorProperty); set => SetValue(BadgeTextColorProperty, value); }
+    /// <summary>Badge text color. When null, the theme OnError token is used.</summary>
+    public Color? BadgeTextColor { get => (Color?)GetValue(BadgeTextColorProperty); set => SetValue(BadgeTextColorProperty, value); }
 
     public static readonly BindableProperty BadgeBorderColorProperty = BindableProperty.Create(
-        nameof(BadgeBorderColor), typeof(Color), typeof(BadgeView), Colors.White,
+        nameof(BadgeBorderColor), typeof(Color), typeof(BadgeView), null,
         propertyChanged: (b, _, _) => ((BadgeView)b).OnBadgeVisualChanged());
-    /// <summary>Badge border (stroke) color. Defaults to white, creating a clean separation from the wrapped content.</summary>
-    public Color BadgeBorderColor { get => (Color)GetValue(BadgeBorderColorProperty); set => SetValue(BadgeBorderColorProperty, value); }
+    /// <summary>Badge border (stroke) color. When null, the theme Surface token is used, creating a clean separation from the wrapped content.</summary>
+    public Color? BadgeBorderColor { get => (Color?)GetValue(BadgeBorderColorProperty); set => SetValue(BadgeBorderColorProperty, value); }
 
     public static readonly BindableProperty BadgeBorderThicknessProperty = BindableProperty.Create(
         nameof(BadgeBorderThickness), typeof(double), typeof(BadgeView), 1.5,

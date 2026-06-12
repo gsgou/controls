@@ -1,0 +1,40 @@
+@namespace Sample.Blazor.Layout
+
+@* Loads the selected theme pack stylesheet into <head> (overriding the core Basic :root vars). *@
+<HeadContent>
+    @if (themeHref is not null)
+    {
+        <link rel="stylesheet" href="@themeHref" />
+    }
+</HeadContent>
+
+<div class="theme-switcher">
+    <select aria-label="Theme" @onchange="OnThemeChange">
+        <option value="">Basic</option>
+        <option value="ocean">Ocean</option>
+        <option value="material">Material</option>
+    </select>
+    <label class="theme-switcher-dark">
+        <input type="checkbox" @bind="Dark" @bind:after="OnDarkChanged" />
+        Dark
+    </label>
+</div>
+
+@code {
+    string? themeHref;
+    bool Dark { get; set; }
+
+    [Parameter] public EventCallback<bool> DarkChanged { get; set; }
+
+    void OnThemeChange(ChangeEventArgs e)
+    {
+        themeHref = e.Value?.ToString() switch
+        {
+            "ocean" => "_content/Shiny.Blazor.Controls.Themes.Ocean/css/shiny-theme-ocean.css",
+            "material" => "_content/Shiny.Blazor.Controls.Themes.Material/css/shiny-theme-material.css",
+            _ => null
+        };
+    }
+
+    Task OnDarkChanged() => DarkChanged.InvokeAsync(Dark);
+}

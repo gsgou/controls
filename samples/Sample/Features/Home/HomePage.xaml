@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:Sample.Features.Home"
+             xmlns:shiny="http://shiny.net/maui/controls"
              x:Class="Sample.Features.Home.HomePage"
              x:DataType="local:HomeViewModel"
              Title="Home"
@@ -92,6 +93,40 @@
                    TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
                    HorizontalTextAlignment="Center"
                    Margin="0,8,0,0" />
+
+            <!-- Theme switcher (demo of the central theme packs) -->
+            <Border Margin="0,20,0,0"
+                    Padding="18"
+                    StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1B4B}"
+                    HorizontalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Live theme preview"
+                           FontAttributes="Bold"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}" />
+
+                    <!-- Semantic pills + a primary FAB react to the theme picked in the menu -->
+                    <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <shiny:PillView Type="Success" Text="Success" />
+                        <shiny:PillView Type="Info" Text="Info" />
+                        <shiny:PillView Type="Warning" Text="Warning" />
+                        <shiny:PillView Type="Critical" Text="Critical" />
+                    </HorizontalStackLayout>
+
+                    <shiny:Fab Text="Primary"
+                               HasShadow="False"
+                               HorizontalOptions="Center" />
+
+                    <Label Text="Switch Basic / Ocean / Material &amp; dark mode from the flyout menu."
+                           FontSize="12"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                </VerticalStackLayout>
+            </Border>
 
         </VerticalStackLayout>
     </Grid>

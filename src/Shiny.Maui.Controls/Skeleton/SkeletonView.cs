@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls;
 
 /// <summary>
@@ -101,11 +103,15 @@ public partial class SkeletonView : Grid, IDisposable
     {
         var bar = new BoxView
         {
-            Color = this.BaseColor,
             HeightRequest = this.ItemHeight,
             CornerRadius = new CornerRadius(this.CornerRadius),
             HorizontalOptions = LayoutOptions.Fill
         };
+        // Theme default — overridden if the consumer sets BaseColor explicitly.
+        if (this.BaseColor is Color baseColor)
+            bar.Color = baseColor;
+        else
+            bar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         if (widthFraction >= 1.0)
             return bar;
@@ -129,6 +135,14 @@ public partial class SkeletonView : Grid, IDisposable
 
         var bandWidth = Math.Max(this.containerWidth * 0.4, 40);
         this.shimmerBand.WidthRequest = bandWidth;
+
+        // Middle highlight stop — falls back to the theme token when ShimmerColor is unset.
+        var highlightStop = new GradientStop { Offset = 0.5f };
+        if (this.ShimmerColor is Color shimmerColor)
+            highlightStop.Color = shimmerColor;
+        else
+            highlightStop.SetDynamicResource(GradientStop.ColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+
         this.shimmerBand.Background = new LinearGradientBrush
         {
             StartPoint = new Point(0, 0.5),
@@ -136,7 +150,7 @@ public partial class SkeletonView : Grid, IDisposable
             GradientStops =
             {
                 new GradientStop(Colors.Transparent, 0f),
-                new GradientStop(this.ShimmerColor, 0.5f),
+                highlightStop,
                 new GradientStop(Colors.Transparent, 1f)
             }
         };

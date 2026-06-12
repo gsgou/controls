@@ -58,7 +58,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--shiny-color-on-primary, white);
     transition: transform 100ms ease;
 }
 

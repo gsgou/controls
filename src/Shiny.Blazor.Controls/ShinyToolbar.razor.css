@@ -151,8 +151,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 9px;
-    background: #EF4444;
-    color: #fff;
+    background: var(--shiny-color-error, #EF4444);
+    color: var(--shiny-color-on-error, #fff);
     font-size: 10px;
     font-weight: 600;
     line-height: 1;
@@ -224,8 +224,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    background: #EF4444;
-    color: #fff;
+    background: var(--shiny-color-error, #EF4444);
+    color: var(--shiny-color-on-error, #fff);
     font-size: 10px;
     font-weight: 600;
     line-height: 1;

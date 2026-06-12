@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -35,7 +36,6 @@ public class FabMenuItem : ContentView
             {
                 CornerRadius = new CornerRadius(6)
             },
-            BackgroundColor = Colors.White,
             VerticalOptions = LayoutOptions.Center,
             Content = label,
             IsVisible = false,
@@ -66,7 +66,6 @@ public class FabMenuItem : ContentView
             {
                 CornerRadius = new CornerRadius(DefaultSize / 2)
             },
-            BackgroundColor = Color.FromArgb("#2196F3"),
             Content = iconImage,
             VerticalOptions = LayoutOptions.Center,
             Shadow = new Shadow
@@ -86,6 +85,11 @@ public class FabMenuItem : ContentView
         };
         rootLayout.Add(labelBorder);
         rootLayout.Add(iconBorder);
+
+        // Theme defaults — overridden if the consumer sets the explicit color properties.
+        iconBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        labelBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         iconTap = new TapGestureRecognizer();
         iconTap.Tapped += OnTapped;
@@ -160,11 +164,14 @@ public class FabMenuItem : ContentView
         nameof(FabBackgroundColor),
         typeof(Color),
         typeof(FabMenuItem),
-        Color.FromArgb("#2196F3"),
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var item = (FabMenuItem)b;
             if (n is Color c)
-                ((FabMenuItem)b).iconBorder.BackgroundColor = c;
+                item.iconBorder.BackgroundColor = c;
+            else
+                item.iconBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         });
     public Color? FabBackgroundColor
     {
@@ -204,11 +211,14 @@ public class FabMenuItem : ContentView
         nameof(TextColor),
         typeof(Color),
         typeof(FabMenuItem),
-        Colors.Black,
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var item = (FabMenuItem)b;
             if (n is Color c)
-                ((FabMenuItem)b).label.TextColor = c;
+                item.label.TextColor = c;
+            else
+                item.label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
         });
     public Color? TextColor
     {
@@ -220,11 +230,14 @@ public class FabMenuItem : ContentView
         nameof(LabelBackgroundColor),
         typeof(Color),
         typeof(FabMenuItem),
-        Colors.White,
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var item = (FabMenuItem)b;
             if (n is Color c)
-                ((FabMenuItem)b).labelBorder.BackgroundColor = c;
+                item.labelBorder.BackgroundColor = c;
+            else
+                item.labelBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
         });
     public Color? LabelBackgroundColor
     {

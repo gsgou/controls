@@ -1,0 +1,19 @@
+{
+    "$schema": "./shiny-theme.schema.json",
+    "name": "Material",
+    "slug": "material",
+    "description": "A Material Design 3 inspired palette built around the signature M3 purple.",
+    "seeds": {
+        "primary": "#6750A4",
+        "secondary": "#625B71",
+        "tertiary": "#7D5260",
+        "neutral": "#605D62",
+        "neutralVariant": "#605D66",
+        "error": "#B3261E",
+        "success": "#2E7D32",
+        "info": "#1565C0",
+        "warning": "#F9A825",
+        "caution": "#EF6C00",
+        "critical": "#B3261E"
+    }
+}

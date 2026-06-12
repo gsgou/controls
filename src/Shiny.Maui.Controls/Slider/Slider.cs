@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls;
 
 public partial class Slider : ContentView
@@ -23,19 +25,21 @@ public partial class Slider : ContentView
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             FontSize = 12,
-            TextColor = Colors.White,
             FontAttributes = FontAttributes.Bold
         };
+        // Theme default — overridden if the consumer sets TooltipTextColor explicitly.
+        tooltipLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         tooltipBadge = new Border
         {
-            BackgroundColor = Color.FromArgb("#1F2937"),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
             Stroke = Colors.Transparent,
             Padding = new Thickness(10, 4),
             Content = tooltipLabel,
             HorizontalOptions = LayoutOptions.Center
         };
+        // Theme default — overridden if the consumer sets TooltipBackgroundColor explicitly.
+        tooltipBadge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
 
         tooltipContainer = new ContentView
         {
@@ -69,13 +73,14 @@ public partial class Slider : ContentView
             WidthRequest = 24,
             HeightRequest = 24,
             CornerRadius = 12,
-            BackgroundColor = Colors.White,
             BorderColor = ColdColor,
             HasShadow = true,
             Padding = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center
         };
+        // Theme default — overridden if the consumer sets ThumbColor explicitly.
+        thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
 
         // Track layout
         trackLayout = new AbsoluteLayout
@@ -235,9 +240,15 @@ public partial class Slider : ContentView
         else
         {
             tooltipLabel.Text = FormatValue(Value);
-            tooltipLabel.TextColor = TooltipTextColor;
+            if (TooltipTextColor is Color ttText)
+                tooltipLabel.TextColor = ttText;
+            else
+                tooltipLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             tooltipLabel.FontSize = TooltipFontSize;
-            tooltipBadge.BackgroundColor = TooltipBackgroundColor;
+            if (TooltipBackgroundColor is Color ttBg)
+                tooltipBadge.BackgroundColor = ttBg;
+            else
+                tooltipBadge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
         }
 
         // Position tooltip centered on thumb, clamped to track bounds.

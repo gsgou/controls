@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Toast;
 
 public static class ToastStyles
@@ -17,8 +19,19 @@ public static class ToastStyles
         [ToastType.Critical] = CriticalStyleKey,
     };
 
-    // Default colors: (Background, Text, Border)
-    // Bold, high-contrast colors suitable for toast notifications
+    // Theme token keys per toast type: (background, text, border).
+    // background = vivid status role, text = on-role, border = soft container.
+    internal static readonly Dictionary<ToastType, (string Bg, string Text, string Border)> TypeTokens = new()
+    {
+        [ToastType.Info] = (ShinyThemeKeys.Color.Info, ShinyThemeKeys.Color.OnInfo, ShinyThemeKeys.Color.InfoContainer),
+        [ToastType.Success] = (ShinyThemeKeys.Color.Success, ShinyThemeKeys.Color.OnSuccess, ShinyThemeKeys.Color.SuccessContainer),
+        [ToastType.Warning] = (ShinyThemeKeys.Color.Warning, ShinyThemeKeys.Color.OnWarning, ShinyThemeKeys.Color.WarningContainer),
+        [ToastType.Danger] = (ShinyThemeKeys.Color.Caution, ShinyThemeKeys.Color.OnCaution, ShinyThemeKeys.Color.CautionContainer),
+        [ToastType.Critical] = (ShinyThemeKeys.Color.Critical, ShinyThemeKeys.Color.OnCritical, ShinyThemeKeys.Color.CriticalContainer),
+    };
+
+    // Hex fallbacks: (Background, Text, Border) — used only when no Application/theme
+    // resource dictionary is available so the default look is preserved.
     internal static readonly Dictionary<ToastType, (string Bg, string Text, string Border)> DefaultColors = new()
     {
         [ToastType.Info] = ("#1E40AF", "#FFFFFF", "#3B82F6"),       // Deep blue bg, white text
@@ -59,10 +72,9 @@ public static class ToastStyles
 
     internal static void ApplyDefaults(ToastType type, ToastConfig config)
     {
-        var (bgHex, textHex, borderHex) = DefaultColors[type];
-        config.BackgroundColor ??= Color.FromArgb(bgHex);
-        config.TextColor ??= Color.FromArgb(textHex);
-        config.BorderColor ??= Color.FromArgb(borderHex);
+        // Record the type so ToastView can bind theme tokens via dynamic resources for any
+        // color the user/style did not set explicitly. Concrete color resolution is deferred.
+        config.Type = type;
         if (config.BorderThickness == 0)
             config.BorderThickness = 1;
     }

@@ -30,4 +30,10 @@ public class ToastConfig
     public int MarqueeLoops { get; set; } = 1;
     public ICommand? TapCommand { get; set; }
     public bool AnnounceToScreenReader { get; set; } = true;
+
+    /// <summary>
+    /// Set by the typed toast helpers (Info/Success/etc). When set, ToastView binds the
+    /// matching theme tokens via dynamic resources for any color not set explicitly.
+    /// </summary>
+    internal ToastType? Type { get; set; }
 }

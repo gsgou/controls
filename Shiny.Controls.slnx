@@ -19,6 +19,8 @@
     </Folder>
     <Project Path="src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Maui.Controls/Shiny.Maui.Controls.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Themes.Ocean/Shiny.Maui.Controls.Themes.Ocean.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Themes.Material/Shiny.Maui.Controls.Themes.Material.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Desktop/Shiny.Maui.Controls.Desktop.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj" />
@@ -29,5 +31,8 @@
     <Project Path="src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj" />
+    <Project Path="src/Shiny.Blazor.Controls.Themes.Ocean/Shiny.Blazor.Controls.Themes.Ocean.csproj" />
+    <Project Path="src/Shiny.Blazor.Controls.Themes.Material/Shiny.Blazor.Controls.Themes.Material.csproj" />
+    <Project Path="tools/ShinyThemeGen/ShinyThemeGen.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
 </Solution>

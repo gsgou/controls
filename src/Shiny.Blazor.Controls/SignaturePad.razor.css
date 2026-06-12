@@ -9,7 +9,7 @@
 .shiny-sigpad-title {
     text-align: center;
     font-size: 14px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     padding: 4px 0 0;
 }
 
@@ -19,7 +19,7 @@
     min-height: 120px;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-sigpad-canvas {
@@ -39,7 +39,7 @@
     border-radius: 4px;
     padding: 4px 10px;
     font-size: 12px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     cursor: pointer;
 }
 
@@ -64,7 +64,7 @@
     border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
-    color: white;
+    color: var(--shiny-color-on-primary, white);
     cursor: pointer;
 }
 

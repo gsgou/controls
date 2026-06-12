@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Themes.Material</RootNamespace>
+        <Description>Material theme pack for Shiny.Maui.Controls — a Material Design 3 purple palette.</Description>
+        <PackageTags>maui shiny controls theme material material3</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+</Project>

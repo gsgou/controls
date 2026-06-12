@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Themes.Ocean</RootNamespace>
+        <Description>Ocean theme pack for Shiny.Maui.Controls — a cool teal/cyan Material 3 palette.</Description>
+        <PackageTags>maui shiny controls theme ocean material3</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+</Project>

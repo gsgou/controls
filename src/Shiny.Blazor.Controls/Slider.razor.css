@@ -10,7 +10,7 @@
     position: relative;
     width: 100%;
     cursor: pointer;
-    background: #e5e7eb;
+    background: var(--shiny-color-surface-variant, #e5e7eb);
 }
 
 .shiny-gs-track-fill {

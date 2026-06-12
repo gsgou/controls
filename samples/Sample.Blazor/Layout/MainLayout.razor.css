@@ -1,7 +1,31 @@
 .page {
     display: flex;
     min-height: 100vh;
-    background: #F5F3FF;
+    background: var(--shiny-color-background, #F5F3FF);
+}
+
+/* Theme switcher (demo) */
+::deep .theme-switcher {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
+}
+
+::deep .theme-switcher select {
+    padding: 4px 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    border: 1px solid var(--shiny-color-outline-variant, #D1D5DB);
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #111827);
+}
+
+::deep .theme-switcher-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .sidebar {

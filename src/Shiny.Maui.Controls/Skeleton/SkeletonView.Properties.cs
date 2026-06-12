@@ -27,16 +27,16 @@ public partial class SkeletonView
     public int ItemCount { get => (int)GetValue(ItemCountProperty); set => SetValue(ItemCountProperty, value); }
 
     public static readonly BindableProperty BaseColorProperty = BindableProperty.Create(
-        nameof(BaseColor), typeof(Color), typeof(SkeletonView), Color.FromArgb("#E1E1E6"),
+        nameof(BaseColor), typeof(Color), typeof(SkeletonView), null,
         propertyChanged: (b, _, _) => ((SkeletonView)b).OnSkeletonAppearanceChanged());
-    /// <summary>Fill color of the built-in placeholder shapes.</summary>
-    public Color BaseColor { get => (Color)GetValue(BaseColorProperty); set => SetValue(BaseColorProperty, value); }
+    /// <summary>Fill color of the built-in placeholder shapes. When null, the theme SurfaceContainerHigh token is used.</summary>
+    public Color? BaseColor { get => (Color?)GetValue(BaseColorProperty); set => SetValue(BaseColorProperty, value); }
 
     public static readonly BindableProperty ShimmerColorProperty = BindableProperty.Create(
-        nameof(ShimmerColor), typeof(Color), typeof(SkeletonView), Color.FromRgba(255, 255, 255, 153),
+        nameof(ShimmerColor), typeof(Color), typeof(SkeletonView), null,
         propertyChanged: (b, _, _) => ((SkeletonView)b).OnShimmerColorChanged());
-    /// <summary>Color of the sweeping shimmer highlight.</summary>
-    public Color ShimmerColor { get => (Color)GetValue(ShimmerColorProperty); set => SetValue(ShimmerColorProperty, value); }
+    /// <summary>Color of the sweeping shimmer highlight. When null, the theme SurfaceContainerHighest token is used.</summary>
+    public Color? ShimmerColor { get => (Color?)GetValue(ShimmerColorProperty); set => SetValue(ShimmerColorProperty, value); }
 
     public static readonly BindableProperty ShimmerEnabledProperty = BindableProperty.Create(
         nameof(ShimmerEnabled), typeof(bool), typeof(SkeletonView), true,

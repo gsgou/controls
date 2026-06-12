@@ -2,7 +2,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background: #000;
+    background: var(--shiny-color-scrim, #000);
     overflow: hidden;
     user-select: none;
     touch-action: none;
@@ -42,7 +42,7 @@
     border: none;
     border-radius: 22px;
     background: transparent;
-    color: #fff;
+    color: var(--shiny-color-on-surface, #fff);
     font-size: 18px;
     cursor: pointer;
     display: flex;
@@ -68,7 +68,7 @@
 .shiny-imgeditor-separator {
     width: 1px;
     height: 30px;
-    background: #666;
+    background: var(--shiny-color-outline-variant, #666);
     margin: 0 4px;
 }
 
@@ -76,9 +76,9 @@
     height: 32px;
     padding: 0 8px;
     border-radius: 6px;
-    border: 1px solid #555;
-    background: #2c2c2e;
-    color: #fff;
+    border: 1px solid var(--shiny-color-outline-variant, #555);
+    background: var(--shiny-color-surface-container, #2c2c2e);
+    color: var(--shiny-color-on-surface, #fff);
     font-size: 13px;
     cursor: pointer;
 }
@@ -87,7 +87,7 @@
     width: 36px;
     height: 36px;
     padding: 2px;
-    border: 2px solid #888;
+    border: 2px solid var(--shiny-color-outline-variant, #888);
     border-radius: 50%;
     background: transparent;
     cursor: pointer;

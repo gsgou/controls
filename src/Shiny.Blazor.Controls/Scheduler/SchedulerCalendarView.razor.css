@@ -3,10 +3,10 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
     border-radius: 12px;
     overflow: hidden;
-    background: white;
+    background: var(--shiny-color-surface, white);
 }
 
 .shiny-cal-header {
@@ -14,7 +14,7 @@
     grid-template-columns: 44px 1fr 44px;
     align-items: center;
     padding: 8px 12px;
-    border-bottom: 1px solid #E5E7EB;
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-cal-title {
@@ -26,7 +26,7 @@
 .shiny-cal-nav {
     border: 0;
     background: transparent;
-    color: #3B82F6;
+    color: var(--shiny-color-primary, #3B82F6);
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
@@ -39,8 +39,8 @@
 .shiny-cal-dayheaders {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    background: #F9FAFB;
-    border-bottom: 1px solid #E5E7EB;
+    background: var(--shiny-color-surface-container, #F9FAFB);
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-cal-dayheader {
@@ -48,7 +48,7 @@
     padding: 8px 0;
     font-size: 11px;
     font-weight: 700;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     text-transform: uppercase;
 }
 
@@ -59,8 +59,8 @@
 }
 
 .shiny-cal-cell {
-    border-right: 1px solid #F3F4F6;
-    border-bottom: 1px solid #F3F4F6;
+    border-right: 1px solid var(--shiny-color-outline-variant, #F3F4F6);
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #F3F4F6);
     padding: 4px 4px 6px;
     min-height: 92px;
     cursor: pointer;
@@ -75,7 +75,7 @@
 .shiny-cal-daynum {
     font-size: 12px;
     font-weight: 600;
-    color: #111827;
+    color: var(--shiny-color-on-surface, #111827);
     min-width: 22px;
     height: 22px;
     line-height: 22px;
@@ -92,7 +92,7 @@
 }
 
 .shiny-cal-event {
-    color: white;
+    color: var(--shiny-color-on-primary, white);
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
@@ -104,13 +104,13 @@
 
 .shiny-cal-overflow {
     font-size: 10px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     padding-left: 4px;
 }
 
 .shiny-cal-count {
     font-size: 11px;
-    color: #3B82F6;
+    color: var(--shiny-color-primary, #3B82F6);
     padding-left: 4px;
 }
 
@@ -121,5 +121,5 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
 }

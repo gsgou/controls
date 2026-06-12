@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Chat.Internal;
 
 class ChatInputBar : ContentView
@@ -29,13 +31,14 @@ class ChatInputBar : ContentView
         {
             Text = "Send",
             FontSize = 14,
-            TextColor = Colors.White,
-            BackgroundColor = Color.FromArgb("#007AFF"),
             CornerRadius = 18,
             HeightRequest = 36,
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
         };
+        // Theme defaults \u2014 overridden by ChatView.SendButton* properties when set.
+        sendButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        sendButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         sendButton.Clicked += OnSendClicked;
 
         attachButton = new Button
@@ -43,7 +46,6 @@ class ChatInputBar : ContentView
             Text = "+",
             FontSize = 22,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Color.FromArgb("#007AFF"),
             BackgroundColor = Colors.Transparent,
             WidthRequest = 44,
             HeightRequest = 44,
@@ -51,6 +53,7 @@ class ChatInputBar : ContentView
             VerticalOptions = LayoutOptions.Center,
             IsVisible = false
         };
+        attachButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         attachButton.Clicked += OnAttachClicked;
 
         toolsButton = new Button
@@ -58,14 +61,14 @@ class ChatInputBar : ContentView
             WidthRequest = 40,
             HeightRequest = 40,
             CornerRadius = 20,
-            BackgroundColor = Color.FromArgb("#007AFF"),
-            TextColor = Colors.White,
             Text = "\u2026",
             FontSize = 18,
             Padding = 0,
             VerticalOptions = LayoutOptions.Center,
             IsVisible = false
         };
+        toolsButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        toolsButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         toolsButton.Clicked += OnToolsClicked;
 
         rootGrid = new Grid
@@ -78,18 +81,20 @@ class ChatInputBar : ContentView
                 new ColumnDefinition(GridLength.Auto)
             },
             ColumnSpacing = 4,
-            Padding = new Thickness(8, 6),
-            BackgroundColor = Color.FromArgb("#F5F5F5")
+            Padding = new Thickness(8, 6)
         };
+        // Input bar background \u2014 overridden by ChatView.InputBarBackgroundColor when set.
+        rootGrid.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         // Top border line
         separator = new BoxView
         {
             HeightRequest = 0.5,
-            Color = Color.FromArgb("#E0E0E0"),
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(-8, -6, -8, 0)
         };
+        // Input bar separator \u2014 overridden by ChatView.InputBarBorderColor when set.
+        separator.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
 
         var wrapper = new Grid
         {

@@ -26,7 +26,7 @@
 .shiny-vgrid-group-header.shiny-vgrid-sticky {
     position: sticky;
     top: 0;
-    background: var(--vgrid-sticky-bg, white);
+    background: var(--vgrid-sticky-bg, var(--shiny-color-surface, white));
 }
 
 /* padding (not margin) so Virtualize height measurement includes the row spacing */
@@ -47,7 +47,7 @@
 
 .shiny-vgrid-loadmore-btn {
     padding: 8px 24px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
     border-radius: 6px;
     background: transparent;
     cursor: pointer;

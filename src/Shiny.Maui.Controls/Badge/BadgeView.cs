@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls.Shapes;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -28,15 +29,12 @@ public partial class BadgeView : Grid, IDisposable
             VerticalTextAlignment = TextAlignment.Center,
             LineBreakMode = LineBreakMode.NoWrap,
             FontSize = 10,
-            FontAttributes = Microsoft.Maui.Controls.FontAttributes.Bold,
-            TextColor = Colors.White
+            FontAttributes = Microsoft.Maui.Controls.FontAttributes.Bold
         };
 
         this.badgeBorder = new Border
         {
             Padding = new Thickness(6, 2),
-            BackgroundColor = Color.FromArgb("#DC2626"),
-            Stroke = Colors.White,
             StrokeThickness = 1.5,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
@@ -68,14 +66,31 @@ public partial class BadgeView : Grid, IDisposable
 
     void ApplyBadgeVisual(bool animate)
     {
-        // Colors / stroke
-        this.badgeBorder.BackgroundColor = this.BadgeColor;
-        this.badgeBorder.Stroke = this.BadgeBorderColor;
+        // Colors / stroke — fall back to theme tokens when the explicit color is unset.
+        if (this.BadgeColor is Color badgeColor)
+            this.badgeBorder.BackgroundColor = badgeColor;
+        else
+            this.badgeBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Error);
+
+        if (this.BadgeBorderColor is Color borderColor)
+        {
+            this.badgeBorder.Stroke = borderColor;
+        }
+        else
+        {
+            // Stroke is a Brush; drive its Color from the token so theme swaps propagate.
+            var strokeBrush = new SolidColorBrush();
+            strokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Surface);
+            this.badgeBorder.Stroke = strokeBrush;
+        }
         this.badgeBorder.StrokeThickness = this.BadgeBorderThickness;
         this.badgeBorder.StrokeShape = new RoundRectangle { CornerRadius = this.CornerRadius };
 
         // Font / text color
-        this.badgeLabel.TextColor = this.BadgeTextColor;
+        if (this.BadgeTextColor is Color textColor)
+            this.badgeLabel.TextColor = textColor;
+        else
+            this.badgeLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnError);
         this.badgeLabel.FontSize = this.FontSize;
         this.badgeLabel.FontAttributes = this.FontAttributes;
 

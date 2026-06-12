@@ -1,5 +1,6 @@
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -60,10 +61,10 @@ public class ImageViewer : ContentView
         // Build overlay (not in the visual tree until opened)
         backdrop = new BoxView
         {
-            Color = Colors.Black,
             Opacity = 0,
             InputTransparent = false
         };
+        backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
         // Swallow touches on backdrop
         backdrop.GestureRecognizers.Add(new TapGestureRecognizer());
 
@@ -330,7 +331,8 @@ public class ImageViewer : ContentView
         {
             Text = "\u2715",
             FontSize = 20,
-            TextColor = Colors.White,
+            // Close button sits on the dark Scrim backdrop \u2014 use inverse-on-surface.
+            // Translucent black chip background left as-is.
             BackgroundColor = Color.FromRgba(0, 0, 0, 0.5),
             CornerRadius = 20,
             WidthRequest = 40,
@@ -340,6 +342,7 @@ public class ImageViewer : ContentView
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(0, 50, 16, 0)
         };
+        btn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
         btn.Clicked += (_, _) => IsOpen = false;
         return btn;
     }

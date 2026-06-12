@@ -1,16 +1,16 @@
 .shiny-tv {
-    --shiny-tv-sep-color: #E5E7EB;
+    --shiny-tv-sep-color: var(--shiny-color-outline-variant, #E5E7EB);
     --shiny-tv-sep-height: 1px;
     --shiny-tv-sep-padding: 16px;
     --shiny-tv-section-sep-color: transparent;
     --shiny-tv-section-sep-height: 8px;
-    --shiny-tv-cell-bg: #FFFFFF;
+    --shiny-tv-cell-bg: var(--shiny-color-surface, #FFFFFF);
 
     display: flex;
     flex-direction: column;
     width: 100%;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    color: #111827;
+    color: var(--shiny-color-on-surface, #111827);
     background: transparent;
 }
 
@@ -26,13 +26,13 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
 }
 
 ::deep .shiny-tv-section-footer {
     padding: 6px 16px 12px;
     font-size: 12px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
 }
 
 ::deep .shiny-tv-section-sep {
@@ -60,7 +60,7 @@
     cursor: pointer;
     user-select: none;
     transition: background-color 120ms ease;
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #F1F5F9);
 }
 
 ::deep .shiny-tv-cell:last-child {
@@ -68,7 +68,7 @@
 }
 
 ::deep .shiny-tv-cell:hover {
-    background-color: rgba(0, 0, 0, 0.02);
+    background-color: var(--shiny-color-surface-container-high, rgba(0, 0, 0, 0.02));
 }
 
 ::deep .shiny-tv-cell-icon {
@@ -100,7 +100,7 @@
 
 ::deep .shiny-tv-cell-title {
     font-size: 16px;
-    color: #111827;
+    color: var(--shiny-color-on-surface, #111827);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -110,13 +110,13 @@
 
 ::deep .shiny-tv-cell-hint {
     font-size: 12px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     flex-shrink: 0;
 }
 
 ::deep .shiny-tv-cell-description {
     font-size: 12px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     line-height: 1.4;
 }
 
@@ -124,7 +124,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     font-size: 14px;
 }
 
@@ -134,7 +134,7 @@
     text-align: center;
     border: none;
     background: transparent;
-    color: #2196F3;
+    color: var(--shiny-color-primary, #2196F3);
     font-weight: 600;
     padding: 12px 16px;
     cursor: pointer;
@@ -143,7 +143,7 @@
 }
 
 ::deep .shiny-tv-button:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--shiny-color-surface-container-high, rgba(0, 0, 0, 0.03));
 }
 
 /* form controls */
@@ -173,7 +173,7 @@
 ::deep .shiny-tv-switch-slider {
     position: absolute;
     inset: 0;
-    background: #D1D5DB;
+    background: var(--shiny-color-outline-variant, #D1D5DB);
     border-radius: 13px;
     transition: background-color 200ms ease;
     cursor: pointer;
@@ -186,14 +186,14 @@
     height: 22px;
     left: 2px;
     top: 2px;
-    background: white;
+    background: var(--shiny-color-surface, white);
     border-radius: 50%;
     transition: transform 200ms ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 ::deep .shiny-tv-switch input:checked + .shiny-tv-switch-slider {
-    background: var(--shiny-tv-switch-on, #34C759);
+    background: var(--shiny-tv-switch-on, var(--shiny-color-primary, #34C759));
 }
 
 ::deep .shiny-tv-switch input:checked + .shiny-tv-switch-slider::before {
@@ -203,27 +203,27 @@
 ::deep .shiny-tv-checkbox {
     width: 22px;
     height: 22px;
-    accent-color: var(--shiny-tv-accent, #2196F3);
+    accent-color: var(--shiny-tv-accent, var(--shiny-color-primary, #2196F3));
     cursor: pointer;
 }
 
 ::deep .shiny-tv-radio {
     width: 22px;
     height: 22px;
-    accent-color: var(--shiny-tv-accent, #2196F3);
+    accent-color: var(--shiny-tv-accent, var(--shiny-color-primary, #2196F3));
     cursor: pointer;
 }
 
 ::deep .shiny-tv-check-mark {
     width: 18px;
     height: 18px;
-    color: var(--shiny-tv-accent, #2196F3);
+    color: var(--shiny-tv-accent, var(--shiny-color-primary, #2196F3));
 }
 
 ::deep .shiny-tv-chevron {
     width: 14px;
     height: 14px;
-    color: #9CA3AF;
+    color: var(--shiny-color-on-surface-variant, #9CA3AF);
 }
 
 ::deep .shiny-tv-value {

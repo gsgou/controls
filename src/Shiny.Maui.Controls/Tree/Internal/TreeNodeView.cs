@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Tree.Internal;
 
 internal class TreeNodeView : Grid
@@ -132,13 +134,17 @@ internal class TreeNodeView : Grid
 
         for (var d = 0; d < Node.Depth; d++)
         {
-            host.Add(new BoxView
+            var line = new BoxView
             {
                 WidthRequest = 1,
-                Color = owner.GuideLineColor,
                 HorizontalOptions = LayoutOptions.Start,
                 Margin = new Thickness((d * owner.IndentSize) + (owner.IndentSize / 2), 0, 0, 0)
-            });
+            };
+            if (owner.GuideLineColor is Color gc)
+                line.Color = gc;
+            else
+                line.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+            host.Add(line);
         }
         return host;
     }
@@ -165,15 +171,19 @@ internal class TreeNodeView : Grid
 
         if (Node.LoadState == TreeLoadState.Loading)
         {
-            chevronHost.Children.Add(new ActivityIndicator
+            var indicator = new ActivityIndicator
             {
                 IsRunning = true,
-                Color = owner.ChevronColor,
                 WidthRequest = owner.ChevronSize,
                 HeightRequest = owner.ChevronSize,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Center
-            });
+            };
+            if (owner.ChevronColor is Color cc)
+                indicator.Color = cc;
+            else
+                indicator.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            chevronHost.Children.Add(indicator);
             return;
         }
 
@@ -205,23 +215,37 @@ internal class TreeNodeView : Grid
             };
         }
 
-        return new Label
+        var glyphLabel = new Label
         {
             Text = fallbackGlyph,
             FontSize = owner.ChevronSize * 0.75,
-            TextColor = owner.ChevronColor,
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Center
         };
+        if (owner.ChevronColor is Color cc)
+            glyphLabel.TextColor = cc;
+        else
+            glyphLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        return glyphLabel;
     }
 
     public void RefreshSelection()
     {
-        background.BackgroundColor = Node.IsSelected
-            ? owner.SelectedBackgroundColor
-            : owner.RowBackgroundColor;
+        if (Node.IsSelected)
+        {
+            if (owner.SelectedBackgroundColor is Color selected)
+                background.BackgroundColor = selected;
+            else
+                background.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
+        }
+        else
+        {
+            // Row background defaults to transparent; clear any dynamic resource binding.
+            background.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+            background.BackgroundColor = owner.RowBackgroundColor;
+        }
     }
 
     void OnChevronTapped(object? sender, EventArgs e)

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Chat.Internal;
 
@@ -59,10 +60,10 @@ partial class ChatBubbleView : ContentView
         nameLabel = new Label
         {
             FontSize = 12,
-            TextColor = Colors.Grey,
             Margin = new Thickness(4, 0, 0, 2),
             VerticalOptions = LayoutOptions.Center
         };
+        nameLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         avatarNameRow = new Grid
         {
@@ -111,7 +112,6 @@ partial class ChatBubbleView : ContentView
         {
             Text = "\u22ee",
             FontSize = 16,
-            TextColor = Colors.Grey,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 28,
             HeightRequest = 28,
@@ -119,6 +119,7 @@ partial class ChatBubbleView : ContentView
             VerticalOptions = LayoutOptions.Center,
             IsVisible = false
         };
+        toolsButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         toolsButton.Clicked += OnToolsButtonClicked;
 
         bubbleRow = new Grid
@@ -138,9 +139,9 @@ partial class ChatBubbleView : ContentView
         timestampLabel = new Label
         {
             FontSize = 11,
-            TextColor = Colors.Grey,
             Margin = new Thickness(4, 2, 4, 0)
         };
+        timestampLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         acknowledgementLayout = new HorizontalStackLayout
         {
@@ -341,11 +342,19 @@ partial class ChatBubbleView : ContentView
         foreach (var group in groups)
         {
             var count = group.Count();
+            var countLabel = new Label
+            {
+                Text = count > 1 ? count.ToString() : "",
+                FontSize = 11,
+                VerticalTextAlignment = TextAlignment.Center,
+                IsVisible = count > 1
+            };
+            countLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
             var badge = new Border
             {
                 StrokeThickness = 0,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
-                BackgroundColor = Color.FromArgb("#E5E7EB"),
                 Padding = new Thickness(6, 2),
                 Content = new HorizontalStackLayout
                 {
@@ -358,17 +367,11 @@ partial class ChatBubbleView : ContentView
                             FontSize = 12,
                             VerticalTextAlignment = TextAlignment.Center
                         },
-                        new Label
-                        {
-                            Text = count > 1 ? count.ToString() : "",
-                            FontSize = 11,
-                            TextColor = Colors.Grey,
-                            VerticalTextAlignment = TextAlignment.Center,
-                            IsVisible = count > 1
-                        }
+                        countLabel
                     }
                 }
             };
+            badge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
             acknowledgementLayout.Children.Add(badge);
         }
 

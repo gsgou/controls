@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -54,9 +55,18 @@ public partial class Slider
 
     // ThumbColor
     public static readonly BindableProperty ThumbColorProperty = BindableProperty.Create(
-        nameof(ThumbColor), typeof(Color), typeof(Slider), Colors.White,
-        propertyChanged: (b, _, _) => ((Slider)b).UpdateVisuals());
-    public Color ThumbColor { get => (Color)GetValue(ThumbColorProperty); set => SetValue(ThumbColorProperty, value); }
+        nameof(ThumbColor), typeof(Color), typeof(Slider), null,
+        propertyChanged: (b, _, n) =>
+        {
+            var slider = (Slider)b;
+            if (n is Color c)
+                slider.thumb.BackgroundColor = c;
+            else
+                slider.thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            slider.UpdateVisuals();
+        });
+    /// <summary>Thumb fill color. When null, the theme OnPrimary token is used.</summary>
+    public Color? ThumbColor { get => (Color?)GetValue(ThumbColorProperty); set => SetValue(ThumbColorProperty, value); }
 
     // ThumbBorderWidth
     public static readonly BindableProperty ThumbBorderWidthProperty = BindableProperty.Create(
@@ -72,15 +82,17 @@ public partial class Slider
 
     // TooltipBackgroundColor
     public static readonly BindableProperty TooltipBackgroundColorProperty = BindableProperty.Create(
-        nameof(TooltipBackgroundColor), typeof(Color), typeof(Slider), Color.FromArgb("#1F2937"),
+        nameof(TooltipBackgroundColor), typeof(Color), typeof(Slider), null,
         propertyChanged: (b, _, _) => ((Slider)b).UpdateVisuals());
-    public Color TooltipBackgroundColor { get => (Color)GetValue(TooltipBackgroundColorProperty); set => SetValue(TooltipBackgroundColorProperty, value); }
+    /// <summary>Tooltip badge background color. When null, the theme SurfaceVariant token is used.</summary>
+    public Color? TooltipBackgroundColor { get => (Color?)GetValue(TooltipBackgroundColorProperty); set => SetValue(TooltipBackgroundColorProperty, value); }
 
     // TooltipTextColor
     public static readonly BindableProperty TooltipTextColorProperty = BindableProperty.Create(
-        nameof(TooltipTextColor), typeof(Color), typeof(Slider), Colors.White,
+        nameof(TooltipTextColor), typeof(Color), typeof(Slider), null,
         propertyChanged: (b, _, _) => ((Slider)b).UpdateVisuals());
-    public Color TooltipTextColor { get => (Color)GetValue(TooltipTextColorProperty); set => SetValue(TooltipTextColorProperty, value); }
+    /// <summary>Tooltip text color. When null, the theme OnSurfaceVariant token is used.</summary>
+    public Color? TooltipTextColor { get => (Color?)GetValue(TooltipTextColorProperty); set => SetValue(TooltipTextColorProperty, value); }
 
     // TooltipFontSize
     public static readonly BindableProperty TooltipFontSizeProperty = BindableProperty.Create(

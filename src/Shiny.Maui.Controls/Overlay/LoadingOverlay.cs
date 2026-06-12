@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls;
 
 public class LoadingOverlay : Overlay
@@ -12,29 +14,31 @@ public class LoadingOverlay : Overlay
         spinner = new ActivityIndicator
         {
             IsRunning = true,
-            Color = Colors.White,
             HeightRequest = 48,
             WidthRequest = 48,
             HorizontalOptions = LayoutOptions.Center
         };
+        // Content sits on the dark Scrim backdrop, so use the inverse-on-surface role.
+        spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
 
         progressBar = new ProgressBar
         {
             IsVisible = false,
             WidthRequest = 200,
             HorizontalOptions = LayoutOptions.Center,
-            BarColor = Colors.White,
+            // Translucent white track left as-is (a tinted inverse-on-surface veil).
             TrackColor = Color.FromArgb("#FFFFFF33")
         };
+        progressBar.SetDynamicResource(ProgressBar.BarColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
 
         messageLabel = new Label
         {
             IsVisible = false,
-            TextColor = Colors.White,
             FontSize = 14,
             HorizontalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Center
         };
+        messageLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
 
         contentLayout = new StackLayout
         {
@@ -74,9 +78,16 @@ public class LoadingOverlay : Overlay
 
     // SpinnerColor
     public static readonly BindableProperty SpinnerColorProperty = BindableProperty.Create(
-        nameof(SpinnerColor), typeof(Color), typeof(LoadingOverlay), Colors.White,
-        propertyChanged: (b, _, n) => ((LoadingOverlay)b).spinner.Color = (Color)n);
-    public Color SpinnerColor { get => (Color)GetValue(SpinnerColorProperty); set => SetValue(SpinnerColorProperty, value); }
+        nameof(SpinnerColor), typeof(Color), typeof(LoadingOverlay), null,
+        propertyChanged: (b, _, n) =>
+        {
+            var lo = (LoadingOverlay)b;
+            if (n is Color c)
+                lo.spinner.Color = c;
+            else
+                lo.spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
+        });
+    public Color? SpinnerColor { get => (Color?)GetValue(SpinnerColorProperty); set => SetValue(SpinnerColorProperty, value); }
 
     void OnModeChanged()
     {

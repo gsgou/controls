@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls;
 
 public partial class ProgressBar : ContentView, IDisposable
@@ -20,9 +22,10 @@ public partial class ProgressBar : ContentView, IDisposable
         {
             HeightRequest = 8,
             CornerRadius = new CornerRadius(4),
-            BackgroundColor = Color.FromArgb("#E5E7EB"),
             VerticalOptions = LayoutOptions.Center
         };
+        // Theme default — overridden if the consumer sets TrackColor explicitly.
+        trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
 
         trackFill = new BoxView
         {
@@ -57,7 +60,6 @@ public partial class ProgressBar : ContentView, IDisposable
         progressLabel = new Label
         {
             FontSize = 11,
-            TextColor = Colors.White,
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
@@ -65,6 +67,8 @@ public partial class ProgressBar : ContentView, IDisposable
             HorizontalOptions = LayoutOptions.Center,
             IsVisible = false
         };
+        // Theme default — overridden if the consumer sets TextColor explicitly.
+        progressLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
 
         trackGrid = new Grid
         {
@@ -140,7 +144,10 @@ public partial class ProgressBar : ContentView, IDisposable
         else
         {
             trackFill.Background = null;
-            trackFill.BackgroundColor = BarColor;
+            if (BarColor is Color barColor)
+                trackFill.BackgroundColor = barColor;
+            else
+                trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         }
 
         // Pulse sheen sizing
@@ -278,7 +285,10 @@ public partial class ProgressBar : ContentView, IDisposable
         else
         {
             trackFill.Background = null;
-            trackFill.BackgroundColor = BarColor;
+            if (BarColor is Color barColor)
+                trackFill.BackgroundColor = barColor;
+            else
+                trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         }
 
         progressLabel.IsVisible = false;

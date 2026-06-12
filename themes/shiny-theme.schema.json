@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://shinylib.net/controls/shiny-theme.schema.json",
+    "title": "Shiny Controls Theme",
+    "description": "Canonical definition of a Shiny Controls theme. A theme is described by a small set of seed colors; the generator (tools/ShinyThemeGen) derives the full Material-3 tonal role set (light + dark) plus shape, elevation, state, type and spacing tokens. This same file format drives the docs-site theme creator.",
+    "type": "object",
+    "required": ["name", "slug", "seeds"],
+    "additionalProperties": false,
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "Display name, e.g. 'Ocean'. Used for the generated theme class name (OceanTheme)."
+        },
+        "slug": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Lowercase identifier used in file names and CSS, e.g. 'ocean' -> shiny-theme-ocean.css."
+        },
+        "description": {
+            "type": "string"
+        },
+        "seeds": {
+            "type": "object",
+            "description": "Source colors. Each is expanded into a tonal palette; M3 roles are mapped from the tones for both light and dark schemes.",
+            "required": [
+                "primary", "secondary", "tertiary", "neutral", "neutralVariant", "error",
+                "success", "info", "warning", "caution", "critical"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "primary": { "$ref": "#/$defs/hex" },
+                "secondary": { "$ref": "#/$defs/hex" },
+                "tertiary": { "$ref": "#/$defs/hex" },
+                "neutral": { "$ref": "#/$defs/hex" },
+                "neutralVariant": { "$ref": "#/$defs/hex" },
+                "error": { "$ref": "#/$defs/hex" },
+                "success": { "$ref": "#/$defs/hex" },
+                "info": { "$ref": "#/$defs/hex" },
+                "warning": { "$ref": "#/$defs/hex" },
+                "caution": { "$ref": "#/$defs/hex" },
+                "critical": { "$ref": "#/$defs/hex" }
+            }
+        },
+        "shape": {
+            "type": "object",
+            "description": "Optional override of the default corner-radius scale (px). Omit to use generator defaults.",
+            "additionalProperties": { "type": "number" }
+        }
+    },
+    "$defs": {
+        "hex": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+            "description": "sRGB hex color, #RRGGBB or #RRGGBBAA."
+        }
+    }
+}

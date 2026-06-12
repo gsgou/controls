@@ -55,7 +55,7 @@
     width: 44px;
     height: 44px;
     border-radius: 8px;
-    border: 2px solid #ccc;
+    border: 2px solid var(--shiny-color-outline-variant, #ccc);
     flex-shrink: 0;
 }
 
@@ -63,7 +63,7 @@
     font-family: monospace;
     font-size: 14px;
     padding: 8px 12px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
     border-radius: 6px;
     width: 100%;
     box-sizing: border-box;
@@ -71,6 +71,6 @@
 
 .shiny-colorpicker-hex:focus {
     outline: none;
-    border-color: #007AFF;
+    border-color: var(--shiny-color-primary, #007AFF);
     box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }

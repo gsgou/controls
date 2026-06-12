@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -25,10 +26,11 @@ public class FabMenu : ContentView
     {
         backdrop = new BoxView
         {
-            Color = Colors.Black,
             Opacity = 0,
             IsVisible = false
         };
+        // Theme default — overridden if the consumer sets BackdropColor explicitly.
+        backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
         backdropTap = new TapGestureRecognizer();
         backdropTap.Tapped += OnBackdropTapped;
         backdrop.GestureRecognizers.Add(backdropTap);
@@ -135,11 +137,11 @@ public class FabMenu : ContentView
         nameof(FabBackgroundColor),
         typeof(Color),
         typeof(FabMenu),
-        Color.FromArgb("#2196F3"),
+        null,
         propertyChanged: (b, _, n) =>
         {
-            if (n is Color c)
-                ((FabMenu)b).mainFab.FabBackgroundColor = c;
+            // Forward to the inner Fab; null lets the Fab fall back to its own theme default (Primary).
+            ((FabMenu)b).mainFab.FabBackgroundColor = n as Color;
         });
     public Color? FabBackgroundColor
     {
@@ -179,11 +181,11 @@ public class FabMenu : ContentView
         nameof(TextColor),
         typeof(Color),
         typeof(FabMenu),
-        Colors.White,
+        null,
         propertyChanged: (b, _, n) =>
         {
-            if (n is Color c)
-                ((FabMenu)b).mainFab.TextColor = c;
+            // Forward to the inner Fab; null lets the Fab fall back to its own theme default (OnPrimary).
+            ((FabMenu)b).mainFab.TextColor = n as Color;
         });
     public Color? TextColor
     {
@@ -231,11 +233,14 @@ public class FabMenu : ContentView
         nameof(BackdropColor),
         typeof(Color),
         typeof(FabMenu),
-        Colors.Black,
+        null,
         propertyChanged: (b, _, n) =>
         {
+            var menu = (FabMenu)b;
             if (n is Color c)
-                ((FabMenu)b).backdrop.Color = c;
+                menu.backdrop.Color = c;
+            else
+                menu.backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
         });
     public Color? BackdropColor
     {
