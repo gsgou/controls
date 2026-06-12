@@ -46,6 +46,26 @@
 </section>
 
 <section class="demo-section">
+    <h2>Overflow &rarr; hamburger menu (drag the panel narrower)</h2>
+    <p>When the action buttons can't all fit, the ones that don't are tucked into a dropdown behind the
+       overflow button. Drag the bottom-right corner of the box to watch items collapse into &mdash; and
+       pop back out of &mdash; the menu.</p>
+    <div class="scroll-demo scroll-demo--resizable">
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Title="Editor"
+                      Items="@manyItems"
+                      ItemClicked="OnItemClicked" />
+        <div class="scroll-body">
+            @for (var i = 1; i <= 10; i++)
+            {
+                <div class="fake-row">Line @i</div>
+            }
+        </div>
+    </div>
+    <p class="state">Last tapped: <strong>@lastAction</strong></p>
+</section>
+
+<section class="demo-section">
     <h2>Custom content (StartContent / ChildContent / EndContent)</h2>
     <div class="scroll-demo">
         <ShinyToolbar Dock="ToolbarDock.Top" BackgroundColor="#0F172A" TextColor="#E2E8F0">
@@ -118,6 +138,16 @@
         new() { Icon = IconStar, Text = "Favorite" },
         new() { Icon = IconTrash, Text = "Delete", IconColor = "#EF4444" }
     };
+
+    List<ToolbarItem> manyItems = new()
+    {
+        new() { Icon = IconSearch, Text = "Search" },
+        new() { Icon = IconStar, Text = "Star" },
+        new() { Icon = IconBell, Text = "Alerts", Badge = "5" },
+        new() { Icon = IconCompose, Text = "Compose" },
+        new() { Icon = IconShare, Text = "Share" },
+        new() { Icon = IconTrash, Text = "Delete", IconColor = "#EF4444" }
+    };
 }
 
 <style>
@@ -128,6 +158,13 @@
         border: 1px solid #E5E7EB;
         border-radius: 14px;
         background: #F8FAFC;
+    }
+
+    .scroll-demo--resizable {
+        resize: horizontal;
+        overflow: auto;
+        min-width: 220px;
+        max-width: 100%;
     }
 
     .scroll-body {

@@ -1,6 +1,8 @@
 @namespace Shiny.Blazor.Controls
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<div class="@RootClass" style="@RootStyle">
+<div class="@RootClass" style="@RootStyle" @ref="rootEl">
     <div class="shiny-toolbar-inner">
         @if (StartContent != null)
         {
@@ -23,31 +25,59 @@
         else if (Items is { Count: > 0 })
         {
             <div class="shiny-toolbar-end shiny-toolbar-items">
-                @foreach (var item in Items)
+                @foreach (var item in (UseOverflow ? VisibleItems : Items))
                 {
-                    if (!string.IsNullOrEmpty(item.Href))
+                    @ItemTemplate(item)
+                }
+
+                @if (HasOverflow)
+                {
+                    <button type="button"
+                            class="shiny-toolbar-item shiny-toolbar-more"
+                            aria-haspopup="true"
+                            aria-expanded="@menuOpen"
+                            aria-label="@OverflowAriaLabel"
+                            @onclick="ToggleMenu"
+                            @onclick:stopPropagation="true">
+                        <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
+                        @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
+                        {
+                            <span class="shiny-toolbar-item-label">@OverflowText</span>
+                        }
+                    </button>
+
+                    @if (menuOpen)
                     {
-                        <a class="shiny-toolbar-item"
-                           href="@item.Href"
-                           target="@item.Target"
-                           style="@ItemStyle(item)"
-                           @onclick="@(_ => OnItemClicked(item))">
-                            @ItemBody(item)
-                        </a>
-                    }
-                    else
-                    {
-                        <button type="button"
-                                class="shiny-toolbar-item"
-                                style="@ItemStyle(item)"
-                                disabled="@item.IsDisabled"
-                                @onclick="@(_ => OnItemClicked(item))"
-                                @onclick:stopPropagation="true">
-                            @ItemBody(item)
-                        </button>
+                        <div class="shiny-toolbar-menu-backdrop" @onclick="CloseMenu"></div>
+                        <div class="shiny-toolbar-menu" role="menu"
+                             style="background-color:@MenuBackgroundColor;color:@MenuTextColor;">
+                            @foreach (var item in OverflowItems)
+                            {
+                                @MenuItemTemplate(item)
+                            }
+                        </div>
                     }
                 }
             </div>
+
+            @if (UseOverflow)
+            {
+                <div class="shiny-toolbar-measure" aria-hidden="true">
+                    @foreach (var item in Items)
+                    {
+                        <div data-measure-item>@ItemTemplate(item)</div>
+                    }
+                    <div data-measure-toggle>
+                        <button type="button" class="shiny-toolbar-item shiny-toolbar-more" tabindex="-1">
+                            <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
+                            @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
+                            {
+                                <span class="shiny-toolbar-item-label">@OverflowText</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
@@ -71,6 +101,22 @@
     [Parameter] public double IconSize { get; set; } = 22;
     [Parameter] public bool ShowItemLabels { get; set; }
 
+    // overflow -> hamburger dropdown
+    /// <summary>When true (default) items that don't fit collapse into a dropdown menu behind the overflow button.</summary>
+    [Parameter] public bool OverflowEnabled { get; set; } = true;
+
+    /// <summary>Inline SVG/HTML for the overflow ("more") button. Defaults to a hamburger glyph.</summary>
+    [Parameter] public string OverflowIcon { get; set; } = HamburgerIcon;
+
+    /// <summary>Optional label shown under the overflow button when <see cref="ShowItemLabels"/> is on.</summary>
+    [Parameter] public string? OverflowText { get; set; } = "More";
+
+    /// <summary>Accessible label for the overflow button.</summary>
+    [Parameter] public string OverflowAriaLabel { get; set; } = "More actions";
+
+    [Parameter] public string MenuBackgroundColor { get; set; } = "#FFFFFF";
+    [Parameter] public string MenuTextColor { get; set; } = "#1F2937";
+
     // frosted glass
     [Parameter] public bool Frosted { get; set; }
     [Parameter] public double BlurRadius { get; set; } = 20;
@@ -88,7 +134,31 @@
 
     [Parameter] public EventCallback<ToolbarItem> ItemClicked { get; set; }
 
+    const string HamburgerIcon = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M3 6h18M3 12h18M3 18h18'/></svg>";
+
+    ElementReference rootEl;
+    IJSObjectReference? module;
+    DotNetObjectReference<ShinyToolbar>? selfRef;
+    bool menuOpen;
+
+    // how many items currently fit; int.MaxValue == "show everything" until JS measures
+    int visibleCount = int.MaxValue;
+
     bool IsTop => Dock == ToolbarDock.Top;
+
+    bool UseOverflow => OverflowEnabled && EndContent == null && Items is { Count: > 0 };
+
+    int VisibleItemCount => Items == null ? 0 : Math.Min(visibleCount, Items.Count);
+
+    bool HasOverflow => UseOverflow && Items != null && VisibleItemCount < Items.Count;
+
+    IEnumerable<ToolbarItem> VisibleItems => Items == null
+        ? Enumerable.Empty<ToolbarItem>()
+        : Items.Take(VisibleItemCount);
+
+    IEnumerable<ToolbarItem> OverflowItems => Items == null
+        ? Enumerable.Empty<ToolbarItem>()
+        : Items.Skip(VisibleItemCount);
 
     string RootClass
     {
@@ -140,13 +210,38 @@
         }
     }
 
-    string ItemStyle(ToolbarItem item)
+    string ItemStyle(ToolbarItem? item)
     {
         var sb = new System.Text.StringBuilder();
         sb.Append("--shiny-toolbar-icon-size:").Append(IconSize.ToInv()).Append("px;");
-        if (!string.IsNullOrEmpty(item.IconColor)) sb.Append("color:").Append(item.IconColor).Append(';');
+        if (item != null && !string.IsNullOrEmpty(item.IconColor)) sb.Append("color:").Append(item.IconColor).Append(';');
         return sb.ToString();
     }
+
+    RenderFragment ItemTemplate(ToolbarItem item) =>
+        @<text>
+            @if (!string.IsNullOrEmpty(item.Href))
+            {
+                <a class="shiny-toolbar-item"
+                   href="@item.Href"
+                   target="@item.Target"
+                   style="@ItemStyle(item)"
+                   @onclick="@(_ => OnItemClicked(item))">
+                    @ItemBody(item)
+                </a>
+            }
+            else
+            {
+                <button type="button"
+                        class="shiny-toolbar-item"
+                        style="@ItemStyle(item)"
+                        disabled="@item.IsDisabled"
+                        @onclick="@(_ => OnItemClicked(item))"
+                        @onclick:stopPropagation="true">
+                    @ItemBody(item)
+                </button>
+            }
+        </text>;
 
     RenderFragment ItemBody(ToolbarItem item) =>
         @<text>
@@ -173,11 +268,121 @@
             }
         </text>;
 
+    RenderFragment MenuItemTemplate(ToolbarItem item) =>
+        @<text>
+            @if (!string.IsNullOrEmpty(item.Href))
+            {
+                <a class="shiny-toolbar-menu-item"
+                   role="menuitem"
+                   href="@item.Href"
+                   target="@item.Target"
+                   style="@ItemStyle(item)"
+                   @onclick="@(_ => OnMenuItemClicked(item))">
+                    @MenuItemBody(item)
+                </a>
+            }
+            else
+            {
+                <button type="button"
+                        class="shiny-toolbar-menu-item"
+                        role="menuitem"
+                        style="@ItemStyle(item)"
+                        disabled="@item.IsDisabled"
+                        @onclick="@(_ => OnMenuItemClicked(item))">
+                    @MenuItemBody(item)
+                </button>
+            }
+        </text>;
+
+    RenderFragment MenuItemBody(ToolbarItem item) =>
+        @<text>
+            <span class="shiny-toolbar-item-icon">
+                @if (!string.IsNullOrEmpty(item.Icon))
+                {
+                    if (IsImageUrl(item.Icon!))
+                    {
+                        <img src="@item.Icon" alt="" />
+                    }
+                    else
+                    {
+                        @((MarkupString)item.Icon!)
+                    }
+                }
+            </span>
+            <span class="shiny-toolbar-menu-item-text">@(item.Text ?? string.Empty)</span>
+            @if (item.Badge != null)
+            {
+                <span class="shiny-toolbar-menu-item-badge">@item.Badge</span>
+            }
+        </text>;
+
+    void ToggleMenu() => menuOpen = !menuOpen;
+
+    void CloseMenu() => menuOpen = false;
+
     async Task OnItemClicked(ToolbarItem item)
     {
         if (item.IsDisabled) return;
         if (ItemClicked.HasDelegate)
             await ItemClicked.InvokeAsync(item);
+    }
+
+    async Task OnMenuItemClicked(ToolbarItem item)
+    {
+        if (item.IsDisabled) return;
+        menuOpen = false;
+        if (ItemClicked.HasDelegate)
+            await ItemClicked.InvokeAsync(item);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!UseOverflow)
+            return;
+
+        if (firstRender)
+        {
+            selfRef = DotNetObjectReference.Create(this);
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls/toolbar.js");
+            await module.InvokeVoidAsync("init", rootEl, selfRef);
+        }
+        else if (module != null)
+        {
+            await module.InvokeVoidAsync("remeasure", rootEl);
+        }
+    }
+
+    [JSInvokable]
+    public Task SetVisibleCount(int count)
+    {
+        if (count != visibleCount)
+        {
+            visibleCount = count;
+            // a smaller bar may no longer have room for the open menu's anchor; keep it sane
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (module != null)
+            {
+                await module.InvokeVoidAsync("dispose", rootEl);
+                await module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // circuit already gone — nothing to clean up
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+            // module never finished importing
+        }
+        selfRef?.Dispose();
     }
 
     static bool IsImageUrl(string s)

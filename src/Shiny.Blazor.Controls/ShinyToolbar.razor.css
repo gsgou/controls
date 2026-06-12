@@ -3,8 +3,8 @@
     width: 100%;
     box-sizing: border-box;
     font-family: inherit;
-    /* clip the backdrop-filter to this box so the blur edge is crisp */
-    overflow: hidden;
+    /* must stay visible so the overflow dropdown can escape the bar's bounds */
+    overflow: visible;
 }
 
 .shiny-toolbar--shadow.shiny-toolbar--top {
@@ -50,6 +50,112 @@
     align-items: center;
     gap: 4px;
     margin-left: auto;
+}
+
+.shiny-toolbar-items {
+    position: relative;
+}
+
+/* off-screen mirror of every item used purely to measure intrinsic widths */
+.shiny-toolbar-measure {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    gap: 4px;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.shiny-toolbar-measure > * {
+    flex: 0 0 auto;
+}
+
+/* transparent full-screen catcher that closes the menu on an outside click */
+.shiny-toolbar-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: transparent;
+}
+
+.shiny-toolbar-menu {
+    position: absolute;
+    right: 0;
+    z-index: 2;
+    min-width: 180px;
+    max-width: 280px;
+    padding: 6px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.shiny-toolbar--top .shiny-toolbar-menu {
+    top: calc(100% + 6px);
+}
+
+.shiny-toolbar--bottom .shiny-toolbar-menu {
+    bottom: calc(100% + 6px);
+}
+
+.shiny-toolbar-menu-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.2;
+    text-align: left;
+    text-decoration: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.shiny-toolbar-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.shiny-toolbar-menu-item:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.shiny-toolbar-menu-item .shiny-toolbar-item-icon {
+    flex: 0 0 auto;
+}
+
+.shiny-toolbar-menu-item-text {
+    flex: 1 1 auto;
+    font-size: 14px;
+}
+
+.shiny-toolbar-menu-item-badge {
+    flex: 0 0 auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .shiny-toolbar-item {
