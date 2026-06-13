@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, and Barcodes (1D + 2D, QR codes) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -10,6 +10,8 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![Blazor Mermaid NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MermaidDiagrams.svg?label=Shiny.Blazor.Controls.MermaidDiagrams)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MermaidDiagrams)
 [![MAUI Barcodes NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Barcodes.svg?label=Shiny.Maui.Controls.Barcodes)](https://www.nuget.org/packages/Shiny.Maui.Controls.Barcodes)
 [![Blazor Barcodes NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Barcodes.svg?label=Shiny.Blazor.Controls.Barcodes)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Barcodes)
+[![MAUI Camera NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.svg?label=Shiny.Maui.Controls.Camera)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera)
+[![Blazor Camera NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Camera.svg?label=Shiny.Blazor.Controls.Camera)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Camera)
 
 ## Getting Started
 
@@ -70,6 +72,28 @@ xmlns:bc="http://shiny.net/maui/barcodes"
 ```
 
 Supported formats: QR Code, Aztec, Data Matrix, PDF417, Code 128/39/93, Codabar, EAN-8/13, UPC-A/E, ITF. Output is rendered as PNG via a pure-managed encoder (no SkiaSharp / System.Drawing dependency). Need an SVG string? Call `BarcodeRenderer.RenderSvg(...)` directly.
+
+For the CameraView (separate package — iOS, Android, Windows, macOS AppKit, Blazor):
+
+```bash
+dotnet add package Shiny.Maui.Controls.Camera
+```
+
+```csharp
+builder
+    .UseShinyControls()
+    .UseShinyCamera();
+```
+
+```xml
+xmlns:cam="http://shiny.net/maui/camera"
+```
+
+```xml
+<cam:CameraView Facing="Back" Filter="None" />
+```
+
+Live preview with zoom / torch / lens selection, photo + video capture, and live color filters (Mono, Noir, Sepia, Vivid, Cool, Warm, Fade, Chrome, Instant, Tonal). Add frame analyzers — `Shiny.Maui.Controls.Camera.Barcode`, `.Camera.Face`, `.Camera.Motion`, `.Camera.Ocr`, `.Camera.Documents` — to scan barcodes, detect faces/motion, run OCR, or extract structured documents — every document analyzer hands back a strongly-typed record with nullable fields: `Invoice` (with order lines), `DriversLicense` (AAMVA), `HealthCard`, `CreditCard`, and `Passport` (MRZ). Each analyzer raises its own strongly-typed event (or a bindable `Command`), can be declared right in XAML, and draws styled bounding boxes via the built-in `CameraOverlayView`. See the [CameraView docs](https://shinylib.net/controls/cameraview/).
 
 ### Blazor
 

@@ -6,11 +6,11 @@ using Windows.Security.Cryptography;
 
 namespace Shiny.Maui.Controls.Camera.Ocr;
 
-public partial class OcrAnalyzer
+public partial class TextRecognizer
 {
     OcrEngine? engine;
 
-    private async partial Task<List<Detection>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
+    public async partial Task<List<RecognizedText>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not WindowsCameraFrame)
             return [];
@@ -25,7 +25,7 @@ public partial class OcrAnalyzer
 
         var result = await this.engine.RecognizeAsync(bitmap);
 
-        var detections = new List<Detection>();
+        var blocks = new List<RecognizedText>();
         foreach (var line in result.Lines)
         {
             double minX = double.MaxValue, minY = double.MaxValue, maxX = 0, maxY = 0;
@@ -43,8 +43,8 @@ public partial class OcrAnalyzer
             var raw = new RectF((float)(minX / frame.Width), (float)(minY / frame.Height),
                 (float)((maxX - minX) / frame.Width), (float)((maxY - minY) / frame.Height));
             var box = CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored);
-            detections.Add(new Detection(DetectionType.Text, box, null, line.Text));
+            blocks.Add(new RecognizedText(line.Text ?? string.Empty, box));
         }
-        return detections;
+        return blocks;
     }
 }

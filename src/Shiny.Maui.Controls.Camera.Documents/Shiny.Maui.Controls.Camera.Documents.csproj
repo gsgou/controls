@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-windows10.0.19041.0;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-macos</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <SingleProject>true</SingleProject>
+        <RootNamespace>Shiny.Maui.Controls.Camera.Documents</RootNamespace>
+        <Description>Structured document analyzers for the Shiny CameraView — each document type (Invoice, DriversLicense, HealthCard) is its own analyzer with a strongly-typed event. Driver's licenses are parsed deterministically from the AAMVA PDF417 barcode; invoices/health cards via OCR + swappable rules.</Description>
+        <PackageTags>maui camera document invoice driverslicense aamva healthcard ocr pdf417</PackageTags>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls.Camera.Ocr\Shiny.Maui.Controls.Camera.Ocr.csproj" />
+        <PackageReference Include="ZXing.Net" />
+    </ItemGroup>
+</Project>

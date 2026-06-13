@@ -7,23 +7,22 @@ using Xamarin.Google.MLKit.Vision.Face;
 namespace Shiny.Maui.Controls.Camera.Face;
 
 /// <summary>Face detection via Android MLKit.</summary>
-public class FaceAnalyzer : IFrameAnalyzer
+public partial class FaceAnalyzer
 {
     readonly IFaceDetector detector = FaceDetection.GetClient(
         new FaceDetectorOptions.Builder()
             .SetPerformanceMode(FaceDetectorOptions.PerformanceModeFast)
             .Build());
 
-    public string Id => "shiny.camera.face";
-
-    public async ValueTask<DetectionResult?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+    /// <inheritdoc/>
+    public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not AndroidCameraFrame android)
-            return DetectionResult.Empty(this.Id);
+            return null;
 
         var mediaImage = android.Proxy.Image;
         if (mediaImage == null)
-            return DetectionResult.Empty(this.Id);
+            return null;
 
         var rotation = android.Proxy.ImageInfo.RotationDegrees;
         var input = InputImage.FromMediaImage(mediaImage, rotation);
@@ -34,10 +33,10 @@ public class FaceAnalyzer : IFrameAnalyzer
 
         var result = await GmsTaskAwaiter.AwaitAsync(this.detector.Process(input)).ConfigureAwait(false);
 
-        var detections = new List<Detection>();
-        if (result is JavaList faces)
+        var faces = new List<DetectedFace>();
+        if (result is JavaList items)
         {
-            foreach (var item in faces)
+            foreach (var item in items)
             {
                 if (item is not Xamarin.Google.MLKit.Vision.Face.Face face)
                     continue;
@@ -46,9 +45,9 @@ public class FaceAnalyzer : IFrameAnalyzer
                 var raw = new RectF((float)r.Left / uprightW, (float)r.Top / uprightH,
                     (float)r.Width() / uprightW, (float)r.Height() / uprightH);
                 var box = CoordinateTransform.ApplyOrientation(raw, 0, frame.IsMirrored);
-                detections.Add(new Detection(DetectionType.Face, box, "Face"));
+                faces.Add(new DetectedFace(box));
             }
         }
-        return new DetectionResult(this.Id, detections);
+        return this.Report(faces);
     }
 }

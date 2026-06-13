@@ -75,6 +75,61 @@ static class AndroidCameraFilters
                     0, 0, 0, 1f, 0
                 });
 
+            case CameraFilter.Fade:
+            {
+                // slightly desaturate, then lift blacks + drop contrast for a washed look
+                var m = new ColorMatrix();
+                m.SetSaturation(0.8f);
+                m.PostConcat(new ColorMatrix(new[]
+                {
+                    0.85f, 0, 0, 0, 22f,
+                    0, 0.85f, 0, 0, 22f,
+                    0, 0, 0.85f, 0, 22f,
+                    0, 0, 0, 1f, 0
+                }));
+                return m;
+            }
+
+            case CameraFilter.Chrome:
+            {
+                // punchy + slightly cool
+                var m = new ColorMatrix();
+                m.SetSaturation(1.3f);
+                m.PostConcat(new ColorMatrix(new[]
+                {
+                    1.05f, 0, 0, 0, -6f,
+                    0, 1.05f, 0, 0, -6f,
+                    0, 0, 1.15f, 0, 4f,
+                    0, 0, 0, 1f, 0
+                }));
+                return m;
+            }
+
+            case CameraFilter.Instant:
+                // warm, low-contrast vintage instant film
+                return new ColorMatrix(new[]
+                {
+                    1.0f, 0.1f, 0.05f, 0, 12f,
+                    0.05f, 0.95f, 0.05f, 0, 10f,
+                    0.05f, 0.1f, 0.8f, 0, 4f,
+                    0, 0, 0, 1f, 0
+                });
+
+            case CameraFilter.Tonal:
+            {
+                // muted, low-contrast black & white
+                var m = new ColorMatrix();
+                m.SetSaturation(0f);
+                m.PostConcat(new ColorMatrix(new[]
+                {
+                    0.9f, 0, 0, 0, 14f,
+                    0, 0.9f, 0, 0, 14f,
+                    0, 0, 0.9f, 0, 14f,
+                    0, 0, 0, 1f, 0
+                }));
+                return m;
+            }
+
             default:
                 return null;
         }

@@ -28,30 +28,6 @@ public enum CameraFlashMode
 }
 
 
-/// <summary>The category of a <see cref="Detection"/> produced by an analyzer.</summary>
-public enum DetectionType
-{
-    /// <summary>A 1D/2D barcode or QR code. <see cref="Detection.Value"/> holds the decoded payload.</summary>
-    Barcode,
-
-    /// <summary>A detected face. <see cref="Detection.Landmarks"/> may hold eye/nose/mouth points.</summary>
-    Face,
-
-    /// <summary>A recognized block/line/word of text. <see cref="Detection.Value"/> holds the text.</summary>
-    Text,
-
-    /// <summary>A region where motion was detected between frames.</summary>
-    Motion,
-
-    /// <summary>A structured field extracted by an <c>IDocumentAnalyzer</c> (e.g. invoice total).
-    /// <see cref="Detection.Label"/> is the field name, <see cref="Detection.Value"/> the field value.</summary>
-    DocumentField,
-
-    /// <summary>A detection produced by a custom analyzer.</summary>
-    Custom
-}
-
-
 /// <summary>The pixel layout of a <see cref="CameraFrame"/>'s native buffer.</summary>
 public enum CameraFrameFormat
 {

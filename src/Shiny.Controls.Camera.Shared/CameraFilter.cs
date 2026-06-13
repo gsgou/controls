@@ -25,5 +25,17 @@ public enum CameraFilter
     Cool,
 
     /// <summary>Warm orange color cast.</summary>
-    Warm
+    Warm,
+
+    /// <summary>Soft, low-contrast washed-out look.</summary>
+    Fade,
+
+    /// <summary>Punchy, cool, high-clarity look.</summary>
+    Chrome,
+
+    /// <summary>Warm vintage instant-photo look.</summary>
+    Instant,
+
+    /// <summary>Muted, low-contrast black &amp; white.</summary>
+    Tonal
 }

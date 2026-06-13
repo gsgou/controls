@@ -7,12 +7,22 @@
              AutomationId="CameraPage">
 
     <Grid>
+        <!-- analyzers are declared in XAML; their Commands bind to the page (BindingContext) -->
         <cam:CameraView x:Name="Camera"
                         Facing="Back"
-                        ScaleMode="AspectFill" />
+                        ScaleMode="AspectFill">
+            <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}" />
+            <!-- run motion for the command only, no overlay box -->
+            <cam:MotionAnalyzer MotionChangedCommand="{Binding MotionCommand}" ShowBoundingBox="False" />
+            <cam:FaceAnalyzer FacesDetectedCommand="{Binding FaceCommand}" />
+            <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}" />
+            <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}" />
+            <cam:CreditCardAnalyzer DocumentDetectedCommand="{Binding CreditCardCommand}" />
+            <cam:PassportAnalyzer DocumentDetectedCommand="{Binding PassportCommand}" />
+        </cam:CameraView>
 
-        <!-- bounding-box overlay -->
-        <GraphicsView x:Name="Overlay" InputTransparent="True" />
+        <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
+        <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
 
         <!-- status / errors -->
         <Label x:Name="StatusLabel"

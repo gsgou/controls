@@ -1,5 +1,5 @@
 // Shiny Blazor CameraView interop.
-// All frame analysis runs here in JS; only flat Detection DTOs cross back to .NET.
+// All frame analysis runs here in JS; only flat overlay-box + barcode DTOs cross back to .NET.
 
 const states = new WeakMap();
 
@@ -43,9 +43,11 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
             state.busy = true;
             try {
                 const codes = await state.detector.detect(video);
-                const dets = codes.map(c => toDetection(c, video));
-                if (state.showOverlay) drawOverlay(ctx, overlay, dets);
-                await state.dotnet.invokeMethodAsync('OnDetections', dets);
+                const boxes = codes.map(c => toOverlayBox(c, video));
+                if (state.showOverlay) drawOverlay(ctx, overlay, boxes);
+                await state.dotnet.invokeMethodAsync('OnOverlays', boxes);
+                for (const c of codes)
+                    await state.dotnet.invokeMethodAsync('OnBarcode', toBarcode(c, video));
             }
             catch { /* transient detect error; keep looping */ }
             finally { state.busy = false; }
@@ -129,20 +131,34 @@ export function capture(video) {
 }
 
 
-function toDetection(code, video) {
+function toOverlayBox(code, video) {
     // BarcodeDetector boundingBox is in video pixel space; normalize to 0..1.
     const w = video.videoWidth || 1;
     const h = video.videoHeight || 1;
     const b = code.boundingBox;
     return {
-        type: 'Barcode',
         x: b.x / w,
         y: b.y / h,
         w: b.width / w,
         h: b.height / h,
-        label: code.format,
+        strokeColor: '#22C55E',
+        text: code.rawValue,
+        textColor: '#22C55E'
+    };
+}
+
+
+function toBarcode(code, video) {
+    const w = video.videoWidth || 1;
+    const h = video.videoHeight || 1;
+    const b = code.boundingBox;
+    return {
+        format: code.format,
         value: code.rawValue,
-        confidence: 1
+        x: b.x / w,
+        y: b.y / h,
+        w: b.width / w,
+        h: b.height / h
     };
 }
 
@@ -156,18 +172,18 @@ function syncOverlaySize(state) {
 }
 
 
-function drawOverlay(ctx, overlay, dets) {
+function drawOverlay(ctx, overlay, boxes) {
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     ctx.lineWidth = 3;
-    ctx.strokeStyle = '#22D3EE';
-    ctx.fillStyle = '#22D3EE';
     ctx.font = '16px sans-serif';
-    for (const d of dets) {
-        const x = d.x * overlay.width;
-        const y = d.y * overlay.height;
-        const w = d.w * overlay.width;
-        const h = d.h * overlay.height;
+    for (const b of boxes) {
+        const x = b.x * overlay.width;
+        const y = b.y * overlay.height;
+        const w = b.w * overlay.width;
+        const h = b.h * overlay.height;
+        ctx.strokeStyle = b.strokeColor || '#22D3EE';
+        ctx.fillStyle = b.textColor || b.strokeColor || '#22D3EE';
         ctx.strokeRect(x, y, w, h);
-        if (d.value) ctx.fillText(d.value, x, Math.max(14, y - 6));
+        if (b.text) ctx.fillText(b.text, x, Math.max(14, y - 6));
     }
 }

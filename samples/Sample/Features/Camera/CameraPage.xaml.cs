@@ -1,53 +1,54 @@
+using System.Windows.Input;
 using Shiny.Controls.Camera;
 using Shiny.Maui.Controls.Camera;
 using Shiny.Maui.Controls.Camera.Barcode;
+using Shiny.Maui.Controls.Camera.Documents;
+using Shiny.Maui.Controls.Camera.Face;
 using Shiny.Maui.Controls.Camera.Motion;
-using Shiny.Maui.Controls.Camera.Ocr;
-using FaceAnalyzer = Shiny.Maui.Controls.Camera.Face.FaceAnalyzer;
 
 namespace Sample.Features.Camera;
 
 public partial class CameraPage : ContentPage
 {
     static readonly CameraFilter[] Filters = Enum.GetValues<CameraFilter>();
-    readonly CameraOverlayDrawable overlayDrawable = new();
     IReadOnlyList<CameraInfo> cameras = [];
+
+    // The analyzers are declared in XAML inside <cam:CameraView>; these commands are bound to them and fire
+    // (on the UI thread) with each analyzer's typed event args.
+    public ICommand BarcodeCommand { get; }
+    public ICommand MotionCommand { get; }
+    public ICommand FaceCommand { get; }
+    public ICommand InvoiceCommand { get; }
+    public ICommand LicenseCommand { get; }
+    public ICommand CreditCardCommand { get; }
+    public ICommand PassportCommand { get; }
 
     public CameraPage()
     {
+        this.BarcodeCommand = new Command<BarcodeDetectedEventArgs>(e => this.ShowStatus($"{e.Format}: {e.Value}"));
+        this.MotionCommand = new Command<MotionEventArgs>(e => this.ShowStatus(e.InMotion ? "Motion detected" : "Motion stopped"));
+        this.FaceCommand = new Command<FacesDetectedEventArgs>(e => this.ShowStatus($"{e.Faces.Count} face(s)"));
+        this.InvoiceCommand = new Command<DocumentDetectedEventArgs<Invoice>>(e =>
+            this.ShowStatus($"Invoice {e.Document.Number ?? "?"} — total {e.Document.Total?.ToString("0.00") ?? "?"}, {e.Document.Lines.Count} line(s)"));
+        this.LicenseCommand = new Command<DocumentDetectedEventArgs<DriversLicense>>(e =>
+            this.ShowStatus($"License {e.Document.Number} — {e.Document.FirstName} {e.Document.LastName}"));
+        this.CreditCardCommand = new Command<DocumentDetectedEventArgs<CreditCard>>(e =>
+        {
+            var last4 = e.Document.Number is { Length: >= 4 } n ? n[^4..] : e.Document.Number;
+            this.ShowStatus($"{e.Document.Type} •••• {last4} exp {e.Document.Expiry?.ToString("MM/yy") ?? "?"}");
+        });
+        this.PassportCommand = new Command<DocumentDetectedEventArgs<Passport>>(e =>
+            this.ShowStatus($"Passport {e.Document.Number} — {e.Document.GivenNames} {e.Document.Surname} ({e.Document.Nationality})"));
+
         InitializeComponent();
+        this.BindingContext = this;
+
         this.Camera.CameraError += (_, e) => this.ShowStatus(e.Message);
         this.Camera.VideoCaptured += (_, v) => this.ShowStatus($"Saved video: {v.FilePath}");
 
         foreach (var f in Filters)
             this.FilterPicker.Items.Add(f.ToString());
         this.FilterPicker.SelectedIndex = 0;
-
-        // frame analyzers — boxes are drawn by the overlay; barcode/field values show in the status label.
-        // The OCR analyzer is given a sample IDocumentAnalyzer to demo the invoice field-extraction hook.
-        this.Camera.Analyzers.Add(new BarcodeAnalyzer());
-        this.Camera.Analyzers.Add(new MotionAnalyzer());
-        this.Camera.Analyzers.Add(new FaceAnalyzer());
-        this.Camera.Analyzers.Add(new OcrAnalyzer(new SampleInvoiceAnalyzer()) { IncludeTextBlocks = false });
-
-        this.Overlay.Drawable = this.overlayDrawable;
-        this.Camera.DetectionsChanged += this.OnDetections;
-    }
-
-    void OnDetections(object? sender, DetectionsChangedEventArgs e)
-    {
-        this.overlayDrawable.Detections = e.Detections;
-        this.overlayDrawable.ImageAspect = e.ImageHeight == 0 ? 1f : (float)e.ImageWidth / e.ImageHeight;
-        this.overlayDrawable.ScaleMode = this.Camera.ScaleMode;
-        this.Overlay.Invalidate();
-
-        var barcode = e.Detections.FirstOrDefault(d => d.Type == DetectionType.Barcode);
-        if (barcode?.Value is { } value)
-            this.ShowStatus($"Barcode: {value}");
-
-        var field = e.Detections.FirstOrDefault(d => d.Type == DetectionType.DocumentField);
-        if (field is not null)
-            this.ShowStatus($"{field.Label}: {field.Value}");
     }
 
     protected override async void OnAppearing()

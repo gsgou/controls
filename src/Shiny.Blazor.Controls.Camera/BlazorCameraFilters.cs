@@ -15,6 +15,10 @@ static class BlazorCameraFilters
         CameraFilter.Vivid => "saturate(1.6) contrast(1.1)",
         CameraFilter.Cool => "saturate(1.15) hue-rotate(-12deg) brightness(1.03)",
         CameraFilter.Warm => "sepia(0.3) saturate(1.4) hue-rotate(-10deg)",
+        CameraFilter.Fade => "contrast(0.85) brightness(1.1) saturate(0.8)",
+        CameraFilter.Chrome => "saturate(1.3) contrast(1.05) brightness(1.03)",
+        CameraFilter.Instant => "sepia(0.35) saturate(1.25) contrast(0.95)",
+        CameraFilter.Tonal => "grayscale(1) contrast(0.9) brightness(1.05)",
         _ => "none"
     };
 }

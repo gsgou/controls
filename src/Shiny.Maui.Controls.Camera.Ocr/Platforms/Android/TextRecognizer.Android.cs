@@ -6,11 +6,12 @@ using Xamarin.Google.MLKit.Vision.Text.Latin;
 
 namespace Shiny.Maui.Controls.Camera.Ocr;
 
-public partial class OcrAnalyzer
+public partial class TextRecognizer
 {
-    readonly ITextRecognizer recognizer = TextRecognition.GetClient(TextRecognizerOptions.DefaultOptions);
+    readonly Xamarin.Google.MLKit.Vision.Text.ITextRecognizer recognizer =
+        TextRecognition.GetClient(TextRecognizerOptions.DefaultOptions);
 
-    private async partial Task<List<Detection>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
+    public async partial Task<List<RecognizedText>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not AndroidCameraFrame android)
             return [];
@@ -27,7 +28,7 @@ public partial class OcrAnalyzer
 
         var result = await GmsTaskAwaiter.AwaitAsync(this.recognizer.Process(input)).ConfigureAwait(false);
 
-        var detections = new List<Detection>();
+        var blocks = new List<RecognizedText>();
         if (result is Text text)
         {
             foreach (var block in text.TextBlocks)
@@ -40,10 +41,10 @@ public partial class OcrAnalyzer
                     var raw = new RectF((float)r.Left / uprightW, (float)r.Top / uprightH,
                         (float)r.Width() / uprightW, (float)r.Height() / uprightH);
                     var box = CoordinateTransform.ApplyOrientation(raw, 0, frame.IsMirrored);
-                    detections.Add(new Detection(DetectionType.Text, box, null, line.Text));
+                    blocks.Add(new RecognizedText(line.Text ?? string.Empty, box));
                 }
             }
         }
-        return detections;
+        return blocks;
     }
 }

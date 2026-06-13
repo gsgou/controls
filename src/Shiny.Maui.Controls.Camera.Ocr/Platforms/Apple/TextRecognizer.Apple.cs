@@ -5,21 +5,21 @@ using Vision;
 
 namespace Shiny.Maui.Controls.Camera.Ocr;
 
-public partial class OcrAnalyzer
+public partial class TextRecognizer
 {
-    private partial Task<List<Detection>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
+    public partial Task<List<RecognizedText>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not AppleCameraFrame apple)
-            return Task.FromResult(new List<Detection>());
+            return Task.FromResult(new List<RecognizedText>());
 
         var cg = apple.ToCGImage();
         if (cg == null)
-            return Task.FromResult(new List<Detection>());
+            return Task.FromResult(new List<RecognizedText>());
 
-        var tcs = new TaskCompletionSource<List<Detection>>();
+        var tcs = new TaskCompletionSource<List<RecognizedText>>();
         var request = new VNRecognizeTextRequest((req, err) =>
         {
-            var detections = new List<Detection>();
+            var blocks = new List<RecognizedText>();
             if (err == null && req.GetResults<VNRecognizedTextObservation>() is { } results)
             {
                 foreach (var obs in results)
@@ -28,10 +28,10 @@ public partial class OcrAnalyzer
                     var bb = obs.BoundingBox;
                     var raw = new RectF((float)bb.X, (float)(1 - bb.Y - bb.Height), (float)bb.Width, (float)bb.Height);
                     var box = CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored);
-                    detections.Add(new Detection(DetectionType.Text, box, null, candidate?.String, candidate?.Confidence ?? 1f));
+                    blocks.Add(new RecognizedText(candidate?.String ?? string.Empty, box, candidate?.Confidence ?? 1f));
                 }
             }
-            tcs.TrySetResult(detections);
+            tcs.TrySetResult(blocks);
             cg.Dispose();
         })
         {

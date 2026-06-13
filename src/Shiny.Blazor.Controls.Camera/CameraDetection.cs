@@ -1,37 +1,47 @@
 using Microsoft.Maui.Graphics;
+using Shiny.Controls.Camera;
 
 namespace Shiny.Blazor.Controls.Camera;
 
 /// <summary>
-/// Flat, primitives-only DTO marshaled from the camera JS module into [JSInvokable] callbacks. Kept
-/// separate from <see cref="Shiny.Controls.Camera.Detection"/> (which uses <see cref="RectF"/>) so JS
-/// interop never has to (de)serialize a struct — see the repo rule against anonymous/complex interop types.
-/// Coordinates are normalized 0..1 in upright video space.
+/// Flat, primitives-only DTO marshaled from the camera JS module into <c>[JSInvokable]</c> callbacks for a
+/// styled overlay box. Kept separate from <see cref="OverlayBox"/> (which uses <see cref="RectF"/> /
+/// <see cref="Color"/>) so JS interop never (de)serializes a struct — see the repo rule against
+/// anonymous/complex interop types. Coordinates are normalized 0..1 in upright video space; colors are hex.
 /// </summary>
-public class CameraDetection
+public class CameraOverlayBox
 {
-    public string Type { get; set; } = "Barcode";
     public float X { get; set; }
     public float Y { get; set; }
     public float W { get; set; }
     public float H { get; set; }
-    public string? Label { get; set; }
-    public string? Value { get; set; }
-    public float Confidence { get; set; } = 1f;
+    public string? StrokeColor { get; set; }
+    public string? Text { get; set; }
+    public string? TextColor { get; set; }
 
-    /// <summary>Project to the shared <see cref="Shiny.Controls.Camera.Detection"/> record.</summary>
-    public Shiny.Controls.Camera.Detection ToDetection()
-    {
-        var type = Enum.TryParse<Shiny.Controls.Camera.DetectionType>(this.Type, ignoreCase: true, out var t)
-            ? t
-            : Shiny.Controls.Camera.DetectionType.Custom;
+    /// <summary>Project to the shared <see cref="OverlayBox"/> record.</summary>
+    public OverlayBox ToOverlayBox() => new(
+        new RectF(this.X, this.Y, this.W, this.H),
+        Parse(this.StrokeColor),
+        this.Text,
+        Parse(this.TextColor)
+    );
 
-        return new Shiny.Controls.Camera.Detection(
-            type,
-            new RectF(this.X, this.Y, this.W, this.H),
-            this.Label,
-            this.Value,
-            this.Confidence
-        );
-    }
+    static Color? Parse(string? hex) => string.IsNullOrEmpty(hex) ? null : Color.FromArgb(hex);
+}
+
+
+/// <summary>Flat DTO for the typed barcode callback marshaled from the JS <c>BarcodeDetector</c>.</summary>
+public class CameraBarcode
+{
+    /// <summary>The barcode symbology reported by the browser (e.g. "qr_code", "ean_13").</summary>
+    public string Format { get; set; } = string.Empty;
+
+    /// <summary>The decoded payload text.</summary>
+    public string Value { get; set; } = string.Empty;
+
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float W { get; set; }
+    public float H { get; set; }
 }

@@ -17,7 +17,11 @@
         <PackageReference Include="Microsoft.Maui.Controls" />
     </ItemGroup>
 
-    <!-- Shared contracts (Detection, CameraFrame, IFrameAnalyzer, CoordinateTransform) live in one
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.Camera.Tests" />
+    </ItemGroup>
+
+    <!-- Shared contracts (OverlayBox, CameraFrame, IFrameAnalyzer, CoordinateTransform) live in one
          assembly so the analyzer sub-packages can be referenced alongside this one without duplicating types. -->
     <ItemGroup>
         <ProjectReference Include="..\Shiny.Controls.Camera.Shared\Shiny.Controls.Camera.Shared.csproj" />

@@ -1,16 +1,38 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace Shiny.Maui.Controls.Camera;
 
 /// <summary>
 /// A cross-platform camera preview with zoom / torch / lens control, still capture, and a pluggable
-/// frame-analysis pipeline (barcode, face, motion, OCR) whose detections are drawn as bounding boxes
+/// frame-analysis pipeline (barcode, face, motion, OCR, documents). Each analyzer raises its own
+/// strongly-typed event for semantic results and returns styled <see cref="OverlayBox"/>es that are drawn
 /// over the preview. Backed by AVFoundation (iOS/macOS), CameraX (Android) and MediaCapture (Windows).
 /// </summary>
+[ContentProperty(nameof(Analyzers))]
 public partial class CameraView : View
 {
     /// <summary>Analyzers run against each frame. Add/remove freely; the running session picks up changes.</summary>
     public IList<IFrameAnalyzer> Analyzers { get; } = new ObservableCollection<IFrameAnalyzer>();
+
+    public CameraView()
+        // analyzers declared in XAML / added in code inherit this view's BindingContext so their Commands bind
+        => ((INotifyCollectionChanged)this.Analyzers).CollectionChanged += this.OnAnalyzersBindingContext;
+
+    void OnAnalyzersBindingContext(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems is null)
+            return;
+        foreach (var analyzer in e.NewItems.OfType<BindableObject>())
+            SetInheritedBindingContext(analyzer, this.BindingContext);
+    }
+
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+        foreach (var analyzer in this.Analyzers.OfType<BindableObject>())
+            SetInheritedBindingContext(analyzer, this.BindingContext);
+    }
 
     /// <summary>Raised on the UI thread when a still photo has been captured.</summary>
     public event EventHandler<CameraPhoto>? MediaCaptured;
@@ -21,8 +43,12 @@ public partial class CameraView : View
     /// <summary>Raised on the UI thread when the camera or pipeline reports an error.</summary>
     public event EventHandler<CameraErrorEventArgs>? CameraError;
 
-    /// <summary>Raised on the UI thread whenever the aggregated set of detections changes.</summary>
-    public event EventHandler<DetectionsChangedEventArgs>? DetectionsChanged;
+    /// <summary>
+    /// Raised on the UI thread whenever the aggregated set of overlay boxes (across all analyzers) changes.
+    /// This is a presentation-only channel for drawing; subscribe to each analyzer's own typed event for
+    /// semantic results (e.g. the decoded barcode value).
+    /// </summary>
+    public event EventHandler<CameraOverlaysChangedEventArgs>? OverlaysChanged;
 
     ICameraViewController? Controller => this.Handler as ICameraViewController;
 
@@ -79,11 +105,11 @@ public partial class CameraView : View
     }
 
 
-    /// <summary>Invoked by the handler/pipeline to publish the latest detections. Raises <see cref="DetectionsChanged"/>.</summary>
-    public void OnDetectionsChanged(IReadOnlyList<Detection> detections, int imageWidth, int imageHeight)
+    /// <summary>Invoked by the handler/pipeline to publish the latest overlay boxes. Raises <see cref="OverlaysChanged"/>.</summary>
+    public void OnOverlaysChanged(IReadOnlyList<OverlayBox> overlays, int imageWidth, int imageHeight)
     {
-        this.Detections = detections;
-        this.DetectionsChanged?.Invoke(this, new DetectionsChangedEventArgs(detections, imageWidth, imageHeight));
+        this.Overlays = overlays;
+        this.OverlaysChanged?.Invoke(this, new CameraOverlaysChangedEventArgs(overlays, imageWidth, imageHeight));
     }
 
     /// <summary>Invoked by the handler to report an error. Raises <see cref="CameraError"/>.</summary>
@@ -99,11 +125,11 @@ public partial class CameraView : View
 }
 
 
-/// <summary>Carries the latest detection set to <see cref="CameraView.DetectionsChanged"/> subscribers.</summary>
-public class DetectionsChangedEventArgs(IReadOnlyList<Detection> detections, int imageWidth, int imageHeight) : EventArgs
+/// <summary>Carries the latest aggregated overlay boxes to <see cref="CameraView.OverlaysChanged"/> subscribers.</summary>
+public class CameraOverlaysChangedEventArgs(IReadOnlyList<OverlayBox> overlays, int imageWidth, int imageHeight) : EventArgs
 {
-    /// <summary>The aggregated detections across all analyzers, in normalized upright image space.</summary>
-    public IReadOnlyList<Detection> Detections { get; } = detections;
+    /// <summary>The aggregated boxes across all analyzers, in normalized upright image space.</summary>
+    public IReadOnlyList<OverlayBox> Overlays { get; } = overlays;
 
     /// <summary>Width of the analyzed image in pixels.</summary>
     public int ImageWidth { get; } = imageWidth;

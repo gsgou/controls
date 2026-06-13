@@ -6,34 +6,33 @@ using Vision;
 namespace Shiny.Maui.Controls.Camera.Face;
 
 /// <summary>Face detection via Apple Vision (iOS, MacCatalyst, macOS).</summary>
-public class FaceAnalyzer : IFrameAnalyzer
+public partial class FaceAnalyzer
 {
-    public string Id => "shiny.camera.face";
-
-    public ValueTask<DetectionResult?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+    /// <inheritdoc/>
+    public override ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not AppleCameraFrame apple)
-            return new ValueTask<DetectionResult?>(DetectionResult.Empty(this.Id));
+            return default;
 
         using var cg = apple.ToCGImage();
         if (cg == null)
-            return new ValueTask<DetectionResult?>(DetectionResult.Empty(this.Id));
+            return default;
 
-        var tcs = new TaskCompletionSource<DetectionResult?>();
+        var tcs = new TaskCompletionSource<IReadOnlyList<OverlayBox>?>();
         var request = new VNDetectFaceRectanglesRequest((req, err) =>
         {
-            var detections = new List<Detection>();
-            if (err == null && req.GetResults<VNFaceObservation>() is { } faces)
+            var faces = new List<DetectedFace>();
+            if (err == null && req.GetResults<VNFaceObservation>() is { } observations)
             {
-                foreach (var face in faces)
+                foreach (var face in observations)
                 {
                     var bb = face.BoundingBox; // normalized, origin bottom-left
                     var raw = new RectF((float)bb.X, (float)(1 - bb.Y - bb.Height), (float)bb.Width, (float)bb.Height);
                     var box = CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored);
-                    detections.Add(new Detection(DetectionType.Face, box, "Face", null, face.Confidence));
+                    faces.Add(new DetectedFace(box, face.Confidence));
                 }
             }
-            tcs.TrySetResult(new DetectionResult(this.Id, detections));
+            tcs.TrySetResult(this.Report(faces));
         });
 
         try
@@ -46,6 +45,6 @@ public class FaceAnalyzer : IFrameAnalyzer
             tcs.TrySetException(ex);
         }
 
-        return new ValueTask<DetectionResult?>(tcs.Task);
+        return new ValueTask<IReadOnlyList<OverlayBox>?>(tcs.Task);
     }
 }

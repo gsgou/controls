@@ -51,6 +51,18 @@ static class AppleCameraFilters
                 return f;
             }
 
+            case CameraFilter.Fade:
+                return CIFilter.FromName("CIPhotoEffectFade");
+
+            case CameraFilter.Chrome:
+                return CIFilter.FromName("CIPhotoEffectChrome");
+
+            case CameraFilter.Instant:
+                return CIFilter.FromName("CIPhotoEffectInstant");
+
+            case CameraFilter.Tonal:
+                return CIFilter.FromName("CIPhotoEffectTonal");
+
             default:
                 return null;
         }

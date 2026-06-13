@@ -32,8 +32,11 @@ public partial class CameraView : IAsyncDisposable
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public string? Style { get; set; }
 
-    /// <summary>Raised whenever the in-browser analyzers produce a new detection set.</summary>
-    [Parameter] public EventCallback<IReadOnlyList<Detection>> DetectionsChanged { get; set; }
+    /// <summary>Raised whenever the in-browser analyzers produce a new styled overlay-box set.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<OverlayBox>> OverlaysChanged { get; set; }
+
+    /// <summary>Raised with the decoded barcode (format + value) when one is detected in-browser.</summary>
+    [Parameter] public EventCallback<CameraBarcode> BarcodeDetected { get; set; }
 
     /// <summary>Raised when the camera cannot start (permission denied, no device, insecure context).</summary>
     [Parameter] public EventCallback<string> OnError { get; set; }
@@ -129,13 +132,18 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
-    /// <summary>Invoked from JS with the latest detections. Public + named DTO for trim-safe interop.</summary>
+    /// <summary>Invoked from JS with the latest styled overlay boxes. Public + named DTO for trim-safe interop.</summary>
     [JSInvokable]
-    public async Task OnDetections(CameraDetection[] detections)
+    public async Task OnOverlays(CameraOverlayBox[] boxes)
     {
-        var mapped = detections.Select(d => d.ToDetection()).ToArray();
-        await this.DetectionsChanged.InvokeAsync(mapped);
+        var mapped = boxes.Select(b => b.ToOverlayBox()).ToArray();
+        await this.OverlaysChanged.InvokeAsync(mapped);
     }
+
+
+    /// <summary>Invoked from JS when a barcode is decoded. Public + named DTO for trim-safe interop.</summary>
+    [JSInvokable]
+    public Task OnBarcode(CameraBarcode barcode) => this.BarcodeDetected.InvokeAsync(barcode);
 
 
     /// <summary>Invoked from JS when an error occurs after startup.</summary>

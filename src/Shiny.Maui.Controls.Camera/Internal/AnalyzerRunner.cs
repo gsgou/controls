@@ -4,9 +4,10 @@ namespace Shiny.Maui.Controls.Camera.Internal;
 /// Wraps one <see cref="IFrameAnalyzer"/> with a max-in-flight of one. A frame submitted while the
 /// analyzer is still working is dropped for this analyzer, giving each analyzer independent backpressure
 /// (a slow OCR pass never stalls a fast barcode pass). On accept it retains the shared frame and disposes
-/// it when the analysis completes.
+/// it when the analysis completes. Forwards every completed result — including <c>null</c> (clear) — to the
+/// pipeline.
 /// </summary>
-sealed class AnalyzerRunner(IFrameAnalyzer analyzer, Action<DetectionResult> onResult)
+sealed class AnalyzerRunner(IFrameAnalyzer analyzer, Action<string, IReadOnlyList<OverlayBox>?> onResult)
 {
     int busy;
 
@@ -28,8 +29,7 @@ sealed class AnalyzerRunner(IFrameAnalyzer analyzer, Action<DetectionResult> onR
         try
         {
             var result = await analyzer.AnalyzeAsync(frame, ct).ConfigureAwait(false);
-            if (result != null)
-                onResult(result);
+            onResult(analyzer.Id, result);
         }
         catch
         {

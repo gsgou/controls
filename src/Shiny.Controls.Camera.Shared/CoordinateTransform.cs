@@ -7,7 +7,7 @@ namespace Shiny.Controls.Camera;
 /// <list type="bullet">
 /// <item><see cref="ApplyOrientation(RectF,int,bool)"/> — used by <b>analyzers</b> to turn raw
 /// sensor-space normalized coordinates into upright, mirror-corrected normalized coordinates (the
-/// <see cref="Detection"/> contract).</item>
+/// <see cref="OverlayBox"/> contract).</item>
 /// <item><see cref="MapToView(RectF,float,float,float,PreviewScaleMode)"/> — used by the <b>overlay</b>
 /// to turn upright normalized coordinates into view-space pixels, accounting for the preview's
 /// aspect-fill crop or aspect-fit letterbox.</item>

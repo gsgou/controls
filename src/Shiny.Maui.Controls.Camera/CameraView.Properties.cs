@@ -53,9 +53,9 @@ public partial class CameraView
     public static readonly BindableProperty IsRecordingProperty = BindableProperty.Create(
         nameof(IsRecording), typeof(bool), typeof(CameraView), false, BindingMode.OneWayToSource);
 
-    /// <summary>The most recent aggregated detections (read-only; updated by the pipeline).</summary>
-    public static readonly BindableProperty DetectionsProperty = BindableProperty.Create(
-        nameof(Detections), typeof(IReadOnlyList<Detection>), typeof(CameraView), Array.Empty<Detection>());
+    /// <summary>The most recent aggregated overlay boxes (read-only; updated by the pipeline).</summary>
+    public static readonly BindableProperty OverlaysProperty = BindableProperty.Create(
+        nameof(Overlays), typeof(IReadOnlyList<OverlayBox>), typeof(CameraView), Array.Empty<OverlayBox>());
 
 
     /// <inheritdoc cref="FacingProperty"/>
@@ -142,11 +142,11 @@ public partial class CameraView
         private set => this.SetValue(IsRecordingProperty, value);
     }
 
-    /// <inheritdoc cref="DetectionsProperty"/>
-    public IReadOnlyList<Detection> Detections
+    /// <inheritdoc cref="OverlaysProperty"/>
+    public IReadOnlyList<OverlayBox> Overlays
     {
-        get => (IReadOnlyList<Detection>)this.GetValue(DetectionsProperty);
-        private set => this.SetValue(DetectionsProperty, value);
+        get => (IReadOnlyList<OverlayBox>)this.GetValue(OverlaysProperty);
+        private set => this.SetValue(OverlaysProperty, value);
     }
 
 

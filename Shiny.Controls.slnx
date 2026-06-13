@@ -31,6 +31,7 @@
     <Project Path="src/Shiny.Maui.Controls.Camera.Barcode/Shiny.Maui.Controls.Camera.Barcode.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera.Face/Shiny.Maui.Controls.Camera.Face.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera.Ocr/Shiny.Maui.Controls.Camera.Ocr.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Camera.Documents/Shiny.Maui.Controls.Camera.Documents.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.SpeechAddins/Shiny.Blazor.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Blazor.Controls/Shiny.Blazor.Controls.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj" />
@@ -42,4 +43,5 @@
     <Project Path="src/Shiny.Blazor.Controls.Themes.Material/Shiny.Blazor.Controls.Themes.Material.csproj" />
     <Project Path="tools/ShinyThemeGen/ShinyThemeGen.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
+    <Project Path="tests/Shiny.Maui.Controls.Camera.Tests/Shiny.Maui.Controls.Camera.Tests.csproj" />
 </Solution>

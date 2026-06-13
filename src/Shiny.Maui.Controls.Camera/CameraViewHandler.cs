@@ -9,12 +9,15 @@ public partial class CameraViewHandler
 {
     internal readonly CameraPipeline Pipeline = new();
 
-    // Wire detection delivery (marshaled to the UI thread) and keep the runner set in sync with the
+    // Wire overlay delivery (marshaled to the UI thread) and keep the runner set in sync with the
     // control's Analyzers collection. Call from each platform's ConnectHandler.
     private protected void InitPipeline()
     {
-        this.Pipeline.OnDetections = (dets, w, h) =>
-            this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnDetectionsChanged(dets, w, h));
+        this.Pipeline.OnOverlays = (boxes, w, h) =>
+            this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnOverlaysChanged(boxes, w, h));
+
+        // analyzers raise their typed events on the UI thread via this dispatcher
+        this.Pipeline.SetDispatcher(a => this.VirtualView?.Dispatcher.Dispatch(a));
 
         this.SyncAnalyzers();
         if (this.VirtualView.Analyzers is INotifyCollectionChanged incc)
@@ -42,7 +45,7 @@ public partial class CameraViewHandler
             [nameof(CameraView.Zoom)] = MapZoom,
             [nameof(CameraView.ScaleMode)] = MapScaleMode,
             [nameof(CameraView.ShowDetectionOverlay)] = MapOverlay,
-            [nameof(CameraView.Detections)] = MapOverlay,
+            [nameof(CameraView.Overlays)] = MapOverlay,
             [nameof(CameraView.Filter)] = MapFilter,
         };
 
