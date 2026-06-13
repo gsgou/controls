@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Camera.Barcode</RootNamespace>
+        <Description>Barcode/QR analyzer for the Shiny CameraView. Decodes from the frame luminance plane with ZXing.Net — works on every platform with no native dependency.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Camera.Shared\Shiny.Controls.Camera.Shared.csproj" />
+        <PackageReference Include="ZXing.Net" />
+    </ItemGroup>
+</Project>

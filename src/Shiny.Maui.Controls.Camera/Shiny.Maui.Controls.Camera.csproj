@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-windows10.0.19041.0;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-macos</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <SingleProject>true</SingleProject>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <RootNamespace>Shiny.Maui.Controls.Camera</RootNamespace>
+        <!-- CameraX (androidx.lifecycle.runtime) requires Android API 23+ -->
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+        <Description>Cross-platform .NET MAUI CameraView (iOS, Android, Windows, macOS AppKit) with live preview, zoom/torch/lens control, photo capture and a pluggable frame-analysis pipeline (barcode, face, motion, OCR) that draws bounding boxes on the preview.</Description>
+        <PackageTags>maui camera cameraview barcode face ocr motion preview avfoundation camerax</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+    </ItemGroup>
+
+    <!-- Shared contracts (Detection, CameraFrame, IFrameAnalyzer, CoordinateTransform) live in one
+         assembly so the analyzer sub-packages can be referenced alongside this one without duplicating types. -->
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Camera.Shared\Shiny.Controls.Camera.Shared.csproj" />
+    </ItemGroup>
+
+    <!--
+        Manage Platforms/** includes ourselves so we can (a) share one Apple folder across iOS +
+        MacCatalyst and (b) support net10.0-macos AppKit, which MAUI's SingleProject strips.
+        Mirrors src/Shiny.Maui.Controls.Desktop.
+    -->
+    <ItemGroup>
+        <Compile Remove="Platforms/**/*.cs" />
+        <None Include="Platforms/**/*.cs" />
+    </ItemGroup>
+
+    <!-- AppleShared: pure AVFoundation/CoreImage helpers shared by iOS, MacCatalyst and macOS -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst' Or '$(TargetPlatformIdentifier)' == 'macos'">
+        <Compile Include="Platforms/AppleShared/**/*.cs" />
+    </ItemGroup>
+
+    <!-- Apple: UIKit handler + views (iOS + MacCatalyst) -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+        <Compile Include="Platforms/Apple/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+        <Compile Include="Platforms/MacOS/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <Compile Include="Platforms/Android/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
+        <Compile Include="Platforms/Windows/**/*.cs" />
+    </ItemGroup>
+
+    <!-- CameraX bindings — Android TFM only -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <PackageReference Include="Xamarin.AndroidX.Camera.Core" />
+        <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" />
+        <PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" />
+        <PackageReference Include="Xamarin.AndroidX.Camera.View" />
+        <PackageReference Include="Xamarin.AndroidX.Camera.Video" />
+    </ItemGroup>
+
+    <!--
+        MAUI's SingleProject targets tag every Platforms/**/*.cs file with
+        ExcludeFromCurrentConfiguration=true and only re-enable folders named after known platforms
+        (Android, iOS, MacCatalyst, Windows, Tizen). Our shared "Apple" folder (iOS + MacCatalyst) and
+        AppKit "MacOS" folder aren't in that list, so re-enable them before removal.
+    -->
+    <Target Name="_ReincludeNonMauiPlatforms"
+            BeforeTargets="_MauiRemovePlatformCompileItems"
+            Condition="'$(SingleProject)' == 'true'">
+        <ItemGroup>
+            <Compile Update="Platforms/Apple/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/AppleShared/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst' Or '$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/MacOS/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+        </ItemGroup>
+    </Target>
+</Project>

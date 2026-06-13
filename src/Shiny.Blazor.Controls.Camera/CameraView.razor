@@ -1,0 +1,7 @@
+@namespace Shiny.Blazor.Controls.Camera
+@implements IAsyncDisposable
+
+<div class="shiny-camera @CssClass" style="@Style">
+    <video @ref="videoEl" class="shiny-camera-video" autoplay playsinline muted></video>
+    <canvas @ref="overlayEl" class="shiny-camera-overlay"></canvas>
+</div>

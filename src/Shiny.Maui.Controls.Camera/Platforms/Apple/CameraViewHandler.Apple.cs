@@ -1,0 +1,463 @@
+using AVFoundation;
+using CoreFoundation;
+using CoreMedia;
+using CoreVideo;
+using Foundation;
+using Microsoft.Maui.Handlers;
+using UIKit;
+
+namespace Shiny.Maui.Controls.Camera;
+
+// iOS + MacCatalyst (UIKit / AVFoundation). Shared via the csproj Platforms/Apple include.
+public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewView>, ICameraViewController
+{
+    AVCaptureSession? session;
+    AVCaptureDeviceInput? videoInput;
+    AVCaptureDeviceInput? audioInput;
+    AVCapturePhotoOutput? photoOutput;
+    AVCaptureMovieFileOutput? movieOutput;
+    AVCaptureVideoDataOutput? dataOutput;
+    AVCaptureDevice? device;
+    VideoFrameDelegate? frameDelegate;
+    MovieRecordingDelegate? recordingDelegate;
+    UIImageView? filterView;
+    readonly DispatchQueue sessionQueue = new("shiny.camera.session");
+    readonly DispatchQueue videoQueue = new("shiny.camera.video");
+
+    protected override CameraPreviewView CreatePlatformView() => new();
+
+    protected override void ConnectHandler(CameraPreviewView platformView)
+    {
+        base.ConnectHandler(platformView);
+        this.InitPipeline();
+        if (this.VirtualView.IsActive)
+            _ = this.StartAsync();
+    }
+
+    protected override void DisconnectHandler(CameraPreviewView platformView)
+    {
+        this.TeardownPipeline();
+        this.TeardownSession();
+        base.DisconnectHandler(platformView);
+    }
+
+
+    public Task<bool> RequestPermissionAsync(CancellationToken ct = default)
+    {
+        var status = AVCaptureDevice.GetAuthorizationStatus(AVAuthorizationMediaType.Video);
+        if (status == AVAuthorizationStatus.Authorized)
+            return Task.FromResult(true);
+
+        return AVCaptureDevice.RequestAccessForMediaTypeAsync(AVAuthorizationMediaType.Video);
+    }
+
+
+    public async Task StartAsync(CancellationToken ct = default)
+    {
+        if (!await this.RequestPermissionAsync(ct).ConfigureAwait(false))
+        {
+            this.VirtualView?.OnCameraError("Camera permission denied");
+            return;
+        }
+
+        this.sessionQueue.DispatchAsync(() =>
+        {
+            try
+            {
+                this.ConfigureSession();
+                if (this.session is { Running: false })
+                    this.session.StartRunning();
+            }
+            catch (Exception ex)
+            {
+                this.MainThread(() => this.VirtualView?.OnCameraError("Failed to start camera", ex));
+            }
+        });
+    }
+
+
+    public Task StopAsync(CancellationToken ct = default)
+    {
+        this.sessionQueue.DispatchAsync(() =>
+        {
+            if (this.session is { Running: true })
+                this.session.StopRunning();
+        });
+        return Task.CompletedTask;
+    }
+
+
+    public Task<CameraPhoto> CapturePhotoAsync(CancellationToken ct = default)
+    {
+        if (this.photoOutput == null)
+            throw new InvalidOperationException("Camera is not running");
+
+        var settings = AVCapturePhotoSettings.Create();
+        settings.FlashMode = this.VirtualView.FlashMode switch
+        {
+            CameraFlashMode.On => AVCaptureFlashMode.On,
+            CameraFlashMode.Auto => AVCaptureFlashMode.Auto,
+            _ => AVCaptureFlashMode.Off
+        };
+
+        var del = new PhotoCaptureDelegate();
+        this.photoOutput.CapturePhoto(settings, del);
+        return del.Task;
+    }
+
+
+    public Task StartVideoRecordingAsync(VideoRecordingOptions options, CancellationToken ct = default)
+    {
+        if (this.movieOutput == null)
+            throw new InvalidOperationException("Camera is not running");
+
+        if (options.IncludeAudio)
+            this.EnsureAudioInput();
+
+        var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mov");
+        this.recordingDelegate = new MovieRecordingDelegate();
+        this.movieOutput.StartRecordingToOutputFile(NSUrl.FromFilename(path), this.recordingDelegate);
+        return Task.CompletedTask;
+    }
+
+
+    public Task<CameraVideo> StopVideoRecordingAsync(CancellationToken ct = default)
+    {
+        if (this.movieOutput is not { Recording: true } || this.recordingDelegate == null)
+            throw new InvalidOperationException("Not recording");
+
+        this.movieOutput.StopRecording();
+        return this.recordingDelegate.Task;
+    }
+
+
+    // ---- property mappers ----
+
+    static partial void MapFacing(CameraViewHandler handler, CameraView view)
+        => handler.sessionQueue.DispatchAsync(handler.ReconfigureInput);
+
+    static partial void MapIsActive(CameraViewHandler handler, CameraView view)
+    {
+        if (view.IsActive)
+            _ = handler.StartAsync();
+        else
+            _ = handler.StopAsync();
+    }
+
+    static partial void MapTorch(CameraViewHandler handler, CameraView view)
+        => handler.ApplyTorch(view.IsTorchOn);
+
+    static partial void MapFlashMode(CameraViewHandler handler, CameraView view) { /* applied at capture time */ }
+
+    static partial void MapZoom(CameraViewHandler handler, CameraView view)
+        => handler.ApplyZoom(view.Zoom);
+
+    static partial void MapScaleMode(CameraViewHandler handler, CameraView view)
+    {
+        if (handler.PlatformView is { } pv)
+            pv.PreviewLayer.VideoGravity = view.ScaleMode == PreviewScaleMode.AspectFit
+                ? AVLayerVideoGravity.ResizeAspect
+                : AVLayerVideoGravity.ResizeAspectFill;
+    }
+
+    static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* Phase 2 */ }
+
+    static partial void MapFilter(CameraViewHandler handler, CameraView view)
+        => handler.MainThread(() => handler.ApplyFilter(view.Filter));
+
+
+    // ---- internals ----
+
+    void ConfigureSession()
+    {
+        if (this.session != null)
+            return;
+
+        this.session = new AVCaptureSession { SessionPreset = AVCaptureSession.PresetHigh };
+        this.session.BeginConfiguration();
+
+        this.AddVideoInput();
+
+        this.photoOutput = new AVCapturePhotoOutput();
+        if (this.session.CanAddOutput(this.photoOutput))
+            this.session.AddOutput(this.photoOutput);
+
+        this.dataOutput = new AVCaptureVideoDataOutput
+        {
+            AlwaysDiscardsLateVideoFrames = true,
+            WeakVideoSettings = new CVPixelBufferAttributes { PixelFormatType = CVPixelFormatType.CV32BGRA }.Dictionary
+        };
+        if (this.session.CanAddOutput(this.dataOutput))
+            this.session.AddOutput(this.dataOutput);
+
+        this.movieOutput = new AVCaptureMovieFileOutput();
+        if (this.session.CanAddOutput(this.movieOutput))
+            this.session.AddOutput(this.movieOutput);
+
+        this.session.CommitConfiguration();
+
+        this.MainThread(() =>
+        {
+            this.PlatformView.PreviewLayer.Session = this.session;
+            this.SetupFilterView();
+            this.dataOutput.SetSampleBufferDelegate(this.frameDelegate, this.videoQueue);
+            this.OrientConnections();
+            this.ReportZoomRange();
+            this.ApplyZoom(this.VirtualView.Zoom);
+            this.ApplyTorch(this.VirtualView.IsTorchOn);
+            this.ApplyFilter(this.VirtualView.Filter);
+        });
+    }
+
+
+    // Orient the frame-delivery connection so buffers arrive upright (portrait) and front-mirrored to
+    // match the preview. The wrapped AppleCameraFrame then needs no further rotation/mirroring.
+    void OrientConnections()
+    {
+        var front = this.VirtualView.Facing == CameraFacing.Front;
+        var conn = this.dataOutput?.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!);
+        if (conn == null)
+            return;
+
+        if (conn.SupportsVideoOrientation)
+            conn.VideoOrientation = AVCaptureVideoOrientation.Portrait;
+
+        if (conn.SupportsVideoMirroring)
+        {
+            conn.AutomaticallyAdjustsVideoMirroring = false;
+            conn.VideoMirrored = front;
+        }
+
+        if (this.frameDelegate != null)
+            this.frameDelegate.Mirrored = false; // connection already applies orientation + mirroring
+    }
+
+
+    void SetupFilterView()
+    {
+        if (this.filterView != null)
+            return;
+
+        this.filterView = new UIImageView(this.PlatformView.Bounds)
+        {
+            ContentMode = UIViewContentMode.ScaleAspectFill,
+            AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight,
+            Hidden = true,
+            ClipsToBounds = true
+        };
+        this.PlatformView.AddSubview(this.filterView);
+        this.frameDelegate = new VideoFrameDelegate(this.filterView)
+        {
+            WantFrames = () => this.Pipeline.HasAnalyzers,
+            OnFrame = frame => this.Pipeline.Process(frame, default),
+            Mirrored = this.VirtualView.Facing == CameraFacing.Front
+        };
+    }
+
+
+    void ApplyFilter(CameraFilter filter)
+    {
+        if (this.frameDelegate == null || this.filterView == null)
+            return;
+
+        var ci = AppleCameraFilters.Create(filter);
+        this.frameDelegate.Filter = ci;
+
+        var active = ci != null;
+        this.filterView.Hidden = !active;
+        this.PlatformView.PreviewLayer.Hidden = active;
+    }
+
+
+    void EnsureAudioInput()
+    {
+        if (this.audioInput != null || this.session == null)
+            return;
+
+        var mic = AVCaptureDevice.GetDefaultDevice(AVMediaTypes.Audio);
+        if (mic == null)
+            return;
+
+        var input = AVCaptureDeviceInput.FromDevice(mic, out var err);
+        if (err != null || input == null)
+            return;
+
+        this.session.BeginConfiguration();
+        if (this.session.CanAddInput(input))
+        {
+            this.session.AddInput(input);
+            this.audioInput = input;
+        }
+        this.session.CommitConfiguration();
+    }
+
+
+    static readonly AVCaptureDeviceType[] DeviceTypes =
+    [
+        AVCaptureDeviceType.BuiltInWideAngleCamera,
+        AVCaptureDeviceType.BuiltInUltraWideCamera,
+        AVCaptureDeviceType.BuiltInTelephotoCamera
+    ];
+
+    public Task<IReadOnlyList<CameraInfo>> GetAvailableCamerasAsync(CancellationToken ct = default)
+    {
+        var discovery = AVCaptureDeviceDiscoverySession.Create(DeviceTypes, AVMediaTypes.Video, AVCaptureDevicePosition.Unspecified);
+        IReadOnlyList<CameraInfo> list = discovery.Devices
+            .Select(d => new CameraInfo(d.UniqueID, d.LocalizedName, ToFacing(d.Position)))
+            .ToList();
+        return Task.FromResult(list);
+    }
+
+    static CameraFacing ToFacing(AVCaptureDevicePosition position) => position switch
+    {
+        AVCaptureDevicePosition.Front => CameraFacing.Front,
+        AVCaptureDevicePosition.Back => CameraFacing.Back,
+        _ => CameraFacing.External
+    };
+
+    AVCaptureDevice? SelectDevice()
+    {
+        var id = this.VirtualView.CameraId;
+        if (!string.IsNullOrEmpty(id) && AVCaptureDevice.DeviceWithUniqueID(id) is { } byId)
+            return byId;
+
+        var position = this.VirtualView.Facing == CameraFacing.Front
+            ? AVCaptureDevicePosition.Front
+            : AVCaptureDevicePosition.Back;
+        return DiscoverDevice(position) ?? DiscoverDevice(AVCaptureDevicePosition.Unspecified);
+    }
+
+    void AddVideoInput()
+    {
+        this.device = this.SelectDevice();
+        if (this.device == null)
+        {
+            this.MainThread(() => this.VirtualView?.OnCameraError("No camera device found"));
+            return;
+        }
+
+        var input = AVCaptureDeviceInput.FromDevice(this.device, out var error);
+        if (error != null || input == null)
+        {
+            this.MainThread(() => this.VirtualView?.OnCameraError("Cannot open camera: " + error?.LocalizedDescription));
+            return;
+        }
+
+        if (this.session!.CanAddInput(input))
+            this.session.AddInput(input);
+        this.videoInput = input;
+    }
+
+
+    void ReconfigureInput()
+    {
+        if (this.session == null)
+            return;
+
+        this.session.BeginConfiguration();
+        if (this.videoInput != null)
+        {
+            this.session.RemoveInput(this.videoInput);
+            this.videoInput.Dispose();
+            this.videoInput = null;
+        }
+        this.AddVideoInput();
+        this.session.CommitConfiguration();
+
+        this.MainThread(() =>
+        {
+            this.OrientConnections();
+            this.ReportZoomRange();
+            this.ApplyZoom(this.VirtualView.Zoom);
+            this.ApplyTorch(this.VirtualView.IsTorchOn);
+        });
+    }
+
+
+    static AVCaptureDevice? DiscoverDevice(AVCaptureDevicePosition position)
+    {
+        var discovery = AVCaptureDeviceDiscoverySession.Create(DeviceTypes, AVMediaTypes.Video, position);
+        return discovery.Devices.FirstOrDefault();
+    }
+
+
+    void ApplyZoom(double zoom)
+    {
+        if (this.device == null)
+            return;
+        try
+        {
+            if (this.device.LockForConfiguration(out _))
+            {
+                var max = (double)this.device.ActiveFormat.VideoMaxZoomFactor;
+                var min = (double)this.device.MinAvailableVideoZoomFactor;
+                this.device.VideoZoomFactor = (System.Runtime.InteropServices.NFloat)Math.Clamp(zoom, min, max);
+                this.device.UnlockForConfiguration();
+            }
+        }
+        catch (Exception ex)
+        {
+            this.VirtualView?.OnCameraError("Zoom failed", ex);
+        }
+    }
+
+
+    void ApplyTorch(bool on)
+    {
+        if (this.device is not { HasTorch: true })
+            return;
+        try
+        {
+            if (this.device.LockForConfiguration(out _))
+            {
+                if (this.device.TorchAvailable)
+                    this.device.TorchMode = on ? AVCaptureTorchMode.On : AVCaptureTorchMode.Off;
+                this.device.UnlockForConfiguration();
+            }
+        }
+        catch (Exception ex)
+        {
+            this.VirtualView?.OnCameraError("Torch failed", ex);
+        }
+    }
+
+
+    void ReportZoomRange()
+    {
+        if (this.device == null)
+            return;
+        var min = (double)this.device.MinAvailableVideoZoomFactor;
+        var max = (double)this.device.ActiveFormat.VideoMaxZoomFactor;
+        this.VirtualView?.OnZoomRangeChanged(min, Math.Min(max, 10d));
+    }
+
+
+    void TeardownSession()
+    {
+        this.sessionQueue.DispatchAsync(() =>
+        {
+            if (this.session == null)
+                return;
+            if (this.movieOutput is { Recording: true })
+                this.movieOutput.StopRecording();
+            if (this.session.Running)
+                this.session.StopRunning();
+            this.session.Dispose();
+            this.session = null;
+            this.videoInput?.Dispose();
+            this.videoInput = null;
+            this.audioInput?.Dispose();
+            this.audioInput = null;
+            this.photoOutput?.Dispose();
+            this.photoOutput = null;
+            this.movieOutput?.Dispose();
+            this.movieOutput = null;
+            this.dataOutput?.Dispose();
+            this.dataOutput = null;
+            this.device = null;
+        });
+    }
+
+
+    void MainThread(Action action) => UIApplication.SharedApplication.InvokeOnMainThread(action);
+}

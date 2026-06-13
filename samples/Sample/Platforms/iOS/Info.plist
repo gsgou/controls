@@ -30,6 +30,8 @@
 	<string>This app uses speech recognition for voice input</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app uses the microphone for speech recognition</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera for the CameraView preview, capture and frame analysis demos</string>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
 </dict>

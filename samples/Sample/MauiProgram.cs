@@ -26,6 +26,7 @@ public static class MauiProgram
                 cfg.SetCustomFeedback<MyCustomFeedbackService>(); // haptic is installed by default, but we want more fun
                 cfg.AddDefaultMauiControlFeedback();
             })
+            .UseShinyCamera()
             .UseTrayIcon()
             .UseShinyDocking()
             .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")

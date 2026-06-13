@@ -20,7 +20,7 @@
 		<WindowsPackageType>None</WindowsPackageType>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
@@ -59,5 +59,10 @@
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Barcodes\Shiny.Maui.Controls.Barcodes.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera\Shiny.Maui.Controls.Camera.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Motion\Shiny.Maui.Controls.Camera.Motion.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Barcode\Shiny.Maui.Controls.Camera.Barcode.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Face\Shiny.Maui.Controls.Camera.Face.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Ocr\Shiny.Maui.Controls.Camera.Ocr.csproj" />
 	</ItemGroup>
 </Project>

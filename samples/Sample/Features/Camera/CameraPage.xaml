@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cam="http://shiny.net/maui/camera"
+             x:Class="Sample.Features.Camera.CameraPage"
+             Title="Camera"
+             AutomationId="CameraPage">
+
+    <Grid>
+        <cam:CameraView x:Name="Camera"
+                        Facing="Back"
+                        ScaleMode="AspectFill" />
+
+        <!-- bounding-box overlay -->
+        <GraphicsView x:Name="Overlay" InputTransparent="True" />
+
+        <!-- status / errors -->
+        <Label x:Name="StatusLabel"
+               Margin="16"
+               VerticalOptions="Start"
+               HorizontalOptions="Center"
+               TextColor="White"
+               BackgroundColor="#80000000"
+               Padding="10,4"
+               IsVisible="False" />
+
+        <!-- bottom control bar -->
+        <VerticalStackLayout VerticalOptions="End"
+                             Padding="20"
+                             Spacing="12"
+                             BackgroundColor="#66000000">
+
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="Camera" TextColor="White" VerticalOptions="Center" />
+                <Picker x:Name="CameraPicker"
+                        WidthRequest="220"
+                        TextColor="White"
+                        TitleColor="White"
+                        SelectedIndexChanged="OnCameraChanged" />
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                <Label Text="Zoom" TextColor="White" VerticalOptions="Center" />
+                <Slider x:Name="ZoomSlider"
+                        WidthRequest="160"
+                        Minimum="{Binding MinZoom, Source={x:Reference Camera}}"
+                        Maximum="{Binding MaxZoom, Source={x:Reference Camera}}"
+                        Value="{Binding Zoom, Source={x:Reference Camera}, Mode=TwoWay}" />
+                <Label Text="Filter" TextColor="White" VerticalOptions="Center" />
+                <Picker x:Name="FilterPicker"
+                        WidthRequest="120"
+                        TextColor="White"
+                        TitleColor="White"
+                        SelectedIndexChanged="OnFilterChanged" />
+            </HorizontalStackLayout>
+
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Text="Flip"
+                        Clicked="OnFlipClicked" />
+
+                <Button Grid.Column="1"
+                        Text="Photo"
+                        Clicked="OnCaptureClicked" />
+
+                <Button Grid.Column="2"
+                        x:Name="RecordButton"
+                        Text="Record"
+                        Clicked="OnRecordClicked" />
+
+                <Button Grid.Column="3"
+                        Text="Torch"
+                        Clicked="OnTorchClicked" />
+            </Grid>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

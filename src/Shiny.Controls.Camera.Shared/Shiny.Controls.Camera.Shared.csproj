@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Controls.Camera</RootNamespace>
+        <Description>Shared contracts for the Shiny CameraView frame-analysis pipeline (Detection, IFrameAnalyzer, CameraFrame, CoordinateTransform).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Graphics" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.Camera" />
+    </ItemGroup>
+</Project>
