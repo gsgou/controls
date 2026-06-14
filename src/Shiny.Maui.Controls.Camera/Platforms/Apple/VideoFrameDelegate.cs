@@ -26,6 +26,9 @@ sealed class VideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegate
     /// <summary>Receives each wrapped frame (off the capture queue). The callee owns/disposes it.</summary>
     public Action<AppleCameraFrame>? OnFrame;
 
+    /// <summary>Invoked (off the capture queue) when a frame raises an exception, so it can be surfaced.</summary>
+    public Action<Exception>? OnError;
+
     /// <summary>Set by the handler so wrapped frames carry mirroring metadata.</summary>
     public volatile bool Mirrored;
 
@@ -46,6 +49,12 @@ sealed class VideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegate
                 var frame = new AppleCameraFrame(pixelBuffer, rotation: 0, mirrored: this.Mirrored);
                 this.OnFrame(frame);
             }
+        }
+        catch (Exception ex)
+        {
+            // This is a native AVFoundation callback — a managed exception must never escape into ObjC or
+            // the app hard-crashes. Swallow per-frame failures (report the first) and keep the camera alive.
+            this.OnError?.Invoke(ex);
         }
         finally
         {

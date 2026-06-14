@@ -55,6 +55,70 @@ public class CameraPipelineTests
     }
 
 
+    [Fact]
+    public void Disabled_analyzer_is_skipped_its_boxes_cleared_and_resumes_on_enable()
+    {
+        var pipeline = new CameraPipeline();
+        IReadOnlyList<OverlayBox> latest = [];
+        pipeline.OnOverlays = (boxes, _, _) => latest = boxes;
+
+        var box = new OverlayBox(new RectF(0, 0, 0.5f, 0.5f));
+        var analyzer = new ToggleAnalyzer("t", box);
+        pipeline.SetAnalyzers([analyzer]);
+
+        pipeline.HasAnalyzers.ShouldBeTrue();
+        pipeline.Process(new FakeFrame(), default);
+        latest.ShouldBe([box]);
+        analyzer.Calls.ShouldBe(1);
+
+        analyzer.IsEnabled = false;
+        pipeline.HasAnalyzers.ShouldBeFalse();   // enabled count is now 0 -> behaves as "no analyzers"
+        latest.ShouldBeEmpty();                  // disabling cleared its boxes immediately
+
+        pipeline.Process(new FakeFrame(), default);
+        analyzer.Calls.ShouldBe(1);              // skipped while disabled
+
+        analyzer.IsEnabled = true;
+        pipeline.HasAnalyzers.ShouldBeTrue();
+        pipeline.Process(new FakeFrame(), default);
+        analyzer.Calls.ShouldBe(2);              // runs again with state intact
+        latest.ShouldBe([box]);
+    }
+
+    [Fact]
+    public void OnActiveChanged_fires_on_set_and_on_enabled_toggle()
+    {
+        var pipeline = new CameraPipeline();
+        var fires = 0;
+        pipeline.OnActiveChanged = () => fires++;
+
+        var analyzer = new ToggleAnalyzer("t", new OverlayBox(new RectF(0, 0, 1, 1)));
+        pipeline.SetAnalyzers([analyzer]);
+        fires.ShouldBe(1);                       // collection edit
+
+        analyzer.IsEnabled = false;
+        fires.ShouldBe(2);                       // toggled off
+
+        analyzer.IsEnabled = true;
+        fires.ShouldBe(3);                       // toggled on
+    }
+
+
+    // A FrameAnalyzer (so it carries the IsEnabled bindable) that counts how often it actually runs.
+    sealed class ToggleAnalyzer(string id, OverlayBox box) : FrameAnalyzer
+    {
+        public int Calls;
+
+        public override string Id => id;
+
+        public override ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+        {
+            this.Calls++;
+            return new(new[] { box });
+        }
+    }
+
+
     sealed class ScriptedAnalyzer(string id, params IReadOnlyList<OverlayBox>?[] results) : IFrameAnalyzer
     {
         readonly Queue<IReadOnlyList<OverlayBox>?> queue = new(results);

@@ -99,7 +99,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
             throw new InvalidOperationException("Camera is not running");
 
         var settings = AVCapturePhotoSettings.Create();
-        var del = new PhotoCaptureDelegate();
+        var del = new PhotoCaptureDelegate
+        {
+            // apply the same filter as the live preview so the captured still matches what the user sees
+            Filter = AppleCameraFilters.Create(this.VirtualView.Filter)
+        };
         this.photoOutput.CapturePhoto(settings, del);
         return del.Task;
     }

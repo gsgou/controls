@@ -26,6 +26,10 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     VideoRecordListener? recordListener;
     Java.Util.Concurrent.IExecutorService? analysisExecutor;
     ICamera? camera;
+    // CameraX's ~3-use-case budget makes ImageAnalysis and VideoCapture mutually exclusive, so the bound set
+    // is decided up-front from whether any analyzer is enabled. Tracks which mode is currently bound so an
+    // analyzer toggle that flips it (the enabled set crossing zero) triggers a rebind.
+    bool boundAnalysisMode;
 
     protected override AWidget.FrameLayout CreatePlatformView()
     {
@@ -160,7 +164,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
             _ => ImageCapture.FlashModeOff
         };
 
-        var cb = new ImageCapturedCallback();
+        // apply the same filter as the live preview so the captured still matches what the user sees
+        var cb = new ImageCapturedCallback(this.VirtualView.Filter);
         this.imageCapture.TakePicture(ContextCompat.GetMainExecutor(this.Context)!, cb);
         return cb.Task;
     }
@@ -199,7 +204,38 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.activeRecording.Stop();
         var task = this.recordListener.Task;
         this.activeRecording = null;
+
+        // analyzers enabled while recording couldn't be bound (VideoCapture held the slot); now the recording
+        // is finalizing, re-evaluate so they take effect
+        _ = task.ContinueWith(
+            _ => MainThread.BeginInvokeOnMainThread(this.RebindIfModeChanged),
+            TaskScheduler.Default);
         return task;
+    }
+
+
+    // Re-bind use cases when the enabled-analyzer set has crossed the ImageAnalysis<->VideoCapture boundary.
+    // Invoked via the OnAnalyzersSynced hook (analyzer added/removed or IsEnabled toggled) and after a
+    // recording finalizes. A no-op while not started, mid-recording, or when the mode is unchanged.
+    partial void OnAnalyzersSynced()
+    {
+        if (this.cameraProvider == null || this.lifecycleOwner == null)
+            return; // not started yet — BindUseCases will read the current set when it runs
+        if (this.activeRecording != null)
+            return; // can't swap the video use case mid-recording; deferred until it finalizes
+        if (this.Pipeline.HasAnalyzers == this.boundAnalysisMode)
+            return; // mode unchanged (e.g. a 2nd analyzer added) — runner set already updated, no rebind
+
+        MainThread.BeginInvokeOnMainThread(this.RebindIfModeChanged);
+    }
+
+    void RebindIfModeChanged()
+    {
+        // re-check after marshalling to the main thread: state may have moved on
+        if (this.cameraProvider != null
+            && this.activeRecording == null
+            && this.Pipeline.HasAnalyzers != this.boundAnalysisMode)
+            this.BindUseCases();
     }
 
 
@@ -297,6 +333,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
         this.cameraProvider.UnbindAll();
         this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, useCases.ToArray());
+        this.boundAnalysisMode = this.Pipeline.HasAnalyzers;
 
         this.ApplyFilter(this.VirtualView.Filter);
 

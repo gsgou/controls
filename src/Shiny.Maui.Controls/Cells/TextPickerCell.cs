@@ -21,7 +21,8 @@ public class TextPickerCell : CellBase
 
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(TextPickerCell), null,
-        BindingMode.TwoWay);
+        BindingMode.TwoWay,
+        propertyChanged: (b, o, n) => ((TextPickerCell)b).OnSelectedItemChanged());
 
     public static readonly BindableProperty DisplayMemberProperty = BindableProperty.Create(
         nameof(DisplayMember), typeof(string), typeof(TextPickerCell), null);
@@ -134,12 +135,27 @@ public class TextPickerCell : CellBase
         hiddenPicker.ItemsSource = ItemsSource;
         if (!string.IsNullOrEmpty(DisplayMember))
             hiddenPicker.ItemDisplayBinding = new Binding(DisplayMember);
+
+        // items may have arrived after SelectedItem was set (e.g. an async-loaded list) — re-sync
+        OnSelectedItemChanged();
     }
 
     void OnSelectedIndexChanged()
     {
         if (hiddenPicker != null && hiddenPicker.SelectedIndex != SelectedIndex)
             hiddenPicker.SelectedIndex = SelectedIndex;
+        UpdateDisplayText();
+    }
+
+    // Reflect an externally-set SelectedItem in the picker selection + value label (the picker's own
+    // selection events drive the reverse direction).
+    void OnSelectedItemChanged()
+    {
+        if (hiddenPicker == null) return;
+
+        var index = ItemsSource == null || SelectedItem == null ? -1 : ItemsSource.IndexOf(SelectedItem);
+        if (index >= 0 && hiddenPicker.SelectedIndex != index)
+            hiddenPicker.SelectedIndex = index;
         UpdateDisplayText();
     }
 

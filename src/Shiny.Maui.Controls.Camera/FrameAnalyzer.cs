@@ -14,8 +14,26 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     Action<Action>? dispatcher;
 
     /// <summary>
+    /// Whether this analyzer runs at all. Default <c>true</c>. Set <c>false</c> (e.g. bind it to a switch in
+    /// XAML) to turn the analyzer off without removing it from <see cref="CameraView.Analyzers"/> — its
+    /// command/event bindings stay wired and its internal state is preserved, so toggling it back on resumes
+    /// instantly. A disabled analyzer is skipped by the pipeline and its overlay boxes are cleared. When every
+    /// analyzer is disabled the camera behaves as if it had none (e.g. on Android, video recording is allowed).
+    /// </summary>
+    public static readonly BindableProperty IsEnabledProperty = BindableProperty.Create(
+        nameof(IsEnabled), typeof(bool), typeof(FrameAnalyzer), true);
+
+    /// <inheritdoc cref="IsEnabledProperty"/>
+    public bool IsEnabled
+    {
+        get => (bool)this.GetValue(IsEnabledProperty);
+        set => this.SetValue(IsEnabledProperty, value);
+    }
+
+    /// <summary>
     /// Whether this analyzer's bounding boxes are drawn. Default <c>true</c>. Set <c>false</c> (e.g. in XAML)
-    /// to run the analyzer purely for its event/command without drawing any box.
+    /// to run the analyzer purely for its event/command without drawing any box. Distinct from
+    /// <see cref="IsEnabled"/>, which stops the analyzer running entirely.
     /// </summary>
     public static readonly BindableProperty ShowBoundingBoxProperty = BindableProperty.Create(
         nameof(ShowBoundingBox), typeof(bool), typeof(FrameAnalyzer), true);

@@ -62,6 +62,9 @@ public static class MauiProgram
         builder.Services.AddTransient<InteractiveEditorPage>();
         builder.Services.AddSingleton<ISchedulerEventProvider, SampleSchedulerProvider>();
 
+        // shared app-session list of documents lifted by the camera's document analyzers
+        builder.Services.AddSingleton<Sample.Features.Camera.DocumentSessionStore>();
+
 #if DEBUG
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
         builder.Logging.AddDebug();

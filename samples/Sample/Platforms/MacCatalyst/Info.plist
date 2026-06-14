@@ -36,5 +36,9 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera for the CameraView preview, capture and frame analysis demos</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses the microphone for video recording with audio</string>
 </dict>
 </plist>

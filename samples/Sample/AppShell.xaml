@@ -266,6 +266,33 @@
     </FlyoutItem>
 
     <!-- ============================================================ -->
+    <!--  CAMERA -->
+    <!-- ============================================================ -->
+    <MenuItem Text="CAMERA"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="Camera">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25C9;" Size="20"
+                             Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate camera:CameraPage}" Route="camera" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Scanned Documents">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2637;" Size="20"
+                             Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate camera:DocumentSessionPage}" Route="documentsession" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
     <!--  COLLECTIONS -->
     <!-- ============================================================ -->
     <MenuItem Text="COLLECTIONS"
@@ -282,14 +309,6 @@
                              Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Camera">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25C9;" Size="20"
-                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate camera:CameraPage}" Route="camera" />
     </FlyoutItem>
 
     <FlyoutItem Title="Staggered Grid">

@@ -1,87 +1,138 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:cam="http://shiny.net/maui/camera"
-             x:Class="Sample.Features.Camera.CameraPage"
-             Title="Camera"
-             AutomationId="CameraPage">
+<shiny:ShinyContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                        xmlns:cam="http://shiny.net/maui/camera"
+                        xmlns:shiny="http://shiny.net/maui/controls"
+                        x:Class="Sample.Features.Camera.CameraPage"
+                        Title="Camera"
+                        AutomationId="CameraPage">
 
-    <Grid>
-        <!-- analyzers are declared in XAML; their Commands bind to the page (BindingContext) -->
-        <cam:CameraView x:Name="Camera"
-                        Facing="Back"
-                        ScaleMode="AspectFill">
-            <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}" />
-            <!-- run motion for the command only, no overlay box -->
-            <cam:MotionAnalyzer MotionChangedCommand="{Binding MotionCommand}" ShowBoundingBox="False" />
-            <cam:FaceAnalyzer FacesDetectedCommand="{Binding FaceCommand}" />
-            <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}" />
-            <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}" />
-            <cam:CreditCardAnalyzer DocumentDetectedCommand="{Binding CreditCardCommand}" />
-            <cam:PassportAnalyzer DocumentDetectedCommand="{Binding PassportCommand}" />
-        </cam:CameraView>
+    <shiny:ShinyContentPage.PageContent>
+        <Grid>
+            <!-- Analyzers are declared in XAML so their Commands stay bound; each is toggled on/off live via
+                 its IsEnabled binding to a SwitchCell in the options sheet (all start off). The shared
+                 BoxesSwitch toggles every analyzer's bounding-box rendering via ShowBoundingBox. -->
+            <cam:CameraView x:Name="Camera"
+                            Facing="Back"
+                            ScaleMode="AspectFill">
+                <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}"
+                                     IsEnabled="{Binding On, Source={x:Reference BarcodeSwitch}}"
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <!-- motion draws a box around each region where movement was detected -->
+                <cam:MotionAnalyzer MotionChangedCommand="{Binding MotionCommand}"
+                                    IsEnabled="{Binding On, Source={x:Reference MotionSwitch}}"
+                                    ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:FaceAnalyzer FacesDetectedCommand="{Binding FaceCommand}"
+                                  IsEnabled="{Binding On, Source={x:Reference FaceSwitch}}"
+                                  ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}"
+                                     IsEnabled="{Binding On, Source={x:Reference InvoiceSwitch}}"
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}"
+                                            IsEnabled="{Binding On, Source={x:Reference LicenseSwitch}}"
+                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:CreditCardAnalyzer DocumentDetectedCommand="{Binding CreditCardCommand}"
+                                        IsEnabled="{Binding On, Source={x:Reference CreditCardSwitch}}"
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:PassportAnalyzer DocumentDetectedCommand="{Binding PassportCommand}"
+                                      IsEnabled="{Binding On, Source={x:Reference PassportSwitch}}"
+                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+            </cam:CameraView>
 
-        <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
-        <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
+            <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
+            <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
 
-        <!-- status / errors -->
-        <Label x:Name="StatusLabel"
-               Margin="16"
-               VerticalOptions="Start"
-               HorizontalOptions="Center"
-               TextColor="White"
-               BackgroundColor="#80000000"
-               Padding="10,4"
-               IsVisible="False" />
+            <!-- last captured photo (confirms the filter is applied to stills) -->
+            <Image x:Name="PhotoThumbnail"
+                   WidthRequest="90"
+                   HeightRequest="120"
+                   Aspect="AspectFill"
+                   Margin="16"
+                   HorizontalOptions="End"
+                   VerticalOptions="Start"
+                   IsVisible="False" />
 
-        <!-- bottom control bar -->
-        <VerticalStackLayout VerticalOptions="End"
-                             Padding="20"
-                             Spacing="12"
-                             BackgroundColor="#66000000">
+            <!-- status / errors -->
+            <Label x:Name="StatusLabel"
+                   Margin="16"
+                   VerticalOptions="Start"
+                   HorizontalOptions="Center"
+                   TextColor="White"
+                   BackgroundColor="#80000000"
+                   Padding="10,4"
+                   IsVisible="False" />
 
-            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                <Label Text="Camera" TextColor="White" VerticalOptions="Center" />
-                <Picker x:Name="CameraPicker"
-                        WidthRequest="220"
-                        TextColor="White"
-                        TitleColor="White"
-                        SelectedIndexChanged="OnCameraChanged" />
-            </HorizontalStackLayout>
+            <!-- on-screen camera controls; everything else lives in the Options sheet -->
+            <VerticalStackLayout VerticalOptions="End"
+                                 Padding="16"
+                                 Spacing="10"
+                                 BackgroundColor="#66000000">
 
-            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
-                <Label Text="Zoom" TextColor="White" VerticalOptions="Center" />
-                <Slider x:Name="ZoomSlider"
-                        WidthRequest="160"
-                        Minimum="{Binding MinZoom, Source={x:Reference Camera}}"
-                        Maximum="{Binding MaxZoom, Source={x:Reference Camera}}"
-                        Value="{Binding Zoom, Source={x:Reference Camera}, Mode=TwoWay}" />
-                <Label Text="Filter" TextColor="White" VerticalOptions="Center" />
-                <Picker x:Name="FilterPicker"
-                        WidthRequest="120"
-                        TextColor="White"
-                        TitleColor="White"
-                        SelectedIndexChanged="OnFilterChanged" />
-            </HorizontalStackLayout>
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="8">
+                    <Label Text="Zoom" TextColor="White" VerticalOptions="Center" />
+                    <Slider WidthRequest="220"
+                            Minimum="{Binding MinZoom, Source={x:Reference Camera}}"
+                            Maximum="{Binding MaxZoom, Source={x:Reference Camera}}"
+                            Value="{Binding Zoom, Source={x:Reference Camera}, Mode=TwoWay}" />
+                </HorizontalStackLayout>
 
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-                <Button Grid.Column="0"
-                        Text="Flip"
-                        Clicked="OnFlipClicked" />
+                <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
+                    <Button Grid.Column="0" Text="Options" Clicked="OnOptionsClicked" />
+                    <Button Grid.Column="1" Text="Flip" Clicked="OnFlipClicked" />
+                    <Button Grid.Column="2" Text="Photo" Clicked="OnCaptureClicked" />
+                    <Button Grid.Column="3" x:Name="RecordButton" Text="Record" Clicked="OnRecordClicked" />
+                    <Button Grid.Column="4" Text="Torch" Clicked="OnTorchClicked" />
+                </Grid>
+            </VerticalStackLayout>
+        </Grid>
+    </shiny:ShinyContentPage.PageContent>
 
-                <Button Grid.Column="1"
-                        Text="Photo"
-                        Clicked="OnCaptureClicked" />
+    <shiny:ShinyContentPage.Panels>
+        <!-- bottom-sheet of all the detector + camera options -->
+        <shiny:FloatingPanel x:Name="OptionsPanel"
+                             IsOpen="False"
+                             HasBackdrop="True"
+                             CloseOnBackdropTap="True"
+                             HandleColor="Gray"
+                             PanelCornerRadius="20"
+                             IsContentScrollEnabled="False"
+                             PanelBackgroundColor="{AppThemeBinding Light=White, Dark=#1C1C1E}">
+            <!-- TableView scrolls itself, so disable the panel's outer ScrollView (nested scrolls collapse the table) -->
+            <shiny:TableView>
+                <shiny:TableRoot>
+                    <shiny:TableSection Title="Detectors">
+                        <shiny:SwitchCell x:Name="BarcodeSwitch" Title="Barcode / QR" />
+                        <shiny:SwitchCell x:Name="MotionSwitch" Title="Motion" Description="Fires a command only — no box" />
+                        <shiny:SwitchCell x:Name="FaceSwitch" Title="Face" />
+                        <shiny:SwitchCell x:Name="InvoiceSwitch" Title="Invoice" Description="OCR — header + order lines" />
+                        <shiny:SwitchCell x:Name="LicenseSwitch" Title="Driver's License" Description="PDF417 / AAMVA" />
+                        <shiny:SwitchCell x:Name="CreditCardSwitch" Title="Credit Card" Description="IIN brand + Luhn" />
+                        <shiny:SwitchCell x:Name="PassportSwitch" Title="Passport" Description="MRZ" />
+                    </shiny:TableSection>
 
-                <Button Grid.Column="2"
-                        x:Name="RecordButton"
-                        Text="Record"
-                        Clicked="OnRecordClicked" />
+                    <shiny:TableSection Title="Camera">
+                        <shiny:SwitchCell x:Name="BoxesSwitch"
+                                          Title="Detection boxes"
+                                          Description="Draw bounding boxes for detections"
+                                          On="True" />
+                        <shiny:TextPickerCell Title="Filter"
+                                              PickerTitle="Filter"
+                                              ItemsSource="{Binding Filters}"
+                                              SelectedItem="{Binding Filter, Source={x:Reference Camera}, Mode=TwoWay}" />
+                        <shiny:TextPickerCell Title="Lens"
+                                              PickerTitle="Camera"
+                                              ItemsSource="{Binding Cameras}"
+                                              DisplayMember="Name"
+                                              SelectedItem="{Binding SelectedCamera, Mode=TwoWay}" />
+                    </shiny:TableSection>
 
-                <Button Grid.Column="3"
-                        Text="Torch"
-                        Clicked="OnTorchClicked" />
-            </Grid>
-        </VerticalStackLayout>
-    </Grid>
-</ContentPage>
+                    <shiny:TableSection Title="Session">
+                        <shiny:CommandCell Title="Scanned documents"
+                                           ValueText="{Binding ScannedSummary}"
+                                           Command="{Binding ViewSessionCommand}" />
+                    </shiny:TableSection>
+                </shiny:TableRoot>
+            </shiny:TableView>
+        </shiny:FloatingPanel>
+    </shiny:ShinyContentPage.Panels>
+</shiny:ShinyContentPage>

@@ -13,6 +13,12 @@ sealed class AnalyzerRunner(IFrameAnalyzer analyzer, Action<string, IReadOnlyLis
 
     public string Id => analyzer.Id;
 
+    /// <summary>The wrapped analyzer (so the pipeline can read its <c>IsEnabled</c> / observe its changes).</summary>
+    public IFrameAnalyzer Analyzer => analyzer;
+
+    /// <summary>Cached enabled state, refreshed by the pipeline so frame dispatch never reads a bindable off-thread.</summary>
+    public volatile bool Enabled = true;
+
     /// <summary>Submit a frame. Returns false (frame untouched) when the analyzer is busy.</summary>
     public bool TrySubmit(CameraFrame frame, CancellationToken ct)
     {

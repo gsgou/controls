@@ -16,6 +16,10 @@ public partial class CameraViewHandler
         this.Pipeline.OnOverlays = (boxes, w, h) =>
             this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnOverlaysChanged(boxes, w, h));
 
+        // the enabled-analyzer set changed (collection edit or an IsEnabled toggle); platforms that bind use
+        // cases up-front (Android) re-evaluate, others no-op
+        this.Pipeline.OnActiveChanged = () => this.OnAnalyzersSynced();
+
         // analyzers raise their typed events on the UI thread via this dispatcher
         this.Pipeline.SetDispatcher(a => this.VirtualView?.Dispatcher.Dispatch(a));
 
@@ -55,6 +59,9 @@ public partial class CameraViewHandler
     public CameraViewHandler() : base(Mapper, CommandMapper)
     {
     }
+
+    // Implemented only where binding the analyzer use case is decided up-front (Android); elsewhere elided.
+    partial void OnAnalyzersSynced();
 
     static partial void MapFacing(CameraViewHandler handler, CameraView view);
     static partial void MapIsActive(CameraViewHandler handler, CameraView view);

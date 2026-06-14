@@ -100,7 +100,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             _ => AVCaptureFlashMode.Off
         };
 
-        var del = new PhotoCaptureDelegate();
+        var del = new PhotoCaptureDelegate
+        {
+            // apply the same filter as the live preview so the captured still matches what the user sees
+            Filter = AppleCameraFilters.Create(this.VirtualView.Filter)
+        };
         this.photoOutput.CapturePhoto(settings, del);
         return del.Task;
     }
@@ -198,14 +202,24 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         this.MainThread(() =>
         {
-            this.PlatformView.PreviewLayer.Session = this.session;
-            this.SetupFilterView();
-            this.dataOutput.SetSampleBufferDelegate(this.frameDelegate, this.videoQueue);
-            this.OrientConnections();
-            this.ReportZoomRange();
-            this.ApplyZoom(this.VirtualView.Zoom);
-            this.ApplyTorch(this.VirtualView.IsTorchOn);
-            this.ApplyFilter(this.VirtualView.Filter);
+            try
+            {
+                if (this.PlatformView is not { } pv || this.session is not { } s)
+                    return;
+
+                pv.PreviewLayer.Session = s;
+                this.SetupFilterView();
+                this.dataOutput?.SetSampleBufferDelegate(this.frameDelegate, this.videoQueue);
+                this.OrientConnections();
+                this.ReportZoomRange();
+                this.ApplyZoom(this.VirtualView.Zoom);
+                this.ApplyTorch(this.VirtualView.IsTorchOn);
+                this.ApplyFilter(this.VirtualView.Filter);
+            }
+            catch (Exception ex)
+            {
+                this.VirtualView?.OnCameraError("Camera preview setup failed", ex);
+            }
         });
     }
 
@@ -250,8 +264,18 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         {
             WantFrames = () => this.Pipeline.HasAnalyzers,
             OnFrame = frame => this.Pipeline.Process(frame, default),
+            OnError = this.OnFrameError,
             Mirrored = this.VirtualView.Facing == CameraFacing.Front
         };
+    }
+
+    int frameErrorReported;
+
+    void OnFrameError(Exception ex)
+    {
+        // surface only the first frame-processing failure, on the UI thread
+        if (Interlocked.Exchange(ref this.frameErrorReported, 1) == 0)
+            this.MainThread(() => this.VirtualView?.OnCameraError("Frame processing failed", ex));
     }
 
 

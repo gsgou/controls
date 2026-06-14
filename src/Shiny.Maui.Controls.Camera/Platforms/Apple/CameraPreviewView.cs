@@ -15,11 +15,39 @@ public sealed class CameraPreviewView : UIView
     [Export("layerClass")]
     public static Class LayerClass() => new(typeof(AVCaptureVideoPreviewLayer));
 
+    AVCaptureVideoPreviewLayer? fallbackLayer;
+
     public CameraPreviewView()
     {
         this.BackgroundColor = UIColor.Black;
         this.PreviewLayer.VideoGravity = AVLayerVideoGravity.ResizeAspectFill;
     }
 
-    public AVCaptureVideoPreviewLayer PreviewLayer => (AVCaptureVideoPreviewLayer)this.Layer!;
+    /// <summary>
+    /// The preview layer. Normally the view's backing layer (via <c>layerClass</c>); if that override is not
+    /// honored (e.g. the static export is trimmed on an AOT build) we fall back to a managed sublayer rather
+    /// than crashing on an invalid cast.
+    /// </summary>
+    public AVCaptureVideoPreviewLayer PreviewLayer
+    {
+        get
+        {
+            if (this.Layer is AVCaptureVideoPreviewLayer backing)
+                return backing;
+
+            if (this.fallbackLayer == null)
+            {
+                this.fallbackLayer = new AVCaptureVideoPreviewLayer { Frame = this.Bounds };
+                this.Layer!.AddSublayer(this.fallbackLayer);
+            }
+            return this.fallbackLayer;
+        }
+    }
+
+    public override void LayoutSubviews()
+    {
+        base.LayoutSubviews();
+        if (this.fallbackLayer != null)
+            this.fallbackLayer.Frame = this.Bounds;
+    }
 }

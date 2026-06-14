@@ -8,7 +8,9 @@ namespace Shiny.Maui.Controls.Camera.Motion;
 /// <summary>
 /// Detects motion by comparing successive frames' luminance. Fully managed and cross-platform — works on
 /// every target including those without native ML. Raises <see cref="MotionChanged"/> when motion starts or
-/// stops, and draws a box bounding the changed region while motion continues (cleared when still).
+/// stops, and draws a box around each distinct region where motion is happening (so movement in two separate
+/// spots yields two boxes, not one spanning both). Boxes are cleared when motion stops, and suppressed
+/// entirely when <see cref="FrameAnalyzer.ShowBoundingBox"/> is <c>false</c>.
 /// </summary>
 public class MotionAnalyzer : FrameAnalyzer
 {
@@ -27,6 +29,18 @@ public class MotionAnalyzer : FrameAnalyzer
 
     /// <summary>Sampling stride — every Nth pixel on each axis is compared (higher = faster). Default 4.</summary>
     public int SampleStride { get; set; } = 4;
+
+    /// <summary>
+    /// Horizontal resolution of the grid used to localize and cluster motion into separate boxes; rows are
+    /// derived from this and the frame aspect. Higher = finer (more, smaller boxes). Default 16.
+    /// </summary>
+    public int GridColumns { get; set; } = 16;
+
+    /// <summary>
+    /// Fraction of a single grid cell's sampled pixels that must change for that cell to be part of a motion
+    /// region (0–1). Higher = only stronger localized motion is boxed. Default 0.10.
+    /// </summary>
+    public double CellThreshold { get; set; } = 0.10;
 
     /// <summary>Box outline + caption color. Default an amber accent.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#F59E0B");
@@ -71,19 +85,31 @@ public class MotionAnalyzer : FrameAnalyzer
             return default;
         }
 
+        // grid resolution, capped so a cell never spans fewer than one sampled pixel (keeps it sane on tiny frames)
+        int sampledCols = Math.Max(1, (w + stride - 1) / stride);
+        int sampledRows = Math.Max(1, (h + stride - 1) / stride);
+        int cols = Math.Clamp(this.GridColumns, 1, sampledCols);
+        int rows = Math.Clamp((int)Math.Round(cols * (double)h / Math.Max(1, w)), 1, sampledRows);
+        var cellChanged = new int[cols * rows];
+        var cellTotal = new int[cols * rows];
+
         int changed = 0, total = 0, minX = w, minY = h, maxX = 0, maxY = 0;
         var prev = this.previous;
         for (var y = 0; y < h; y += stride)
         {
             var rowBase = y * w;
+            var cellRowBase = Math.Min(rows - 1, y * rows / h) * cols;
             for (var x = 0; x < w; x += stride)
             {
                 var i = rowBase + x;
                 total++;
+                var ci = cellRowBase + Math.Min(cols - 1, x * cols / w);
+                cellTotal[ci]++;
                 if (Math.Abs(lum[i] - prev[i]) <= this.PixelThreshold)
                     continue;
 
                 changed++;
+                cellChanged[ci]++;
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
@@ -97,25 +123,108 @@ public class MotionAnalyzer : FrameAnalyzer
         var ratio = total == 0 ? 0d : (double)changed / total;
         var motion = ratio >= this.AreaThreshold;
 
-        RectF? region = null;
-        if (motion && maxX >= minX)
+        var regions = new List<RectF>();
+        if (motion)
         {
-            var raw = new RectF((float)minX / w, (float)minY / h, (float)(maxX - minX) / w, (float)(maxY - minY) / h);
-            region = CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored);
+            // mark cells with enough localized change, then group adjacent ones into separate regions
+            var active = new bool[cellTotal.Length];
+            for (var ci = 0; ci < active.Length; ci++)
+                active[ci] = cellTotal[ci] > 0 && (double)cellChanged[ci] / cellTotal[ci] >= this.CellThreshold;
+
+            ClusterRegions(active, cols, rows, frame.Rotation, frame.IsMirrored, regions);
+
+            // diffuse change that tripped the global threshold but never concentrated in a cell -> one box
+            if (regions.Count == 0 && maxX >= minX)
+            {
+                var raw = new RectF((float)minX / w, (float)minY / h, (float)(maxX - minX) / w, (float)(maxY - minY) / h);
+                regions.Add(CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored));
+            }
         }
 
-        var args = new MotionEventArgs(motion, region, (float)Math.Min(1d, ratio));
+        RectF? union = regions.Count == 0 ? null : Union(regions);
+        var args = new MotionEventArgs(motion, union, (float)Math.Min(1d, ratio), regions);
         if (motion != this.lastMotion)
         {
             this.lastMotion = motion;
             this.Emit(() => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand, args);
         }
 
-        if (region is null)
-            return default; // no motion -> clear the box
+        if (regions.Count == 0)
+            return default; // no motion -> clear the boxes
 
-        var boxes = this.ResolveOverlay(args, this.OverlayProvider,
-            () => new[] { new OverlayBox(region.Value, this.BoxColor, this.Label, this.BoxColor) });
+        var boxes = this.ResolveOverlay(args, this.OverlayProvider, () =>
+        {
+            var list = new OverlayBox[regions.Count];
+            for (var i = 0; i < regions.Count; i++)
+                // caption only the first box so multiple regions don't clutter the overlay
+                list[i] = new OverlayBox(regions[i], this.BoxColor, i == 0 ? this.Label : null, this.BoxColor);
+            return list;
+        });
         return new ValueTask<IReadOnlyList<OverlayBox>?>(boxes);
+    }
+
+
+    // 8-connected components over the active-cell grid; appends one oriented, normalized RectF per cluster.
+    static void ClusterRegions(bool[] active, int cols, int rows, int rotation, bool mirrored, List<RectF> regions)
+    {
+        var visited = new bool[active.Length];
+        var stack = new Stack<int>();
+
+        for (var start = 0; start < active.Length; start++)
+        {
+            if (!active[start] || visited[start])
+                continue;
+
+            int minCx = cols, minCy = rows, maxCx = -1, maxCy = -1;
+            stack.Push(start);
+            visited[start] = true;
+
+            while (stack.Count > 0)
+            {
+                var ci = stack.Pop();
+                int cx = ci % cols, cy = ci / cols;
+                if (cx < minCx) minCx = cx;
+                if (cx > maxCx) maxCx = cx;
+                if (cy < minCy) minCy = cy;
+                if (cy > maxCy) maxCy = cy;
+
+                for (var dy = -1; dy <= 1; dy++)
+                {
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0)
+                            continue;
+                        int nx = cx + dx, ny = cy + dy;
+                        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows)
+                            continue;
+                        int ni = ny * cols + nx;
+                        if (active[ni] && !visited[ni])
+                        {
+                            visited[ni] = true;
+                            stack.Push(ni);
+                        }
+                    }
+                }
+            }
+
+            var raw = new RectF(
+                (float)minCx / cols, (float)minCy / rows,
+                (float)(maxCx - minCx + 1) / cols, (float)(maxCy - minCy + 1) / rows);
+            regions.Add(CoordinateTransform.ApplyOrientation(raw, rotation, mirrored));
+        }
+    }
+
+
+    static RectF Union(IReadOnlyList<RectF> rects)
+    {
+        float l = float.MaxValue, t = float.MaxValue, r = float.MinValue, b = float.MinValue;
+        foreach (var rect in rects)
+        {
+            if (rect.Left < l) l = rect.Left;
+            if (rect.Top < t) t = rect.Top;
+            if (rect.Right > r) r = rect.Right;
+            if (rect.Bottom > b) b = rect.Bottom;
+        }
+        return new RectF(l, t, r - l, b - t);
     }
 }
