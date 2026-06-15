@@ -90,7 +90,7 @@ CameraVideo video = await this.Camera.StopVideoRecordingAsync();   // video.File
 // Flip lens
 this.Camera.Facing = this.Camera.Facing == CameraFacing.Back ? CameraFacing.Front : CameraFacing.Back;
 
-// Live filter — applied to the preview AND to captured photos (Apple + Android; not recorded video, not Windows)
+// Live filter — applied to the preview AND to captured photos (Apple + Android API 31+; not recorded video, not Windows)
 this.Camera.Filter = CameraFilter.Noir;
 ```
 
@@ -345,7 +345,7 @@ Blazor barcode scanning uses the browser `BarcodeDetector` (Chromium only); on u
 | `IsTorchOn` | `bool` | `false` | Continuous torch |
 | `FlashMode` | `CameraFlashMode` | `Off` | Still-capture flash (`Off`/`On`/`Auto`) |
 | `ScaleMode` | `PreviewScaleMode` | `AspectFill` | `AspectFill` / `AspectFit` |
-| `Filter` | `CameraFilter` | `None` | `None`/`Mono`/`Noir`/`Sepia`/`Invert`/`Vivid`/`Cool`/`Warm`/`Fade`/`Chrome`/`Instant`/`Tonal` — applied to preview + captured photos (not recorded video; no-op on Windows) |
+| `Filter` | `CameraFilter` | `None` | `None`/`Mono`/`Noir`/`Sepia`/`Invert`/`Vivid`/`Cool`/`Warm`/`Fade`/`Chrome`/`Instant`/`Tonal` — applied to preview + captured photos (live preview needs Android API 31+; not recorded video; no-op on Windows) |
 | `ShowDetectionOverlay` | `bool` | `true` | Surface overlay boxes for the overlay |
 | `Analyzers` | `IList<IFrameAnalyzer>` | empty | Frame analyzers — add/remove live; toggle one via its `IsEnabled` |
 | `IsRecording` | `bool` (get) | `false` | Recording in progress |
@@ -370,7 +370,7 @@ Blazor barcode scanning uses the browser `BarcodeDetector` (Chromium only); on u
 ## Common Pitfalls
 
 - **Android: video + analyzers together** — CameraX caps concurrent use-cases, so the camera binds either `ImageAnalysis` (while any analyzer is **enabled**) or `VideoCapture`, not both. To record, disable every analyzer (`IsEnabled = false`) or clear `Camera.Analyzers` — the camera rebinds automatically; `StartVideoRecordingAsync` throws a clear error while an enabled analyzer is attached.
-- **Filters affect preview + photos, not video** — `Filter` is baked into the live preview and the `CapturePhotoAsync` JPEG, but **recorded video records the unfiltered feed**. Windows has no live filter at all (preview and photo are unfiltered there).
+- **Filters affect preview + photos, not video** — `Filter` is baked into the live preview and the `CapturePhotoAsync` JPEG, but **recorded video records the unfiltered feed**. Windows has no live filter at all (preview and photo are unfiltered there). On **Android the live-preview filter needs API 31+** (it uses `RenderEffect`); on older Android the preview is unfiltered but captured photos are still filtered. The Android preview renders in `PreviewView` *Compatible* (TextureView) mode so the effect can be applied — *Performance* mode (SurfaceView) ignores it.
 - **"Camera permission denied" but the preview works** — you're gating on `RequestPermissionAsync()` in `OnAppearing` before the handler is connected (it returns `false` → looks denied, and the early-return also leaves the lens list empty). Don't gate on it; rely on auto-start + `CameraError`, and load cameras once the view is loaded.
 - **Android minSdk** — CameraX requires API 23+. Set `<SupportedOSPlatformVersion>` to 23 or higher in the consuming app or you'll get a manifest-merge error.
 - **macOS** — best-effort host; multiple webcams enumerate via `GetAvailableCamerasAsync()`; FaceTime + USB devices report an `External`/unspecified facing, so use `CameraId` rather than `Facing` to choose.

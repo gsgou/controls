@@ -40,6 +40,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
                 Android.Views.ViewGroup.LayoutParams.MatchParent,
                 Android.Views.ViewGroup.LayoutParams.MatchParent)
         };
+        // PreviewView defaults to Performance mode, which renders into a SurfaceView whose content is
+        // composited on a separate surface that ignores View.SetRenderEffect — so the live colour filter
+        // never appears. Compatible mode renders into a TextureView, which honours the RenderEffect colour
+        // matrix we apply in ApplyFilter.
+        this.previewView.SetImplementationMode(PreviewView.ImplementationMode.Compatible!);
         layout.AddView(this.previewView);
         return layout;
     }

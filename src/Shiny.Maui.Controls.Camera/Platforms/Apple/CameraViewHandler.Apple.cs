@@ -297,9 +297,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         var ci = AppleCameraFilters.Create(filter);
         this.frameDelegate.Filter = ci;
 
-        var active = ci != null;
-        this.filterView.Hidden = !active;
-        this.PlatformView.PreviewLayer.Hidden = active;
+        // Show the filtered-frame overlay on top of the live preview while a filter is active. We must NOT
+        // hide the preview layer to reveal it: PreviewLayer is the view's *backing* layer and the overlay is
+        // a subview (a sublayer of it), so hiding the preview layer also hides the overlay — which blanked the
+        // whole preview. The overlay's frames are opaque and fill the bounds, so they cover the live preview.
+        this.filterView.Hidden = ci == null;
     }
 
 
