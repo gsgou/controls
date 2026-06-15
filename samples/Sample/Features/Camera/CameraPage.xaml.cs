@@ -97,10 +97,11 @@ public partial class CameraPage : ShinyContentPage
         this.HealthCardCommand = new Command<DocumentDetectedEventArgs<HealthCard>>(e =>
         {
             var d = e.Document;
-            var summary = $"Health Card {d.Number} — {d.Name}";
+            var summary = $"Health Card {d.Number}{(d.Province is null ? "" : $" ({d.Province})")} — {d.Name}";
             this.Capture("Health Card", summary, Detail(
                 ("Number", d.Number),
                 ("Name", d.Name),
+                ("Province", d.Province),
                 ("Issuer", d.Issuer),
                 ("Expiry", d.Expiry?.ToString("yyyy-MM-dd"))));
         });
@@ -113,6 +114,7 @@ public partial class CameraPage : ShinyContentPage
                 ("Name", $"{d.FirstName} {d.LastName}".Trim()),
                 ("Date of birth", d.DateOfBirth?.ToString("yyyy-MM-dd")),
                 ("Expiry", d.Expiry?.ToString("yyyy-MM-dd")),
+                ("Province / State", d.Jurisdiction),
                 ("Address", d.Address)));
         });
         this.CreditCardCommand = new Command<DocumentDetectedEventArgs<CreditCard>>(e =>

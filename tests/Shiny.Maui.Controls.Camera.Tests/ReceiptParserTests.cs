@@ -47,7 +47,7 @@ public class ReceiptParserTests
         receipt.Lines[0].Quantity.ShouldBe(2m);
         receipt.Lines[0].UnitPrice.ShouldBe(8.00m);
         receipt.Lines[0].Amount.ShouldBe(16.00m);
-        receipt.Lines[1].Description.ShouldContain("Fries");
+        receipt.Lines[1].Description.ShouldNotBeNull().ShouldContain("Fries");
         receipt.Lines[1].Amount.ShouldBe(3.50m);
     }
 

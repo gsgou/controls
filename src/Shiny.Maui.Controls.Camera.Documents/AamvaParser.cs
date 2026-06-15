@@ -18,10 +18,19 @@ public static class AamvaParser
     /// Attempt to parse an AAMVA data string. Returns <c>true</c> with <paramref name="license"/> populated
     /// when the string is a recognizable AAMVA record carrying at least a number or a name.
     /// </summary>
+    // Province/territory codes used by Canadian AAMVA jurisdictions (incl. legacy NF/PQ). Used both to surface
+    // the province and to drive Canadian date order (CCYYMMDD) when the country element (DCG) is absent.
+    static readonly HashSet<string> CanadianJurisdictions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ON", "QC", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU", "NF", "PQ"
+    };
+
     public static bool TryParse(string? raw, out DriversLicense license)
     {
         license = null!;
-        if (string.IsNullOrWhiteSpace(raw) || !raw.Contains("ANSI ", StringComparison.Ordinal))
+        // AAMVA 2000+ uses the "ANSI " file header; pre-2000 (and some Canadian) cards use "AAMVA".
+        if (string.IsNullOrWhiteSpace(raw) ||
+            (!raw.Contains("ANSI", StringComparison.Ordinal) && !raw.Contains("AAMVA", StringComparison.Ordinal)))
             return false;
 
         var country = Read(raw, "DCG");
@@ -29,10 +38,20 @@ public static class AamvaParser
         var last = Read(raw, "DCS") ?? Read(raw, "DAB");
         var first = Read(raw, "DAC") ?? Read(raw, "DCT");
         var middle = Read(raw, "DAD");
-        var dob = ParseDate(Read(raw, "DBB"), country);
-        var expiry = ParseDate(Read(raw, "DBA"), country);
-        var issue = ParseDate(Read(raw, "DBD"), country);
-        var address = JoinAddress(Read(raw, "DAG"), Read(raw, "DAI"), Read(raw, "DAJ"), Read(raw, "DAK"));
+        var jurisdiction = Read(raw, "DAJ");
+
+        // Canada encodes dates as CCYYMMDD (vs USA MMDDCCYY). DCG is the authoritative signal, but many cards
+        // omit it — fall back to the province code so Canadian licences still parse dates correctly.
+        var canada =
+            (country is not null &&
+                (country.Equals("CAN", StringComparison.OrdinalIgnoreCase) ||
+                 country.Equals("CANADA", StringComparison.OrdinalIgnoreCase))) ||
+            (jurisdiction is not null && CanadianJurisdictions.Contains(jurisdiction));
+
+        var dob = ParseDate(Read(raw, "DBB"), canada);
+        var expiry = ParseDate(Read(raw, "DBA"), canada);
+        var issue = ParseDate(Read(raw, "DBD"), canada);
+        var address = JoinAddress(Read(raw, "DAG"), Read(raw, "DAI"), jurisdiction, Read(raw, "DAK"));
 
         if (number == null && last == null && first == null)
             return false;
@@ -46,9 +65,10 @@ public static class AamvaParser
         Add(fields, "Expiry", expiry?.ToString("yyyy-MM-dd"));
         Add(fields, "Issued", issue?.ToString("yyyy-MM-dd"));
         Add(fields, "Address", address);
-        Add(fields, "Country", country);
+        Add(fields, canada ? "Province" : "Jurisdiction", jurisdiction);
+        Add(fields, "Country", country ?? (canada ? "CAN" : null));
 
-        license = new DriversLicense(number, first, last, dob, expiry, address, fields);
+        license = new DriversLicense(number, first, last, dob, expiry, address, jurisdiction, fields);
         return true;
     }
 
@@ -88,17 +108,13 @@ public static class AamvaParser
         return joined.Length == 0 ? null : joined;
     }
 
-    static DateOnly? ParseDate(string? s, string? country)
+    static DateOnly? ParseDate(string? s, bool canada)
     {
         if (string.IsNullOrWhiteSpace(s))
             return null;
         s = s.Trim();
         if (s.Length != 8 || !s.All(char.IsDigit))
             return null;
-
-        var canada = country is not null &&
-            (country.Equals("CAN", StringComparison.OrdinalIgnoreCase) ||
-             country.Equals("CANADA", StringComparison.OrdinalIgnoreCase));
 
         // USA = MMDDCCYY, Canada = CCYYMMDD; when unknown, try US order then ISO order.
         return canada

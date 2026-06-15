@@ -63,4 +63,30 @@ public class AamvaParserTests
         dl.DateOfBirth.ShouldBe(new DateOnly(1985, 7, 15));
         dl.Expiry.ShouldBe(new DateOnly(2030, 7, 15));
     }
+
+    [Fact]
+    public void Infers_canada_from_province_when_country_missing()
+    {
+        // No DCG element — the BC jurisdiction (DAJ) should still drive CCYYMMDD date order.
+        const string bc =
+            "@\nANSI 636028\nDLDAQ9999999\nDCSTREMBLAY\nDACMARIE\nDBB19901225\nDBA20281225\nDAJBC\n";
+
+        AamvaParser.TryParse(bc, out var dl).ShouldBeTrue();
+        dl.Jurisdiction.ShouldBe("BC");
+        dl.DateOfBirth.ShouldBe(new DateOnly(1990, 12, 25));
+        dl.Expiry.ShouldBe(new DateOnly(2028, 12, 25));
+        dl.Fields.ShouldContain(f => f.Label == "Province" && f.Value == "BC");
+    }
+
+    [Fact]
+    public void Accepts_legacy_aamva_header()
+    {
+        // Pre-2000 cards use an "AAMVA" file header instead of "ANSI ".
+        const string legacy =
+            "@\nAAMVA6360120\nDLDAQA1234\nDCSSMITH\nDACJOHN\nDAJON\n";
+
+        AamvaParser.TryParse(legacy, out var dl).ShouldBeTrue();
+        dl.LastName.ShouldBe("SMITH");
+        dl.Jurisdiction.ShouldBe("ON");
+    }
 }

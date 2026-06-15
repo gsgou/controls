@@ -12,6 +12,7 @@ namespace Shiny.Maui.Controls.Camera.Documents;
 /// <param name="DateOfBirth">Date of birth (DBB).</param>
 /// <param name="Expiry">Expiry date (DBA).</param>
 /// <param name="Address">Combined mailing address (DAG/DAI/DAJ/DAK), when present.</param>
+/// <param name="Jurisdiction">The issuing jurisdiction code (DAJ) — a Canadian province (e.g. "ON", "QC", "BC") or US state, when present.</param>
 /// <param name="Fields">All recognized fields as label/value pairs.</param>
 public record DriversLicense(
     string? Number,
@@ -20,5 +21,6 @@ public record DriversLicense(
     DateOnly? DateOfBirth,
     DateOnly? Expiry,
     string? Address,
+    string? Jurisdiction,
     IReadOnlyList<DocumentField> Fields
 );

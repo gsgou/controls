@@ -10,11 +10,13 @@ namespace Shiny.Maui.Controls.Camera.Documents;
 /// <param name="Name">The cardholder name, when found.</param>
 /// <param name="Expiry">The expiry date, when found.</param>
 /// <param name="Issuer">The issuing plan/authority, when found.</param>
+/// <param name="Province">The issuing Canadian province name (e.g. "Ontario", "Quebec"), when recognized.</param>
 /// <param name="Fields">All recognized fields as label/value pairs.</param>
 public record HealthCard(
     string? Number,
     string? Name,
     DateOnly? Expiry,
     string? Issuer,
+    string? Province,
     IReadOnlyList<DocumentField> Fields
 );
