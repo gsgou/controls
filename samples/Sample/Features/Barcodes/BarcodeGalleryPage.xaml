@@ -10,35 +10,42 @@
     <ScrollView>
         <VerticalStackLayout Spacing="20" Padding="16">
 
+            <!-- the encoded value is shown under each barcode so you can compare it against a scan -->
+
             <Label Text="Code 128" FontAttributes="Bold" />
             <bc:BarcodeView Value="SHINY-CONTROLS-123456"
                             Format="Code128"
                             PixelWidth="500" PixelHeight="150"
                             HeightRequest="120" />
+            <Label Text="SHINY-CONTROLS-123456" FontSize="12" TextColor="Gray" />
 
             <Label Text="EAN-13" FontAttributes="Bold" />
             <bc:BarcodeView Value="5901234123457"
                             Format="Ean13"
                             PixelWidth="500" PixelHeight="160"
                             HeightRequest="120" />
+            <Label Text="5901234123457" FontSize="12" TextColor="Gray" />
 
             <Label Text="UPC-A" FontAttributes="Bold" />
             <bc:BarcodeView Value="036000291452"
                             Format="UpcA"
                             PixelWidth="500" PixelHeight="160"
                             HeightRequest="120" />
+            <Label Text="036000291452" FontSize="12" TextColor="Gray" />
 
             <Label Text="Code 39" FontAttributes="Bold" />
             <bc:BarcodeView Value="HELLO-WORLD"
                             Format="Code39"
                             PixelWidth="500" PixelHeight="150"
                             HeightRequest="120" />
+            <Label Text="HELLO-WORLD" FontSize="12" TextColor="Gray" />
 
             <Label Text="PDF417" FontAttributes="Bold" />
             <bc:BarcodeView Value="https://github.com/shinyorg/controls"
                             Format="Pdf417"
                             PixelWidth="500" PixelHeight="200"
                             HeightRequest="150" />
+            <Label Text="https://github.com/shinyorg/controls" FontSize="12" TextColor="Gray" />
 
             <Label Text="Aztec" FontAttributes="Bold" />
             <bc:BarcodeView Value="Shiny Aztec Demo"
@@ -46,6 +53,7 @@
                             PixelWidth="250" PixelHeight="250"
                             HeightRequest="200" WidthRequest="200"
                             HorizontalOptions="Center" />
+            <Label Text="Shiny Aztec Demo" FontSize="12" TextColor="Gray" HorizontalTextAlignment="Center" />
 
             <Label Text="Data Matrix" FontAttributes="Bold" />
             <bc:BarcodeView Value="Shiny DataMatrix Demo"
@@ -53,6 +61,7 @@
                             PixelWidth="250" PixelHeight="250"
                             HeightRequest="200" WidthRequest="200"
                             HorizontalOptions="Center" />
+            <Label Text="Shiny DataMatrix Demo" FontSize="12" TextColor="Gray" HorizontalTextAlignment="Center" />
 
         </VerticalStackLayout>
     </ScrollView>

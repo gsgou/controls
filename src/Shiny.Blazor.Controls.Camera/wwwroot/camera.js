@@ -3,12 +3,24 @@
 
 const states = new WeakMap();
 
-export async function start(video, overlay, dotnetRef, facingMode, enableBarcode, showOverlay) {
+export async function listCameras() {
+    if (!navigator.mediaDevices?.enumerateDevices)
+        return [];
+    // labels are only populated after camera permission has been granted (i.e. after start())
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices
+        .filter(d => d.kind === 'videoinput')
+        .map((d, i) => ({ id: d.deviceId, name: d.label || `Camera ${i + 1}` }));
+}
+
+export async function start(video, overlay, dotnetRef, facingMode, enableBarcode, showOverlay, deviceId) {
     if (!navigator.mediaDevices?.getUserMedia)
         throw new Error('getUserMedia is unavailable (requires a secure context / HTTPS).');
 
+    // an exact deviceId pins a specific camera; otherwise fall back to the front/back facing hint
+    const video_constraints = deviceId ? { deviceId: { exact: deviceId } } : { facingMode };
     const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
+        video: video_constraints,
         audio: false
     });
     video.srcObject = stream;
@@ -117,11 +129,14 @@ export function stopRecording(video) {
 }
 
 
-export function capture(video) {
+export function capture(video, filterCss) {
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    const ctx = canvas.getContext('2d');
+    if (filterCss && filterCss !== 'none')
+        ctx.filter = filterCss;   // bake the preview filter into the still
+    ctx.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const base64 = dataUrl.split(',')[1];
     const binary = atob(base64);

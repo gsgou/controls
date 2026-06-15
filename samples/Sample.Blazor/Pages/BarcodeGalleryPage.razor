@@ -13,6 +13,7 @@
         <BarcodeView Value="SHINY-CONTROLS-123456" Format="BarcodeFormat.Code128"
                      PixelWidth="500" PixelHeight="150"
                      CssWidth="100%" CssHeight="120px" />
+        <code class="bc-value">SHINY-CONTROLS-123456</code>
     </div>
 
     <div class="bc-card">
@@ -20,6 +21,7 @@
         <BarcodeView Value="5901234123457" Format="BarcodeFormat.Ean13"
                      PixelWidth="500" PixelHeight="160"
                      CssWidth="100%" CssHeight="120px" />
+        <code class="bc-value">5901234123457</code>
     </div>
 
     <div class="bc-card">
@@ -27,6 +29,7 @@
         <BarcodeView Value="036000291452" Format="BarcodeFormat.UpcA"
                      PixelWidth="500" PixelHeight="160"
                      CssWidth="100%" CssHeight="120px" />
+        <code class="bc-value">036000291452</code>
     </div>
 
     <div class="bc-card">
@@ -34,6 +37,7 @@
         <BarcodeView Value="HELLO-WORLD" Format="BarcodeFormat.Code39"
                      PixelWidth="500" PixelHeight="150"
                      CssWidth="100%" CssHeight="120px" />
+        <code class="bc-value">HELLO-WORLD</code>
     </div>
 
     <div class="bc-card">
@@ -41,6 +45,7 @@
         <BarcodeView Value="https://github.com/shinyorg/controls" Format="BarcodeFormat.Pdf417"
                      PixelWidth="500" PixelHeight="200"
                      CssWidth="100%" CssHeight="160px" />
+        <code class="bc-value">https://github.com/shinyorg/controls</code>
     </div>
 
     <div class="bc-card">
@@ -48,6 +53,7 @@
         <BarcodeView Value="Shiny Aztec Demo" Format="BarcodeFormat.Aztec"
                      PixelWidth="250" PixelHeight="250"
                      CssWidth="220px" CssHeight="220px" />
+        <code class="bc-value">Shiny Aztec Demo</code>
     </div>
 
     <div class="bc-card">
@@ -55,6 +61,7 @@
         <BarcodeView Value="Shiny DataMatrix Demo" Format="BarcodeFormat.DataMatrix"
                      PixelWidth="250" PixelHeight="250"
                      CssWidth="220px" CssHeight="220px" />
+        <code class="bc-value">Shiny DataMatrix Demo</code>
     </div>
 
 </div>
@@ -70,5 +77,12 @@
         margin: 0 0 12px 0;
         font-size: 14px;
         color: #7C3AED;
+    }
+    .bc-value {
+        display: block;
+        margin-top: 10px;
+        font-size: 12px;
+        color: #6b7280;
+        word-break: break-all;
     }
 </style>

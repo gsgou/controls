@@ -252,14 +252,24 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         if (this.filterView != null)
             return;
 
-        this.filterView = new UIImageView(this.PlatformView.Bounds)
+        this.filterView = new UIImageView
         {
             ContentMode = UIViewContentMode.ScaleAspectFill,
-            AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight,
             Hidden = true,
-            ClipsToBounds = true
+            ClipsToBounds = true,
+            // pin to the preview with constraints — an autoresizing mask off a zero starting frame (the bounds
+            // are often 0 when the session configures, before layout) leaves the view 0×0, so a filtered frame
+            // renders into nothing and the preview looks black
+            TranslatesAutoresizingMaskIntoConstraints = false
         };
         this.PlatformView.AddSubview(this.filterView);
+        NSLayoutConstraint.ActivateConstraints(
+        [
+            this.filterView.LeadingAnchor.ConstraintEqualTo(this.PlatformView.LeadingAnchor),
+            this.filterView.TrailingAnchor.ConstraintEqualTo(this.PlatformView.TrailingAnchor),
+            this.filterView.TopAnchor.ConstraintEqualTo(this.PlatformView.TopAnchor),
+            this.filterView.BottomAnchor.ConstraintEqualTo(this.PlatformView.BottomAnchor),
+        ]);
         this.frameDelegate = new VideoFrameDelegate(this.filterView)
         {
             WantFrames = () => this.Pipeline.HasAnalyzers,

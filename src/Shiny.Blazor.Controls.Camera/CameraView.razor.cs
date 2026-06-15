@@ -17,6 +17,9 @@ public partial class CameraView : IAsyncDisposable
     /// <summary>Which camera to use. <see cref="CameraFacing.Front"/> maps to the browser "user" facing mode.</summary>
     [Parameter] public CameraFacing Facing { get; set; } = CameraFacing.Back;
 
+    /// <summary>Exact device id (from <see cref="GetAvailableCamerasAsync"/>) to use; overrides <see cref="Facing"/> when set.</summary>
+    [Parameter] public string? CameraId { get; set; }
+
     /// <summary>Run the in-browser barcode detector (native <c>BarcodeDetector</c> where available).</summary>
     [Parameter] public bool EnableBarcode { get; set; } = true;
 
@@ -41,6 +44,9 @@ public partial class CameraView : IAsyncDisposable
     /// <summary>Raised when the camera cannot start (permission denied, no device, insecure context).</summary>
     [Parameter] public EventCallback<string> OnError { get; set; }
 
+    /// <summary>Raised after the preview has started (permission granted) — a good time to call <see cref="GetAvailableCamerasAsync"/>, whose device labels only populate once permission is granted.</summary>
+    [Parameter] public EventCallback OnStarted { get; set; }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -59,11 +65,41 @@ public partial class CameraView : IAsyncDisposable
 
 
     CameraFilter appliedFilter = CameraFilter.None;
+    bool appliedBarcode;
+    bool appliedOverlay;
+    CameraFacing appliedFacing;
+    string? appliedCameraId;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (this.module != null && this.Filter != this.appliedFilter)
-            await this.ApplyFilterAsync();
+        if (this.module == null)
+            return;
+
+        if (this.Filter != this.appliedFilter)
+            await this.ApplyFilterAsync();   // CSS filter — applied live without a restart
+
+        // EnableBarcode / ShowOverlay / Facing / CameraId are read by the JS `start` call, so changing them
+        // re-acquires the stream. Re-apply by restarting while running (matches MAUI's live toggling).
+        if (this.started &&
+            (this.EnableBarcode != this.appliedBarcode ||
+             this.ShowOverlay != this.appliedOverlay ||
+             this.Facing != this.appliedFacing ||
+             this.CameraId != this.appliedCameraId))
+        {
+            await this.StopAsync();
+            await this.StartAsync();
+        }
+    }
+
+    /// <summary>
+    /// List the video input devices the browser exposes. Device <c>Name</c>s are only populated once camera
+    /// permission has been granted, so call this after the preview has started.
+    /// </summary>
+    public async Task<IReadOnlyList<CameraDevice>> GetAvailableCamerasAsync()
+    {
+        if (this.module == null)
+            return [];
+        return await this.module.InvokeAsync<CameraDevice[]>("listCameras");
     }
 
 
@@ -86,8 +122,13 @@ public partial class CameraView : IAsyncDisposable
             await this.module.InvokeVoidAsync(
                 "start", this.videoEl, this.overlayEl, this.selfRef,
                 this.Facing == CameraFacing.Front ? "user" : "environment",
-                this.EnableBarcode, this.ShowOverlay);
+                this.EnableBarcode, this.ShowOverlay, this.CameraId);
             this.started = true;
+            this.appliedBarcode = this.EnableBarcode;
+            this.appliedOverlay = this.ShowOverlay;
+            this.appliedFacing = this.Facing;
+            this.appliedCameraId = this.CameraId;
+            await this.OnStarted.InvokeAsync();
         }
         catch (Exception ex)
         {
@@ -111,7 +152,8 @@ public partial class CameraView : IAsyncDisposable
     {
         if (this.module == null)
             return [];
-        return await this.module.InvokeAsync<byte[]>("capture", this.videoEl);
+        // bake the current filter into the still so it matches the preview (parity with MAUI)
+        return await this.module.InvokeAsync<byte[]>("capture", this.videoEl, BlazorCameraFilters.ToCss(this.Filter));
     }
 
 
