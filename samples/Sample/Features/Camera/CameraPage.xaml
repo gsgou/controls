@@ -28,6 +28,12 @@
                 <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}"
                                      IsEnabled="{Binding On, Source={x:Reference InvoiceSwitch}}"
                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:ReceiptAnalyzer DocumentDetectedCommand="{Binding ReceiptCommand}"
+                                     IsEnabled="{Binding On, Source={x:Reference ReceiptSwitch}}"
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:HealthCardAnalyzer DocumentDetectedCommand="{Binding HealthCardCommand}"
+                                        IsEnabled="{Binding On, Source={x:Reference HealthCardSwitch}}"
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
                 <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}"
                                             IsEnabled="{Binding On, Source={x:Reference LicenseSwitch}}"
                                             ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
@@ -105,6 +111,8 @@
                         <shiny:SwitchCell x:Name="MotionSwitch" Title="Motion" Description="Fires a command only — no box" />
                         <shiny:SwitchCell x:Name="FaceSwitch" Title="Face" />
                         <shiny:SwitchCell x:Name="InvoiceSwitch" Title="Invoice" Description="OCR — header + order lines" />
+                        <shiny:SwitchCell x:Name="ReceiptSwitch" Title="Receipt" Description="OCR — items, tax breakdown, totals" />
+                        <shiny:SwitchCell x:Name="HealthCardSwitch" Title="Health Card" Description="OCR — member / issuer" />
                         <shiny:SwitchCell x:Name="LicenseSwitch" Title="Driver's License" Description="PDF417 / AAMVA" />
                         <shiny:SwitchCell x:Name="CreditCardSwitch" Title="Credit Card" Description="IIN brand + Luhn" />
                         <shiny:SwitchCell x:Name="PassportSwitch" Title="Passport" Description="MRZ" />

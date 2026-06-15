@@ -46,6 +46,8 @@ public partial class CameraPage : ShinyContentPage
     public ICommand MotionCommand { get; }
     public ICommand FaceCommand { get; }
     public ICommand InvoiceCommand { get; }
+    public ICommand ReceiptCommand { get; }
+    public ICommand HealthCardCommand { get; }
     public ICommand LicenseCommand { get; }
     public ICommand CreditCardCommand { get; }
     public ICommand PassportCommand { get; }
@@ -73,6 +75,34 @@ public partial class CameraPage : ShinyContentPage
                 ("Date", d.Date?.ToString("yyyy-MM-dd")),
                 ("Total", d.Total?.ToString("0.00")),
                 ("Lines", d.Lines.Count.ToString())));
+        });
+        this.ReceiptCommand = new Command<DocumentDetectedEventArgs<Receipt>>(e =>
+        {
+            var d = e.Document;
+            var summary = $"{d.Merchant ?? "Receipt"} — total {d.Total?.ToString("0.00") ?? "?"}, {d.Lines.Count} item(s)";
+            this.Capture("Receipt", summary, Detail(
+                ("Merchant", d.Merchant),
+                ("Receipt #", d.ReceiptNumber),
+                ("Date", d.Date?.ToString("yyyy-MM-dd")),
+                ("Time", d.Time?.ToString("HH:mm")),
+                ("Items", d.Lines.Count.ToString()),
+                ("Subtotal", d.Subtotal?.ToString("0.00")),
+                ("Tax", d.Tax?.ToString("0.00")),
+                ("Tip", d.Tip?.ToString("0.00")),
+                ("Discount", d.Discount?.ToString("0.00")),
+                ("Total", d.Total?.ToString("0.00")),
+                ("Payment", d.PaymentMethod),
+                ("Card", d.CardLast4 is null ? null : $"•••• {d.CardLast4}")));
+        });
+        this.HealthCardCommand = new Command<DocumentDetectedEventArgs<HealthCard>>(e =>
+        {
+            var d = e.Document;
+            var summary = $"Health Card {d.Number} — {d.Name}";
+            this.Capture("Health Card", summary, Detail(
+                ("Number", d.Number),
+                ("Name", d.Name),
+                ("Issuer", d.Issuer),
+                ("Expiry", d.Expiry?.ToString("yyyy-MM-dd"))));
         });
         this.LicenseCommand = new Command<DocumentDetectedEventArgs<DriversLicense>>(e =>
         {
