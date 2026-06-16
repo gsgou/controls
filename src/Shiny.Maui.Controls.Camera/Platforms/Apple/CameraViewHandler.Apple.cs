@@ -1,5 +1,6 @@
 using AVFoundation;
 using CoreFoundation;
+using CoreGraphics;
 using CoreMedia;
 using CoreVideo;
 using Foundation;
@@ -199,6 +200,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             this.session.AddOutput(this.movieOutput);
 
         this.session.CommitConfiguration();
+        this.ConfigureFocus();
 
         this.MainThread(() =>
         {
@@ -399,6 +401,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         }
         this.AddVideoInput();
         this.session.CommitConfiguration();
+        this.ConfigureFocus();
 
         this.MainThread(() =>
         {
@@ -414,6 +417,47 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     {
         var discovery = AVCaptureDeviceDiscoverySession.Create(DeviceTypes, AVMediaTypes.Video, position);
         return discovery.Devices.FirstOrDefault();
+    }
+
+
+    // Put the device into continuous autofocus and clear any near-limit restriction so the lens can
+    // re-focus as the subject distance changes. Without this the device can sit in a one-shot focus
+    // mode (or keep a "Far" range restriction), which is exactly why moving in close — e.g. to scan a
+    // document — leaves the preview blurry and never recovers.
+    void ConfigureFocus()
+    {
+        if (this.device == null)
+            return;
+        try
+        {
+            if (!this.device.LockForConfiguration(out var err) || err != null)
+                return;
+
+            if (this.device.IsFocusModeSupported(AVCaptureFocusMode.ContinuousAutoFocus))
+                this.device.FocusMode = AVCaptureFocusMode.ContinuousAutoFocus;
+
+            // allow the lens to travel all the way to its near limit (macro/close range)
+            if (this.device.AutoFocusRangeRestrictionSupported)
+                this.device.AutoFocusRangeRestriction = AVCaptureAutoFocusRangeRestriction.None;
+
+            // drive focus from the centre of the frame, where the subject the user is moving toward sits
+            if (this.device.FocusPointOfInterestSupported)
+                this.device.FocusPointOfInterest = new CGPoint(0.5, 0.5);
+
+            // smoother lens travel for video/preview rather than abrupt hunting
+            if (this.device.SmoothAutoFocusSupported)
+                this.device.SmoothAutoFocusEnabled = true;
+
+            // keep exposure tracking too so a close subject is correctly exposed as well as focused
+            if (this.device.IsExposureModeSupported(AVCaptureExposureMode.ContinuousAutoExposure))
+                this.device.ExposureMode = AVCaptureExposureMode.ContinuousAutoExposure;
+
+            this.device.UnlockForConfiguration();
+        }
+        catch (Exception ex)
+        {
+            this.VirtualView?.OnCameraError("Focus configuration failed", ex);
+        }
     }
 
 

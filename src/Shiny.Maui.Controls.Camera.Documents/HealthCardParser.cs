@@ -201,6 +201,28 @@ public partial class HealthCardParser : IDocumentParser<HealthCard>
         return true;
     }
 
+    /// <inheritdoc/>
+    public HealthCard Merge(HealthCard accumulated, HealthCard incoming)
+    {
+        // a different card in view replaces the accumulation
+        if (accumulated.Number is not null && incoming.Number is not null && accumulated.Number != incoming.Number)
+            return incoming;
+
+        return accumulated with
+        {
+            Number = accumulated.Number ?? incoming.Number,
+            Name = accumulated.Name ?? incoming.Name,
+            Expiry = accumulated.Expiry ?? incoming.Expiry,
+            Issuer = accumulated.Issuer ?? incoming.Issuer,
+            Province = accumulated.Province ?? incoming.Province,
+            Fields = DocumentMerge.Richer(accumulated.Fields, incoming.Fields)
+        };
+    }
+
+    /// <inheritdoc/>
+    public bool IsComplete(HealthCard document)
+        => document.Number is not null;
+
     static Province? MatchProvince(string lower)
     {
         foreach (var p in Provinces)

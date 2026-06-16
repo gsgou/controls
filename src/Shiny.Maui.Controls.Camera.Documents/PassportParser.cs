@@ -13,6 +13,32 @@ public class PassportParser : IDocumentParser<Passport>
     /// <summary>Color for the highlighted MRZ boxes.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#6366F1");
 
+    /// <inheritdoc/>
+    public Passport Merge(Passport accumulated, Passport incoming)
+    {
+        // a different passport in view replaces the accumulation
+        if (accumulated.Number is not null && incoming.Number is not null && accumulated.Number != incoming.Number)
+            return incoming;
+
+        return accumulated with
+        {
+            Number = accumulated.Number ?? incoming.Number,
+            Surname = accumulated.Surname ?? incoming.Surname,
+            GivenNames = accumulated.GivenNames ?? incoming.GivenNames,
+            Nationality = accumulated.Nationality ?? incoming.Nationality,
+            IssuingCountry = accumulated.IssuingCountry ?? incoming.IssuingCountry,
+            DateOfBirth = accumulated.DateOfBirth ?? incoming.DateOfBirth,
+            Expiry = accumulated.Expiry ?? incoming.Expiry,
+            Sex = accumulated.Sex != PassportSex.Unspecified ? accumulated.Sex : incoming.Sex,
+            Fields = DocumentMerge.Richer(accumulated.Fields, incoming.Fields)
+        };
+    }
+
+    /// <inheritdoc/>
+    public bool IsComplete(Passport document)
+        => document.Number is not null && document.Surname is not null &&
+           document.DateOfBirth is not null && document.Expiry is not null;
+
     public bool TryParse(
         IReadOnlyList<RecognizedText> text,
         out Passport document,

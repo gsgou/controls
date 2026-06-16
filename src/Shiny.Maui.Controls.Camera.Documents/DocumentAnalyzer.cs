@@ -38,22 +38,72 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
     /// </summary>
     public Func<TDocument, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
+    /// <summary>
+    /// How many frames to merge a document's reads across before firing <see cref="DocumentDetected"/> — so a
+    /// card/passport that reveals its fields gradually (number, then name, then expiry) yields one complete
+    /// payload instead of a flood of partials. The event fires earlier if the parser reports the accumulation
+    /// <see cref="IDocumentParser{TDocument}.IsComplete"/>, and only once per document (it won't re-fire while
+    /// the same document stays in view). Default 5; set 1 for the old fire-every-frame behavior.
+    /// </summary>
+    public int AccumulationFrames { get; set; } = 5;
+
+    /// <summary>
+    /// How many consecutive frames with no recognized document clear the in-progress accumulation, so a
+    /// different document presented next re-arms the event. Default 5.
+    /// </summary>
+    public int ResetAfterEmptyFrames { get; set; } = 5;
+
     /// <summary>Raised on the UI thread when a document of this type is recognized in a frame.</summary>
     public event EventHandler<DocumentDetectedEventArgs<TDocument>>? DocumentDetected;
+
+    TDocument? accumulated;
+    int framesAccrued;
+    int emptyFrames;
+    bool emitted;
+    IReadOnlyList<OverlayBox>? lastOverlay;
 
     /// <inheritdoc/>
     public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
         var text = await this.recognizer.RecognizeAsync(frame, ct).ConfigureAwait(false);
-        if (text.Count == 0)
-            return null;
 
-        if (!this.parser.TryParse(text, out var document, out var boxes))
-            return null;
+        if (text.Count == 0 || !this.parser.TryParse(text, out var incoming, out var boxes))
+        {
+            // tolerate brief drop-outs while a document is in hand; reset once it's clearly gone
+            if (++this.emptyFrames >= Math.Max(1, this.ResetAfterEmptyFrames))
+            {
+                this.Reset();
+                return null;
+            }
+            return this.lastOverlay; // persist the last box so it doesn't flicker between reads
+        }
 
-        var args = new DocumentDetectedEventArgs<TDocument>(document);
-        this.Emit(() => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand, args);
+        this.emptyFrames = 0;
+        this.accumulated = this.accumulated is null ? incoming : this.parser.Merge(this.accumulated, incoming);
+        this.framesAccrued++;
 
-        return this.ResolveOverlay(document, this.OverlayProvider, () => boxes.Count == 0 ? null : boxes);
+        if (!this.emitted &&
+            (this.parser.IsComplete(this.accumulated) || this.framesAccrued >= Math.Max(1, this.AccumulationFrames)))
+        {
+            this.emitted = true;
+            var args = new DocumentDetectedEventArgs<TDocument>(this.accumulated);
+            // Pass the typed event args (not the raw document) as the command parameter AND detection payload —
+            // bound commands are Command<DocumentDetectedEventArgs<TDocument>>, so a raw TDocument fails their
+            // CanExecute type check and the command (e.g. "add to the scanned-documents store") never runs.
+            this.EmitDetection(args, () => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand);
+        }
+
+        // overlay tracks the current frame's boxes (document position), keyed off the merged payload
+        this.lastOverlay = this.ResolveOverlay(this.accumulated, this.OverlayProvider, () => boxes.Count == 0 ? null : boxes);
+        return this.lastOverlay;
+    }
+
+    void Reset()
+    {
+        this.accumulated = default;
+        this.framesAccrued = 0;
+        this.emptyFrames = 0;
+        this.emitted = false;
+        this.lastOverlay = null;
     }
 }

@@ -1,21 +1,36 @@
 namespace Shiny.Blazor.Controls;
 
 /// <summary>
-/// How the <see cref="Carousel{TItem}"/> moves between items.
+/// Scroll-linked visual effect applied to each slide as it moves through the
+/// <see cref="Carousel{TItem}"/> viewport. Effects are driven by each slide's
+/// distance from the centre, so they animate continuously while dragging.
 /// </summary>
-public enum CarouselTransition
+public enum CarouselEffect
 {
-    /// <summary>Native scroll-snap. Supports swipe, peek, and scroll-driven scaling.</summary>
-    Snap,
+    /// <summary>Plain translate — slides simply move along the axis.</summary>
+    None,
 
-    /// <summary>One item at a time slides in along the orientation axis.</summary>
-    Slide,
+    /// <summary>Slides scale down as they move away from the centre.</summary>
+    Scale,
 
-    /// <summary>Crossfade between the outgoing and incoming item.</summary>
-    Fade,
+    /// <summary>Slides fade out as they move away from the centre.</summary>
+    Opacity,
 
-    /// <summary>Incoming item zooms/fades in (scale + opacity).</summary>
-    Scale
+    /// <summary>Slide content shifts within the slide for a depth/parallax effect.</summary>
+    Parallax,
+
+    /// <summary>Slides are stacked and crossfade between each other (the container does not translate).</summary>
+    Fade
+}
+
+/// <summary>
+/// Where the active slide settles within the viewport.
+/// </summary>
+public enum CarouselAlign
+{
+    Start,
+    Center,
+    End
 }
 
 /// <summary>

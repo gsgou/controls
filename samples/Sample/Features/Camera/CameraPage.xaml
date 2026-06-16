@@ -14,7 +14,8 @@
                  BoxesSwitch toggles every analyzer's bounding-box rendering via ShowBoundingBox. -->
             <cam:CameraView x:Name="Camera"
                             Facing="Back"
-                            ScaleMode="AspectFill">
+                            ScaleMode="AspectFill"
+                            DetectionCaptured="OnDetectionCaptured">
                 <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}"
                                      IsEnabled="{Binding On, Source={x:Reference BarcodeSwitch}}"
                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
@@ -25,30 +26,43 @@
                 <cam:FaceAnalyzer FacesDetectedCommand="{Binding FaceCommand}"
                                   IsEnabled="{Binding On, Source={x:Reference FaceSwitch}}"
                                   ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <!-- the document analyzers opt into capture+stop-on-detection via the CaptureStopSwitch -->
                 <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}"
                                      IsEnabled="{Binding On, Source={x:Reference InvoiceSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                     CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                     StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
                 <cam:ReceiptAnalyzer DocumentDetectedCommand="{Binding ReceiptCommand}"
                                      IsEnabled="{Binding On, Source={x:Reference ReceiptSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                     CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                     StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
                 <cam:HealthCardAnalyzer DocumentDetectedCommand="{Binding HealthCardCommand}"
                                         IsEnabled="{Binding On, Source={x:Reference HealthCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                        CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                        StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
                 <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}"
                                             IsEnabled="{Binding On, Source={x:Reference LicenseSwitch}}"
-                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                            CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                            StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
                 <cam:CreditCardAnalyzer DocumentDetectedCommand="{Binding CreditCardCommand}"
                                         IsEnabled="{Binding On, Source={x:Reference CreditCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                        CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                        StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
                 <cam:PassportAnalyzer DocumentDetectedCommand="{Binding PassportCommand}"
                                       IsEnabled="{Binding On, Source={x:Reference PassportSwitch}}"
-                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
+                                      CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
+                                      StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
             </cam:CameraView>
 
             <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
             <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
 
-            <!-- last captured photo (confirms the filter is applied to stills) -->
+            <!-- last captured photo (confirms the filter is applied to stills); tap to resume after a capture+stop -->
             <Image x:Name="PhotoThumbnail"
                    WidthRequest="90"
                    HeightRequest="120"
@@ -56,7 +70,11 @@
                    Margin="16"
                    HorizontalOptions="End"
                    VerticalOptions="Start"
-                   IsVisible="False" />
+                   IsVisible="False">
+                <Image.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnThumbnailTapped" />
+                </Image.GestureRecognizers>
+            </Image>
 
             <!-- status / errors -->
             <Label x:Name="StatusLabel"
@@ -123,6 +141,9 @@
                                           Title="Detection boxes"
                                           Description="Draw bounding boxes for detections"
                                           On="True" />
+                        <shiny:SwitchCell x:Name="CaptureStopSwitch"
+                                          Title="Capture &amp; stop on detect"
+                                          Description="Grab a still and freeze the preview when a document is recognized (tap the thumbnail to resume)" />
                         <shiny:TextPickerCell Title="Filter"
                                               PickerTitle="Filter"
                                               ItemsSource="{Binding Filters}"

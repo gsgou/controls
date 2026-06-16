@@ -113,6 +113,30 @@ public partial class CreditCardParser : IDocumentParser<CreditCard>
         return true;
     }
 
+    /// <inheritdoc/>
+    public CreditCard Merge(CreditCard accumulated, CreditCard incoming)
+    {
+        // a different card in view replaces the accumulation
+        if (accumulated.Number is not null && incoming.Number is not null && accumulated.Number != incoming.Number)
+            return incoming;
+
+        return accumulated with
+        {
+            Type = accumulated.Type != CreditCardType.Unknown ? accumulated.Type : incoming.Type,
+            Number = accumulated.Number ?? incoming.Number,
+            Expiry = accumulated.Expiry ?? incoming.Expiry,
+            FirstName = accumulated.FirstName ?? incoming.FirstName,
+            LastName = accumulated.LastName ?? incoming.LastName,
+            CompanyName = accumulated.CompanyName ?? incoming.CompanyName,
+            Cvv = accumulated.Cvv ?? incoming.Cvv,
+            Fields = DocumentMerge.Richer(accumulated.Fields, incoming.Fields)
+        };
+    }
+
+    /// <inheritdoc/>
+    public bool IsComplete(CreditCard document)
+        => document.Number is not null && document.Expiry is not null;
+
     static DateOnly? MatchExpiry(string line)
     {
         var m = ExpiryRegex().Match(line);

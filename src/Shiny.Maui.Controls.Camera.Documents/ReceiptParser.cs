@@ -193,6 +193,40 @@ public partial class ReceiptParser : IDocumentParser<Receipt>
         return true;
     }
 
+    /// <inheritdoc/>
+    public Receipt Merge(Receipt accumulated, Receipt incoming)
+    {
+        // a clearly different receipt (different merchant + total) replaces the accumulation
+        if (accumulated.Merchant is not null && incoming.Merchant is not null &&
+            !string.Equals(accumulated.Merchant, incoming.Merchant, StringComparison.OrdinalIgnoreCase) &&
+            accumulated.Total is not null && incoming.Total is not null && accumulated.Total != incoming.Total)
+            return incoming;
+
+        return accumulated with
+        {
+            Merchant = accumulated.Merchant ?? incoming.Merchant,
+            MerchantPhone = accumulated.MerchantPhone ?? incoming.MerchantPhone,
+            ReceiptNumber = accumulated.ReceiptNumber ?? incoming.ReceiptNumber,
+            Date = accumulated.Date ?? incoming.Date,
+            Time = accumulated.Time ?? incoming.Time,
+            Lines = DocumentMerge.Longer(accumulated.Lines, incoming.Lines),
+            Subtotal = accumulated.Subtotal ?? incoming.Subtotal,
+            Taxes = DocumentMerge.Longer(accumulated.Taxes, incoming.Taxes),
+            Tax = accumulated.Tax ?? incoming.Tax,
+            Tip = accumulated.Tip ?? incoming.Tip,
+            Discount = accumulated.Discount ?? incoming.Discount,
+            Total = accumulated.Total ?? incoming.Total,
+            Currency = accumulated.Currency ?? incoming.Currency,
+            PaymentMethod = accumulated.PaymentMethod ?? incoming.PaymentMethod,
+            CardLast4 = accumulated.CardLast4 ?? incoming.CardLast4,
+            Fields = DocumentMerge.Richer(accumulated.Fields, incoming.Fields)
+        };
+    }
+
+    /// <inheritdoc/>
+    public bool IsComplete(Receipt document)
+        => document.Merchant is not null && document.Total is not null;
+
     static bool IsTaxLine(string lower) =>
         lower.Contains("tax") || lower.Contains("vat") ||
         lower.Contains("gst") || lower.Contains("hst") || lower.Contains("pst") || lower.Contains("qst");

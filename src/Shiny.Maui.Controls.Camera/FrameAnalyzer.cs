@@ -12,6 +12,7 @@ namespace Shiny.Controls.Camera;
 public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
 {
     Action<Action>? dispatcher;
+    Func<FrameAnalyzer, object, Task>? detectionRequested;
 
     /// <summary>
     /// Whether this analyzer runs at all. Default <c>true</c>. Set <c>false</c> (e.g. bind it to a switch in
@@ -45,6 +46,38 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
         set => this.SetValue(ShowBoundingBoxProperty, value);
     }
 
+    /// <summary>
+    /// When <c>true</c>, the <see cref="CameraView"/> captures a still photo as soon as this analyzer reports a
+    /// confirmed detection (e.g. a fully merged document, or motion starting). Default <c>false</c>. The photo
+    /// is delivered on <see cref="CameraView.DetectionCaptured"/> (and the usual <see cref="CameraView.MediaCaptured"/>).
+    /// Combine with <see cref="StopOnDetection"/> for a typical "scan then freeze" flow.
+    /// </summary>
+    public static readonly BindableProperty CaptureOnDetectionProperty = BindableProperty.Create(
+        nameof(CaptureOnDetection), typeof(bool), typeof(FrameAnalyzer), false);
+
+    /// <inheritdoc cref="CaptureOnDetectionProperty"/>
+    public bool CaptureOnDetection
+    {
+        get => (bool)this.GetValue(CaptureOnDetectionProperty);
+        set => this.SetValue(CaptureOnDetectionProperty, value);
+    }
+
+    /// <summary>
+    /// When <c>true</c>, the <see cref="CameraView"/> stops the capture session as soon as this analyzer reports
+    /// a confirmed detection. Default <c>false</c>. Pair with <see cref="CaptureOnDetection"/> to grab a still
+    /// and then freeze the preview. While stopped the trigger stays latched; call
+    /// <see cref="CameraView.StartAsync"/> to re-arm.
+    /// </summary>
+    public static readonly BindableProperty StopOnDetectionProperty = BindableProperty.Create(
+        nameof(StopOnDetection), typeof(bool), typeof(FrameAnalyzer), false);
+
+    /// <inheritdoc cref="StopOnDetectionProperty"/>
+    public bool StopOnDetection
+    {
+        get => (bool)this.GetValue(StopOnDetectionProperty);
+        set => this.SetValue(StopOnDetectionProperty, value);
+    }
+
     /// <inheritdoc/>
     public abstract string Id { get; }
 
@@ -56,6 +89,12 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     /// <c>null</c> to detach (then they run inline on the analysis thread).
     /// </summary>
     internal void SetDispatcher(Action<Action>? post) => this.dispatcher = post;
+
+    /// <summary>
+    /// Set by the camera pipeline so <see cref="EmitDetection"/> can ask the <see cref="CameraView"/> to capture
+    /// and/or stop on a confirmed detection. Pass <c>null</c> to detach (then capture/stop requests are no-ops).
+    /// </summary>
+    internal void SetDetectionHandler(Func<FrameAnalyzer, object, Task>? handler) => this.detectionRequested = handler;
 
     /// <summary>Run an action on the UI thread when attached to a camera, or inline otherwise.</summary>
     protected void Raise(Action action)
@@ -78,6 +117,21 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
             if (command is not null && command.CanExecute(arg))
                 command.Execute(arg);
         });
+
+    /// <summary>
+    /// Raise an analyzer's typed event/command (via <see cref="Emit"/>) for a <i>confirmed</i> detection and,
+    /// when <see cref="CaptureOnDetection"/> or <see cref="StopOnDetection"/> is set, ask the camera to capture a
+    /// still and/or stop — both on the UI thread. Call this (instead of <see cref="Emit"/>) at the point an
+    /// analyzer commits to a result it would auto-capture on (e.g. a fully merged document, or motion starting).
+    /// </summary>
+    /// <param name="detection">The detection payload — passed to the command and to <see cref="CameraView.DetectionCaptured"/>.</param>
+    protected void EmitDetection(object detection, Action raiseEvent, ICommand? command)
+    {
+        this.Emit(raiseEvent, command, detection);
+        var handler = this.detectionRequested;
+        if (handler is not null && (this.CaptureOnDetection || this.StopOnDetection))
+            this.Raise(() => _ = handler(this, detection));
+    }
 
     /// <summary>
     /// Resolve the boxes to draw for a detection: nothing when <see cref="ShowBoundingBox"/> is off, else the

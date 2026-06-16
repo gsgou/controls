@@ -1,164 +1,137 @@
-.shiny-carousel2 {
+.shiny-carousel {
     position: relative;
     width: 100%;
     outline: none;
 }
 
-.shiny-carousel2:focus-visible {
+.shiny-carousel:focus-visible {
     outline: 2px solid var(--shiny-color-primary, #0055D9);
     outline-offset: 2px;
     border-radius: var(--shiny-shape-corner-medium, 12px);
 }
 
-.shiny-carousel2-empty {
+.shiny-carousel-empty {
     padding: 24px;
     text-align: center;
     color: var(--shiny-color-on-surface-variant, #6b7280);
 }
 
-.shiny-carousel2-viewport {
+/* ===== Viewport & container ===== */
+
+.shiny-carousel-viewport {
     position: relative;
     width: 100%;
+    overflow: hidden;
+    touch-action: pan-y;
 }
 
-.shiny-carousel2-item {
+.shiny-carousel.orient-v .shiny-carousel-viewport {
+    height: var(--carousel-viewport-h, 320px);
+    touch-action: pan-x;
+}
+
+.shiny-carousel.is-draggable .shiny-carousel-viewport { cursor: grab; }
+.shiny-carousel-viewport.is-dragging { cursor: grabbing; }
+
+.shiny-carousel-container {
+    display: flex;
+    gap: var(--carousel-spacing, 16px);
+    will-change: transform;
+    align-items: stretch;
+}
+
+.shiny-carousel.orient-v .shiny-carousel-container {
+    flex-direction: column;
+    height: 100%;
+}
+
+.shiny-carousel.is-rtl .shiny-carousel-container { direction: rtl; }
+
+/* ===== Slides ===== */
+
+.shiny-carousel-slide {
     flex: 0 0 auto;
     box-sizing: border-box;
-    border-radius: var(--shiny-shape-corner-medium, 12px);
-    overflow: hidden;
+    position: relative;
+    min-width: 0;
 }
 
-.shiny-carousel2-placeholder {
+.shiny-carousel-slide-tween {
     width: 100%;
     height: 100%;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
+    overflow: hidden;
+    transform-origin: center center;
+}
+
+/* Sizing modes (horizontal) */
+.orient-h.size-fixed .shiny-carousel-slide {
+    flex-basis: var(--carousel-item-width, 280px);
+    height: var(--carousel-item-height, 320px);
+}
+
+.orient-h.size-spv .shiny-carousel-slide {
+    flex-basis: calc((100% - var(--carousel-spacing, 16px) * (var(--carousel-spv, 1) - 1)) / var(--carousel-spv, 1));
+    height: var(--carousel-item-height, 320px);
+}
+
+.orient-h.size-var .shiny-carousel-slide {
+    flex-basis: auto;
+    width: max-content;
+    height: var(--carousel-item-height, 320px);
+}
+
+/* Sizing modes (vertical) — slides fill width, height varies */
+.orient-v .shiny-carousel-slide { width: 100%; }
+
+.orient-v.size-fixed .shiny-carousel-slide { flex-basis: var(--carousel-item-height, 320px); }
+
+.orient-v.size-spv .shiny-carousel-slide {
+    flex-basis: calc((100% - var(--carousel-spacing, 16px) * (var(--carousel-spv, 1) - 1)) / var(--carousel-spv, 1));
+}
+
+.orient-v.size-var .shiny-carousel-slide { flex-basis: auto; height: auto; }
+
+/* ===== Fade effect (stacked, container does not translate) ===== */
+
+.shiny-carousel.fx-fade .shiny-carousel-container {
+    display: block;
+    position: relative;
+    transform: none !important;
+}
+
+.shiny-carousel.fx-fade .shiny-carousel-slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.shiny-carousel.fx-fade.orient-h .shiny-carousel-slide { height: var(--carousel-item-height, 320px); }
+
+/* ===== Placeholder shimmer ===== */
+
+.shiny-carousel-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 80px;
     border-radius: inherit;
     background: linear-gradient(100deg,
         var(--shiny-color-surface-variant, #e5e7eb) 30%,
         var(--shiny-color-surface, #f3f4f6) 50%,
         var(--shiny-color-surface-variant, #e5e7eb) 70%);
     background-size: 200% 100%;
-    animation: shiny-carousel2-shimmer 1.2s ease-in-out infinite;
+    animation: shiny-carousel-shimmer 1.2s ease-in-out infinite;
 }
 
-@keyframes shiny-carousel2-shimmer {
+@keyframes shiny-carousel-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
 
-/* ===== Snap mode (native scroll-snap) ===== */
-
-.mode-snap .shiny-carousel2-viewport {
-    overflow: hidden;
-}
-
-.mode-snap .shiny-carousel2-track {
-    display: flex;
-    gap: var(--carousel-spacing, 16px);
-    scroll-behavior: smooth;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-.mode-snap .shiny-carousel2-track::-webkit-scrollbar {
-    display: none;
-}
-
-.mode-snap.orient-h .shiny-carousel2-track {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    padding: 8px var(--carousel-peek, 40px);
-    align-items: center;
-}
-
-.mode-snap.orient-v .shiny-carousel2-track {
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scroll-snap-type: y mandatory;
-    max-height: calc(var(--carousel-item-height) * 1.5);
-    padding: var(--carousel-peek, 40px) 8px;
-    align-items: center;
-}
-
-.mode-snap .shiny-carousel2-item {
-    scroll-snap-align: center;
-    transform-origin: center center;
-    transition: transform var(--carousel-duration, 400ms) ease;
-    cursor: pointer;
-}
-
-.mode-snap .shiny-carousel2-item.active {
-    z-index: 1;
-}
-
-/* ===== Slide / Fade / Scale (single-item animated) ===== */
-
-.mode-slide .shiny-carousel2-viewport,
-.mode-fade .shiny-carousel2-viewport,
-.mode-scale .shiny-carousel2-viewport {
-    overflow: hidden;
-    height: var(--carousel-item-height);
-    border-radius: var(--shiny-shape-corner-medium, 12px);
-}
-
-/* Slide: a flex track that translates */
-.mode-slide .shiny-carousel2-track {
-    display: flex;
-    height: 100%;
-    transition: transform var(--carousel-duration, 400ms) cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-}
-
-.mode-slide.orient-v .shiny-carousel2-track {
-    flex-direction: column;
-}
-
-.mode-slide .shiny-carousel2-item {
-    flex: 0 0 100%;
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-}
-
-/* Fade & Scale: items stacked, only the active one visible */
-.mode-fade .shiny-carousel2-track,
-.mode-scale .shiny-carousel2-track {
-    position: relative;
-    height: 100%;
-}
-
-.mode-fade .shiny-carousel2-item,
-.mode-scale .shiny-carousel2-item {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--carousel-duration, 400ms) ease,
-                transform var(--carousel-duration, 400ms) ease;
-}
-
-.mode-fade .shiny-carousel2-item.active,
-.mode-scale .shiny-carousel2-item.active {
-    opacity: 1;
-    pointer-events: auto;
-    z-index: 1;
-}
-
-.mode-scale .shiny-carousel2-item {
-    transform: scale(1.06);
-}
-
-.mode-scale .shiny-carousel2-item.active {
-    transform: scale(1);
-}
-
 /* ===== Arrows ===== */
 
-.shiny-carousel2-arrow {
+.shiny-carousel-arrow {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -169,7 +142,7 @@
     justify-content: center;
     border: none;
     border-radius: var(--shiny-shape-corner-full, 9999px);
-    background: var(--shiny-color-surface, rgba(255, 255, 255, 0.9));
+    background: var(--shiny-color-surface, rgba(255, 255, 255, 0.92));
     color: var(--shiny-color-on-surface, #1f2937);
     font-size: 24px;
     line-height: 1;
@@ -179,63 +152,68 @@
     z-index: 3;
 }
 
-.shiny-carousel2-arrow:hover:not(:disabled) {
+.shiny-carousel-arrow:hover:not(:disabled) {
     background: var(--shiny-color-primary-container, #C2D6FF);
 }
 
-.shiny-carousel2-arrow:disabled {
+.shiny-carousel-arrow:disabled {
     opacity: 0.35;
     cursor: default;
 }
 
-.shiny-carousel2-arrow.prev { left: 8px; }
-.shiny-carousel2-arrow.next { right: 8px; }
+.shiny-carousel-arrow.prev { left: 8px; }
+.shiny-carousel-arrow.next { right: 8px; }
 
-.orient-v .shiny-carousel2-arrow {
+.is-rtl .shiny-carousel-arrow.prev { left: auto; right: 8px; }
+.is-rtl .shiny-carousel-arrow.next { right: auto; left: 8px; }
+
+.orient-v .shiny-carousel-arrow {
     top: auto;
     left: 50%;
     transform: translateX(-50%);
 }
 
-.orient-v .shiny-carousel2-arrow.prev { top: 8px; }
-.orient-v .shiny-carousel2-arrow.next { top: auto; bottom: 8px; }
+.orient-v .shiny-carousel-arrow.prev { top: 8px; }
+.orient-v .shiny-carousel-arrow.next { top: auto; bottom: 8px; }
 
-/* ===== Auto-play progress ===== */
+/* ===== Scroll progress bar ===== */
 
-.shiny-carousel2-progress {
+.shiny-carousel-progress {
     position: relative;
-    height: 3px;
-    margin-top: 8px;
+    height: 4px;
+    margin-top: 10px;
     border-radius: var(--shiny-shape-corner-full, 9999px);
     background: var(--shiny-color-surface-variant, rgba(0, 0, 0, 0.1));
     overflow: hidden;
 }
 
-.shiny-carousel2-progress .bar {
+.shiny-carousel-progress .bar {
     position: absolute;
     inset: 0;
     transform-origin: left center;
+    transform: scaleX(0);
     background: var(--shiny-color-primary, #0055D9);
-    animation-name: shiny-carousel2-fill;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
 }
 
-@keyframes shiny-carousel2-fill {
-    from { transform: scaleX(0); }
-    to { transform: scaleX(1); }
+.is-rtl .shiny-carousel-progress .bar { transform-origin: right center; }
+
+/* ===== Footer (indicators + counter) ===== */
+
+.shiny-carousel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 0 4px;
 }
 
-/* ===== Indicators ===== */
-
-.shiny-carousel2-indicators {
+.shiny-carousel-indicators {
     display: flex;
     justify-content: center;
     gap: 8px;
-    padding: 12px 0;
 }
 
-.shiny-carousel2-dot {
+.shiny-carousel-dot {
     width: 10px;
     height: 10px;
     padding: 0;
@@ -243,10 +221,50 @@
     border-radius: var(--shiny-shape-corner-full, 9999px);
     background: var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.25));
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease, width 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.shiny-carousel2-dot.active {
+.shiny-carousel-dot.active {
     background: var(--shiny-color-primary, #0055D9);
-    transform: scale(1.25);
+    transform: scale(1.3);
+}
+
+.shiny-carousel-counter {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+}
+
+/* ===== Thumbnails ===== */
+
+.shiny-carousel-thumbs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 2px 4px;
+    scrollbar-width: thin;
+}
+
+.shiny-carousel-thumb {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    background: var(--shiny-color-surface-variant, #e5e7eb);
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+    cursor: pointer;
+    overflow: hidden;
+    opacity: 0.55;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.shiny-carousel-thumb > * { width: 100%; height: 100%; object-fit: cover; }
+
+.shiny-carousel-thumb:hover { opacity: 0.85; }
+
+.shiny-carousel-thumb.active {
+    opacity: 1;
+    border-color: var(--shiny-color-primary, #0055D9);
 }

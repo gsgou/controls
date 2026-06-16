@@ -3,81 +3,187 @@
 <PageTitle>Carousel</PageTitle>
 
 <h1>Carousel</h1>
-<p>Auto-play, lazy item templates, animated transitions, and scroll-driven scaling.</p>
+<p>A transform-based drag engine — click-drag on desktop, flick on touch — with alignment,
+   slides-per-view, scroll-linked effects, looping, autoplay, and more.</p>
 
-<section class="demo-section">
-    <h2>Auto-play + scroll scaling (Snap)</h2>
-    <Carousel TItem="Slide" Items="@slides"
-              Transition="CarouselTransition.Snap"
-              AutoPlay="true" AutoPlayInterval="3000" PauseOnHover="true"
-              EnableScaling="true" FocusedItemScale="1.0" UnfocusedItemScale="0.8"
-              ItemWidth="300" ItemHeight="190" PeekAmount="56"
-              ShowAutoPlayProgress="true"
-              CurrentPosition="@pos" CurrentPositionChanged="@(p => pos = p)">
-        <ItemTemplate Context="s">
-            <div class="slide" style="background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">
-                <span class="ico">@s.Icon</span>
-                <span class="title">@s.Title</span>
-            </div>
-        </ItemTemplate>
-    </Carousel>
-    <p style="text-align:center;margin-top:8px;">Position: <strong>@pos</strong></p>
-</section>
+<div class="carousel-gallery">
 
-<section class="demo-section">
-    <h2>Crossfade</h2>
-    <Carousel TItem="Slide" Items="@slides" Transition="CarouselTransition.Fade"
-              AutoPlay="true" AutoPlayInterval="2500" ItemHeight="200">
-        <ItemTemplate Context="s">
-            <div class="slide fill" style="background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">
-                <span class="ico">@s.Icon</span>
-                <span class="title">@s.Title</span>
-            </div>
-        </ItemTemplate>
-    </Carousel>
-</section>
+    @* ---------- Basics ---------- *@
+    <article class="ex">
+        <h3>Default</h3>
+        <p>Single slide, centre aligned, draggable.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="200"
+                  ShowArrows="true" ShowIndicators="true">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
 
-<section class="demo-section">
-    <h2>Slide + lazy templates</h2>
-    <Carousel TItem="Slide" Items="@slides" Transition="CarouselTransition.Slide"
-              ItemHeight="200" LazyLoad="true" LazyLoadBuffer="1">
-        <ItemTemplate Context="s">
-            <div class="slide fill" style="background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">
-                <span class="ico">@s.Icon</span>
-                <span class="title">@s.Title</span>
-            </div>
-        </ItemTemplate>
-        <PlaceholderTemplate>
-            <div class="slide fill" style="background:#e5e7eb;color:#9ca3af">Loading…</div>
-        </PlaceholderTemplate>
-    </Carousel>
-</section>
+    <article class="ex">
+        <h3>Loop</h3>
+        <p>Seamless wrap-around in both directions.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="200" Loop="true">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
 
-<section class="demo-section">
-    <h2>Zoom (Scale)</h2>
-    <Carousel TItem="Slide" Items="@slides" Transition="CarouselTransition.Scale"
-              AutoPlay="true" AutoPlayInterval="2800" ItemHeight="200" ShowArrows="true">
-        <ItemTemplate Context="s">
-            <div class="slide fill" style="background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">
-                <span class="ico">@s.Icon</span>
-                <span class="title">@s.Title</span>
-            </div>
-        </ItemTemplate>
-    </Carousel>
-</section>
+    <article class="ex">
+        <h3>Slides per view</h3>
+        <p>Three slides visible at once.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="3" ItemHeight="160" Align="CarouselAlign.Start">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Slides to scroll</h3>
+        <p>Two visible, advances two at a time.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="2" SlidesToScroll="2" ItemHeight="160">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Align: start</h3>
+        <p>Fixed-width slides anchored to the leading edge.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemWidth="220" ItemHeight="160" Align="CarouselAlign.Start">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Drag free</h3>
+        <p>Momentum scrolling with no snap.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemWidth="200" ItemHeight="160"
+                  DragFree="true" Align="CarouselAlign.Start" ShowIndicators="false">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Variable widths</h3>
+        <p>Each slide sizes to its own content.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" VariableWidths="true" ItemHeight="160"
+                  Align="CarouselAlign.Start" ShowIndicators="false">
+            <ItemTemplate Context="s">
+                <div class="slide" style="width:@(120 + s.Title.Length * 14)px;background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">
+                    <span class="ico">@s.Icon</span><span class="title">@s.Title</span>
+                </div>
+            </ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Y-axis</h3>
+        <p>Vertical drag and snapping.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" Orientation="CarouselOrientation.Vertical"
+                  ViewportHeight="220" ItemHeight="120">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Right to left</h3>
+        <p>Mirrored layout and drag direction.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" Rtl="true" SlidesPerView="2" ItemHeight="160">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    @* ---------- Auto motion ---------- *@
+    <article class="ex">
+        <h3>Autoplay</h3>
+        <p>Advances every 3s, pauses on hover, with a progress bar.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="200"
+                  AutoPlay="true" AutoPlayInterval="3000" ShowProgress="true">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Auto scroll</h3>
+        <p>Continuous marquee, pauses on hover.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemWidth="200" ItemHeight="160"
+                  AutoScroll="true" AutoScrollSpeed="50" Align="CarouselAlign.Start"
+                  ShowArrows="false" ShowIndicators="false">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    @* ---------- Effects ---------- *@
+    <article class="ex">
+        <h3>Scale</h3>
+        <p>Slides shrink as they leave the centre.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemWidth="240" ItemHeight="190"
+                  Effect="CarouselEffect.Scale" FocusedItemScale="1" UnfocusedItemScale="0.72">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Opacity</h3>
+        <p>Off-centre slides fade out.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemWidth="240" ItemHeight="190"
+                  Effect="CarouselEffect.Opacity" MinOpacity="0.15">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Parallax</h3>
+        <p>Content drifts inside each slide.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="200"
+                  Effect="CarouselEffect.Parallax" ParallaxFactor="0.5">
+            <ItemTemplate Context="s"><SlideCard Slide="s" Fill="true" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex">
+        <h3>Fade</h3>
+        <p>Stacked slides crossfade.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" ItemHeight="200" Effect="CarouselEffect.Fade"
+                  AutoPlay="true" AutoPlayInterval="2500">
+            <ItemTemplate Context="s"><SlideCard Slide="s" Fill="true" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    @* ---------- Chrome ---------- *@
+    <article class="ex">
+        <h3>Counter + progress</h3>
+        <p>Numeric readout and scroll-linked bar.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="200"
+                  ShowCounter="true" ShowProgress="true" ShowIndicators="false">
+            <ItemTemplate Context="s"><SlideCard Slide="s" /></ItemTemplate>
+        </Carousel>
+    </article>
+
+    <article class="ex wide">
+        <h3>Thumbnails</h3>
+        <p>Navigate via a thumbnail strip.</p>
+        <Carousel TItem="DemoSlide" Items="@slides" SlidesPerView="1" ItemHeight="220"
+                  ShowThumbnails="true" ShowIndicators="false">
+            <ItemTemplate Context="s"><SlideCard Slide="s" Fill="true" /></ItemTemplate>
+            <ThumbnailTemplate Context="s">
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,@s.Color,@s.GradientEnd)">@s.Icon</div>
+            </ThumbnailTemplate>
+        </Carousel>
+    </article>
+
+</div>
 
 <style>
-    .slide { width:100%; height:100%; display:flex; flex-direction:column;
-             align-items:center; justify-content:center; color:#fff; border-radius:12px; }
-    .slide.fill { border-radius:0; }
+    .carousel-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:24px; }
+    .ex { background:var(--shiny-color-surface,#fff); border:1px solid rgba(0,0,0,.08); border-radius:14px; padding:16px; }
+    .ex.wide { grid-column:1 / -1; }
+    .ex h3 { margin:0 0 2px; font-size:16px; }
+    .ex p { margin:0 0 12px; font-size:13px; color:#6b7280; }
+    .slide { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             color:#fff; border-radius:12px; }
     .slide .ico { font-size:40px; }
     .slide .title { font-size:18px; font-weight:600; margin-top:6px; }
 </style>
 
 @code {
-    int pos;
-
-    List<Slide> slides = new()
+    List<DemoSlide> slides = new()
     {
         new("Mountains", "#2D3748", "#4A5568", "🏔️"),
         new("Ocean", "#2B6CB0", "#63B3ED", "🌊"),
@@ -86,6 +192,4 @@
         new("City", "#553C9A", "#B794F4", "🌃"),
         new("Aurora", "#1A365D", "#4FD1C5", "🌌"),
     };
-
-    record Slide(string Title, string Color, string GradientEnd, string Icon);
 }

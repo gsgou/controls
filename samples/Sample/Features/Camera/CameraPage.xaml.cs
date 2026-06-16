@@ -253,6 +253,26 @@ public partial class CameraPage : ShinyContentPage
         }
     }
 
+    // Raised after a document analyzer with CaptureOnDetection/StopOnDetection confirms a detection: the camera
+    // has already captured the still and stopped. Show the photo; tapping it resumes the preview.
+    void OnDetectionCaptured(object? sender, DetectionCapturedEventArgs e)
+    {
+        if (e.Photo is { } photo)
+        {
+            var bytes = photo.Data;
+            this.PhotoThumbnail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+            this.PhotoThumbnail.IsVisible = true;
+        }
+        this.ShowStatus("Captured & stopped — tap the photo to resume");
+    }
+
+    async void OnThumbnailTapped(object? sender, TappedEventArgs e)
+    {
+        // re-arms the capture/stop latch and restarts the preview after a capture+stop
+        await this.Camera.StartAsync();
+        this.ShowStatus("Resumed");
+    }
+
     async void OnCaptureClicked(object? sender, EventArgs e)
     {
         try

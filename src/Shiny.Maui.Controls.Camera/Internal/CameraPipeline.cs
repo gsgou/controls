@@ -30,6 +30,13 @@ sealed class CameraPipeline
     /// </summary>
     public Action? OnActiveChanged;
 
+    /// <summary>
+    /// Invoked (on the UI thread) when an analyzer with <see cref="FrameAnalyzer.CaptureOnDetection"/> /
+    /// <see cref="FrameAnalyzer.StopOnDetection"/> confirms a detection, so the <see cref="CameraView"/> can
+    /// capture and/or stop. Set by the handler.
+    /// </summary>
+    public Func<FrameAnalyzer, object, Task>? OnDetectionRequested;
+
     Action<Action>? dispatcher;
     int uprightW;
     int uprightH;
@@ -57,6 +64,7 @@ sealed class CameraPipeline
                 if (old is FrameAnalyzer fa)
                 {
                     fa.SetDispatcher(null);
+                    fa.SetDetectionHandler(null);
                     fa.PropertyChanged -= this.OnAnalyzerPropertyChanged;
                 }
             }
@@ -68,6 +76,8 @@ sealed class CameraPipeline
                 if (a is FrameAnalyzer fa)
                 {
                     fa.SetDispatcher(this.dispatcher);
+                    fa.SetDetectionHandler((analyzer, detection) =>
+                        this.OnDetectionRequested?.Invoke(analyzer, detection) ?? Task.CompletedTask);
                     fa.PropertyChanged += this.OnAnalyzerPropertyChanged;
                 }
             }

@@ -1,7 +1,7 @@
 @namespace Shiny.Blazor.Controls
 @typeparam TItem
 
-<div class="shiny-carousel2 @ModeClass @OrientClass"
+<div class="@RootClasses"
      style="@RootStyle"
      tabindex="0"
      role="region"
@@ -12,7 +12,7 @@
 
     @if (Count == 0)
     {
-        <div class="shiny-carousel2-empty">
+        <div class="shiny-carousel-empty">
             @if (EmptyTemplate is not null)
             {
                 @EmptyTemplate
@@ -25,39 +25,38 @@
     }
     else
     {
-        <div class="shiny-carousel2-viewport" @ref="viewportRef">
-            <div class="shiny-carousel2-track" @ref="trackRef" style="@TrackStyle" aria-live="@(AutoPlay ? "off" : "polite")">
+        <div class="shiny-carousel-viewport" @ref="viewportRef">
+            <div class="shiny-carousel-container" @ref="containerRef" aria-live="@(AutoPlay || AutoScroll ? "off" : "polite")">
                 @for (var i = 0; i < Count; i++)
                 {
                     var index = i;
                     var item = Items![index];
-                    var active = index == CurrentPosition;
-                    <div class="shiny-carousel2-item @(active ? "active" : "")"
+                    <div class="shiny-carousel-slide"
                          role="group"
                          aria-roledescription="slide"
                          aria-label="@($"{index + 1} of {Count}")"
-                         aria-hidden="@((!active && Transition != CarouselTransition.Snap) ? "true" : null)"
-                         style="@ItemStyle"
                          @onclick="() => OnItemClicked(index)">
-                        @if (IsLoaded(index))
-                        {
-                            @if (ItemTemplate is not null)
+                        <div class="shiny-carousel-slide-tween">
+                            @if (IsLoaded(index))
                             {
-                                @ItemTemplate(item)
+                                @if (ItemTemplate is not null)
+                                {
+                                    @ItemTemplate(item)
+                                }
+                                else
+                                {
+                                    @item?.ToString()
+                                }
+                            }
+                            else if (PlaceholderTemplate is not null)
+                            {
+                                @PlaceholderTemplate
                             }
                             else
                             {
-                                @item?.ToString()
+                                <div class="shiny-carousel-placeholder"></div>
                             }
-                        }
-                        else if (PlaceholderTemplate is not null)
-                        {
-                            @PlaceholderTemplate
-                        }
-                        else
-                        {
-                            <div class="shiny-carousel2-placeholder"></div>
-                        }
+                        </div>
                     </div>
                 }
             </div>
@@ -65,35 +64,64 @@
 
         @if (ShowArrows)
         {
-            <button type="button" class="shiny-carousel2-arrow prev"
-                    aria-label="Previous item"
+            <button type="button" class="shiny-carousel-arrow prev"
+                    aria-label="Previous"
                     disabled="@(!Loop && CurrentPosition == 0)"
-                    @onclick="PreviousAsync">@PrevGlyph</button>
-            <button type="button" class="shiny-carousel2-arrow next"
-                    aria-label="Next item"
-                    disabled="@(!Loop && CurrentPosition == Count - 1)"
-                    @onclick="NextAsync">@NextGlyph</button>
+                    @onclick="PreviousAsync">‹</button>
+            <button type="button" class="shiny-carousel-arrow next"
+                    aria-label="Next"
+                    disabled="@(!Loop && CurrentPosition >= SnapCount - 1)"
+                    @onclick="NextAsync">›</button>
         }
 
-        @if (AutoPlay && ShowAutoPlayProgress)
+        @if (ShowProgress)
         {
-            <div class="shiny-carousel2-progress" @key="CurrentPosition">
-                <div class="bar" style="@($"animation-duration:{AutoPlayInterval}ms")"></div>
-            </div>
+            <div class="shiny-carousel-progress"><div class="bar"></div></div>
         }
 
-        @if (ShowIndicators)
+        <div class="shiny-carousel-footer">
+            @if (ShowIndicators)
+            {
+                <div class="shiny-carousel-indicators" role="tablist" aria-label="Carousel position">
+                    @for (var d = 0; d < SnapCount; d++)
+                    {
+                        var dot = d;
+                        <button type="button"
+                                class="shiny-carousel-dot @(dot == CurrentPosition ? "active" : "")"
+                                role="tab"
+                                aria-selected="@(dot == CurrentPosition)"
+                                aria-label="@($"Go to {dot + 1}")"
+                                @onclick="() => GoToAsync(dot)"></button>
+                    }
+                </div>
+            }
+
+            @if (ShowCounter)
+            {
+                <div class="shiny-carousel-counter">@(CurrentPosition + 1) / @SnapCount</div>
+            }
+        </div>
+
+        @if (ShowThumbnails)
         {
-            <div class="shiny-carousel2-indicators" role="tablist" aria-label="Carousel position">
-                @for (var d = 0; d < Count; d++)
+            <div class="shiny-carousel-thumbs">
+                @for (var t = 0; t < Count; t++)
                 {
-                    var dot = d;
+                    var thumb = t;
+                    var active = (thumb / Math.Max(1, SlidesToScroll)) == CurrentPosition;
                     <button type="button"
-                            class="shiny-carousel2-dot @(dot == CurrentPosition ? "active" : "")"
-                            role="tab"
-                            aria-selected="@(dot == CurrentPosition)"
-                            aria-label="@($"Go to item {dot + 1}")"
-                            @onclick="() => GoToAsync(dot)"></button>
+                            class="shiny-carousel-thumb @(active ? "active" : "")"
+                            aria-label="@($"Go to slide {thumb + 1}")"
+                            @onclick="() => OnThumbClicked(thumb)">
+                        @if (ThumbnailTemplate is not null)
+                        {
+                            @ThumbnailTemplate(Items![thumb])
+                        }
+                        else
+                        {
+                            <span>@(thumb + 1)</span>
+                        }
+                    </button>
                 }
             </div>
         }

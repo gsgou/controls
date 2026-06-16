@@ -42,6 +42,19 @@ public class MotionAnalyzer : FrameAnalyzer
     /// </summary>
     public double CellThreshold { get; set; } = 0.10;
 
+    /// <summary>
+    /// Consecutive frames above <see cref="AreaThreshold"/> required before reporting motion <i>started</i>.
+    /// Debounces the event so a single noisy frame doesn't fire it. Default 3 (raise it if motion is still too
+    /// twitchy). The overlay boxes are not debounced — they track each frame so they stay responsive.
+    /// </summary>
+    public int EnterFrames { get; set; } = 3;
+
+    /// <summary>
+    /// Consecutive frames below <see cref="AreaThreshold"/> required before reporting motion <i>stopped</i>.
+    /// Larger than <see cref="EnterFrames"/> by default so brief pauses mid-movement don't end the event. Default 5.
+    /// </summary>
+    public int ExitFrames { get; set; } = 5;
+
     /// <summary>Box outline + caption color. Default an amber accent.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#F59E0B");
 
@@ -69,6 +82,8 @@ public class MotionAnalyzer : FrameAnalyzer
     public event EventHandler<MotionEventArgs>? MotionChanged;
 
     bool lastMotion;
+    int aboveCount;
+    int belowCount;
 
     /// <inheritdoc/>
     public override ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
@@ -141,11 +156,31 @@ public class MotionAnalyzer : FrameAnalyzer
             }
         }
 
+        // debounce: require sustained change before flipping the reported state so a single noisy frame (or a
+        // brief pause mid-movement) doesn't fire the event
+        if (motion)
+        {
+            this.aboveCount++;
+            this.belowCount = 0;
+        }
+        else
+        {
+            this.belowCount++;
+            this.aboveCount = 0;
+        }
+
         RectF? union = regions.Count == 0 ? null : Union(regions);
         var args = new MotionEventArgs(motion, union, (float)Math.Min(1d, ratio), regions);
-        if (motion != this.lastMotion)
+
+        if (!this.lastMotion && this.aboveCount >= Math.Max(1, this.EnterFrames))
         {
-            this.lastMotion = motion;
+            this.lastMotion = true;
+            // motion started — also drives CaptureOnDetection/StopOnDetection
+            this.EmitDetection(args, () => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand);
+        }
+        else if (this.lastMotion && this.belowCount >= Math.Max(1, this.ExitFrames))
+        {
+            this.lastMotion = false;
             this.Emit(() => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand, args);
         }
 

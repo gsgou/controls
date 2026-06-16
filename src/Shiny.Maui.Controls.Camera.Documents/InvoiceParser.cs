@@ -108,6 +108,27 @@ public partial class InvoiceParser : IDocumentParser<Invoice>
         return true;
     }
 
+    /// <inheritdoc/>
+    public Invoice Merge(Invoice accumulated, Invoice incoming)
+    {
+        // a different invoice in view replaces the accumulation
+        if (accumulated.Number is not null && incoming.Number is not null && accumulated.Number != incoming.Number)
+            return incoming;
+
+        return accumulated with
+        {
+            Number = accumulated.Number ?? incoming.Number,
+            Date = accumulated.Date ?? incoming.Date,
+            Total = accumulated.Total ?? incoming.Total,
+            Lines = DocumentMerge.Longer(accumulated.Lines, incoming.Lines),
+            Fields = DocumentMerge.Richer(accumulated.Fields, incoming.Fields)
+        };
+    }
+
+    /// <inheritdoc/>
+    public bool IsComplete(Invoice document)
+        => document.Number is not null && document.Total is not null;
+
     static string? MatchInvoiceNumber(string line)
     {
         var m = InvoiceNumberRegex().Match(line);

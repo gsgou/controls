@@ -81,7 +81,8 @@ public class MotionAnalyzerTests
         FillBlock(moved, n, 48, 48, 16);
 
         MotionEventArgs? captured = null;
-        var a = new MotionAnalyzer { MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e) };
+        // EnterFrames=1 so a single transition reports immediately (debounce covered separately)
+        var a = new MotionAnalyzer { EnterFrames = 1, MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e) };
         await a.AnalyzeAsync(new SizedLumFrame(still, n, n), default);
         await a.AnalyzeAsync(new SizedLumFrame(moved, n, n), default);
 
@@ -103,6 +104,7 @@ public class MotionAnalyzerTests
         MotionEventArgs? captured = null;
         var a = new MotionAnalyzer
         {
+            EnterFrames = 1,   // fire on the first transition
             MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e)
         };
 
@@ -110,6 +112,53 @@ public class MotionAnalyzerTests
 
         captured.ShouldNotBeNull();
         captured!.InMotion.ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public async Task Motion_event_is_debounced_by_EnterFrames()
+    {
+        var events = new List<bool>();
+        var a = new MotionAnalyzer
+        {
+            EnterFrames = 3,
+            MotionChangedCommand = new Command<MotionEventArgs>(e => events.Add(e.InMotion))
+        };
+
+        // alternate fully-different frames so every comparison registers change
+        await a.AnalyzeAsync(Still, default);   // seed
+        await a.AnalyzeAsync(Moved, default);   // change #1
+        events.Count.ShouldBe(0);
+        await a.AnalyzeAsync(Still, default);   // change #2
+        events.Count.ShouldBe(0);
+        await a.AnalyzeAsync(Moved, default);   // change #3 -> motion started
+        events.Count.ShouldBe(1);
+        events[0].ShouldBeTrue();
+        await a.AnalyzeAsync(Still, default);   // still moving -> no re-fire
+        events.Count.ShouldBe(1);
+    }
+
+
+    [Fact]
+    public async Task Motion_stops_only_after_ExitFrames_of_stillness()
+    {
+        var events = new List<bool>();
+        var a = new MotionAnalyzer
+        {
+            EnterFrames = 1,
+            ExitFrames = 2,
+            MotionChangedCommand = new Command<MotionEventArgs>(e => events.Add(e.InMotion))
+        };
+
+        await a.AnalyzeAsync(Still, default);   // seed
+        await a.AnalyzeAsync(Moved, default);   // change -> started
+        events.Count.ShouldBe(1);
+        events[0].ShouldBeTrue();
+        await a.AnalyzeAsync(Moved, default);   // identical to prev -> still #1, not yet stopped
+        events.Count.ShouldBe(1);
+        await a.AnalyzeAsync(Moved, default);   // still #2 -> stopped
+        events.Count.ShouldBe(2);
+        events[1].ShouldBeFalse();
     }
 
 

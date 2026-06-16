@@ -63,4 +63,23 @@ public interface IDocumentParser<TDocument>
         [MaybeNullWhen(false)] out TDocument document,
         out IReadOnlyList<OverlayBox> boxes
     );
+
+    /// <summary>
+    /// Merge a freshly parsed read into the document accumulated over previous frames — typically filling in
+    /// fields that were still <c>null</c> and preferring the richer of two repeating-row collections. The
+    /// analyzer calls this each frame so a document that reveals its fields gradually (number first, then name,
+    /// then expiry) ends up as one complete payload instead of a stream of partials. When <paramref name="incoming"/>
+    /// is a <i>different</i> document (e.g. a different card number) implementations should return it as-is to
+    /// start a fresh accumulation. The default replaces the accumulation with the latest read (no merging).
+    /// </summary>
+    /// <param name="accumulated">The document built from earlier frames in this run.</param>
+    /// <param name="incoming">The document parsed from the current frame.</param>
+    TDocument Merge(TDocument accumulated, TDocument incoming) => incoming;
+
+    /// <summary>
+    /// Whether the accumulated document already has enough to emit, letting the analyzer fire early instead of
+    /// spending its full frame budget. The default returns <c>false</c> so the analyzer always emits once it has
+    /// merged across <c>AccumulationFrames</c> frames; override to short-circuit as soon as the key fields are present.
+    /// </summary>
+    bool IsComplete(TDocument document) => false;
 }
