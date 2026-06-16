@@ -15,6 +15,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Shiny.Maui.Controls.Camera.Ocr\Shiny.Maui.Controls.Camera.Ocr.csproj" />
-        <PackageReference Include="ZXing.Net" />
+        <ProjectReference Include="..\Shiny.Maui.Controls.Camera.Barcode\Shiny.Maui.Controls.Camera.Barcode.csproj" />
     </ItemGroup>
 </Project>

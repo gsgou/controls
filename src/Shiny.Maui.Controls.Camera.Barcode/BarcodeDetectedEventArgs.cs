@@ -1,5 +1,5 @@
 using Microsoft.Maui.Graphics;
-using ZXing;
+using Shiny.Controls.Camera;
 
 namespace Shiny.Maui.Controls.Camera.Barcode;
 

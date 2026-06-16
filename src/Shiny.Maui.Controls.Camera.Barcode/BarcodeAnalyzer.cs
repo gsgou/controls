@@ -2,37 +2,31 @@ using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
-using ZXing;
-using ZXing.Common;
 
 namespace Shiny.Maui.Controls.Camera.Barcode;
 
 /// <summary>
-/// Decodes 1D/2D barcodes and QR codes from each frame using ZXing.Net over the frame's luminance plane.
-/// Cross-platform with no native dependency. Raises <see cref="BarcodeDetected"/> with the decoded format +
-/// value, and draws a box (captioned with the value) around the code; clears it when no code is in view.
+/// Decodes 1D/2D barcodes and QR codes from each frame using the native scanner — Apple Vision on
+/// iOS/macOS and Android MLKit (a no-op on Windows and bare net10.0). Raises <see cref="BarcodeDetected"/>
+/// with the decoded format + value for each code in view, and draws a box (captioned with the value) around
+/// each; clears them when no code is in view.
 /// </summary>
 public class BarcodeAnalyzer : FrameAnalyzer
 {
-    readonly BarcodeReaderGeneric reader;
-
-    public BarcodeAnalyzer()
-    {
-        this.reader = new BarcodeReaderGeneric
-        {
-            AutoRotate = true,
-            Options = new DecodingOptions { TryHarder = true, TryInverted = true }
-        };
-    }
+    readonly BarcodeScanner scanner = new();
 
     /// <inheritdoc/>
     public override string Id => "shiny.camera.barcode";
 
-    /// <summary>Restrict to specific formats (null = all supported). Maps to ZXing PossibleFormats.</summary>
+    /// <summary>
+    /// Restrict to specific symbologies (null = all supported). Filters the native scanner. Settable in XAML
+    /// as a comma-separated list — e.g. <c>Formats="QrCode,Ean13,Code128"</c>.
+    /// </summary>
+    [System.ComponentModel.TypeConverter(typeof(BarcodeFormatCollectionTypeConverter))]
     public IList<BarcodeFormat>? Formats
     {
-        get => this.reader.Options.PossibleFormats;
-        set => this.reader.Options.PossibleFormats = value;
+        get => this.scanner.Formats;
+        set => this.scanner.Formats = value;
     }
 
     /// <summary>Box outline + caption color. Default a green accent.</summary>
@@ -51,58 +45,31 @@ public class BarcodeAnalyzer : FrameAnalyzer
 
     /// <summary>
     /// Optional selector deciding the boxes to draw for a decode; return <c>null</c> for no overlay. When
-    /// unset the analyzer draws a single <see cref="BoxColor"/> box captioned with the value.
+    /// unset the analyzer draws a single <see cref="BoxColor"/> box captioned with the value, per barcode.
     /// </summary>
     public Func<BarcodeDetectedEventArgs, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread when a barcode is decoded in a frame.</summary>
+    /// <summary>Raised on the UI thread for each barcode decoded in a frame.</summary>
     public event EventHandler<BarcodeDetectedEventArgs>? BarcodeDetected;
 
     /// <inheritdoc/>
-    public override ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+    public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
-        int w = frame.Width, h = frame.Height;
-        var lum = frame.GetLuminance().ToArray();
+        var codes = await this.scanner.ScanAsync(frame, ct).ConfigureAwait(false);
+        if (codes.Count == 0)
+            return null; // nothing in view -> clear this analyzer's boxes
 
-        var source = new PlanarYUVLuminanceSource(lum, w, h, 0, 0, w, h, false);
-        var result = this.reader.Decode(source);
-        if (result == null)
-            return default; // nothing in view -> clear this analyzer's box
-
-        var raw = BoundingBox(result.ResultPoints, w, h);
-        var box = CoordinateTransform.ApplyOrientation(raw, frame.Rotation, frame.IsMirrored);
-        var args = new BarcodeDetectedEventArgs(result.BarcodeFormat, result.Text, box);
-
-        this.Emit(() => this.BarcodeDetected?.Invoke(this, args), this.BarcodeDetectedCommand, args);
-
-        var boxes = this.ResolveOverlay(args, this.OverlayProvider,
-            () => new[] { new OverlayBox(box, this.BoxColor, result.Text, this.BoxColor) });
-        return new ValueTask<IReadOnlyList<OverlayBox>?>(boxes);
-    }
-
-    static RectF BoundingBox(ResultPoint[]? points, int w, int h)
-    {
-        if (points == null || points.Length == 0)
-            return new RectF(0, 0, 1, 1);
-
-        float minX = float.MaxValue, minY = float.MaxValue, maxX = 0, maxY = 0;
-        foreach (var p in points)
+        List<OverlayBox>? boxes = null;
+        foreach (var code in codes)
         {
-            minX = Math.Min(minX, p.X);
-            minY = Math.Min(minY, p.Y);
-            maxX = Math.Max(maxX, p.X);
-            maxY = Math.Max(maxY, p.Y);
+            var args = new BarcodeDetectedEventArgs(code.Format, code.Value, code.BoundingBox);
+            this.Emit(() => this.BarcodeDetected?.Invoke(this, args), this.BarcodeDetectedCommand, args);
+
+            var drawn = this.ResolveOverlay(args, this.OverlayProvider,
+                () => new[] { new OverlayBox(code.BoundingBox, this.BoxColor, code.Value, this.BoxColor) });
+            if (drawn is { Count: > 0 })
+                (boxes ??= []).AddRange(drawn);
         }
-
-        // pad slightly so a 1D barcode's zero-height line still draws as a box
-        var pad = Math.Max(w, h) * 0.02f;
-        minX -= pad; maxX += pad; minY -= pad; maxY += pad;
-
-        return new RectF(
-            Math.Clamp(minX / w, 0, 1),
-            Math.Clamp(minY / h, 0, 1),
-            Math.Clamp((maxX - minX) / w, 0, 1),
-            Math.Clamp((maxY - minY) / h, 0, 1)
-        );
+        return boxes;
     }
 }

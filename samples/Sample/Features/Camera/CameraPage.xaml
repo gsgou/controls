@@ -16,6 +16,8 @@
                             Facing="Back"
                             ScaleMode="AspectFill"
                             DetectionCaptured="OnDetectionCaptured">
+                <!-- Scans all symbologies. To limit the native scanner, set Formats inline as a comma-separated
+                     list, e.g. Formats="QrCode,Ean13,Code128" (omit = all). -->
                 <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}"
                                      IsEnabled="{Binding On, Source={x:Reference BarcodeSwitch}}"
                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />

@@ -3,9 +3,9 @@ namespace Shiny.Controls.Camera;
 /// <summary>
 /// A camera frame handed to analyzers. Native analyzers downcast to the platform-specific subclass
 /// (e.g. <c>AppleCameraFrame.SampleBuffer</c>, <c>AndroidCameraFrame.ImageProxy</c>,
-/// <c>WindowsCameraFrame.SoftwareBitmap</c>) to consume the native buffer with zero copies. Managed
-/// analyzers (ZXing barcode, motion) call <see cref="GetLuminance"/> to get a lazily materialized,
-/// cached 8-bit grayscale plane in native (un-rotated) image space.
+/// <c>WindowsCameraFrame.SoftwareBitmap</c>) to consume the native buffer with zero copies. Luminance-based
+/// analyzers (motion) call <see cref="GetLuminance"/> to get a lazily materialized, cached 8-bit grayscale
+/// plane in native (un-rotated) image space.
 /// </summary>
 /// <remarks>
 /// The frame is only valid for the duration of <see cref="IFrameAnalyzer.AnalyzeAsync"/>; the pipeline
