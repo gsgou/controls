@@ -10,7 +10,7 @@ public partial class TextRecognizer
 {
     OcrEngine? engine;
 
-    public async partial Task<List<RecognizedText>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
+    private async partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not WindowsCameraFrame)
             return [];

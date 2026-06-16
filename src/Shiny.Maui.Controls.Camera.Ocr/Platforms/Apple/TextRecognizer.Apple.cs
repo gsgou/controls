@@ -7,7 +7,7 @@ namespace Shiny.Maui.Controls.Camera.Ocr;
 
 public partial class TextRecognizer
 {
-    public partial Task<List<RecognizedText>> RecognizeAsync(CameraFrame frame, CancellationToken ct)
+    private partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct)
     {
         if (frame is not AppleCameraFrame apple)
             return Task.FromResult(new List<RecognizedText>());
@@ -35,7 +35,10 @@ public partial class TextRecognizer
             cg.Dispose();
         })
         {
-            RecognitionLevel = VNRequestTextRecognitionLevel.Accurate
+            RecognitionLevel = VNRequestTextRecognitionLevel.Accurate,
+            // Off: Vision's dictionary "correction" mangles structured fields (license/MRZ/card numbers,
+            // totals, dates) by snapping codes to words (0->O, 1->I). Our parsers fuzzy-match raw text.
+            UsesLanguageCorrection = false
         };
 
         try
