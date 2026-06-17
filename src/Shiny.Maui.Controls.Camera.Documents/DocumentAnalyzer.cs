@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
 using Shiny.Maui.Controls.Camera.Ocr;
 
@@ -34,9 +35,13 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
 
     /// <summary>
     /// Optional selector deciding the boxes to draw for the recognized document; return <c>null</c> for no
-    /// overlay. When unset the analyzer draws the parser's boxes.
+    /// overlay. When unset the analyzer draws the detected document outline (when the frame was deskewed) or
+    /// the parser's field boxes (whole-frame fallback).
     /// </summary>
     public Func<TDocument, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
+
+    /// <summary>Outline color drawn around a detected document. Default a blue accent.</summary>
+    public Color BoxColor { get; set; } = Color.FromArgb("#3B82F6");
 
     /// <summary>
     /// How many frames to merge a document's reads across before firing <see cref="DocumentDetected"/> — so a
@@ -65,7 +70,8 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
     /// <inheritdoc/>
     public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
-        var text = await this.recognizer.RecognizeAsync(frame, ct).ConfigureAwait(false);
+        var doc = await this.recognizer.RecognizeDocumentAsync(frame, ct).ConfigureAwait(false);
+        var text = doc.Blocks;
 
         if (text.Count == 0 || !this.parser.TryParse(text, out var incoming, out var boxes))
         {
@@ -93,8 +99,12 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
             this.EmitDetection(args, () => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand);
         }
 
-        // overlay tracks the current frame's boxes (document position), keyed off the merged payload
-        this.lastOverlay = this.ResolveOverlay(this.accumulated, this.OverlayProvider, () => boxes.Count == 0 ? null : boxes);
+        // Overlay: when the frame was deskewed the parser's boxes are in flat document space (wrong on the
+        // live preview), so draw the detected document outline instead; otherwise draw the parser's field boxes.
+        this.lastOverlay = this.ResolveOverlay(this.accumulated, this.OverlayProvider, () =>
+            doc.Quad is { } q
+                ? [new OverlayBox(q.Bounds, this.BoxColor, null, this.BoxColor)]
+                : (boxes.Count == 0 ? null : boxes));
         return this.lastOverlay;
     }
 

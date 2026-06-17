@@ -17,6 +17,7 @@ namespace Shiny.Maui.Controls.Camera.Ocr;
 public partial class TextRecognizer
 {
     static readonly ConditionalWeakTable<CameraFrame, Lazy<Task<List<RecognizedText>>>> frameCache = new();
+    static readonly ConditionalWeakTable<CameraFrame, Lazy<Task<RecognizedDocument>>> documentCache = new();
 
     /// <summary>
     /// Recognize text blocks in the frame. Returns an empty list when none / unsupported. The underlying OCR
@@ -28,6 +29,21 @@ public partial class TextRecognizer
             .GetValue(frame, f => new Lazy<Task<List<RecognizedText>>>(() => this.RecognizeCoreAsync(f, ct)))
             .Value;
 
+    /// <summary>
+    /// Detect a document in the frame, deskew it (perspective-correct), and OCR the flattened crop — far more
+    /// accurate for angled cards/IDs than whole-frame OCR. Falls back to whole-frame OCR (with a null
+    /// <see cref="RecognizedDocument.Quad"/>) when no document is found or the platform has no rectifier (only
+    /// Apple Vision today; Android/Windows/bare net10.0 fall back). Shared once per frame like
+    /// <see cref="RecognizeAsync"/>.
+    /// </summary>
+    public Task<RecognizedDocument> RecognizeDocumentAsync(CameraFrame frame, CancellationToken ct)
+        => documentCache
+            .GetValue(frame, f => new Lazy<Task<RecognizedDocument>>(() => this.RecognizeDocumentCoreAsync(f, ct)))
+            .Value;
+
     /// <summary>Platform OCR for a single frame. Invoked at most once per frame via <see cref="RecognizeAsync"/>.</summary>
     private partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct);
+
+    /// <summary>Platform detect-deskew-OCR for a single frame. Invoked at most once per frame via <see cref="RecognizeDocumentAsync"/>.</summary>
+    private partial Task<RecognizedDocument> RecognizeDocumentCoreAsync(CameraFrame frame, CancellationToken ct);
 }
