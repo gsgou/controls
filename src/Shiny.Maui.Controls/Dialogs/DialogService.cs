@@ -1,0 +1,52 @@
+using Shiny.Maui.Controls.Infrastructure;
+
+namespace Shiny.Maui.Controls.Dialogs;
+
+public sealed class DialogService(DialogOptions options) : IDialogService
+{
+    public async Task Alert(string title, string message, string okText = "OK", Action<DialogConfig>? configure = null)
+    {
+        var config = this.Build(DialogKind.Alert, title, message, okText, null, null, configure);
+        await this.ShowAsync(config);
+    }
+
+    public async Task<bool> Confirm(string title, string message, string okText = "Yes", string cancelText = "No", Action<DialogConfig>? configure = null)
+    {
+        var config = this.Build(DialogKind.Confirm, title, message, okText, cancelText, null, configure);
+        var outcome = await this.ShowAsync(config);
+        return outcome.Ok;
+    }
+
+    public async Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string cancelText = "Cancel", Action<DialogConfig>? configure = null)
+    {
+        var config = this.Build(DialogKind.Prompt, title, message, okText, cancelText, placeholder, configure);
+        var outcome = await this.ShowAsync(config);
+        return new PromptResult(outcome.Ok, outcome.Value);
+    }
+
+    DialogConfig Build(DialogKind kind, string title, string message, string okText, string? cancelText, string? placeholder, Action<DialogConfig>? configure)
+    {
+        var config = new DialogConfig
+        {
+            Kind = kind,
+            Title = title,
+            Message = message,
+            OkText = okText,
+            CancelText = cancelText,
+            Placeholder = placeholder,
+            Animation = options.DefaultAnimation
+        };
+
+        options.ConfigureDefaults?.Invoke(config);
+        configure?.Invoke(config);
+        return config;
+    }
+
+    Task<DialogOutcome> ShowAsync(DialogConfig config)
+    {
+        if (config.UseFeedback)
+            FeedbackHelper.Execute(this, "Show", config.Title);
+
+        return DialogManager.ShowAsync(config, options);
+    }
+}

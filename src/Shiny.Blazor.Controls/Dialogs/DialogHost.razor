@@ -1,0 +1,167 @@
+@namespace Shiny.Blazor.Controls.Dialogs
+@implements IDisposable
+@inject DialogService DialogService
+
+@foreach (var entry in DialogService.ActiveDialogs)
+{
+    var cfg = entry.Config;
+    var state = entry.IsDismissing ? "shiny-dialog-exit" : "shiny-dialog-enter";
+    var ctx = GetContext(entry);
+
+    <div class="shiny-dialog-backdrop @state"
+         style="@BackdropStyle(cfg)"
+         @onclick="() => OnBackdrop(entry)">
+
+        <div class="shiny-dialog @AnimClass(cfg.Animation) @state @cfg.CssClass"
+             style="@CardStyle(cfg)"
+             role="@(cfg.Kind == DialogKind.Alert ? "alertdialog" : "dialog")"
+             aria-modal="true"
+             aria-label="@cfg.Title"
+             @onclick:stopPropagation="true"
+             @onkeydown="e => OnKeyDown(entry, e)">
+
+            @if (Template is not null)
+            {
+                @Template(ctx)
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(cfg.Title))
+                {
+                    <div class="shiny-dialog-title" style="@Color("color", cfg.TitleColor)">@cfg.Title</div>
+                }
+                @if (!string.IsNullOrEmpty(cfg.Message))
+                {
+                    <div class="shiny-dialog-message" style="@Color("color", cfg.MessageColor)">@cfg.Message</div>
+                }
+                @if (cfg.Kind == DialogKind.Prompt)
+                {
+                    <input class="shiny-dialog-input"
+                           type="@cfg.InputType"
+                           autofocus
+                           placeholder="@cfg.Placeholder"
+                           @bind="entry.PromptValue"
+                           @bind:event="oninput" />
+                }
+                <div class="shiny-dialog-buttons">
+                    @if (!string.IsNullOrEmpty(cfg.CancelText))
+                    {
+                        <button type="button"
+                                class="shiny-dialog-button shiny-dialog-button-cancel"
+                                style="@ButtonStyle(cfg.CancelButtonColor, cfg.CancelButtonTextColor)"
+                                @onclick="() => DialogService.Cancel(entry)">
+                            @cfg.CancelText
+                        </button>
+                    }
+                    <button type="button"
+                            class="shiny-dialog-button shiny-dialog-button-ok"
+                            style="@ButtonStyle(cfg.OkButtonColor, cfg.OkButtonTextColor)"
+                            autofocus="@(cfg.Kind != DialogKind.Prompt)"
+                            @onclick="() => DialogService.Confirm(entry)">
+                        @cfg.OkText
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Optional template that fully replaces the default dialog body. The host still renders the
+    /// dimmed backdrop and applies the entry/exit animation around your content.
+    /// </summary>
+    [Parameter] public RenderFragment<DialogContext>? Template { get; set; }
+
+    readonly Dictionary<string, DialogContext> contexts = new();
+
+    protected override void OnInitialized()
+    {
+        DialogService.OnChanged += OnChanged;
+    }
+
+    void OnChanged()
+    {
+        // Drop contexts for dialogs no longer active so the dictionary doesn't grow unbounded.
+        var live = DialogService.ActiveDialogs.Select(d => d.Id).ToHashSet();
+        foreach (var stale in contexts.Keys.Where(k => !live.Contains(k)).ToList())
+            contexts.Remove(stale);
+
+        StateHasChanged();
+    }
+
+    DialogContext GetContext(DialogEntry entry)
+    {
+        if (!contexts.TryGetValue(entry.Id, out var ctx))
+        {
+            ctx = new DialogContext(entry, () => DialogService.Confirm(entry), () => DialogService.Cancel(entry));
+            contexts[entry.Id] = ctx;
+        }
+        return ctx;
+    }
+
+    void OnBackdrop(DialogEntry entry)
+    {
+        if (entry.Config.DismissOnBackdrop)
+            DialogService.Cancel(entry);
+    }
+
+    void OnKeyDown(DialogEntry entry, KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape" when entry.Config.DismissOnEscape:
+                DialogService.Cancel(entry);
+                break;
+            case "Enter":
+                DialogService.Confirm(entry);
+                break;
+        }
+    }
+
+    static string AnimClass(DialogAnimation animation) => animation switch
+    {
+        DialogAnimation.None => "shiny-dialog-none",
+        DialogAnimation.Fade => "shiny-dialog-fade",
+        DialogAnimation.SlideTop => "shiny-dialog-slide-top",
+        DialogAnimation.SlideBottom => "shiny-dialog-slide-bottom",
+        DialogAnimation.SlideLeft => "shiny-dialog-slide-left",
+        DialogAnimation.SlideRight => "shiny-dialog-slide-right",
+        DialogAnimation.Zoom => "shiny-dialog-zoom",
+        _ => "shiny-dialog-pop"
+    };
+
+    static string BackdropStyle(DialogConfig cfg)
+        => $"background-color: rgba(0,0,0,{cfg.BackdropOpacity.ToString(System.Globalization.CultureInfo.InvariantCulture)});";
+
+    static string CardStyle(DialogConfig cfg)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("border-radius:").Append(Px(cfg.CornerRadius)).Append(';');
+        sb.Append("max-width:").Append(Px(cfg.MaxWidth)).Append(';');
+        if (!string.IsNullOrEmpty(cfg.BackgroundColor))
+            sb.Append("background-color:").Append(cfg.BackgroundColor).Append(';');
+        return sb.ToString();
+    }
+
+    static string ButtonStyle(string? bg, string? text)
+    {
+        var sb = new System.Text.StringBuilder();
+        if (!string.IsNullOrEmpty(bg))
+            sb.Append("background-color:").Append(bg).Append(';');
+        if (!string.IsNullOrEmpty(text))
+            sb.Append("color:").Append(text).Append(';');
+        return sb.ToString();
+    }
+
+    static string Color(string prop, string? value)
+        => string.IsNullOrEmpty(value) ? string.Empty : $"{prop}:{value};";
+
+    static string Px(double value)
+        => value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px";
+
+    public void Dispose()
+    {
+        DialogService.OnChanged -= OnChanged;
+    }
+}

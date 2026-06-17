@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:local="clr-namespace:Sample.Features.DataGrid"
+             x:Class="Sample.Features.DataGrid.DataGridPage"
+             x:DataType="local:DataGridViewModel"
+             Title="DataGrid"
+             AutomationId="DataGridPage">
+
+    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
+        <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray" />
+
+        <shiny:DataGrid Grid.Row="1"
+                        ItemsSource="{Binding People}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                        SortMode="Multiple"
+                        FilterMode="Menu"
+                        Groupable="True"
+                        PageSize="6"
+                        EditMode="Form"
+                        AllowColumnResize="True"
+                        AllowColumnReorder="True"
+                        Striped="True"
+                        Bordered="True">
+            <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
+            <shiny:DataGridColumn Title="Last" PropertyName="LastName" Width="*" />
+            <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
+            <shiny:DataGridColumn Title="Department" PropertyName="Department" Width="2*" />
+            <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
+                <shiny:DataGridColumn.Aggregate>
+                    <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
+                </shiny:DataGridColumn.Aggregate>
+            </shiny:DataGridColumn>
+            <shiny:DataGridTemplateColumn Title="Status" Width="Auto" Editable="False">
+                <shiny:DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="local:Person">
+                        <shiny:PillView Text="{Binding StatusText}"
+                                        Margin="12,8"
+                                        HorizontalOptions="Start"
+                                        VerticalOptions="Center" />
+                    </DataTemplate>
+                </shiny:DataGridTemplateColumn.CellTemplate>
+            </shiny:DataGridTemplateColumn>
+        </shiny:DataGrid>
+    </Grid>
+</ContentPage>

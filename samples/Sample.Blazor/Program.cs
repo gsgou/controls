@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sample.Blazor;
+using Shiny.Blazor.Controls.Dialogs;
 using Shiny.Blazor.Controls.Kiosk.Docking;
 using Shiny.Blazor.Controls.Toast;
 
@@ -9,6 +10,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddShinyToast();
+builder.Services.AddShinyDialogs();
 builder.Services.AddShinyDocking();
 builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ExplorerPanel>("explorer", "Explorer", "📁");
 builder.Services.AddDockPanel<Sample.Blazor.DockPanels.PropertiesPanel>("properties", "Properties", "🔧");

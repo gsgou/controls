@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -139,6 +139,8 @@ No DI registration is required — drop the components into any `.razor` page.
 | `shiny:VirtualizedGrid` | `<VirtualizedGrid>` — `CellPadding` → individual padding props; adds `EnableVirtualization`, `GroupedItems` |
 | `ItemTemplate` as `DataTemplate` | `ItemTemplate` as `RenderFragment<object>` |
 | `IToaster.ShowAsync(text, cfg => {})` (DI) | `IToastService.ShowAsync(text, cfg => {})` (DI + `<ToastHost />`) |
+| `IDialogService.Confirm(...)` (DI; auto-attaches) | `IDialogService.Confirm(...)` (DI + `<DialogHost />`) |
+| `<shiny:DataGrid>` + `<shiny:DataGridColumn PropertyName="..."/>` (items as `object`) | `<DataGrid TItem="T">` + `<PropertyColumn Property="x => x..."/>` (generic, `RenderFragment` templates) |
 | `<shiny:TextEntry>` | `<TextEntry>` |
 | `<shiny:Overlay>` in `<shiny:ShinyContentPage.Panels>` | `<Overlay>` (wraps ChildContent; custom content in `<OverlayContent>` slot) |
 | `<shiny:LoadingOverlay>` in `<shiny:ShinyContentPage.Panels>` | `<LoadingOverlay>` (wraps ChildContent) |
@@ -1396,6 +1398,116 @@ await ToastService.SuccessAsync("File saved");
 - `Ellipsis` — truncates long text with "…" (default)
 - `MultiLine` — wraps text to multiple lines
 - `Marquee` — scrolling ticker animation (configure speed via `MarqueeSpeedPixelsPerSecond`)
+
+### Dialogs
+
+A service-first dialog system that emulates the classic `alert`, `confirm`, and `prompt` primitives — with **owned (non-native), animated, themeable** dialogs on **both MAUI and Blazor**. Inject `IDialogService` and `await` a result — no markup per call. Calls are queued, so awaiting several in a row shows them one at a time.
+
+- **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to the current page (no XAML or OverlayHost required).
+- **Blazor**: register `AddShinyDialogs()` in DI and place a single `<DialogHost />` in your layout.
+
+```csharp
+// MAUI — inject IDialogService (e.g. into a ViewModel)
+public class MyViewModel(IDialogService dialogs)
+{
+    await dialogs.Alert("Heads up", "Your changes have been saved.", "Got it");
+
+    var ok = await dialogs.Confirm("Delete item?", "This cannot be undone.", okText: "Delete", cancelText: "Cancel");
+
+    var result = await dialogs.Prompt("What's your name?", "We'll personalize your experience.", placeholder: "e.g. Allan");
+    if (result.Ok)
+        Console.WriteLine(result.Value);
+}
+```
+
+```razor
+@* Blazor — same surface *@
+@inject IDialogService Dialogs
+
+await Dialogs.Alert("Heads up", "Your changes have been saved.", "Got it");
+var ok = await Dialogs.Confirm("Delete item?", "This cannot be undone.", okText: "Delete", cancelText: "Cancel");
+var result = await Dialogs.Prompt("Your name?", "Personalize things.", placeholder: "e.g. Allan");
+```
+
+| Method | Returns | Buttons |
+|---|---|---|
+| `Alert(title, message, okText, configure?)` | `Task` | OK |
+| `Confirm(title, message, okText, cancelText, configure?)` | `Task<bool>` | confirm + cancel |
+| `Prompt(title, message, placeholder, okText, cancelText, configure?)` | `Task<PromptResult>` | confirm + cancel + text field |
+
+**Animations** — every call takes an optional `configure` delegate to set the entry/exit animation and styling. `DialogAnimation` values: `None`, `Fade`, `SlideTop`, `SlideBottom`, `SlideLeft`, `SlideRight`, `Zoom`, `Pop` (default).
+
+```csharp
+await dialogs.Confirm("Delete?", "This cannot be undone.", configure: c =>
+{
+    c.Animation = DialogAnimation.SlideBottom;
+    c.BackgroundColor = Color.FromArgb("#312E81");   // MAUI Color (Blazor: CSS string)
+    c.OkButtonColor = Color.FromArgb("#22D3EE");
+    c.CornerRadius = 24;
+});
+```
+
+**Customization**
+- **Per-call**: the `configure` delegate (animation, colors, corner radius, backdrop opacity, dismiss behavior).
+- **Global defaults**: MAUI `UseShinyControls(c => c.ConfigureDialogs(o => o.DefaultAnimation = DialogAnimation.Zoom))`; Blazor `AddShinyDialogs(o => o.DefaultAnimation = DialogAnimation.Zoom)`.
+- **Full template override**: MAUI `DialogOptions.ContentTemplate` (a `DataTemplate` bound to `DialogContext`); Blazor `<DialogHost Template="...">` (a `RenderFragment<DialogContext>`). The host still supplies the dimmed backdrop and animation.
+- **Replace the service**: MAUI `c.SetCustomDialogs<T>()`.
+
+Tapping the backdrop or pressing `Escape` (Blazor) cancels (`Confirm` → `false`, `Prompt` → `Cancelled`); `Enter` confirms. Colors follow the theme tokens (`--shiny-color-surface` / `Shiny.Color.Surface`, `Primary`, …) so dialogs match light/dark automatically.
+
+### DataGrid
+
+A feature-rich data grid for both hosts, modeled on MudBlazor's DataGrid. Blazor renders a semantic
+HTML `<table>` (generic `DataGrid<TItem>`); MAUI is a pure cross-platform composite (a `Grid` header
+over a virtualized `CollectionView`, no native handlers). Same feature surface on both: typed
+`PropertyColumn` + `TemplateColumn`, sorting (single + multi), column **filtering** (menu / row /
+toolbar quick-search), **grouping** with expandable groups, footer/group **aggregates**
+(Count/Sum/Average/Min/Max/Custom), single/multi **selection** with checkboxes, inline **editing**
+(cell + form), **paging**, **virtualization**, column **resize/reorder**, sticky header, loading +
+empty states, a `ServerData` delegate for server-side data, and density/striped/bordered/hover styling.
+Colors follow the theme tokens.
+
+```razor
+@* Blazor *@
+<DataGrid TItem="Person" Items="people" MultiSelection="true"
+          SortMode="DataGridSortMode.Multiple" FilterMode="DataGridFilterMode.Menu"
+          Groupable="true" EditMode="DataGridEditMode.Form"
+          Dense="true" Striped="true" Hover="true" FixedHeader="true" Height="420px">
+    <Columns>
+        <PropertyColumn Property="x => x.FirstName" Title="First" />
+        <PropertyColumn Property="x => x.Age" Format="N0" />
+        <PropertyColumn Property="x => x.Salary" Format="C0" />
+        <TemplateColumn Title="Status" Sortable="false">
+            <CellTemplate><Pill Text="@(context.Item.Active ? "Active" : "Inactive")" /></CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <PagerContent><DataGridPager TItem="Person" /></PagerContent>
+</DataGrid>
+```
+
+```xml
+<!-- MAUI -->
+<shiny:DataGrid ItemsSource="{Binding People}" SelectionMode="Multiple"
+                SortMode="Multiple" FilterMode="Menu" Groupable="True"
+                PageSize="20" EditMode="Form" AllowColumnResize="True" AllowColumnReorder="True"
+                Striped="True" Bordered="True">
+    <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
+    <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
+    <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
+        <shiny:DataGridColumn.Aggregate>
+            <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
+        </shiny:DataGridColumn.Aggregate>
+    </shiny:DataGridColumn>
+    <shiny:DataGridTemplateColumn Title="Status" Width="Auto" Editable="False">
+        <shiny:DataGridTemplateColumn.CellTemplate>
+            <DataTemplate><shiny:PillView Text="{Binding StatusText}" /></DataTemplate>
+        </shiny:DataGridTemplateColumn.CellTemplate>
+    </shiny:DataGridTemplateColumn>
+</shiny:DataGrid>
+```
+
+Reflection-based string-path columns are annotated for trimming; set a column's `ValueGetter`/
+`ValueSetter` (MAUI) for fully reflection-free AOT.
 
 ### TableView
 

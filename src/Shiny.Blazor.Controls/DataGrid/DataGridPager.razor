@@ -1,0 +1,44 @@
+@namespace Shiny.Blazor.Controls
+@typeparam TItem
+
+<div class="shiny-dg-pager">
+    <span class="shiny-dg-pager-rpp">
+        @RowsPerPageLabel
+        <select @onchange="OnPageSizeChanged">
+            @foreach (var size in PageSizeOptions)
+            {
+                <option value="@size" selected="@(size == Grid.RowsPerPage)">@size</option>
+            }
+        </select>
+    </span>
+    <span class="shiny-dg-pager-range">@RangeText</span>
+    <span class="shiny-dg-pager-nav">
+        <button type="button" disabled="@(Grid.CurrentPage <= 0)" @onclick="() => Grid.SetPageAsync(0)" aria-label="First">«</button>
+        <button type="button" disabled="@(Grid.CurrentPage <= 0)" @onclick="() => Grid.SetPageAsync(Grid.CurrentPage - 1)" aria-label="Previous">‹</button>
+        <button type="button" disabled="@(Grid.CurrentPage >= Grid.TotalPages - 1)" @onclick="() => Grid.SetPageAsync(Grid.CurrentPage + 1)" aria-label="Next">›</button>
+        <button type="button" disabled="@(Grid.CurrentPage >= Grid.TotalPages - 1)" @onclick="() => Grid.SetPageAsync(Grid.TotalPages - 1)" aria-label="Last">»</button>
+    </span>
+</div>
+
+@code {
+    [CascadingParameter] internal DataGrid<TItem> Grid { get; set; } = default!;
+
+    [Parameter] public int[] PageSizeOptions { get; set; } = { 5, 10, 25, 50, 100 };
+    [Parameter] public string RowsPerPageLabel { get; set; } = "Rows per page:";
+
+    string RangeText
+    {
+        get
+        {
+            var total = Grid.TotalItems;
+            if (total == 0)
+                return "0";
+            var start = Grid.CurrentPage * Grid.RowsPerPage + 1;
+            var end = Math.Min(start + Grid.RowsPerPage - 1, total);
+            return $"{start}-{end} of {total}";
+        }
+    }
+
+    Task OnPageSizeChanged(ChangeEventArgs e)
+        => int.TryParse(e.Value?.ToString(), out var size) ? Grid.SetRowsPerPageAsync(size) : Task.CompletedTask;
+}

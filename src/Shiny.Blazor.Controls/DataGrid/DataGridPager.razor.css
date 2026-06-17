@@ -1,0 +1,48 @@
+.shiny-dg-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--shiny-color-on-surface-variant, #555);
+}
+
+.shiny-dg-pager-rpp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shiny-dg-pager-rpp select {
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: 6px;
+    padding: 4px 6px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+}
+
+.shiny-dg-pager-nav {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.shiny-dg-pager-nav button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--shiny-color-on-surface, #1a1a1a);
+}
+
+.shiny-dg-pager-nav button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 8%, transparent);
+}
+
+.shiny-dg-pager-nav button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}

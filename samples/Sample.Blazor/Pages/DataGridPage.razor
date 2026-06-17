@@ -1,0 +1,101 @@
+@page "/datagrid"
+
+<PageTitle>DataGrid</PageTitle>
+
+<h1>DataGrid</h1>
+
+<p class="status-message">@status</p>
+
+<section class="demo-section">
+    <h2>Options</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+        <label class="toggle-row"><span>Dense</span><input type="checkbox" @bind="dense" /></label>
+        <label class="toggle-row"><span>Striped</span><input type="checkbox" @bind="striped" /></label>
+        <label class="toggle-row"><span>Bordered</span><input type="checkbox" @bind="bordered" /></label>
+        <label class="toggle-row"><span>Hover</span><input type="checkbox" @bind="hover" /></label>
+        <label>Selection
+            <select @bind="selectionMode">
+                @foreach (var v in Enum.GetValues<DataGridSelectionMode>())
+                {
+                    <option value="@v">@v</option>
+                }
+            </select>
+        </label>
+        <label class="toggle-row"><span>Loading</span><input type="checkbox" @bind="loading" /></label>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Full-featured data grid</h2>
+    <p>Multi-sort (click headers), filter menus, grouping (⊞ icon), paging, and form editing (click a row).</p>
+    <DataGrid TItem="Person"
+              Items="people"
+              SelectionMode="selectionMode"
+              SelectedItemsChanged="OnSelectionChanged"
+              SortMode="DataGridSortMode.Multiple"
+              FilterMode="filterMode"
+              Groupable="true"
+              EditMode="editMode"
+              Dense="dense" Striped="striped" Bordered="bordered" Hover="hover"
+              Loading="loading"
+              FixedHeader="true" Height="420px"
+              ColumnResizeMode="DataGridColumnResizeMode.Column"
+              DragDropColumnReordering="true"
+              CommittedItemChanges="OnSaved">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" />
+            <PropertyColumn Property="x => x.LastName" Title="Last" />
+            <PropertyColumn Property="x => x.Age" Format="N0" />
+            <PropertyColumn Property="x => x.Department" />
+            <PropertyColumn Property="x => x.Salary" Format="C0">
+                <FooterTemplate>Total: @people.Sum(p => p.Salary).ToString("C0")</FooterTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="Status" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
+                          Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <DataGridPager TItem="Person" />
+        </PagerContent>
+    </DataGrid>
+</section>
+
+@code {
+    string status = "Pick options and interact with the grid";
+    bool dense, striped = true, bordered, hover = true, loading;
+    DataGridSelectionMode selectionMode = DataGridSelectionMode.Multiple;
+    DataGridFilterMode filterMode = DataGridFilterMode.Menu;
+    DataGridEditMode editMode = DataGridEditMode.Form;
+
+    List<Person> people = Person.Sample();
+
+    void OnSelectionChanged(IReadOnlyCollection<Person> selected)
+        => status = $"{selected.Count} selected";
+
+    void OnSaved(Person p) => status = $"Saved {p.FirstName} {p.LastName}";
+
+    public class Person
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public int Age { get; set; }
+        public string Department { get; set; } = "";
+        public decimal Salary { get; set; }
+        public bool Active { get; set; }
+
+        public static List<Person> Sample() =>
+        [
+            new() { FirstName = "Ada", LastName = "Lovelace", Age = 36, Department = "Engineering", Salary = 142000, Active = true },
+            new() { FirstName = "Alan", LastName = "Turing", Age = 41, Department = "Research", Salary = 158000, Active = true },
+            new() { FirstName = "Grace", LastName = "Hopper", Age = 52, Department = "Engineering", Salary = 165000, Active = false },
+            new() { FirstName = "Katherine", LastName = "Johnson", Age = 44, Department = "Mathematics", Salary = 134000, Active = true },
+            new() { FirstName = "Margaret", LastName = "Hamilton", Age = 39, Department = "Software", Salary = 151000, Active = true },
+            new() { FirstName = "Edsger", LastName = "Dijkstra", Age = 47, Department = "Research", Salary = 149000, Active = false },
+            new() { FirstName = "Donald", LastName = "Knuth", Age = 58, Department = "Mathematics", Salary = 172000, Active = true },
+            new() { FirstName = "Barbara", LastName = "Liskov", Age = 49, Department = "Software", Salary = 161000, Active = true },
+        ];
+    }
+}

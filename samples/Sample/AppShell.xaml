@@ -23,6 +23,8 @@
                   xmlns:pickers="clr-namespace:Sample.Features.Pickers"
                   xmlns:glass="clr-namespace:Sample.Features.FrostedGlass"
                   xmlns:toast="clr-namespace:Sample.Features.Toast"
+                  xmlns:dialogs="clr-namespace:Sample.Features.Dialogs"
+                  xmlns:datagrid="clr-namespace:Sample.Features.DataGrid"
                   xmlns:feedback="clr-namespace:Sample.Features.Feedback"
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
@@ -483,6 +485,22 @@
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Dialogs">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2755;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate dialogs:DialogsPage}" Route="dialogs" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Data Grid">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A6;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
     </FlyoutItem>
 
     <FlyoutItem Title="Text Entry">

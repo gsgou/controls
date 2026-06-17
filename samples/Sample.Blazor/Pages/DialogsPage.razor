@@ -1,0 +1,117 @@
+@page "/dialogs"
+@inject IDialogService Dialogs
+
+<PageTitle>Dialogs</PageTitle>
+
+<h1>Dialog Service</h1>
+
+<p class="status-message">@statusMessage</p>
+
+<section class="demo-section">
+    <h2>Animation</h2>
+    <p>Owned (non-native) entry/exit animation used by the buttons below.</p>
+    <select @bind="animation">
+        @foreach (var v in Enum.GetValues<DialogAnimation>())
+        {
+            <option value="@v">@v</option>
+        }
+    </select>
+</section>
+
+<!-- ============================================================ -->
+<!--  ALERT -->
+<!-- ============================================================ -->
+<section class="demo-section">
+    <h2>Alert</h2>
+    <p>A message with a single dismiss button. Awaits until dismissed.</p>
+    <button @onclick="ShowAlert">Show Alert</button>
+</section>
+
+<!-- ============================================================ -->
+<!--  CONFIRM -->
+<!-- ============================================================ -->
+<section class="demo-section">
+    <h2>Confirm</h2>
+    <p>Confirm / cancel buttons. Returns a <code>bool</code>.</p>
+    <button @onclick="ShowConfirm" style="background:#166534;">Confirm Action</button>
+</section>
+
+<!-- ============================================================ -->
+<!--  PROMPT -->
+<!-- ============================================================ -->
+<section class="demo-section">
+    <h2>Prompt</h2>
+    <p>A text field with confirm / cancel. Returns a <code>PromptResult</code>.</p>
+    <button @onclick="ShowPrompt" style="background:#312E81;">Prompt for Name</button>
+</section>
+
+<!-- ============================================================ -->
+<!--  CUSTOM STYLING -->
+<!-- ============================================================ -->
+<section class="demo-section">
+    <h2>Custom Styling</h2>
+    <p>Per-call colors, corner radius, and a zoom animation.</p>
+    <button @onclick="ShowStyled" style="background:#0F766E;">Styled Confirm</button>
+</section>
+
+@code {
+    string statusMessage = "Tap a button to show a dialog";
+    DialogAnimation animation = DialogAnimation.Pop;
+
+    async Task ShowAlert()
+    {
+        await Dialogs.Alert("Heads up", "Your changes have been saved.", "Got it",
+            c => c.Animation = animation);
+        statusMessage = "Alert dismissed";
+    }
+
+    async Task ShowConfirm()
+    {
+        var ok = await Dialogs.Confirm(
+            "Delete item?",
+            "This action cannot be undone.",
+            okText: "Delete",
+            cancelText: "Cancel",
+            configure: c => c.Animation = animation
+        );
+        statusMessage = ok ? "Confirmed: item deleted" : "Cancelled";
+    }
+
+    async Task ShowPrompt()
+    {
+        var result = await Dialogs.Prompt(
+            "What's your name?",
+            "We'll use this to personalize your experience.",
+            placeholder: "e.g. Allan",
+            okText: "Save",
+            cancelText: "Skip",
+            configure: c => c.Animation = animation
+        );
+        statusMessage = result.Ok
+            ? $"Hello, {result.Value}!"
+            : "Prompt cancelled";
+    }
+
+    async Task ShowStyled()
+    {
+        await Dialogs.Confirm(
+            "Custom styled",
+            "Brand colors with a zoom animation — fully owned, no native dialog.",
+            okText: "Nice",
+            cancelText: "Close",
+            configure: c =>
+            {
+                c.Animation = DialogAnimation.Zoom;
+                c.BackgroundColor = "#312E81";
+                c.TitleColor = "#FFFFFF";
+                c.MessageColor = "#C7D2FE";
+                c.OkButtonColor = "#22D3EE";
+                c.OkButtonTextColor = "#0F172A";
+                c.CancelButtonColor = "#4338CA";
+                c.CancelButtonTextColor = "#FFFFFF";
+                c.CornerRadius = 24;
+            }
+        );
+        statusMessage = "Styled dialog dismissed";
+    }
+}

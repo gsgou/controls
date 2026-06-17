@@ -1,0 +1,365 @@
+.shiny-dg {
+    position: relative;
+    width: 100%;
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    background: var(--shiny-color-surface, #fff);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.shiny-dg-outlined {
+    border: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
+}
+
+.shiny-dg-scroll {
+    overflow: auto;
+    width: 100%;
+    border-radius: inherit;
+}
+
+.shiny-dg-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.shiny-dg-table th,
+.shiny-dg-table td {
+    text-align: left;
+    padding: 12px 16px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.shiny-dg-dense .shiny-dg-table th,
+.shiny-dg-dense .shiny-dg-table td {
+    padding: 6px 10px;
+}
+
+.shiny-dg-table thead th {
+    font-weight: 600;
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
+    background: var(--shiny-color-surface, #fff);
+    user-select: none;
+}
+
+.shiny-dg-header-text {
+    display: inline-block;
+}
+
+.shiny-dg-header-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.shiny-dg-sortable {
+    cursor: pointer;
+}
+
+.shiny-dg-sortable:hover {
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 4%, transparent);
+}
+
+.shiny-dg-sort-icon {
+    font-size: 10px;
+    color: var(--shiny-color-primary, #7c3aed);
+}
+
+.shiny-dg-sort-badge {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--shiny-color-on-primary, #fff);
+    background: var(--shiny-color-primary, #7c3aed);
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shiny-dg-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+}
+
+.shiny-dg-pager-host {
+    border-top: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
+}
+
+.shiny-dg-quickfilter {
+    flex: 1;
+    max-width: 280px;
+    padding: 7px 10px;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: 8px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    font-size: 13px;
+}
+
+.shiny-dg-filter-icon {
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0.5;
+    margin-left: 2px;
+}
+
+.shiny-dg-filter-icon:hover,
+.shiny-dg-filter-active {
+    opacity: 1;
+    color: var(--shiny-color-primary, #7c3aed);
+}
+
+.shiny-dg-filter-menu {
+    position: absolute;
+    z-index: 10;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    min-width: 200px;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #ddd);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    font-weight: 400;
+}
+
+.shiny-dg-filter-menu select,
+.shiny-dg-filter-menu input {
+    padding: 6px 8px;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: 6px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    font-size: 13px;
+}
+
+.shiny-dg-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.shiny-dg-filter-actions button {
+    border: none;
+    cursor: pointer;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--shiny-color-surface-variant, #ececec);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+}
+
+.shiny-dg-filter-row th {
+    padding: 4px 8px 8px;
+}
+
+.shiny-dg-filter-row input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border: 1px solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: 6px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    font-size: 12px;
+    font-weight: 400;
+}
+
+/* the header cell needs relative positioning so the filter menu anchors to it */
+.shiny-dg-table thead th {
+    position: relative;
+}
+
+.shiny-dg-group-icon {
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0.5;
+    margin-left: 2px;
+}
+
+.shiny-dg-group-icon:hover,
+.shiny-dg-group-active {
+    opacity: 1;
+    color: var(--shiny-color-primary, #7c3aed);
+}
+
+.shiny-dg-group-header {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 4%, transparent);
+}
+
+.shiny-dg-group-header td {
+    font-size: 13px;
+}
+
+.shiny-dg-group-caret {
+    display: inline-block;
+    width: 16px;
+    color: var(--shiny-color-on-surface-variant, #777);
+}
+
+.shiny-dg-group-count {
+    color: var(--shiny-color-on-surface-variant, #999);
+    margin-left: 4px;
+}
+
+.shiny-dg-group-footer td {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--shiny-color-on-surface-variant, #555);
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 2%, transparent);
+}
+
+.shiny-dg-editor {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border: 1px solid var(--shiny-color-primary, #7c3aed);
+    border-radius: 6px;
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    font-size: 13px;
+}
+
+.shiny-dg-edit-actions td {
+    text-align: right;
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 6%, transparent);
+}
+
+.shiny-dg-edit-actions button {
+    border: none;
+    cursor: pointer;
+    padding: 6px 16px;
+    margin-left: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.shiny-dg-edit-save {
+    background: var(--shiny-color-primary, #7c3aed);
+    color: var(--shiny-color-on-primary, #fff);
+}
+
+.shiny-dg-edit-cancel {
+    background: var(--shiny-color-surface-variant, #ececec);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+}
+
+.shiny-dg-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 3;
+    touch-action: none;
+}
+
+.shiny-dg-resize-handle:hover {
+    background: var(--shiny-color-primary, #7c3aed);
+    opacity: 0.4;
+}
+
+.shiny-dg-table thead th[draggable="true"] {
+    cursor: grab;
+}
+
+.shiny-dg-table tbody td {
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #efefef);
+    color: var(--shiny-color-on-surface-variant, #444);
+}
+
+.shiny-dg-bordered .shiny-dg-table th,
+.shiny-dg-bordered .shiny-dg-table td {
+    border-right: 1px solid var(--shiny-color-outline-variant, #efefef);
+}
+
+.shiny-dg-striped tbody tr:nth-of-type(odd) {
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 3%, transparent);
+}
+
+.shiny-dg-hover tbody tr.shiny-dg-clickable:hover {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 8%, transparent);
+}
+
+.shiny-dg-row.shiny-dg-selected {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 14%, transparent);
+}
+
+.shiny-dg-clickable {
+    cursor: pointer;
+}
+
+.shiny-dg-checkcol {
+    width: 1%;
+    text-align: center !important;
+    padding-right: 0 !important;
+}
+
+.shiny-dg-norecords td {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--shiny-color-on-surface-variant, #888);
+}
+
+.shiny-dg-table tfoot td {
+    font-weight: 600;
+    border-top: 2px solid var(--shiny-color-outline-variant, #e0e0e0);
+    background: var(--shiny-color-surface, #fff);
+}
+
+/* Fixed (sticky) header */
+.shiny-dg-fixedheader .shiny-dg-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Sticky columns */
+.shiny-dg-sticky-left {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--shiny-color-surface, #fff);
+}
+
+.shiny-dg-sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--shiny-color-surface, #fff);
+}
+
+/* Loading overlay */
+.shiny-dg-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--shiny-color-surface, #fff) 60%, transparent);
+}
+
+.shiny-dg-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 30%, transparent);
+    border-top-color: var(--shiny-color-primary, #7c3aed);
+    border-radius: 50%;
+    animation: shiny-dg-spin 0.7s linear infinite;
+}
+
+@keyframes shiny-dg-spin {
+    to { transform: rotate(360deg); }
+}

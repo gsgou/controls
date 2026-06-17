@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Dialogs;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Toast;
 #if ANDROID || IOS || MACCATALYST || WINDOWS
@@ -28,6 +29,8 @@ public static class ControlsMauiAppBuilderExtensions
 
         builder.Services.TryAddSingleton<IFeedbackService, HapticFeedbackService>();
         builder.Services.TryAddSingleton<IToaster, Toaster>();
+        builder.Services.TryAddSingleton(cfg.DialogOptions);
+        builder.Services.TryAddSingleton<IDialogService, DialogService>();
 
         // Application.Current is not available during builder configuration, so defer applying
         // the theme until the first page is created (same pattern as MauiControlFeedbackIntegrator).
@@ -60,6 +63,28 @@ public static class ControlsMauiAppBuilderExtensions
 
 public class ShinyControlConfiguration(IServiceCollection services)
 {
+    internal DialogOptions DialogOptions { get; } = new();
+
+    /// <summary>
+    /// Configure global defaults for the <see cref="IDialogService"/> service — the default animation,
+    /// app-wide styling (via <see cref="DialogOptions.ConfigureDefaults"/>), and an optional
+    /// <see cref="DialogOptions.ContentTemplate"/> that fully replaces the default dialog card.
+    /// </summary>
+    public ShinyControlConfiguration ConfigureDialogs(Action<DialogOptions> configure)
+    {
+        configure(this.DialogOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Replace the default <see cref="IDialogService"/> implementation with your own.
+    /// </summary>
+    public ShinyControlConfiguration SetCustomDialogs<T>() where T : class, IDialogService
+    {
+        services.AddSingleton<IDialogService, T>();
+        return this;
+    }
+
     /// <summary>
     /// Set a custom feedback service implementation. Note that the default implementation is designed to work with various controls, so if you use a custom implementation, you may need to ensure it integrates properly with the Blazor component or provides its own mechanism for providing feedback (e.g., haptic feedback, sound, etc.).
     /// </summary>

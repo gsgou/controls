@@ -1,0 +1,157 @@
+.shiny-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.shiny-dialog-backdrop.shiny-dialog-enter {
+    animation: shiny-dialog-fade-in 0.2s ease forwards;
+}
+
+.shiny-dialog-backdrop.shiny-dialog-exit {
+    animation: shiny-dialog-fade-out 0.18s ease forwards;
+}
+
+.shiny-dialog {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    background-color: var(--shiny-color-surface, #ffffff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.shiny-dialog-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.shiny-dialog-message {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--shiny-color-on-surface-variant, #4a4a4a);
+}
+
+.shiny-dialog-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--shiny-color-outline, #c4c4c4);
+    background-color: var(--shiny-color-surface, #ffffff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+}
+
+.shiny-dialog-input:focus {
+    outline: none;
+    border-color: var(--shiny-color-primary, #7c3aed);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+
+.shiny-dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.shiny-dialog-button {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 8px;
+    transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+.shiny-dialog-button:hover {
+    filter: brightness(0.95);
+}
+
+.shiny-dialog-button-cancel {
+    background-color: var(--shiny-color-surface-variant, #ececec);
+    color: var(--shiny-color-on-surface-variant, #4a4a4a);
+}
+
+.shiny-dialog-button-ok {
+    background-color: var(--shiny-color-primary, #7c3aed);
+    color: var(--shiny-color-on-primary, #ffffff);
+}
+
+/* ============================================================ */
+/*  Backdrop fade                                               */
+/* ============================================================ */
+@keyframes shiny-dialog-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes shiny-dialog-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ============================================================ */
+/*  Card enter/exit per animation                              */
+/* ============================================================ */
+
+/* Fade */
+.shiny-dialog-fade.shiny-dialog-enter { animation: shiny-dialog-card-fade-in 0.22s ease forwards; }
+.shiny-dialog-fade.shiny-dialog-exit { animation: shiny-dialog-card-fade-out 0.18s ease forwards; }
+
+/* Slide top */
+.shiny-dialog-slide-top.shiny-dialog-enter { animation: shiny-dialog-slide-top-in 0.24s cubic-bezier(0.33, 1, 0.68, 1) forwards; }
+.shiny-dialog-slide-top.shiny-dialog-exit { animation: shiny-dialog-slide-top-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+/* Slide bottom */
+.shiny-dialog-slide-bottom.shiny-dialog-enter { animation: shiny-dialog-slide-bottom-in 0.24s cubic-bezier(0.33, 1, 0.68, 1) forwards; }
+.shiny-dialog-slide-bottom.shiny-dialog-exit { animation: shiny-dialog-slide-bottom-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+/* Slide left */
+.shiny-dialog-slide-left.shiny-dialog-enter { animation: shiny-dialog-slide-left-in 0.24s cubic-bezier(0.33, 1, 0.68, 1) forwards; }
+.shiny-dialog-slide-left.shiny-dialog-exit { animation: shiny-dialog-slide-left-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+/* Slide right */
+.shiny-dialog-slide-right.shiny-dialog-enter { animation: shiny-dialog-slide-right-in 0.24s cubic-bezier(0.33, 1, 0.68, 1) forwards; }
+.shiny-dialog-slide-right.shiny-dialog-exit { animation: shiny-dialog-slide-right-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+/* Zoom */
+.shiny-dialog-zoom.shiny-dialog-enter { animation: shiny-dialog-zoom-in 0.22s cubic-bezier(0.33, 1, 0.68, 1) forwards; }
+.shiny-dialog-zoom.shiny-dialog-exit { animation: shiny-dialog-zoom-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+/* Pop (spring overshoot) */
+.shiny-dialog-pop.shiny-dialog-enter { animation: shiny-dialog-pop-in 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.shiny-dialog-pop.shiny-dialog-exit { animation: shiny-dialog-zoom-out 0.18s cubic-bezier(0.55, 0, 1, 0.45) forwards; }
+
+@keyframes shiny-dialog-card-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shiny-dialog-card-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes shiny-dialog-slide-top-in { from { transform: translateY(-48px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes shiny-dialog-slide-top-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-48px); opacity: 0; } }
+
+@keyframes shiny-dialog-slide-bottom-in { from { transform: translateY(48px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes shiny-dialog-slide-bottom-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(48px); opacity: 0; } }
+
+@keyframes shiny-dialog-slide-left-in { from { transform: translateX(-64px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes shiny-dialog-slide-left-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-64px); opacity: 0; } }
+
+@keyframes shiny-dialog-slide-right-in { from { transform: translateX(64px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes shiny-dialog-slide-right-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(64px); opacity: 0; } }
+
+@keyframes shiny-dialog-zoom-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes shiny-dialog-zoom-out { from { transform: scale(1); opacity: 1; } to { transform: scale(0.92); opacity: 0; } }
+
+@keyframes shiny-dialog-pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }

@@ -1,0 +1,1306 @@
+using System.Collections;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using Shiny.Maui.Controls.Themes;
+
+namespace Shiny.Maui.Controls.DataGrid;
+
+/// <summary>
+/// A pure cross-platform data grid: a header built from <see cref="Columns"/> over a virtualized
+/// <see cref="CollectionView"/> of rows. Supports typed/template columns, selection (single/multi with
+/// checkboxes), and density/striped/bordered styling. Sorting, filtering, grouping, editing, paging,
+/// resize/reorder build on this foundation.
+/// </summary>
+[ContentProperty(nameof(Columns))]
+public partial class DataGrid : ContentView
+{
+    const double CheckboxColumnWidth = 48;
+
+    readonly Grid headerGrid;
+    readonly Border headerWrapper;
+    readonly CollectionView collection;
+    readonly Grid loadingOverlay;
+    readonly List<DataGridRow> dataRows = new();
+    readonly ObservableCollection<object> displayItems = new();
+    readonly SelectionBackgroundConverter selectionConverter = new();
+    readonly Grid footerGrid;
+    Border? footerWrapper;
+    string? groupColumnId;
+    readonly HashSet<object> collapsedGroups = new();
+    DataGridRow? editingRow;
+    readonly Dictionary<string, object?> editValues = new();
+    Border? editActionsBar;
+
+    readonly List<DataGridSortDefinition> sortDefs = new();
+    readonly List<DataGridFilterDefinition> filterDefs = new();
+    readonly Grid pagerBar;
+    readonly Grid toolbarBar;
+    readonly Entry quickSearchEntry;
+    readonly Grid filterRowGrid;
+    readonly Border filterPopup;
+    Label? pagerRangeLabel;
+    Button? pagerFirst, pagerPrev, pagerNext, pagerLast;
+
+    INotifyCollectionChanged? observedItems;
+    bool syncingSelection;
+    int currentPage;
+    string quickSearch = string.Empty;
+    IList? serverItems;
+    int serverTotal;
+
+    public DataGrid()
+    {
+        this.Columns.CollectionChanged += this.OnColumnsCollectionChanged;
+
+        this.headerGrid = new Grid { ColumnSpacing = 0 };
+        this.filterRowGrid = new Grid { ColumnSpacing = 0, IsVisible = false };
+
+        var headerLine = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.End };
+        headerLine.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+
+        var headerStack = new VerticalStackLayout { Children = { this.headerGrid, this.filterRowGrid } };
+        var headerContent = new Grid();
+        headerContent.Add(headerStack);
+        headerContent.Add(headerLine);
+
+        this.headerWrapper = new Border
+        {
+            Content = headerContent,
+            StrokeThickness = 0,
+            Padding = 0
+        };
+        this.headerWrapper.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+
+        this.collection = new CollectionView
+        {
+            ItemsSource = this.displayItems,
+            SelectionMode = Microsoft.Maui.Controls.SelectionMode.None,
+            ItemTemplate = this.BuildItemTemplateSelector()
+        };
+
+        this.pagerBar = this.BuildPager();
+        (this.toolbarBar, this.quickSearchEntry) = this.BuildToolbar();
+        this.filterPopup = this.BuildFilterPopup();
+
+        this.footerGrid = new Grid { ColumnSpacing = 0 };
+        this.footerWrapper = new Border { Content = this.footerGrid, StrokeThickness = 0, Padding = 0, IsVisible = false };
+        this.footerWrapper.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+
+        var bodyGrid = new Grid
+        {
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Star),
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            }
+        };
+        bodyGrid.Add(this.toolbarBar, 0, 0);
+        bodyGrid.Add(this.headerWrapper, 0, 1);
+        bodyGrid.Add(this.collection, 0, 2);
+        bodyGrid.Add(this.footerWrapper, 0, 3);
+        bodyGrid.Add(this.pagerBar, 0, 4);
+
+        this.loadingOverlay = this.BuildLoadingOverlay();
+
+        this.editActionsBar = this.BuildEditActionsBar();
+
+        var host = new Grid();
+        host.Add(bodyGrid);
+        host.Add(this.loadingOverlay);
+        host.Add(this.filterPopup);
+        host.Add(this.editActionsBar);
+        this.Content = host;
+
+        this.ApplyTheme();
+        this.RebuildAll();
+
+        this.Loaded += (_, _) =>
+        {
+            if (this.ServerData is not null)
+                this.LoadServerDataAsync();
+        };
+    }
+
+    /// <summary>The column definitions. Add <see cref="DataGridColumn"/> / <see cref="DataGridTemplateColumn"/>.</summary>
+    public ObservableCollection<DataGridColumn> Columns { get; } = new();
+
+    IReadOnlyList<DataGridColumn> VisibleColumns
+        => this.Columns.Where(c => c.IsVisible).ToList();
+
+    bool HasMultiSelect => this.SelectionMode == DataGridSelectionMode.Multiple;
+
+    void OnColumnsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.RebuildAll();
+
+    // ---------- Items ----------
+    void OnItemsSourceChanged()
+    {
+        if (this.observedItems is not null)
+        {
+            this.observedItems.CollectionChanged -= this.OnItemsCollectionChanged;
+            this.observedItems = null;
+        }
+
+        if (this.ItemsSource is INotifyCollectionChanged ncc)
+        {
+            ncc.CollectionChanged += this.OnItemsCollectionChanged;
+            this.observedItems = ncc;
+        }
+
+        this.RebuildRows();
+    }
+
+    void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (MainThread.IsMainThread)
+            this.RebuildRows();
+        else
+            MainThread.BeginInvokeOnMainThread(this.RebuildRows);
+    }
+
+    bool Grouped => this.groupColumnId is not null && this.Groupable;
+
+    void RebuildRows()
+    {
+        foreach (var row in this.dataRows)
+            row.PropertyChanged -= this.OnRowPropertyChanged;
+        this.dataRows.Clear();
+        this.displayItems.Clear();
+
+        this.selectionConverter.StripedEnabled = this.Striped;
+
+        var index = 0;
+        if (this.Grouped)
+        {
+            var col = this.Columns.FirstOrDefault(c => c.Id == this.groupColumnId);
+            if (col is not null)
+            {
+                foreach (var g in this.ProcessedData().GroupBy(col.GetValue))
+                {
+                    var items = g.ToList();
+                    var collapsed = g.Key is not null && this.collapsedGroups.Contains(g.Key);
+                    this.displayItems.Add(new DataGridGroupHeader(g.Key, col.Title, items.Count, collapsed, items));
+                    if (collapsed)
+                        continue;
+
+                    foreach (var item in items)
+                    {
+                        var row = new DataGridRow(item) { Index = index++ };
+                        row.PropertyChanged += this.OnRowPropertyChanged;
+                        this.dataRows.Add(row);
+                        this.displayItems.Add(row);
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (var item in this.GetPageData())
+            {
+                var row = new DataGridRow(item) { Index = index++ };
+                row.PropertyChanged += this.OnRowPropertyChanged;
+                this.dataRows.Add(row);
+                this.displayItems.Add(row);
+            }
+        }
+
+        // Re-create the item template so density/columns/striping changes take effect.
+        this.collection.ItemTemplate = this.BuildItemTemplateSelector();
+        this.RebuildFooter();
+        this.UpdatePager();
+    }
+
+    DataTemplateSelector BuildItemTemplateSelector()
+        => new DataGridItemTemplateSelector
+        {
+            RowTemplate = new DataTemplate(this.BuildRowView),
+            GroupTemplate = new DataTemplate(this.BuildGroupHeaderView),
+            EditRowTemplate = new DataTemplate(this.BuildEditRowView)
+        };
+
+    // ---------- Inline editing ----------
+    bool EditingEnabled => this.EditMode != DataGridEditMode.None && !this.ReadOnly;
+
+    bool EffectiveEditable(DataGridColumn col) => this.EditingEnabled && col.Editable && col.HasValue;
+
+    void StartEdit(DataGridRow row)
+    {
+        this.editingRow = row;
+        this.editValues.Clear();
+        foreach (var col in this.Columns.Where(c => c.HasValue))
+            this.editValues[col.Id] = col.GetValue(row.Data);
+
+        row.IsEditing = true;
+        this.RefreshRow(row);
+        if (this.editActionsBar is not null)
+            this.editActionsBar.IsVisible = true;
+        this.StartedEditingItem?.Invoke(this, row.Data);
+    }
+
+    void CommitEdit()
+    {
+        if (this.editingRow is null)
+            return;
+        var row = this.editingRow;
+
+        foreach (var col in this.Columns.Where(this.EffectiveEditable))
+        {
+            if (this.editValues.TryGetValue(col.Id, out var v))
+                col.SetCellValue(row.Data, v);
+        }
+
+        row.IsEditing = false;
+        this.editingRow = null;
+        if (this.editActionsBar is not null)
+            this.editActionsBar.IsVisible = false;
+        this.CommittedItemChanges?.Invoke(this, row.Data);
+        this.Reload();
+    }
+
+    void CancelEdit()
+    {
+        if (this.editingRow is null)
+            return;
+        var row = this.editingRow;
+        row.IsEditing = false;
+        this.editingRow = null;
+        this.editValues.Clear();
+        if (this.editActionsBar is not null)
+            this.editActionsBar.IsVisible = false;
+        this.RefreshRow(row);
+        this.CanceledEditingItem?.Invoke(this, row.Data);
+    }
+
+    void RefreshRow(DataGridRow row)
+    {
+        var idx = this.displayItems.IndexOf(row);
+        if (idx < 0)
+            return;
+        this.displayItems.RemoveAt(idx);
+        this.displayItems.Insert(idx, row);
+    }
+
+    View BuildEditRowView()
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = this.BuildColumnDefinitions(),
+            ColumnSpacing = 0
+        };
+        grid.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        if (this.RowHeight > 0)
+            grid.HeightRequest = this.RowHeight;
+
+        var col = 0;
+        if (this.HasMultiSelect)
+            col++;
+
+        foreach (var column in this.VisibleColumns)
+        {
+            View cell;
+            if (this.EffectiveEditable(column))
+            {
+                if (column.EditTemplate is not null)
+                {
+                    cell = (View)column.EditTemplate.CreateContent();
+                    cell.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
+                }
+                else
+                {
+                    var capture = column;
+                    var entry = new Entry
+                    {
+                        Text = this.editValues.TryGetValue(column.Id, out var v) ? v?.ToString() : null,
+                        Margin = new Thickness(8, 2),
+                        VerticalOptions = LayoutOptions.Center
+                    };
+                    entry.TextChanged += (_, e) => this.editValues[capture.Id] = e.NewTextValue;
+                    cell = entry;
+                }
+            }
+            else
+            {
+                cell = this.BuildCellView(column);
+            }
+            grid.Add(cell, col++, 0);
+        }
+        return grid;
+    }
+
+    bool EffectiveGroupable(DataGridColumn col) => this.Groupable && col.Groupable && col.HasValue;
+
+    void ToggleGroupBy(DataGridColumn col)
+    {
+        this.groupColumnId = this.groupColumnId == col.Id ? null : col.Id;
+        this.collapsedGroups.Clear();
+        this.RebuildHeader();
+        this.RebuildRows();
+    }
+
+    void OnGroupHeaderTapped(DataGridGroupHeader header)
+    {
+        if (header.Key is null)
+            return;
+        if (!this.collapsedGroups.Add(header.Key))
+            this.collapsedGroups.Remove(header.Key);
+        this.RebuildRows();
+    }
+
+    View BuildGroupHeaderView()
+    {
+        var caret = new Label { FontSize = 12, VerticalOptions = LayoutOptions.Center, WidthRequest = 18 };
+        caret.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.CaretGlyph));
+        caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+        var text = new Label { FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center };
+        text.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.Display));
+        text.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+
+        var layout = new HorizontalStackLayout { Spacing = 4, Padding = this.CellPadding, Children = { caret, text } };
+        var container = new Grid();
+        container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        container.Add(layout);
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (s, _) =>
+        {
+            if (((View)s!).BindingContext is DataGridGroupHeader h)
+                this.OnGroupHeaderTapped(h);
+        };
+        container.GestureRecognizers.Add(tap);
+        return container;
+    }
+
+    void RebuildFooter()
+    {
+        if (this.footerWrapper is null)
+            return;
+
+        this.footerGrid.Children.Clear();
+        var hasFooter = this.Columns.Any(c => c.IsVisible && (c.Aggregate is not null || c.FooterTemplate is not null));
+        this.footerWrapper.IsVisible = hasFooter;
+        if (!hasFooter)
+            return;
+
+        this.footerGrid.ColumnDefinitions = this.BuildColumnDefinitions();
+        var items = this.ProcessedData();
+        var col = 0;
+        if (this.HasMultiSelect)
+            col++;
+
+        foreach (var column in this.VisibleColumns)
+        {
+            View cell;
+            if (column.FooterTemplate is not null)
+            {
+                cell = (View)column.FooterTemplate.CreateContent();
+            }
+            else if (column.Aggregate is not null)
+            {
+                var lbl = new Label
+                {
+                    Text = ComputeAggregate(column, items),
+                    FontAttributes = FontAttributes.Bold,
+                    Padding = this.CellPadding,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+                cell = lbl;
+            }
+            else
+            {
+                cell = new Label();
+            }
+            this.footerGrid.Add(cell, col++, 0);
+        }
+    }
+
+    internal static string ComputeAggregate(DataGridColumn col, IReadOnlyList<object> items)
+    {
+        var agg = col.Aggregate;
+        if (agg is null)
+            return string.Empty;
+
+        if (agg.Type == DataGridAggregateType.Custom)
+            return agg.CustomAggregate?.Invoke(items) ?? string.Empty;
+
+        double result;
+        if (agg.Type == DataGridAggregateType.Count)
+        {
+            result = items.Count;
+        }
+        else
+        {
+            var nums = items
+                .Select(i => ToDouble(col.GetValue(i)))
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value)
+                .ToList();
+
+            result = agg.Type switch
+            {
+                DataGridAggregateType.Sum => nums.Sum(),
+                DataGridAggregateType.Average => nums.Count > 0 ? nums.Average() : 0,
+                DataGridAggregateType.Min => nums.Count > 0 ? nums.Min() : 0,
+                DataGridAggregateType.Max => nums.Count > 0 ? nums.Max() : 0,
+                _ => 0
+            };
+        }
+
+        return agg.DisplayTemplate?.Invoke(result)
+            ?? result.ToString(agg.Format, System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    static double? ToDouble(object? value)
+    {
+        if (value is null)
+            return null;
+        try
+        {
+            return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    void Reload()
+    {
+        if (this.ServerData is not null)
+            this.LoadServerDataAsync();
+        else
+            this.RebuildRows();
+    }
+
+    void OnPagingChanged()
+    {
+        this.currentPage = 0;
+        this.Reload();
+    }
+
+    // ---------- Pipeline ----------
+    bool Paging => this.PageSize > 0;
+
+    int TotalItems => this.serverItems is not null ? this.serverTotal : this.ProcessedData().Count;
+
+    int TotalPages => this.Paging
+        ? Math.Max(1, (int)Math.Ceiling(this.TotalItems / (double)Math.Max(1, this.PageSize)))
+        : 1;
+
+    IReadOnlyList<object> ProcessedData()
+    {
+        if (this.serverItems is not null)
+            return this.serverItems.Cast<object>().ToList();
+
+        IEnumerable<object> q = this.ItemsSource?.Cast<object>() ?? Enumerable.Empty<object>();
+
+        if (!string.IsNullOrEmpty(this.quickSearch))
+        {
+            var term = this.quickSearch;
+            q = q.Where(item => this.VisibleColumns.Any(c =>
+                c.HasValue && (c.GetText(item)?.Contains(term, StringComparison.CurrentCultureIgnoreCase) ?? false)));
+        }
+
+        q = this.ApplyFilters(q);
+        return this.ApplySort(q);
+    }
+
+    IEnumerable<object> ApplyFilters(IEnumerable<object> source)
+    {
+        if (this.filterDefs.Count == 0)
+            return source;
+
+        var result = source;
+        foreach (var def in this.filterDefs)
+        {
+            var col = this.Columns.FirstOrDefault(c => c.Id == def.ColumnId);
+            if (col is null)
+                continue;
+            var capture = def;
+            result = result.Where(item => DataGridFilterEvaluator.Matches(col.GetValue(item), capture.Operator, capture.Value));
+        }
+        return result;
+    }
+
+    IReadOnlyList<object> ApplySort(IEnumerable<object> source)
+    {
+        if (this.sortDefs.Count == 0)
+            return source as IReadOnlyList<object> ?? source.ToList();
+
+        IOrderedEnumerable<object>? ordered = null;
+        foreach (var def in this.sortDefs.OrderBy(d => d.Order))
+        {
+            var col = this.Columns.FirstOrDefault(c => c.Id == def.ColumnId);
+            if (col is null)
+                continue;
+
+            var comparer = col.Comparer ?? DataGridValueComparer.Instance;
+            Func<object, object?> key = col.GetValue;
+            var asc = def.Direction == DataGridSortDirection.Ascending;
+
+            ordered = ordered is null
+                ? (asc ? source.OrderBy(key, comparer) : source.OrderByDescending(key, comparer))
+                : (asc ? ordered.ThenBy(key, comparer) : ordered.ThenByDescending(key, comparer));
+        }
+        return ((IEnumerable<object>?)ordered ?? source).ToList();
+    }
+
+    IReadOnlyList<object> GetPageData()
+    {
+        var processed = this.ProcessedData();
+        if (!this.Paging || this.serverItems is not null)
+            return processed;
+
+        if (this.currentPage >= this.TotalPages)
+            this.currentPage = this.TotalPages - 1;
+        if (this.currentPage < 0)
+            this.currentPage = 0;
+
+        return processed.Skip(this.currentPage * this.PageSize).Take(this.PageSize).ToList();
+    }
+
+    async void LoadServerDataAsync()
+    {
+        if (this.ServerData is null)
+            return;
+
+        var state = new DataGridGridState
+        {
+            Page = this.currentPage,
+            PageSize = this.PageSize,
+            SortDefinitions = this.sortDefs.ToList(),
+            FilterDefinitions = this.filterDefs.ToList()
+        };
+        var data = await this.ServerData(state);
+        this.serverItems = data.Items;
+        this.serverTotal = data.TotalItems;
+        this.RebuildRows();
+    }
+
+    // ---------- Sorting ----------
+    bool EffectiveSortable(DataGridColumn col)
+        => col.Sortable && this.SortMode != DataGridSortMode.None && col.HasValue;
+
+    void OnHeaderTapped(DataGridColumn col)
+    {
+        if (!this.EffectiveSortable(col))
+            return;
+
+        var existing = this.sortDefs.FirstOrDefault(d => d.ColumnId == col.Id);
+        var next = existing is null
+            ? DataGridSortDirection.Ascending
+            : existing.Direction == DataGridSortDirection.Ascending
+                ? DataGridSortDirection.Descending
+                : DataGridSortDirection.None;
+
+        if (this.SortMode != DataGridSortMode.Multiple)
+            this.sortDefs.Clear();
+        else
+            this.sortDefs.RemoveAll(d => d.ColumnId == col.Id);
+
+        if (next != DataGridSortDirection.None)
+            this.sortDefs.Add(new DataGridSortDefinition(col.Id, next, this.sortDefs.Count));
+
+        this.RebuildHeader();
+        this.Reload();
+    }
+
+    string SortGlyph(DataGridColumn col)
+    {
+        var def = this.sortDefs.FirstOrDefault(d => d.ColumnId == col.Id);
+        if (def is null)
+            return string.Empty;
+        var arrow = def.Direction == DataGridSortDirection.Ascending ? "▲" : "▼";
+        if (this.SortMode == DataGridSortMode.Multiple && this.sortDefs.Count > 1)
+            arrow += (def.Order + 1).ToString();
+        return arrow;
+    }
+
+    // ---------- Build header + rows ----------
+    void RebuildAll()
+    {
+        this.RebuildHeader();
+        this.RebuildRows();
+    }
+
+    void RebuildHeader()
+    {
+        this.headerGrid.Children.Clear();
+        this.headerGrid.ColumnDefinitions = this.BuildColumnDefinitions();
+        this.headerWrapper.IsVisible = this.ShowColumnHeaders;
+        if (!this.ShowColumnHeaders)
+            return;
+
+        var col = 0;
+        if (this.HasMultiSelect)
+        {
+            var selectAll = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            selectAll.CheckedChanged += (_, e) => this.ToggleSelectAll(e.Value);
+            this.headerGrid.Add(selectAll, col++, 0);
+        }
+
+        foreach (var column in this.VisibleColumns)
+        {
+            var capture = column;
+            View headerView;
+            if (column.HeaderTemplate is not null)
+            {
+                headerView = (View)column.HeaderTemplate.CreateContent();
+                if (this.EffectiveSortable(column))
+                {
+                    var t = new TapGestureRecognizer();
+                    t.Tapped += (_, _) => this.OnHeaderTapped(capture);
+                    headerView.GestureRecognizers.Add(t);
+                }
+            }
+            else
+            {
+                var title = new Label
+                {
+                    Text = column.Title,
+                    FontAttributes = FontAttributes.Bold,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+
+                var sortGlyph = new Label
+                {
+                    Text = this.SortGlyph(column),
+                    FontSize = 11,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                sortGlyph.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Primary);
+
+                var sortablePart = new HorizontalStackLayout { Spacing = 4, Children = { title, sortGlyph } };
+                if (this.EffectiveSortable(column))
+                {
+                    var t = new TapGestureRecognizer();
+                    t.Tapped += (_, _) => this.OnHeaderTapped(capture);
+                    sortablePart.GestureRecognizers.Add(t);
+                }
+
+                var cell = new HorizontalStackLayout
+                {
+                    Spacing = 6,
+                    Padding = this.CellPadding,
+                    Children = { sortablePart }
+                };
+
+                if (this.FilterMode == DataGridFilterMode.Menu && this.EffectiveFilterable(column))
+                {
+                    var filterGlyph = new Label
+                    {
+                        Text = "▾",
+                        FontSize = 12,
+                        VerticalOptions = LayoutOptions.Center,
+                        Opacity = this.HasActiveFilter(column) ? 1 : 0.5
+                    };
+                    filterGlyph.SetDynamicResource(Label.TextColorProperty,
+                        this.HasActiveFilter(column) ? ShinyThemeKeys.Color.Primary : ShinyThemeKeys.Color.OnSurfaceVariant);
+                    var ft = new TapGestureRecognizer();
+                    ft.Tapped += (_, _) => this.OpenFilterMenu(capture);
+                    filterGlyph.GestureRecognizers.Add(ft);
+                    cell.Children.Add(filterGlyph);
+                }
+
+                if (this.EffectiveGroupable(column))
+                {
+                    var grouped = this.groupColumnId == column.Id;
+                    var groupGlyph = new Label
+                    {
+                        Text = "⊞",
+                        FontSize = 12,
+                        VerticalOptions = LayoutOptions.Center,
+                        Opacity = grouped ? 1 : 0.5
+                    };
+                    groupGlyph.SetDynamicResource(Label.TextColorProperty,
+                        grouped ? ShinyThemeKeys.Color.Primary : ShinyThemeKeys.Color.OnSurfaceVariant);
+                    var gt = new TapGestureRecognizer();
+                    gt.Tapped += (_, _) => this.ToggleGroupBy(capture);
+                    groupGlyph.GestureRecognizers.Add(gt);
+                    cell.Children.Add(groupGlyph);
+                }
+
+                if (this.AllowColumnReorder)
+                {
+                    cell.Children.Add(this.ReorderArrow("‹", capture, -1));
+                    cell.Children.Add(this.ReorderArrow("›", capture, +1));
+                }
+
+                headerView = cell;
+            }
+
+            if (this.AllowColumnResize && column.Resizable)
+            {
+                var container = new Grid();
+                container.Add(headerView);
+                container.Add(this.ResizeHandle(capture, container));
+                headerView = container;
+            }
+
+            this.headerGrid.Add(headerView, col++, 0);
+        }
+
+        this.BuildFilterRow();
+        this.toolbarBar.IsVisible = this.FilterMode == DataGridFilterMode.Toolbar;
+    }
+
+    void BuildFilterRow()
+    {
+        this.filterRowGrid.Children.Clear();
+        this.filterRowGrid.IsVisible = this.FilterMode == DataGridFilterMode.Row;
+        if (this.FilterMode != DataGridFilterMode.Row)
+            return;
+
+        this.filterRowGrid.ColumnDefinitions = this.BuildColumnDefinitions();
+        var col = 0;
+        if (this.HasMultiSelect)
+            col++;
+
+        foreach (var column in this.VisibleColumns)
+        {
+            if (this.EffectiveFilterable(column))
+            {
+                var capture = column;
+                var entry = new Entry
+                {
+                    Placeholder = "Filter",
+                    FontSize = 13,
+                    Margin = new Thickness(8, 2),
+                    Text = this.filterDefs.FirstOrDefault(d => d.ColumnId == column.Id)?.Value?.ToString()
+                };
+                entry.TextChanged += (_, e) => this.ApplyColumnFilter(
+                    capture,
+                    this.DefaultOperator(capture.GetDataType(this.ItemTypeOrString())),
+                    string.IsNullOrEmpty(e.NewTextValue) ? null : e.NewTextValue);
+                this.filterRowGrid.Add(entry, col, 0);
+            }
+            col++;
+        }
+    }
+
+    // ---------- Reorder / resize ----------
+    Label ReorderArrow(string glyph, DataGridColumn col, int direction)
+    {
+        var arrow = new Label { Text = glyph, FontSize = 14, Opacity = 0.6, VerticalOptions = LayoutOptions.Center };
+        arrow.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) => this.MoveColumn(col, direction);
+        arrow.GestureRecognizers.Add(tap);
+        return arrow;
+    }
+
+    void MoveColumn(DataGridColumn col, int direction)
+    {
+        var idx = this.Columns.IndexOf(col);
+        var target = idx + direction;
+        if (idx < 0 || target < 0 || target >= this.Columns.Count)
+            return;
+        this.Columns.Move(idx, target);
+    }
+
+    View ResizeHandle(DataGridColumn col, VisualElement headerCell)
+    {
+        var handle = new BoxView
+        {
+            WidthRequest = 8,
+            BackgroundColor = Colors.Transparent,
+            HorizontalOptions = LayoutOptions.End,
+            VerticalOptions = LayoutOptions.Fill
+        };
+
+        var startWidth = 0d;
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += (_, e) =>
+        {
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    startWidth = headerCell.Width > 0 ? headerCell.Width : 120;
+                    break;
+                case GestureStatus.Running:
+                    col.Width = new GridLength(Math.Max(48, startWidth + e.TotalX));
+                    this.RebuildHeader();
+                    break;
+                case GestureStatus.Completed:
+                    this.RebuildRows();
+                    break;
+            }
+        };
+        handle.GestureRecognizers.Add(pan);
+        return handle;
+    }
+
+    // ---------- Filtering ----------
+    bool EffectiveFilterable(DataGridColumn col) => col.Filterable && col.HasValue;
+
+    bool HasActiveFilter(DataGridColumn col)
+        => this.filterDefs.Any(d => d.ColumnId == col.Id &&
+            (d.Value is not null || d.Operator is DataGridFilterOperator.Empty or DataGridFilterOperator.NotEmpty));
+
+    Type ItemTypeOrString()
+        => this.ItemsSource?.Cast<object>().FirstOrDefault()?.GetType() ?? typeof(string);
+
+    void SetQuickSearch(string? text)
+    {
+        this.quickSearch = text ?? string.Empty;
+        this.currentPage = 0;
+        this.Reload();
+    }
+
+    void ApplyColumnFilter(DataGridColumn col, DataGridFilterOperator op, object? value)
+    {
+        var def = this.filterDefs.FirstOrDefault(d => d.ColumnId == col.Id);
+        if (def is null)
+        {
+            def = new DataGridFilterDefinition { ColumnId = col.Id };
+            this.filterDefs.Add(def);
+        }
+        def.Operator = op;
+        def.Value = value;
+        this.currentPage = 0;
+        this.Reload();
+    }
+
+    void ClearColumnFilter(DataGridColumn col)
+    {
+        this.filterDefs.RemoveAll(d => d.ColumnId == col.Id);
+        this.currentPage = 0;
+        this.Reload();
+    }
+
+    void OpenFilterMenu(DataGridColumn col)
+    {
+        var type = col.GetDataType(this.ItemTypeOrString());
+        var ops = this.OperatorsFor(type).ToList();
+        var existing = this.filterDefs.FirstOrDefault(d => d.ColumnId == col.Id);
+
+        var picker = new Picker { Title = "Operator" };
+        foreach (var op in ops)
+            picker.Items.Add(this.OperatorLabel(op));
+        picker.SelectedIndex = existing is null ? 0 : Math.Max(0, ops.IndexOf(existing.Operator));
+
+        var valueEntry = new Entry { Placeholder = "Value", Text = existing?.Value?.ToString() };
+
+        var clear = new Button { Text = "Clear", FontSize = 13 };
+        clear.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        clear.BackgroundColor = Colors.Transparent;
+        clear.Clicked += (_, _) =>
+        {
+            this.ClearColumnFilter(col);
+            this.filterPopup.IsVisible = false;
+            this.RebuildHeader();
+        };
+
+        var apply = new Button { Text = "Apply", FontSize = 13 };
+        apply.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        apply.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        apply.Clicked += (_, _) =>
+        {
+            var op = ops[Math.Max(0, picker.SelectedIndex)];
+            this.ApplyColumnFilter(col, op, string.IsNullOrEmpty(valueEntry.Text) ? null : valueEntry.Text);
+            this.filterPopup.IsVisible = false;
+            this.RebuildHeader();
+        };
+
+        var title = new Label { Text = col.Title, FontAttributes = FontAttributes.Bold };
+        title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+
+        this.filterPopup.Content = new VerticalStackLayout
+        {
+            Spacing = 8,
+            Children =
+            {
+                title,
+                picker,
+                valueEntry,
+                new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End, Children = { clear, apply } }
+            }
+        };
+        this.filterPopup.IsVisible = true;
+    }
+
+    IReadOnlyList<DataGridFilterOperator> OperatorsFor(Type type)
+    {
+        if (type == typeof(string))
+            return new[] { DataGridFilterOperator.Contains, DataGridFilterOperator.NotContains, DataGridFilterOperator.Equals, DataGridFilterOperator.NotEquals, DataGridFilterOperator.StartsWith, DataGridFilterOperator.EndsWith, DataGridFilterOperator.Empty, DataGridFilterOperator.NotEmpty };
+        if (type == typeof(bool))
+            return new[] { DataGridFilterOperator.Is };
+        if (type.IsEnum)
+            return new[] { DataGridFilterOperator.Is, DataGridFilterOperator.IsNot };
+        return new[] { DataGridFilterOperator.Equals, DataGridFilterOperator.NotEquals, DataGridFilterOperator.GreaterThan, DataGridFilterOperator.GreaterThanOrEqual, DataGridFilterOperator.LessThan, DataGridFilterOperator.LessThanOrEqual };
+    }
+
+    DataGridFilterOperator DefaultOperator(Type type)
+        => type == typeof(string) ? DataGridFilterOperator.Contains
+            : type == typeof(bool) || type.IsEnum ? DataGridFilterOperator.Is
+            : DataGridFilterOperator.Equals;
+
+    string OperatorLabel(DataGridFilterOperator op) => op switch
+    {
+        DataGridFilterOperator.Contains => "contains",
+        DataGridFilterOperator.NotContains => "not contains",
+        DataGridFilterOperator.Equals => "equals",
+        DataGridFilterOperator.NotEquals => "not equals",
+        DataGridFilterOperator.StartsWith => "starts with",
+        DataGridFilterOperator.EndsWith => "ends with",
+        DataGridFilterOperator.Empty => "is empty",
+        DataGridFilterOperator.NotEmpty => "is not empty",
+        DataGridFilterOperator.GreaterThan => ">",
+        DataGridFilterOperator.GreaterThanOrEqual => "≥",
+        DataGridFilterOperator.LessThan => "<",
+        DataGridFilterOperator.LessThanOrEqual => "≤",
+        DataGridFilterOperator.Is => "is",
+        DataGridFilterOperator.IsNot => "is not",
+        _ => op.ToString()
+    };
+
+    (Grid Bar, Entry Search) BuildToolbar()
+    {
+        var entry = new Entry { Placeholder = "Search…" };
+        entry.TextChanged += (_, e) => this.SetQuickSearch(e.NewTextValue);
+        var bar = new Grid { IsVisible = false, Padding = new Thickness(8, 6) };
+        bar.Add(entry);
+        return (bar, entry);
+    }
+
+    Border BuildFilterPopup()
+    {
+        var popup = new Border
+        {
+            IsVisible = false,
+            Padding = 12,
+            StrokeThickness = 0,
+            WidthRequest = 250,
+            HorizontalOptions = LayoutOptions.End,
+            VerticalOptions = LayoutOptions.Start,
+            Margin = new Thickness(0, 8, 8, 0),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
+            Shadow = new Shadow { Brush = Colors.Black, Offset = new Point(0, 4), Radius = 16, Opacity = 0.25f }
+        };
+        popup.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        return popup;
+    }
+
+    ColumnDefinitionCollection BuildColumnDefinitions()
+    {
+        var defs = new ColumnDefinitionCollection();
+        if (this.HasMultiSelect)
+            defs.Add(new ColumnDefinition(new GridLength(CheckboxColumnWidth)));
+
+        foreach (var column in this.VisibleColumns)
+            defs.Add(new ColumnDefinition(column.Width));
+
+        return defs;
+    }
+
+    Thickness CellPadding => this.Dense ? new Thickness(10, 6) : new Thickness(16, 12);
+
+    View BuildRowView()
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = this.BuildColumnDefinitions(),
+            ColumnSpacing = 0
+        };
+        if (this.RowHeight > 0)
+            grid.HeightRequest = this.RowHeight;
+
+        // Selection / stripe background reacts to the row's IsSelected + index parity.
+        grid.SetBinding(VisualElement.BackgroundColorProperty, new MultiBinding
+        {
+            Converter = this.selectionConverter,
+            Bindings =
+            {
+                new Binding(nameof(DataGridRow.IsSelected)),
+                new Binding(nameof(DataGridRow.Index))
+            }
+        });
+
+        var bottomLine = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.End };
+        bottomLine.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+
+        var col = 0;
+        if (this.HasMultiSelect)
+        {
+            var check = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            check.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(DataGridRow.IsSelected), BindingMode.TwoWay));
+            grid.Add(check, col++, 0);
+        }
+
+        foreach (var column in this.VisibleColumns)
+        {
+            var cell = this.BuildCellView(column);
+            grid.Add(cell, col++, 0);
+        }
+
+        // Wrap so we can overlay the separator line and capture taps without disturbing the cells.
+        var container = new Grid();
+        container.Add(grid);
+        if (this.Bordered)
+            this.AddVerticalBorders(grid);
+        container.Add(bottomLine);
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (s, _) =>
+        {
+            if (((View)s!).BindingContext is DataGridRow row)
+                this.OnRowTapped(row);
+        };
+        container.GestureRecognizers.Add(tap);
+
+        return container;
+    }
+
+    void AddVerticalBorders(Grid rowGrid)
+    {
+        // Right border per cell for the "bordered" look.
+        for (var i = 0; i < rowGrid.ColumnDefinitions.Count; i++)
+        {
+            var line = new BoxView { WidthRequest = 1, HorizontalOptions = LayoutOptions.End };
+            line.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+            rowGrid.Add(line, i, 0);
+        }
+    }
+
+    View BuildCellView(DataGridColumn column)
+    {
+        if (column.CellTemplate is not null)
+        {
+            var content = (View)column.CellTemplate.CreateContent();
+            // The row's BindingContext is the DataGridRow wrapper; point the cell at the data item.
+            content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
+            return content;
+        }
+
+        var label = new Label
+        {
+            VerticalOptions = LayoutOptions.Center,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            Padding = this.CellPadding
+        };
+        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+        if (!string.IsNullOrEmpty(column.PropertyName))
+        {
+            label.SetBinding(Label.TextProperty, new Binding(
+                $"{nameof(DataGridRow.Data)}.{column.PropertyName}",
+                stringFormat: column.StringFormat));
+        }
+        return label;
+    }
+
+    // ---------- Selection ----------
+    void OnRowTapped(DataGridRow row)
+    {
+        if (this.EditingEnabled && this.EditTrigger == DataGridEditTrigger.OnRowClick)
+        {
+            if (!ReferenceEquals(this.editingRow, row))
+                this.StartEdit(row);
+            return;
+        }
+
+        switch (this.SelectionMode)
+        {
+            case DataGridSelectionMode.Single:
+                foreach (var r in this.dataRows)
+                    r.IsSelected = ReferenceEquals(r, row);
+                break;
+
+            case DataGridSelectionMode.Multiple:
+                row.IsSelected = !row.IsSelected;
+                break;
+        }
+    }
+
+    void OnRowPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DataGridRow.IsSelected) && !this.syncingSelection)
+            this.SyncSelectionFromRows();
+    }
+
+    void SyncSelectionFromRows()
+    {
+        this.syncingSelection = true;
+        try
+        {
+            var selectedData = this.dataRows.Where(r => r.IsSelected).Select(r => r.Data).ToList();
+
+            if (this.SelectedItems is { } list)
+            {
+                list.Clear();
+                foreach (var item in selectedData)
+                    list.Add(item);
+            }
+
+            this.SelectedItem = selectedData.Count > 0 ? selectedData[0] : null;
+
+            this.SelectionChanged?.Invoke(this, new DataGridSelectionChangedEventArgs(selectedData));
+            if (this.SelectionChangedCommand?.CanExecute(selectedData) == true)
+                this.SelectionChangedCommand.Execute(selectedData);
+        }
+        finally
+        {
+            this.syncingSelection = false;
+        }
+    }
+
+    void OnSelectedItemChanged(object? newValue)
+    {
+        if (this.syncingSelection || this.SelectionMode != DataGridSelectionMode.Single)
+            return;
+
+        this.syncingSelection = true;
+        try
+        {
+            foreach (var row in this.dataRows)
+                row.IsSelected = ReferenceEquals(row.Data, newValue);
+        }
+        finally
+        {
+            this.syncingSelection = false;
+        }
+    }
+
+    void ToggleSelectAll(bool select)
+    {
+        foreach (var row in this.dataRows)
+            row.IsSelected = select;
+    }
+
+    // ---------- Pager ----------
+    Grid BuildPager()
+    {
+        this.pagerRangeLabel = new Label { VerticalOptions = LayoutOptions.Center, HorizontalOptions = LayoutOptions.End };
+        this.pagerRangeLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+        this.pagerFirst = this.PagerButton("«", () => this.GoToPage(0));
+        this.pagerPrev = this.PagerButton("‹", () => this.GoToPage(this.currentPage - 1));
+        this.pagerNext = this.PagerButton("›", () => this.GoToPage(this.currentPage + 1));
+        this.pagerLast = this.PagerButton("»", () => this.GoToPage(this.TotalPages - 1));
+
+        var bar = new Grid
+        {
+            IsVisible = false,
+            Padding = new Thickness(8, 4),
+            ColumnSpacing = 2,
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Auto)
+            }
+        };
+        bar.Add(this.pagerRangeLabel, 0, 0);
+        bar.Add(this.pagerFirst, 1, 0);
+        bar.Add(this.pagerPrev, 2, 0);
+        bar.Add(this.pagerNext, 3, 0);
+        bar.Add(this.pagerLast, 4, 0);
+        return bar;
+    }
+
+    Button PagerButton(string text, Action action)
+    {
+        var button = new Button
+        {
+            Text = text,
+            FontSize = 16,
+            WidthRequest = 40,
+            HeightRequest = 40,
+            Padding = 0,
+            BackgroundColor = Colors.Transparent
+        };
+        button.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+        button.Clicked += (_, _) => action();
+        return button;
+    }
+
+    void GoToPage(int page)
+    {
+        this.currentPage = Math.Clamp(page, 0, this.TotalPages - 1);
+        this.Reload();
+    }
+
+    void UpdatePager()
+    {
+        this.pagerBar.IsVisible = this.Paging && !this.Grouped;
+        if (!this.pagerBar.IsVisible || this.pagerRangeLabel is null)
+            return;
+
+        var total = this.TotalItems;
+        if (total == 0)
+        {
+            this.pagerRangeLabel.Text = "0";
+        }
+        else
+        {
+            var start = this.currentPage * this.PageSize + 1;
+            var end = Math.Min(start + this.PageSize - 1, total);
+            this.pagerRangeLabel.Text = $"{start}-{end} of {total}";
+        }
+
+        var atStart = this.currentPage <= 0;
+        var atEnd = this.currentPage >= this.TotalPages - 1;
+        if (this.pagerFirst is not null) this.pagerFirst.IsEnabled = !atStart;
+        if (this.pagerPrev is not null) this.pagerPrev.IsEnabled = !atStart;
+        if (this.pagerNext is not null) this.pagerNext.IsEnabled = !atEnd;
+        if (this.pagerLast is not null) this.pagerLast.IsEnabled = !atEnd;
+    }
+
+    Border BuildEditActionsBar()
+    {
+        var cancel = new Button { Text = "Cancel", FontSize = 13, BackgroundColor = Colors.Transparent };
+        cancel.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        cancel.Clicked += (_, _) => this.CancelEdit();
+
+        var save = new Button { Text = "Save", FontSize = 13 };
+        save.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        save.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        save.Clicked += (_, _) => this.CommitEdit();
+
+        var bar = new Border
+        {
+            IsVisible = false,
+            Padding = 8,
+            StrokeThickness = 0,
+            VerticalOptions = LayoutOptions.End,
+            Content = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End, Children = { cancel, save } },
+            Shadow = new Shadow { Brush = Colors.Black, Offset = new Point(0, -2), Radius = 12, Opacity = 0.2f }
+        };
+        bar.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        return bar;
+    }
+
+    // ---------- Theme + loading ----------
+    void ApplyTheme()
+    {
+        this.selectionConverter.Selected = ResolveColor(ShinyThemeKeys.Color.Primary, Color.FromArgb("#7C3AED")).WithAlpha(0.14f);
+        this.selectionConverter.Stripe = ResolveColor(ShinyThemeKeys.Color.OnSurface, Colors.Black).WithAlpha(0.04f);
+    }
+
+    static Color ResolveColor(string key, Color fallback)
+        => Application.Current?.Resources.TryGetValue(key, out var v) == true && v is Color c ? c : fallback;
+
+    void UpdateLoading() => this.loadingOverlay.IsVisible = this.IsLoading;
+
+    Grid BuildLoadingOverlay()
+    {
+        var spinner = new ActivityIndicator
+        {
+            IsRunning = true,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+        spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.Primary);
+
+        var overlay = new Grid { IsVisible = false, BackgroundColor = Colors.Black.WithAlpha(0.06f) };
+        overlay.Add(spinner);
+        return overlay;
+    }
+}

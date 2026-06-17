@@ -1,0 +1,306 @@
+@namespace Shiny.Blazor.Controls
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+
+<CascadingValue Value="this" IsFixed="true">
+    @Columns
+
+    <div class="@RootCssClass" style="@RootStyle" @attributes="AdditionalAttributes">
+        @if (ToolbarContent is not null || FilterMode == DataGridFilterMode.Toolbar)
+        {
+            <div class="shiny-dg-toolbar">
+                @if (FilterMode == DataGridFilterMode.Toolbar)
+                {
+                    <input class="shiny-dg-quickfilter" type="search" placeholder="Search…"
+                           value="@QuickSearch" @oninput="e => SetQuickSearchAsync(e.Value?.ToString())" />
+                }
+                @ToolbarContent
+            </div>
+        }
+
+        @if (Loading)
+        {
+            <div class="shiny-dg-loading">
+                @if (LoadingContent is not null)
+                {
+                    @LoadingContent
+                }
+                else
+                {
+                    <div class="shiny-dg-spinner"></div>
+                }
+            </div>
+        }
+
+        <div class="shiny-dg-scroll" @onpointermove="OnResizeMove" @onpointerup="OnResizeEnd">
+            <table class="shiny-dg-table">
+                @if (ShowColumnHeaders)
+                {
+                    <thead>
+                        <tr>
+                            @if (HasMultiSelect)
+                            {
+                                <th class="shiny-dg-checkcol">
+                                    <input type="checkbox" checked="@AllSelected"
+                                           @onchange="e => ToggleSelectAllAsync(e.Value is true)" />
+                                </th>
+                            }
+                            @foreach (var col in VisibleColumns)
+                            {
+                                var sortable = EffectiveSortable(col);
+                                var sort = GetSortDefinition(col);
+                                var badge = SortOrderBadge(col);
+                                <th class="@HeaderCssClass(col) @(sortable ? "shiny-dg-sortable" : "")"
+                                    style="@ColumnWidthStyle(col)"
+                                    draggable="@(DragDropColumnReordering ? "true" : "false")"
+                                    @ondragstart="() => OnColumnDragStart(col)"
+                                    @ondragover:preventDefault="true"
+                                    @ondrop="() => OnColumnDrop(col)"
+                                    @onclick="() => OnHeaderClickAsync(col, sortable)">
+                                    @if (ColumnResizeMode != DataGridColumnResizeMode.None && (col.Resizable ?? true))
+                                    {
+                                        <span class="shiny-dg-resize-handle" @onclick:stopPropagation="true"
+                                              @onpointerdown="e => OnResizeStart(col, e)"></span>
+                                    }
+                                    <span class="shiny-dg-header-inner">
+                                        @if (col.HeaderTemplate is not null)
+                                        {
+                                            @col.HeaderTemplate
+                                        }
+                                        else
+                                        {
+                                            <span class="shiny-dg-header-text">@col.HeaderText</span>
+                                        }
+                                        @if (sortable && sort is not null)
+                                        {
+                                            <span class="shiny-dg-sort-icon">@(sort.Direction == DataGridSortDirection.Ascending ? "▲" : "▼")</span>
+                                            @if (badge > 0)
+                                            {
+                                                <span class="shiny-dg-sort-badge">@badge</span>
+                                            }
+                                        }
+                                        @if (EffectiveGroupable(col))
+                                        {
+                                            <span class="shiny-dg-group-icon @(IsGroupedBy(col) ? "shiny-dg-group-active" : "")"
+                                                  @onclick:stopPropagation="true" @onclick="() => ToggleGroupBy(col)"
+                                                  title="Group by @col.HeaderText">⊞</span>
+                                        }
+                                        @if (FilterMode == DataGridFilterMode.Menu && EffectiveFilterable(col))
+                                        {
+                                            <span class="shiny-dg-filter-icon @(HasActiveFilter(col) ? "shiny-dg-filter-active" : "")"
+                                                  @onclick:stopPropagation="true" @onclick="() => ToggleFilterMenu(col)">▾</span>
+                                            @if (IsFilterMenuOpen(col))
+                                            {
+                                                var def = GetOrCreateFilter(col);
+                                                var type = col.GetDataType();
+                                                <div class="shiny-dg-filter-menu" @onclick:stopPropagation="true">
+                                                    <select @onchange="e => def.Operator = Enum.Parse<DataGridFilterOperator>(e.Value!.ToString()!)">
+                                                        @foreach (var op in OperatorsFor(type))
+                                                        {
+                                                            <option value="@op" selected="@(op == def.Operator)">@OperatorLabel(op)</option>
+                                                        }
+                                                    </select>
+                                                    <input type="text" value="@(def.Value?.ToString())"
+                                                           @oninput="e => def.Value = e.Value?.ToString()" />
+                                                    <div class="shiny-dg-filter-actions">
+                                                        <button type="button" @onclick="() => ApplyColumnFilterAsync(col, def.Operator, def.Value)">Apply</button>
+                                                        <button type="button" @onclick="() => ClearColumnFilterAsync(col)">Clear</button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </span>
+                                </th>
+                            }
+                        </tr>
+                        @if (FilterMode == DataGridFilterMode.Row)
+                        {
+                            <tr class="shiny-dg-filter-row">
+                                @if (HasMultiSelect)
+                                {
+                                    <th></th>
+                                }
+                                @foreach (var col in VisibleColumns)
+                                {
+                                    <th>
+                                        @if (EffectiveFilterable(col))
+                                        {
+                                            var def = GetOrCreateFilter(col);
+                                            <input type="text" placeholder="Filter" value="@(def.Value?.ToString())"
+                                                   @oninput="e => ApplyColumnFilterAsync(col, def.Operator, string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString())" />
+                                        }
+                                    </th>
+                                }
+                            </tr>
+                        }
+                    </thead>
+                }
+
+                <tbody>
+                    @{
+                        RenderFragment<TItem> rowFragment = rowItem =>
+                            @<tr class="@RowCssClass(rowItem)" @onclick="() => RowClickedAsync(rowItem)">
+                                @if (HasMultiSelect)
+                                {
+                                    <td class="shiny-dg-checkcol" @onclick:stopPropagation="true">
+                                        <input type="checkbox" checked="@IsSelected(rowItem)"
+                                               @onchange="() => ToggleRowAsync(rowItem)" />
+                                    </td>
+                                }
+                                @foreach (var col in VisibleColumns)
+                                {
+                                    var editingThisCell = IsEditingCell(rowItem, col);
+                                    var editingFormCell = EditMode == DataGridEditMode.Form && IsEditingRow(rowItem) && EffectiveEditable(col);
+                                    <td class="shiny-dg-cell @(col.StickyLeft ? "shiny-dg-sticky-left" : "") @(col.StickyRight ? "shiny-dg-sticky-right" : "")"
+                                        style="@ColumnWidthStyle(col)"
+                                        @onclick="() => OnCellClickAsync(rowItem, col)"
+                                        @onclick:stopPropagation="@(EditMode == DataGridEditMode.Cell && EffectiveEditable(col))">
+                                        @if (editingThisCell || editingFormCell)
+                                        {
+                                            @if (col.EditTemplate is not null)
+                                            {
+                                                @col.EditTemplate(CreateCellContext(rowItem))
+                                            }
+                                            else if (col.GetDataType() == typeof(bool))
+                                            {
+                                                <input type="checkbox" checked="@(GetEditValue(col) is true)"
+                                                       @onchange="e => SetEditValue(col, e.Value)" />
+                                            }
+                                            else
+                                            {
+                                                <input class="shiny-dg-editor" value="@(GetEditValue(col)?.ToString())"
+                                                       @oninput="e => SetEditValue(col, e.Value?.ToString())"
+                                                       @onblur="OnEditorBlurAsync"
+                                                       @onkeydown="EditorKeyDownAsync" />
+                                            }
+                                        }
+                                        else if (col.CellTemplate is not null)
+                                        {
+                                            @col.CellTemplate(CreateCellContext(rowItem))
+                                        }
+                                        else
+                                        {
+                                            @col.GetText(rowItem)
+                                        }
+                                    </td>
+                                }
+                            </tr>;
+
+                        RenderFragment<TItem> rowWithEdit = rowItem =>
+                            @<text>
+                                @rowFragment(rowItem)
+                                @if (EditMode == DataGridEditMode.Form && IsEditingRow(rowItem))
+                                {
+                                    <tr class="shiny-dg-edit-actions">
+                                        <td colspan="@ColSpan">
+                                            <button type="button" class="shiny-dg-edit-save" @onclick="CommitEditAsync">Save</button>
+                                            <button type="button" class="shiny-dg-edit-cancel" @onclick="CancelEditAsync">Cancel</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </text>;
+                    }
+
+                    @if (IsGrouped)
+                    {
+                        var gcol = GroupColumn!;
+                        @foreach (var group in GetGroups())
+                        {
+                            var collapsed = IsGroupCollapsed(group.Key);
+                            <tr class="shiny-dg-group-header" @onclick="() => ToggleGroupCollapse(group.Key)">
+                                <td colspan="@ColSpan">
+                                    <span class="shiny-dg-group-caret">@(collapsed ? "▸" : "▾")</span>
+                                    <strong>@gcol.HeaderText:</strong> @group.Key?.ToString()
+                                    <span class="shiny-dg-group-count">(@group.Items.Count)</span>
+                                </td>
+                            </tr>
+                            @if (!collapsed)
+                            {
+                                @foreach (var item in group.Items)
+                                {
+                                    @rowWithEdit(item)
+                                }
+                                @if (HasFooter)
+                                {
+                                    <tr class="shiny-dg-group-footer">
+                                        @if (HasMultiSelect)
+                                        {
+                                            <td class="shiny-dg-checkcol"></td>
+                                        }
+                                        @foreach (var c in VisibleColumns)
+                                        {
+                                            <td class="shiny-dg-footer-cell">@GroupAggregateText(c, group.Items)</td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var items = GetRenderedItems();
+                        @if (items.Count == 0 && !Loading)
+                        {
+                            <tr class="shiny-dg-norecords">
+                                <td colspan="@ColSpan">
+                                    @if (NoRecordsContent is not null)
+                                    {
+                                        @NoRecordsContent
+                                    }
+                                    else
+                                    {
+                                        @NoRecordsText
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        else if (CanVirtualize)
+                        {
+                            <Virtualize Items="@items.ToList()" Context="vitem">
+                                @rowWithEdit(vitem)
+                            </Virtualize>
+                        }
+                        else
+                        {
+                            @foreach (var item in items)
+                            {
+                                @rowWithEdit(item)
+                            }
+                        }
+                    }
+                </tbody>
+
+                @if (HasFooter)
+                {
+                    <tfoot>
+                        <tr>
+                            @if (HasMultiSelect)
+                            {
+                                <td class="shiny-dg-checkcol"></td>
+                            }
+                            @foreach (var col in VisibleColumns)
+                            {
+                                <td class="shiny-dg-footer-cell">
+                                    @if (col.FooterTemplate is not null)
+                                    {
+                                        @col.FooterTemplate
+                                    }
+                                    else if (col.Aggregate is not null)
+                                    {
+                                        @ComputeAggregateText(col)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+
+        @if (PagerContent is not null)
+        {
+            <div class="shiny-dg-pager-host">@PagerContent</div>
+        }
+    </div>
+</CascadingValue>
