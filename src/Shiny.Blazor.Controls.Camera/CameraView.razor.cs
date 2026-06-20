@@ -13,6 +13,7 @@ public partial class CameraView : IAsyncDisposable
     ElementReference videoEl;
     ElementReference overlayEl;
     bool started;
+    TaskCompletionSource<CameraBarcode>? pendingScan;
 
     /// <summary>Which camera to use. <see cref="CameraFacing.Front"/> maps to the browser "user" facing mode.</summary>
     [Parameter] public CameraFacing Facing { get; set; } = CameraFacing.Back;
@@ -38,7 +39,11 @@ public partial class CameraView : IAsyncDisposable
     /// <summary>Raised whenever the in-browser analyzers produce a new styled overlay-box set.</summary>
     [Parameter] public EventCallback<IReadOnlyList<OverlayBox>> OverlaysChanged { get; set; }
 
-    /// <summary>Raised with the decoded barcode (format + value) when one is detected in-browser.</summary>
+    /// <summary>
+    /// Raised with the decoded barcode (format + value) when one is detected in-browser — but only while a
+    /// <see cref="RequestBarcodeAsync"/> is outstanding (gated, so it's quiet by default rather than a per-frame
+    /// firehose). For most flows prefer awaiting <see cref="RequestBarcodeAsync"/> directly.
+    /// </summary>
     [Parameter] public EventCallback<CameraBarcode> BarcodeDetected { get; set; }
 
     /// <summary>Raised when the camera cannot start (permission denied, no device, insecure context).</summary>
@@ -147,6 +152,32 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
+    /// <summary>
+    /// Arm the detector and complete on the <i>next</i> decoded barcode, then go quiet — the gated equivalent of
+    /// the MAUI <c>OnDetected</c> flow. Bounding boxes keep drawing throughout. Call it again to "keep scanning"
+    /// (e.g. in a loop to collect several codes). Pass a <paramref name="ct"/> to cancel an outstanding request.
+    /// </summary>
+    public async Task<CameraBarcode> RequestBarcodeAsync(CancellationToken ct = default)
+    {
+        if (this.module == null)
+            throw new InvalidOperationException("CameraView is not started");
+
+        // only one outstanding request at a time — supersede any prior wait
+        this.pendingScan?.TrySetCanceled();
+        var tcs = new TaskCompletionSource<CameraBarcode>(TaskCreationOptions.RunContinuationsAsynchronously);
+        this.pendingScan = tcs;
+
+        await using var reg = ct.Register(() =>
+        {
+            if (tcs.TrySetCanceled(ct))
+                _ = this.module.InvokeVoidAsync("disarm", this.videoEl).AsTask();
+        });
+
+        await this.module.InvokeVoidAsync("arm", this.videoEl);
+        return await tcs.Task;
+    }
+
+
     /// <summary>Capture a still frame as JPEG bytes.</summary>
     public async Task<byte[]> CapturePhotoAsync()
     {
@@ -183,9 +214,19 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
-    /// <summary>Invoked from JS when a barcode is decoded. Public + named DTO for trim-safe interop.</summary>
+    /// <summary>
+    /// Invoked from JS when a barcode is decoded (only while armed). Completes any outstanding
+    /// <see cref="RequestBarcodeAsync"/> and raises <see cref="BarcodeDetected"/>. Public + named DTO for
+    /// trim-safe interop.
+    /// </summary>
     [JSInvokable]
-    public Task OnBarcode(CameraBarcode barcode) => this.BarcodeDetected.InvokeAsync(barcode);
+    public async Task OnBarcode(CameraBarcode barcode)
+    {
+        var pending = this.pendingScan;
+        this.pendingScan = null;
+        pending?.TrySetResult(barcode);
+        await this.BarcodeDetected.InvokeAsync(barcode);
+    }
 
 
     /// <summary>Invoked from JS when an error occurs after startup.</summary>
@@ -195,6 +236,7 @@ public partial class CameraView : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        this.pendingScan?.TrySetCanceled();
         try
         {
             if (this.module != null)

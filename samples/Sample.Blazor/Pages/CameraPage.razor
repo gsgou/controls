@@ -9,8 +9,10 @@
 <div class="demo-section">
     <p>
         Live <code>getUserMedia</code> preview with in-browser barcode scanning (native
-        <code>BarcodeDetector</code> — Chromium browsers). Face, motion, OCR and document detectors are
-        MAUI-native; the browser exposes only barcode detection.
+        <code>BarcodeDetector</code> — Chromium browsers). Boxes draw continuously, but a decoded value is only
+        delivered when you tap <strong>Scan</strong> (<code>RequestBarcodeAsync</code>) — await it once, or tick
+        <em>Keep scanning</em> to loop. Face, motion, OCR and document detectors are MAUI-native; the browser
+        exposes only barcode detection.
     </p>
 
     <div style="position:relative;width:100%;max-width:480px;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#000;">
@@ -28,6 +30,9 @@
 
     <!-- camera controls -->
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button @onclick="Scan" disabled="@scanning">Scan</button>
+        <button @onclick="StopScan" disabled="@(!scanning)">Stop scan</button>
+        <label><input type="checkbox" @bind="continuous" /> Keep scanning</label>
         <button @onclick="Capture">Photo</button>
         <button @onclick="ToggleRecording">@(recording ? "Stop" : "Record")</button>
         <button @onclick="Flip">Flip</button>
@@ -105,6 +110,9 @@
     CameraFilter filter = CameraFilter.None;
     bool enableBarcode = true;
     bool showBoxes = true;
+    bool continuous;
+    bool scanning;
+    CancellationTokenSource? scanCts;
     readonly List<CameraBarcode> barcodes = [];
     readonly List<CameraDevice> cameras = [];
 
@@ -168,13 +176,43 @@
         }
     }
 
-    void OnBarcode(CameraBarcode barcode)
+    // Gated request/response: arm, await the next decode, then go quiet. "Keep scanning" loops (re-arming each
+    // time) until Stop scan — the await is the gate, looping is "keep going".
+    async Task Scan()
     {
-        if (!barcodes.Any(b => b.Value == barcode.Value && b.Format == barcode.Format))
-            barcodes.Insert(0, barcode);
-        status = $"{barcode.Format}: {barcode.Value}";
-        StateHasChanged();
+        if (camera == null)
+            return;
+        scanCts?.Cancel();
+        scanCts = new CancellationTokenSource();
+        var ct = scanCts.Token;
+        scanning = true;
+        status = "Scanning…";
+        try
+        {
+            do
+            {
+                var barcode = await camera.RequestBarcodeAsync(ct);
+                if (!barcodes.Any(b => b.Value == barcode.Value && b.Format == barcode.Format))
+                    barcodes.Insert(0, barcode);
+                status = $"{barcode.Format}: {barcode.Value}";
+                StateHasChanged();
+            }
+            while (continuous && !ct.IsCancellationRequested);
+        }
+        catch (OperationCanceledException) { /* Stop scan */ }
+        finally
+        {
+            scanning = false;
+            StateHasChanged();
+        }
     }
+
+    void StopScan() => scanCts?.Cancel();
+
+    // Still fires (gated) while a scan is outstanding — the demo drives the list from Scan() instead, but this
+    // shows the EventCallback path stays available.
+    void OnBarcode(CameraBarcode barcode)
+        => status = $"{barcode.Format}: {barcode.Value}";
 
     void OnError(string message)
     {

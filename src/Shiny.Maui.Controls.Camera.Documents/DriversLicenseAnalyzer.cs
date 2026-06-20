@@ -39,8 +39,25 @@ public class DriversLicenseAnalyzer : FrameAnalyzer
     /// </summary>
     public Func<DriversLicense, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread when a driver's license is recognized in a frame.</summary>
+    /// <summary>
+    /// Continuation invoked (on the UI thread) with the recognized license while the analyzer is armed; return
+    /// <c>true</c> to keep scanning (stay armed), <c>false</c> to stop until the next <see cref="CameraView.Scan"/>.
+    /// When unset, delivery is single-shot. Bindable so it can target a VM method in XAML.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>>), typeof(DriversLicenseAnalyzer));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>>? OnDetected
+    {
+        get => (Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
+    /// <summary>Raised on the UI thread when a driver's license is recognized in a frame, while the analyzer is armed.</summary>
     public event EventHandler<DocumentDetectedEventArgs<DriversLicense>>? DocumentDetected;
+
+    string? lastDelivered;
 
     /// <inheritdoc/>
     public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
@@ -52,12 +69,18 @@ public class DriversLicenseAnalyzer : FrameAnalyzer
             if (!AamvaParser.TryParse(code.Value, out var license))
                 continue;
 
-            var args = new DocumentDetectedEventArgs<DriversLicense>(license);
-            this.Emit(() => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand, args);
+            // don't re-deliver the same license while it lingers in view; boxes still draw every frame
+            if (this.lastDelivered != code.Value)
+            {
+                this.lastDelivered = code.Value;
+                var args = new DocumentDetectedEventArgs<DriversLicense>(license);
+                this.Deliver(args, () => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand, this.OnDetected);
+            }
 
             return this.ResolveOverlay(license, this.OverlayProvider,
                 () => new[] { new OverlayBox(code.BoundingBox, this.BoxColor, license.Number ?? "License", this.BoxColor) });
         }
+        this.lastDelivered = null; // no license in view -> allow re-delivery when one returns
         return null; // no license barcode in view -> clear
     }
 }

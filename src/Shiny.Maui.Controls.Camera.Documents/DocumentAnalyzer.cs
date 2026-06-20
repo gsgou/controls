@@ -40,6 +40,21 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
     /// </summary>
     public Func<TDocument, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
+    /// <summary>
+    /// Continuation invoked (on the UI thread) with the recognized document while the analyzer is armed; return
+    /// <c>true</c> to keep scanning (stay armed for the next document), <c>false</c> to stop until the next
+    /// <see cref="CameraView.Scan"/>. When unset, delivery is single-shot. Bindable so it can target a VM method.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<DocumentDetectedEventArgs<TDocument>, Task<bool>>), typeof(DocumentAnalyzer<TDocument>));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<DocumentDetectedEventArgs<TDocument>, Task<bool>>? OnDetected
+    {
+        get => (Func<DocumentDetectedEventArgs<TDocument>, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
     /// <summary>Outline color drawn around a detected document. Default a blue accent.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#3B82F6");
 
@@ -88,15 +103,18 @@ public abstract class DocumentAnalyzer<TDocument> : FrameAnalyzer
         this.accumulated = this.accumulated is null ? incoming : this.parser.Merge(this.accumulated, incoming);
         this.framesAccrued++;
 
-        if (!this.emitted &&
+        // gate the one-shot transition on IsArmed so a completion seen while disarmed isn't consumed (it would
+        // otherwise never deliver once the user arms). The same document won't re-deliver while it stays in view;
+        // once it leaves, Reset() re-opens delivery for the next document.
+        if (!this.emitted && this.IsArmed &&
             (this.parser.IsComplete(this.accumulated) || this.framesAccrued >= Math.Max(1, this.AccumulationFrames)))
         {
             this.emitted = true;
             var args = new DocumentDetectedEventArgs<TDocument>(this.accumulated);
-            // Pass the typed event args (not the raw document) as the command parameter AND detection payload —
-            // bound commands are Command<DocumentDetectedEventArgs<TDocument>>, so a raw TDocument fails their
-            // CanExecute type check and the command (e.g. "add to the scanned-documents store") never runs.
-            this.EmitDetection(args, () => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand);
+            // Pass the typed event args (not the raw document) as the command parameter — bound commands are
+            // Command<DocumentDetectedEventArgs<TDocument>>, so a raw TDocument fails their CanExecute type check
+            // and the command (e.g. "add to the scanned-documents store") never runs.
+            this.Deliver(args, () => this.DocumentDetected?.Invoke(this, args), this.DocumentDetectedCommand, this.OnDetected);
         }
 
         // Overlay: when the frame was deskewed the parser's boxes are in flat document space (wrong on the

@@ -12,7 +12,7 @@ namespace Shiny.Controls.Camera;
 public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
 {
     Action<Action>? dispatcher;
-    Func<FrameAnalyzer, object, Task>? detectionRequested;
+    volatile bool isArmed;
 
     /// <summary>
     /// Whether this analyzer runs at all. Default <c>true</c>. Set <c>false</c> (e.g. bind it to a switch in
@@ -47,36 +47,19 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     }
 
     /// <summary>
-    /// When <c>true</c>, the <see cref="CameraView"/> captures a still photo as soon as this analyzer reports a
-    /// confirmed detection (e.g. a fully merged document, or motion starting). Default <c>false</c>. The photo
-    /// is delivered on <see cref="CameraView.DetectionCaptured"/> (and the usual <see cref="CameraView.MediaCaptured"/>).
-    /// Combine with <see cref="StopOnDetection"/> for a typical "scan then freeze" flow.
+    /// Whether this analyzer is currently <i>armed</i> to deliver a result. An analyzer always runs and draws
+    /// its bounding boxes; it only raises its typed event / command (and invokes <c>OnDetected</c>) while armed.
+    /// Arming is a one-shot gate: the next confirmed detection consumes it, then the analyzer goes quiet until
+    /// re-armed — unless an <c>OnDetected</c> handler returns <c>true</c> to keep scanning. Arm via
+    /// <see cref="CameraView.Scan"/> / <see cref="CameraView.ScanCommand"/>.
     /// </summary>
-    public static readonly BindableProperty CaptureOnDetectionProperty = BindableProperty.Create(
-        nameof(CaptureOnDetection), typeof(bool), typeof(FrameAnalyzer), false);
+    public bool IsArmed => this.isArmed;
 
-    /// <inheritdoc cref="CaptureOnDetectionProperty"/>
-    public bool CaptureOnDetection
-    {
-        get => (bool)this.GetValue(CaptureOnDetectionProperty);
-        set => this.SetValue(CaptureOnDetectionProperty, value);
-    }
+    /// <summary>Arm this analyzer so the next confirmed detection is delivered. Called by <see cref="CameraView.Scan"/>.</summary>
+    internal void Arm() => this.isArmed = true;
 
-    /// <summary>
-    /// When <c>true</c>, the <see cref="CameraView"/> stops the capture session as soon as this analyzer reports
-    /// a confirmed detection. Default <c>false</c>. Pair with <see cref="CaptureOnDetection"/> to grab a still
-    /// and then freeze the preview. While stopped the trigger stays latched; call
-    /// <see cref="CameraView.StartAsync"/> to re-arm.
-    /// </summary>
-    public static readonly BindableProperty StopOnDetectionProperty = BindableProperty.Create(
-        nameof(StopOnDetection), typeof(bool), typeof(FrameAnalyzer), false);
-
-    /// <inheritdoc cref="StopOnDetectionProperty"/>
-    public bool StopOnDetection
-    {
-        get => (bool)this.GetValue(StopOnDetectionProperty);
-        set => this.SetValue(StopOnDetectionProperty, value);
-    }
+    /// <summary>Disarm this analyzer so detections are no longer delivered (boxes keep drawing).</summary>
+    internal void Disarm() => this.isArmed = false;
 
     /// <inheritdoc/>
     public abstract string Id { get; }
@@ -90,12 +73,6 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     /// </summary>
     internal void SetDispatcher(Action<Action>? post) => this.dispatcher = post;
 
-    /// <summary>
-    /// Set by the camera pipeline so <see cref="EmitDetection"/> can ask the <see cref="CameraView"/> to capture
-    /// and/or stop on a confirmed detection. Pass <c>null</c> to detach (then capture/stop requests are no-ops).
-    /// </summary>
-    internal void SetDetectionHandler(Func<FrameAnalyzer, object, Task>? handler) => this.detectionRequested = handler;
-
     /// <summary>Run an action on the UI thread when attached to a camera, or inline otherwise.</summary>
     protected void Raise(Action action)
     {
@@ -107,30 +84,45 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     }
 
     /// <summary>
-    /// Raise an analyzer's typed event and invoke its bound command (when it can execute) — both on the UI
-    /// thread. <paramref name="arg"/> is passed to the command as its parameter.
+    /// Deliver a <i>confirmed</i> detection to the consumer — but only while the analyzer is armed. Call this
+    /// (on the analysis thread) at the point the analyzer commits to a result. The arm is consumed synchronously
+    /// so a burst of frames showing the same thing yields exactly one delivery. On the UI thread it then raises
+    /// the analyzer's typed event, invokes its bound <paramref name="command"/>, and awaits
+    /// <paramref name="onDetected"/>: a <c>true</c> result re-arms (keep scanning), <c>false</c> — or no handler
+    /// at all (single-shot) — leaves the analyzer disarmed until <see cref="CameraView.Scan"/> is called again.
+    /// Bounding boxes are returned from <c>AnalyzeAsync</c> independently and are never gated.
     /// </summary>
-    protected void Emit(Action raiseEvent, ICommand? command, object? arg)
-        => this.Raise(() =>
+    /// <param name="args">The detection payload — passed to the event, the command, and <paramref name="onDetected"/>.</param>
+    /// <param name="raiseEvent">Invokes the analyzer's typed event.</param>
+    /// <param name="command">The analyzer's bound command, invoked when it can execute (with <paramref name="args"/>).</param>
+    /// <param name="onDetected">Optional continuation deciding whether to keep scanning. Return <c>true</c> to stay armed.</param>
+    protected void Deliver<TArgs>(TArgs args, Action raiseEvent, ICommand? command, Func<TArgs, Task<bool>>? onDetected)
+    {
+        // gate + consume the arm synchronously: lingering frames of the same detection won't re-deliver until
+        // the handler (or a fresh Scan()) re-arms
+        if (!this.isArmed)
+            return;
+        this.isArmed = false;
+
+        this.Raise(async () =>
         {
             raiseEvent();
-            if (command is not null && command.CanExecute(arg))
-                command.Execute(arg);
-        });
+            if (command is not null && command.CanExecute(args))
+                command.Execute(args);
 
-    /// <summary>
-    /// Raise an analyzer's typed event/command (via <see cref="Emit"/>) for a <i>confirmed</i> detection and,
-    /// when <see cref="CaptureOnDetection"/> or <see cref="StopOnDetection"/> is set, ask the camera to capture a
-    /// still and/or stop — both on the UI thread. Call this (instead of <see cref="Emit"/>) at the point an
-    /// analyzer commits to a result it would auto-capture on (e.g. a fully merged document, or motion starting).
-    /// </summary>
-    /// <param name="detection">The detection payload — passed to the command and to <see cref="CameraView.DetectionCaptured"/>.</param>
-    protected void EmitDetection(object detection, Action raiseEvent, ICommand? command)
-    {
-        this.Emit(raiseEvent, command, detection);
-        var handler = this.detectionRequested;
-        if (handler is not null && (this.CaptureOnDetection || this.StopOnDetection))
-            this.Raise(() => _ = handler(this, detection));
+            if (onDetected is null)
+                return; // single-shot: stay disarmed until the next Scan()
+
+            try
+            {
+                if (await onDetected(args))
+                    this.isArmed = true; // keep scanning
+            }
+            catch
+            {
+                // a faulting consumer handler must not tear down the dispatcher; stay disarmed (safe stop)
+            }
+        });
     }
 
     /// <summary>

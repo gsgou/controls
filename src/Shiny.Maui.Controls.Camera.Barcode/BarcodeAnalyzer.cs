@@ -49,21 +49,44 @@ public class BarcodeAnalyzer : FrameAnalyzer
     /// </summary>
     public Func<BarcodeDetectedEventArgs, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread for each barcode decoded in a frame.</summary>
+    /// <summary>
+    /// Continuation invoked (on the UI thread) with each decoded barcode while the analyzer is armed; return
+    /// <c>true</c> to keep scanning (stay armed), <c>false</c> to stop until the next <see cref="CameraView.Scan"/>.
+    /// When unset, delivery is single-shot (one barcode per arm). Bindable so it can target a VM method in XAML.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<BarcodeDetectedEventArgs, Task<bool>>), typeof(BarcodeAnalyzer));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<BarcodeDetectedEventArgs, Task<bool>>? OnDetected
+    {
+        get => (Func<BarcodeDetectedEventArgs, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
+    /// <summary>Raised on the UI thread for each barcode decoded in a frame, while the analyzer is armed.</summary>
     public event EventHandler<BarcodeDetectedEventArgs>? BarcodeDetected;
+
+    readonly HashSet<string> delivered = new();
 
     /// <inheritdoc/>
     public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
         var codes = await this.scanner.ScanAsync(frame, ct).ConfigureAwait(false);
         if (codes.Count == 0)
+        {
+            this.delivered.Clear(); // codes left the frame -> allow re-delivery when one returns
             return null; // nothing in view -> clear this analyzer's boxes
+        }
 
         List<OverlayBox>? boxes = null;
         foreach (var code in codes)
         {
             var args = new BarcodeDetectedEventArgs(code.Format, code.Value, code.BoundingBox);
-            this.Emit(() => this.BarcodeDetected?.Invoke(this, args), this.BarcodeDetectedCommand, args);
+            // don't re-deliver the same value while it lingers in view (avoids 30x/sec when staying armed);
+            // boxes are still drawn every frame below regardless of delivery
+            if (this.delivered.Add(code.Value))
+                this.Deliver(args, () => this.BarcodeDetected?.Invoke(this, args), this.BarcodeDetectedCommand, this.OnDetected);
 
             var drawn = this.ResolveOverlay(args, this.OverlayProvider,
                 () => new[] { new OverlayBox(code.BoundingBox, this.BoxColor, code.Value, this.BoxColor) });

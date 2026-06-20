@@ -39,17 +39,32 @@ public partial class FaceAnalyzer : FrameAnalyzer
     /// </summary>
     public Func<FacesDetectedEventArgs, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread when one or more faces are detected in a frame.</summary>
+    /// <summary>
+    /// Continuation invoked (on the UI thread) with the detected faces while the analyzer is armed; return
+    /// <c>true</c> to keep scanning (stay armed), <c>false</c> to stop until the next <see cref="CameraView.Scan"/>.
+    /// When unset, delivery is single-shot. Bindable so it can target a VM method in XAML.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<FacesDetectedEventArgs, Task<bool>>), typeof(FaceAnalyzer));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<FacesDetectedEventArgs, Task<bool>>? OnDetected
+    {
+        get => (Func<FacesDetectedEventArgs, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
+    /// <summary>Raised on the UI thread when one or more faces are detected in a frame, while the analyzer is armed.</summary>
     public event EventHandler<FacesDetectedEventArgs>? FacesDetected;
 
-    /// <summary>Raise <see cref="FacesDetected"/>/command and turn the faces into overlay boxes (null clears).</summary>
+    /// <summary>Deliver <see cref="FacesDetected"/>/command (while armed) and turn the faces into overlay boxes (null clears).</summary>
     protected IReadOnlyList<OverlayBox>? Report(IReadOnlyList<DetectedFace> faces)
     {
         if (faces.Count == 0)
             return null;
 
         var args = new FacesDetectedEventArgs(faces);
-        this.Emit(() => this.FacesDetected?.Invoke(this, args), this.FacesDetectedCommand, args);
+        this.Deliver(args, () => this.FacesDetected?.Invoke(this, args), this.FacesDetectedCommand, this.OnDetected);
 
         return this.ResolveOverlay(args, this.OverlayProvider, () =>
         {

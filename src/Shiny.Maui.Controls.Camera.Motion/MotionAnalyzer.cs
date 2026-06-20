@@ -78,7 +78,23 @@ public class MotionAnalyzer : FrameAnalyzer
     /// </summary>
     public Func<MotionEventArgs, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread when motion starts or stops.</summary>
+    /// <summary>
+    /// Continuation invoked (on the UI thread) on each motion start/stop while the analyzer is armed; inspect
+    /// <see cref="MotionEventArgs.InMotion"/> to tell them apart. Return <c>true</c> to keep watching (stay
+    /// armed), <c>false</c> to stop until the next <see cref="CameraView.Scan"/>. When unset, delivery is
+    /// single-shot (the first motion start). Bindable so it can target a VM method in XAML.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<MotionEventArgs, Task<bool>>), typeof(MotionAnalyzer));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<MotionEventArgs, Task<bool>>? OnDetected
+    {
+        get => (Func<MotionEventArgs, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
+    /// <summary>Raised on the UI thread when motion starts or stops, while the analyzer is armed.</summary>
     public event EventHandler<MotionEventArgs>? MotionChanged;
 
     bool lastMotion;
@@ -175,13 +191,13 @@ public class MotionAnalyzer : FrameAnalyzer
         if (!this.lastMotion && this.aboveCount >= Math.Max(1, this.EnterFrames))
         {
             this.lastMotion = true;
-            // motion started — also drives CaptureOnDetection/StopOnDetection
-            this.EmitDetection(args, () => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand);
+            // motion started — delivered only while armed
+            this.Deliver(args, () => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand, this.OnDetected);
         }
         else if (this.lastMotion && this.belowCount >= Math.Max(1, this.ExitFrames))
         {
             this.lastMotion = false;
-            this.Emit(() => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand, args);
+            this.Deliver(args, () => this.MotionChanged?.Invoke(this, args), this.MotionChangedCommand, this.OnDetected);
         }
 
         if (regions.Count == 0)

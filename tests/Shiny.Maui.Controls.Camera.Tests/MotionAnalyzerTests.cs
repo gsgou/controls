@@ -82,7 +82,13 @@ public class MotionAnalyzerTests
 
         MotionEventArgs? captured = null;
         // EnterFrames=1 so a single transition reports immediately (debounce covered separately)
-        var a = new MotionAnalyzer { EnterFrames = 1, MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e) };
+        var a = new MotionAnalyzer
+        {
+            EnterFrames = 1,
+            OnDetected = _ => Task.FromResult(true),   // stay armed across transitions
+            MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e)
+        };
+        a.Arm();   // results are gated until armed (CameraView.Scan())
         await a.AnalyzeAsync(new SizedLumFrame(still, n, n), default);
         await a.AnalyzeAsync(new SizedLumFrame(moved, n, n), default);
 
@@ -105,8 +111,10 @@ public class MotionAnalyzerTests
         var a = new MotionAnalyzer
         {
             EnterFrames = 1,   // fire on the first transition
+            OnDetected = _ => Task.FromResult(true),   // stay armed across transitions
             MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e)
         };
+        a.Arm();   // results are gated until armed (CameraView.Scan())
 
         await RunMotion(a);
 
@@ -122,8 +130,10 @@ public class MotionAnalyzerTests
         var a = new MotionAnalyzer
         {
             EnterFrames = 3,
+            OnDetected = _ => Task.FromResult(true),   // stay armed across transitions
             MotionChangedCommand = new Command<MotionEventArgs>(e => events.Add(e.InMotion))
         };
+        a.Arm();   // results are gated until armed (CameraView.Scan())
 
         // alternate fully-different frames so every comparison registers change
         await a.AnalyzeAsync(Still, default);   // seed
@@ -147,8 +157,10 @@ public class MotionAnalyzerTests
         {
             EnterFrames = 1,
             ExitFrames = 2,
+            OnDetected = _ => Task.FromResult(true),   // stay armed so both start + stop deliver
             MotionChangedCommand = new Command<MotionEventArgs>(e => events.Add(e.InMotion))
         };
+        a.Arm();   // results are gated until armed (CameraView.Scan())
 
         await a.AnalyzeAsync(Still, default);   // seed
         await a.AnalyzeAsync(Moved, default);   // change -> started
@@ -161,6 +173,42 @@ public class MotionAnalyzerTests
         events[1].ShouldBeFalse();
     }
 
+
+    [Fact]
+    public async Task Disarmed_analyzer_draws_boxes_but_does_not_deliver()
+    {
+        MotionEventArgs? captured = null;
+        // armed gate: never call Arm()
+        var a = new MotionAnalyzer { EnterFrames = 1, MotionChangedCommand = new Command<MotionEventArgs>(e => captured = e) };
+
+        var boxes = await RunMotion(a);
+
+        boxes.ShouldNotBeNull();   // boxes still draw every frame
+        boxes!.Count.ShouldBe(1);
+        captured.ShouldBeNull();   // but no result is delivered while disarmed
+    }
+
+    [Fact]
+    public async Task Single_shot_disarms_after_one_delivery()
+    {
+        var events = new List<bool>();
+        // no OnDetected -> single-shot
+        var a = new MotionAnalyzer
+        {
+            EnterFrames = 1,
+            ExitFrames = 1,
+            MotionChangedCommand = new Command<MotionEventArgs>(e => events.Add(e.InMotion))
+        };
+        a.Arm();
+
+        await a.AnalyzeAsync(Still, default);   // seed
+        await a.AnalyzeAsync(Moved, default);   // start -> delivered, consumes the arm
+        events.Count.ShouldBe(1);
+        a.IsArmed.ShouldBeFalse();
+
+        await a.AnalyzeAsync(Still, default);   // stop transition, but disarmed -> not delivered
+        events.Count.ShouldBe(1);
+    }
 
     sealed class FakeLumFrame(byte[] luminance) : CameraFrame
     {

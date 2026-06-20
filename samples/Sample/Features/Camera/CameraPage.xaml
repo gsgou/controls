@@ -14,51 +14,40 @@
                  BoxesSwitch toggles every analyzer's bounding-box rendering via ShowBoundingBox. -->
             <cam:CameraView x:Name="Camera"
                             Facing="Back"
-                            ScaleMode="AspectFill"
-                            DetectionCaptured="OnDetectionCaptured">
-                <!-- Scans all symbologies. To limit the native scanner, set Formats inline as a comma-separated
+                            ScaleMode="AspectFill">
+                <!-- Each analyzer draws its boxes continuously, but only delivers a result (its OnDetected
+                     handler) while armed — tap "Scan" (-> Camera.ScanCommand) to arm every enabled analyzer.
+                     Scans all symbologies. To limit the native scanner, set Formats inline as a comma-separated
                      list, e.g. Formats="QrCode,Ean13,Code128" (omit = all). -->
-                <cam:BarcodeAnalyzer BarcodeDetectedCommand="{Binding BarcodeCommand}"
+                <cam:BarcodeAnalyzer OnDetected="{Binding OnBarcode}"
                                      IsEnabled="{Binding On, Source={x:Reference BarcodeSwitch}}"
                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
                 <!-- motion draws a box around each region where movement was detected -->
-                <cam:MotionAnalyzer MotionChangedCommand="{Binding MotionCommand}"
+                <cam:MotionAnalyzer OnDetected="{Binding OnMotion}"
                                     IsEnabled="{Binding On, Source={x:Reference MotionSwitch}}"
                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:FaceAnalyzer FacesDetectedCommand="{Binding FaceCommand}"
+                <cam:FaceAnalyzer OnDetected="{Binding OnFace}"
                                   IsEnabled="{Binding On, Source={x:Reference FaceSwitch}}"
                                   ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <!-- the document analyzers opt into capture+stop-on-detection via the CaptureStopSwitch -->
-                <cam:InvoiceAnalyzer DocumentDetectedCommand="{Binding InvoiceCommand}"
+                <!-- each document's OnDetected optionally captures + stops via the CaptureStopSwitch -->
+                <cam:InvoiceAnalyzer OnDetected="{Binding OnInvoice}"
                                      IsEnabled="{Binding On, Source={x:Reference InvoiceSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                     CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                     StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
-                <cam:ReceiptAnalyzer DocumentDetectedCommand="{Binding ReceiptCommand}"
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:ReceiptAnalyzer OnDetected="{Binding OnReceipt}"
                                      IsEnabled="{Binding On, Source={x:Reference ReceiptSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                     CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                     StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
-                <cam:HealthCardAnalyzer DocumentDetectedCommand="{Binding HealthCardCommand}"
+                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:HealthCardAnalyzer OnDetected="{Binding OnHealthCard}"
                                         IsEnabled="{Binding On, Source={x:Reference HealthCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                        CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                        StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
-                <cam:DriversLicenseAnalyzer DocumentDetectedCommand="{Binding LicenseCommand}"
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:DriversLicenseAnalyzer OnDetected="{Binding OnLicense}"
                                             IsEnabled="{Binding On, Source={x:Reference LicenseSwitch}}"
-                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                            CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                            StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
-                <cam:CreditCardAnalyzer DocumentDetectedCommand="{Binding CreditCardCommand}"
+                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:CreditCardAnalyzer OnDetected="{Binding OnCreditCard}"
                                         IsEnabled="{Binding On, Source={x:Reference CreditCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                        CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                        StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
-                <cam:PassportAnalyzer DocumentDetectedCommand="{Binding PassportCommand}"
+                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
+                <cam:PassportAnalyzer OnDetected="{Binding OnPassport}"
                                       IsEnabled="{Binding On, Source={x:Reference PassportSwitch}}"
-                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}"
-                                      CaptureOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}"
-                                      StopOnDetection="{Binding On, Source={x:Reference CaptureStopSwitch}}" />
+                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
             </cam:CameraView>
 
             <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
@@ -102,6 +91,9 @@
                             Value="{Binding Zoom, Source={x:Reference Camera}, Mode=TwoWay}" />
                 </HorizontalStackLayout>
 
+                <!-- arms every enabled analyzer for one scan; nothing is delivered until this is tapped -->
+                <Button Text="Scan" Clicked="OnScanClicked" />
+
                 <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
                     <Button Grid.Column="0" Text="Options" Clicked="OnOptionsClicked" />
                     <Button Grid.Column="1" Text="Flip" Clicked="OnFlipClicked" />
@@ -143,6 +135,9 @@
                                           Title="Detection boxes"
                                           Description="Draw bounding boxes for detections"
                                           On="True" />
+                        <shiny:SwitchCell x:Name="ContinuousSwitch"
+                                          Title="Keep scanning"
+                                          Description="Barcode / motion / face stay armed after each result (tap Scan once); off = one result per Scan" />
                         <shiny:SwitchCell x:Name="CaptureStopSwitch"
                                           Title="Capture &amp; stop on detect"
                                           Description="Grab a still and freeze the preview when a document is recognized (tap the thumbnail to resume)" />

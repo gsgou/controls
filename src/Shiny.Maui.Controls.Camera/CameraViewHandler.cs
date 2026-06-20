@@ -23,10 +23,6 @@ public partial class CameraViewHandler
         // analyzers raise their typed events on the UI thread via this dispatcher
         this.Pipeline.SetDispatcher(a => this.VirtualView?.Dispatcher.Dispatch(a));
 
-        // an analyzer opted into capture/stop-on-detection — let the view drive it
-        this.Pipeline.OnDetectionRequested = (analyzer, detection) =>
-            this.VirtualView?.HandleDetectionAsync(analyzer, detection) ?? Task.CompletedTask;
-
         this.SyncAnalyzers();
         if (this.VirtualView.Analyzers is INotifyCollectionChanged incc)
             incc.CollectionChanged += this.OnAnalyzersChanged;

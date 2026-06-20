@@ -40,17 +40,19 @@ public partial class CameraPage : ShinyContentPage
         var n => $"{n} captured"
     };
 
-    // The analyzers are declared in XAML inside <cam:CameraView>; these commands are bound to them and fire
-    // (on the UI thread) with each analyzer's typed event args.
-    public ICommand BarcodeCommand { get; }
-    public ICommand MotionCommand { get; }
-    public ICommand FaceCommand { get; }
-    public ICommand InvoiceCommand { get; }
-    public ICommand ReceiptCommand { get; }
-    public ICommand HealthCardCommand { get; }
-    public ICommand LicenseCommand { get; }
-    public ICommand CreditCardCommand { get; }
-    public ICommand PassportCommand { get; }
+    // The analyzers are declared in XAML inside <cam:CameraView>; these OnDetected handlers are bound to them
+    // and run (on the UI thread) with each analyzer's typed args — but only while the analyzer is armed (tap
+    // "Scan" -> Camera.ScanCommand). Each returns whether to keep scanning: barcode honors the Continuous
+    // switch; documents are single-shot (return false), optionally capturing + stopping the preview.
+    public Func<BarcodeDetectedEventArgs, Task<bool>> OnBarcode { get; }
+    public Func<MotionEventArgs, Task<bool>> OnMotion { get; }
+    public Func<FacesDetectedEventArgs, Task<bool>> OnFace { get; }
+    public Func<DocumentDetectedEventArgs<Invoice>, Task<bool>> OnInvoice { get; }
+    public Func<DocumentDetectedEventArgs<Receipt>, Task<bool>> OnReceipt { get; }
+    public Func<DocumentDetectedEventArgs<HealthCard>, Task<bool>> OnHealthCard { get; }
+    public Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>> OnLicense { get; }
+    public Func<DocumentDetectedEventArgs<CreditCard>, Task<bool>> OnCreditCard { get; }
+    public Func<DocumentDetectedEventArgs<Passport>, Task<bool>> OnPassport { get; }
 
     public CameraPage()
     {
@@ -62,25 +64,25 @@ public partial class CameraPage : ShinyContentPage
             await Shell.Current.GoToAsync("//documentsession");
         });
 
-        this.BarcodeCommand = new Command<BarcodeDetectedEventArgs>(e => this.ShowStatus($"{e.Format}: {e.Value}"));
-        this.MotionCommand = new Command<MotionEventArgs>(e => this.ShowStatus(e.InMotion ? "Motion detected" : "Motion stopped"));
-        this.FaceCommand = new Command<FacesDetectedEventArgs>(e => this.ShowStatus($"{e.Faces.Count} face(s)"));
+        this.OnBarcode = e => { this.ShowStatus($"{e.Format}: {e.Value}"); return Task.FromResult(this.ContinuousSwitch.On); };
+        this.OnMotion = e => { this.ShowStatus(e.InMotion ? "Motion detected" : "Motion stopped"); return Task.FromResult(this.ContinuousSwitch.On); };
+        this.OnFace = e => { this.ShowStatus($"{e.Faces.Count} face(s)"); return Task.FromResult(this.ContinuousSwitch.On); };
 
-        this.InvoiceCommand = new Command<DocumentDetectedEventArgs<Invoice>>(e =>
+        this.OnInvoice = e =>
         {
             var d = e.Document;
             var summary = $"Invoice {d.Number ?? "?"} — total {d.Total?.ToString("0.00") ?? "?"}, {d.Lines.Count} line(s)";
-            this.Capture("Invoice", summary, Detail(
+            return this.OnDocument("Invoice", summary, Detail(
                 ("Number", d.Number),
                 ("Date", d.Date?.ToString("yyyy-MM-dd")),
                 ("Total", d.Total?.ToString("0.00")),
                 ("Lines", d.Lines.Count.ToString())));
-        });
-        this.ReceiptCommand = new Command<DocumentDetectedEventArgs<Receipt>>(e =>
+        };
+        this.OnReceipt = e =>
         {
             var d = e.Document;
             var summary = $"{d.Merchant ?? "Receipt"} — total {d.Total?.ToString("0.00") ?? "?"}, {d.Lines.Count} item(s)";
-            this.Capture("Receipt", summary, Detail(
+            return this.OnDocument("Receipt", summary, Detail(
                 ("Merchant", d.Merchant),
                 ("Receipt #", d.ReceiptNumber),
                 ("Date", d.Date?.ToString("yyyy-MM-dd")),
@@ -93,47 +95,47 @@ public partial class CameraPage : ShinyContentPage
                 ("Total", d.Total?.ToString("0.00")),
                 ("Payment", d.PaymentMethod),
                 ("Card", d.CardLast4 is null ? null : $"•••• {d.CardLast4}")));
-        });
-        this.HealthCardCommand = new Command<DocumentDetectedEventArgs<HealthCard>>(e =>
+        };
+        this.OnHealthCard = e =>
         {
             var d = e.Document;
             var summary = $"Health Card {d.Number}{(d.Province is null ? "" : $" ({d.Province})")} — {d.Name}";
-            this.Capture("Health Card", summary, Detail(
+            return this.OnDocument("Health Card", summary, Detail(
                 ("Number", d.Number),
                 ("Name", d.Name),
                 ("Province", d.Province),
                 ("Issuer", d.Issuer),
                 ("Expiry", d.Expiry?.ToString("yyyy-MM-dd"))));
-        });
-        this.LicenseCommand = new Command<DocumentDetectedEventArgs<DriversLicense>>(e =>
+        };
+        this.OnLicense = e =>
         {
             var d = e.Document;
             var summary = $"License {d.Number} — {d.FirstName} {d.LastName}";
-            this.Capture("Driver's License", summary, Detail(
+            return this.OnDocument("Driver's License", summary, Detail(
                 ("Number", d.Number),
                 ("Name", $"{d.FirstName} {d.LastName}".Trim()),
                 ("Date of birth", d.DateOfBirth?.ToString("yyyy-MM-dd")),
                 ("Expiry", d.Expiry?.ToString("yyyy-MM-dd")),
                 ("Province / State", d.Jurisdiction),
                 ("Address", d.Address)));
-        });
-        this.CreditCardCommand = new Command<DocumentDetectedEventArgs<CreditCard>>(e =>
+        };
+        this.OnCreditCard = e =>
         {
             var d = e.Document;
             var last4 = d.Number is { Length: >= 4 } n ? n[^4..] : d.Number;
             var summary = $"{d.Type} •••• {last4} exp {d.Expiry?.ToString("MM/yy") ?? "?"}";
-            this.Capture("Credit Card", summary, Detail(
+            return this.OnDocument("Credit Card", summary, Detail(
                 ("Type", d.Type.ToString()),
                 ("Number", last4 is null ? null : $"•••• {last4}"),
                 ("Expiry", d.Expiry?.ToString("MM/yy")),
                 ("Name", $"{d.FirstName} {d.LastName}".Trim()),
                 ("Company", d.CompanyName)));
-        });
-        this.PassportCommand = new Command<DocumentDetectedEventArgs<Passport>>(e =>
+        };
+        this.OnPassport = e =>
         {
             var d = e.Document;
             var summary = $"Passport {d.Number} — {d.GivenNames} {d.Surname} ({d.Nationality})";
-            this.Capture("Passport", summary, Detail(
+            return this.OnDocument("Passport", summary, Detail(
                 ("Number", d.Number),
                 ("Name", $"{d.GivenNames} {d.Surname}".Trim()),
                 ("Nationality", d.Nationality),
@@ -141,7 +143,7 @@ public partial class CameraPage : ShinyContentPage
                 ("Date of birth", d.DateOfBirth?.ToString("yyyy-MM-dd")),
                 ("Expiry", d.Expiry?.ToString("yyyy-MM-dd")),
                 ("Sex", d.Sex.ToString())));
-        });
+        };
 
         InitializeComponent();
         this.BindingContext = this;
@@ -161,6 +163,28 @@ public partial class CameraPage : ShinyContentPage
     {
         this.ShowStatus(summary);
         this.session.Add(kind, summary, detail);
+    }
+
+    // OnDetected handler shared by every document analyzer: record the document, and when "Capture & stop" is
+    // on grab a still and freeze the preview (tap the thumbnail to resume). Always returns false — documents are
+    // single-shot, so the analyzer disarms until the next "Scan" tap.
+    async Task<bool> OnDocument(string kind, string summary, string detail)
+    {
+        this.Capture(kind, summary, detail);
+        if (this.CaptureStopSwitch.On)
+        {
+            var photo = await this.Camera.CaptureAndStopAsync();
+            this.ShowThumbnail(photo);
+            this.ShowStatus("Captured & stopped — tap the photo to resume");
+        }
+        return false;
+    }
+
+    void ShowThumbnail(CameraPhoto photo)
+    {
+        var bytes = photo.Data;
+        this.PhotoThumbnail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+        this.PhotoThumbnail.IsVisible = true;
     }
 
     // Join the non-empty "Label: value" lines into a detail block.
@@ -253,24 +277,18 @@ public partial class CameraPage : ShinyContentPage
         }
     }
 
-    // Raised after a document analyzer with CaptureOnDetection/StopOnDetection confirms a detection: the camera
-    // has already captured the still and stopped. Show the photo; tapping it resumes the preview.
-    void OnDetectionCaptured(object? sender, DetectionCapturedEventArgs e)
-    {
-        if (e.Photo is { } photo)
-        {
-            var bytes = photo.Data;
-            this.PhotoThumbnail.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
-            this.PhotoThumbnail.IsVisible = true;
-        }
-        this.ShowStatus("Captured & stopped — tap the photo to resume");
-    }
-
     async void OnThumbnailTapped(object? sender, TappedEventArgs e)
     {
-        // re-arms the capture/stop latch and restarts the preview after a capture+stop
+        // restart the preview after a document "capture & stop" (tap Scan again to re-arm)
         await this.Camera.StartAsync();
+        this.PhotoThumbnail.IsVisible = false;
         this.ShowStatus("Resumed");
+    }
+
+    void OnScanClicked(object? sender, EventArgs e)
+    {
+        this.Camera.Scan(); // arm every enabled analyzer for one scan
+        this.ShowStatus("Scanning…");
     }
 
     async void OnCaptureClicked(object? sender, EventArgs e)

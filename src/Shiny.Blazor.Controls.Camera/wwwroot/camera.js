@@ -32,7 +32,8 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
         running: true,
         rafId: null,
         detector: null,
-        busy: false
+        busy: false,
+        armed: false   // gated: a decoded barcode is only delivered to .NET while armed (see arm())
     };
     states.set(video, state);
 
@@ -56,10 +57,13 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
             try {
                 const codes = await state.detector.detect(video);
                 const boxes = codes.map(c => toOverlayBox(c, video));
+                // boxes always draw + flow to .NET (presentation); the decoded value is gated behind arm()
                 if (state.showOverlay) drawOverlay(ctx, overlay, boxes);
                 await state.dotnet.invokeMethodAsync('OnOverlays', boxes);
-                for (const c of codes)
-                    await state.dotnet.invokeMethodAsync('OnBarcode', toBarcode(c, video));
+                if (state.armed && codes.length > 0) {
+                    state.armed = false; // one delivery per arm; .NET re-arms to keep scanning
+                    await state.dotnet.invokeMethodAsync('OnBarcode', toBarcode(codes[0], video));
+                }
             }
             catch { /* transient detect error; keep looping */ }
             finally { state.busy = false; }
@@ -80,6 +84,20 @@ export function stop(video) {
     const ctx = state.overlay.getContext('2d');
     ctx.clearRect(0, 0, state.overlay.width, state.overlay.height);
     states.delete(video);
+}
+
+
+// Arm the detector to deliver the next decoded barcode to .NET (then it self-disarms). Boxes keep drawing
+// every frame regardless; this only gates the OnBarcode callback.
+export function arm(video) {
+    const state = states.get(video);
+    if (state) state.armed = true;
+}
+
+
+export function disarm(video) {
+    const state = states.get(video);
+    if (state) state.armed = false;
 }
 
 

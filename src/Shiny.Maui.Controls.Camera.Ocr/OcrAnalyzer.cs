@@ -42,7 +42,22 @@ public class OcrAnalyzer : FrameAnalyzer
     /// </summary>
     public Func<TextRecognizedEventArgs, IReadOnlyList<OverlayBox>?>? OverlayProvider { get; set; }
 
-    /// <summary>Raised on the UI thread when text is recognized in a frame.</summary>
+    /// <summary>
+    /// Continuation invoked (on the UI thread) with the recognized text while the analyzer is armed; return
+    /// <c>true</c> to keep scanning (stay armed), <c>false</c> to stop until the next <see cref="CameraView.Scan"/>.
+    /// When unset, delivery is single-shot. Bindable so it can target a VM method in XAML.
+    /// </summary>
+    public static readonly BindableProperty OnDetectedProperty = BindableProperty.Create(
+        nameof(OnDetected), typeof(Func<TextRecognizedEventArgs, Task<bool>>), typeof(OcrAnalyzer));
+
+    /// <inheritdoc cref="OnDetectedProperty"/>
+    public Func<TextRecognizedEventArgs, Task<bool>>? OnDetected
+    {
+        get => (Func<TextRecognizedEventArgs, Task<bool>>?)this.GetValue(OnDetectedProperty);
+        set => this.SetValue(OnDetectedProperty, value);
+    }
+
+    /// <summary>Raised on the UI thread when text is recognized in a frame, while the analyzer is armed.</summary>
     public event EventHandler<TextRecognizedEventArgs>? TextRecognized;
 
     /// <inheritdoc/>
@@ -53,7 +68,7 @@ public class OcrAnalyzer : FrameAnalyzer
             return null;
 
         var args = new TextRecognizedEventArgs(text);
-        this.Emit(() => this.TextRecognized?.Invoke(this, args), this.TextRecognizedCommand, args);
+        this.Deliver(args, () => this.TextRecognized?.Invoke(this, args), this.TextRecognizedCommand, this.OnDetected);
 
         return this.ResolveOverlay(args, this.OverlayProvider, () =>
         {

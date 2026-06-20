@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Windows.Input;
 
 namespace Shiny.Maui.Controls.Camera;
 
@@ -16,8 +17,34 @@ public partial class CameraView : View
     public IList<IFrameAnalyzer> Analyzers { get; } = new ObservableCollection<IFrameAnalyzer>();
 
     public CameraView()
+    {
         // analyzers declared in XAML / added in code inherit this view's BindingContext so their Commands bind
-        => ((INotifyCollectionChanged)this.Analyzers).CollectionChanged += this.OnAnalyzersBindingContext;
+        ((INotifyCollectionChanged)this.Analyzers).CollectionChanged += this.OnAnalyzersBindingContext;
+        this.ScanCommand = new Command(this.Scan);
+    }
+
+    /// <summary>
+    /// Arm every enabled analyzer for one scan: each stays silent (still drawing boxes) until its next confirmed
+    /// detection, which it then delivers once. An analyzer's <c>OnDetected</c> returning <c>true</c> keeps it
+    /// armed (continuous scanning); otherwise it disarms until the next call. Bind a button/Fab to
+    /// <see cref="ScanCommand"/>, or call this directly.
+    /// </summary>
+    public void Scan()
+    {
+        foreach (var analyzer in this.Analyzers.OfType<FrameAnalyzer>())
+            if (analyzer.IsEnabled)
+                analyzer.Arm();
+    }
+
+    /// <summary>Command form of <see cref="Scan"/> — arms every enabled analyzer for one scan.</summary>
+    public ICommand ScanCommand { get; }
+
+    /// <summary>Disarm every analyzer, cancelling any in-progress scan. Boxes keep drawing; results stop until the next <see cref="Scan"/>.</summary>
+    public void StopScanning()
+    {
+        foreach (var analyzer in this.Analyzers.OfType<FrameAnalyzer>())
+            analyzer.Disarm();
+    }
 
     void OnAnalyzersBindingContext(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -50,17 +77,7 @@ public partial class CameraView : View
     /// </summary>
     public event EventHandler<CameraOverlaysChangedEventArgs>? OverlaysChanged;
 
-    /// <summary>
-    /// Raised on the UI thread after an analyzer with <see cref="FrameAnalyzer.CaptureOnDetection"/> and/or
-    /// <see cref="FrameAnalyzer.StopOnDetection"/> reports a confirmed detection and the camera has captured a
-    /// still and/or stopped. Carries the originating analyzer, the detection payload, and the captured photo
-    /// (null when only <see cref="FrameAnalyzer.StopOnDetection"/> was set).
-    /// </summary>
-    public event EventHandler<DetectionCapturedEventArgs>? DetectionCaptured;
-
     ICameraViewController? Controller => this.Handler as ICameraViewController;
-
-    bool detectionLatched;
 
 
     /// <summary>Request camera permission. Returns <c>true</c> when granted.</summary>
@@ -71,12 +88,9 @@ public partial class CameraView : View
     public Task<IReadOnlyList<CameraInfo>> GetAvailableCamerasAsync(CancellationToken ct = default)
         => this.Controller?.GetAvailableCamerasAsync(ct) ?? Task.FromResult<IReadOnlyList<CameraInfo>>([]);
 
-    /// <summary>Start the capture session and preview. Re-arms any latched capture/stop-on-detection trigger.</summary>
+    /// <summary>Start the capture session and preview.</summary>
     public Task StartAsync(CancellationToken ct = default)
-    {
-        this.detectionLatched = false;
-        return this.Controller?.StartAsync(ct) ?? Task.CompletedTask;
-    }
+        => this.Controller?.StartAsync(ct) ?? Task.CompletedTask;
 
     /// <summary>Stop the capture session and preview.</summary>
     public Task StopAsync(CancellationToken ct = default)
@@ -97,45 +111,14 @@ public partial class CameraView : View
     /// <summary>
     /// Capture a single still photo and then stop the capture session, atomically. Raises
     /// <see cref="MediaCaptured"/> for the photo (via <see cref="CapturePhotoAsync"/>) and returns it. Handy from
-    /// an analyzer's detection event handler when you want full control over when to freeze the preview; for the
-    /// declarative path use <see cref="FrameAnalyzer.CaptureOnDetection"/>/<see cref="FrameAnalyzer.StopOnDetection"/>.
+    /// an analyzer's <c>OnDetected</c> handler for a "scan then freeze" flow — capture the still, then
+    /// <c>return false</c> to disarm.
     /// </summary>
     public async Task<CameraPhoto> CaptureAndStopAsync(CancellationToken ct = default)
     {
         var photo = await this.CapturePhotoAsync(ct).ConfigureAwait(false);
         await this.StopAsync(ct).ConfigureAwait(false);
         return photo;
-    }
-
-
-    // Invoked (on the UI thread) by the pipeline when an analyzer with CaptureOnDetection/StopOnDetection
-    // confirms a detection. Latches so a flurry of detections (or multiple analyzers) fires the capture/stop
-    // once; StartAsync re-arms it.
-    internal async Task HandleDetectionAsync(FrameAnalyzer analyzer, object detection)
-    {
-        if (this.detectionLatched)
-            return;
-        this.detectionLatched = true;
-
-        try
-        {
-            CameraPhoto? photo = null;
-            if (analyzer.CaptureOnDetection)
-                photo = await this.CapturePhotoAsync();
-            if (analyzer.StopOnDetection)
-                await this.StopAsync();
-
-            this.DetectionCaptured?.Invoke(this, new DetectionCapturedEventArgs(analyzer, detection, photo));
-
-            // capture-only (no stop) should keep firing on later detections, so release the latch
-            if (!analyzer.StopOnDetection)
-                this.detectionLatched = false;
-        }
-        catch (Exception ex)
-        {
-            this.detectionLatched = false;
-            this.OnCameraError("Capture/stop on detection failed", ex);
-        }
     }
 
 
@@ -194,26 +177,6 @@ public class CameraOverlaysChangedEventArgs(IReadOnlyList<OverlayBox> overlays, 
 
     /// <summary>Height of the analyzed image in pixels.</summary>
     public int ImageHeight { get; } = imageHeight;
-}
-
-
-/// <summary>
-/// Carries the result of a capture/stop triggered by an analyzer's <see cref="FrameAnalyzer.CaptureOnDetection"/>
-/// / <see cref="FrameAnalyzer.StopOnDetection"/> to <see cref="CameraView.DetectionCaptured"/> subscribers.
-/// </summary>
-public class DetectionCapturedEventArgs(FrameAnalyzer analyzer, object detection, CameraPhoto? photo) : EventArgs
-{
-    /// <summary>The analyzer that reported the detection.</summary>
-    public FrameAnalyzer Analyzer { get; } = analyzer;
-
-    /// <summary>
-    /// The detection payload (the same object the analyzer's typed event carried, e.g. a document record or
-    /// <c>MotionEventArgs</c>). Pattern-match to recover the strong type.
-    /// </summary>
-    public object Detection { get; } = detection;
-
-    /// <summary>The captured still, or <c>null</c> when the analyzer only requested a stop.</summary>
-    public CameraPhoto? Photo { get; } = photo;
 }
 
 
