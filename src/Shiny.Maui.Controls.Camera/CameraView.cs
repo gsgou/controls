@@ -1,63 +1,72 @@
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Windows.Input;
+using Microsoft.Maui.Graphics;
 
 namespace Shiny.Maui.Controls.Camera;
 
 /// <summary>
 /// A cross-platform camera preview with zoom / torch / lens control, still capture, and a pluggable
-/// frame-analysis pipeline (barcode, face, motion, OCR, documents). Each analyzer raises its own
-/// strongly-typed event for semantic results and returns styled <see cref="OverlayBox"/>es that are drawn
-/// over the preview. Backed by AVFoundation (iOS/macOS), CameraX (Android) and MediaCapture (Windows).
+/// frame-analysis pipeline. A <b>single</b> <see cref="Analyzer"/> (barcode, face, motion, OCR, documents)
+/// runs against each frame at a time — set or swap it freely while the camera is running. The analyzer
+/// raises its own strongly-typed event for semantic results and returns styled <see cref="OverlayBox"/>es
+/// that are drawn over the preview. Backed by AVFoundation (iOS/macOS), CameraX (Android) and MediaCapture
+/// (Windows).
 /// </summary>
-[ContentProperty(nameof(Analyzers))]
+[ContentProperty(nameof(Analyzer))]
 public partial class CameraView : View
 {
-    /// <summary>Analyzers run against each frame. Add/remove freely; the running session picks up changes.</summary>
-    public IList<IFrameAnalyzer> Analyzers { get; } = new ObservableCollection<IFrameAnalyzer>();
+    /// <summary>
+    /// The single frame analyzer run against each frame (null = no analysis). Assign or swap it at any time —
+    /// the running session picks up the change. It's the content property, so it can be declared inline in XAML.
+    /// </summary>
+    public static readonly BindableProperty AnalyzerProperty = BindableProperty.Create(
+        nameof(Analyzer), typeof(IFrameAnalyzer), typeof(CameraView), propertyChanged: OnAnalyzerChanged);
+
+    /// <inheritdoc cref="AnalyzerProperty"/>
+    public IFrameAnalyzer? Analyzer
+    {
+        get => (IFrameAnalyzer?)this.GetValue(AnalyzerProperty);
+        set => this.SetValue(AnalyzerProperty, value);
+    }
 
     public CameraView()
     {
-        // analyzers declared in XAML / added in code inherit this view's BindingContext so their Commands bind
-        ((INotifyCollectionChanged)this.Analyzers).CollectionChanged += this.OnAnalyzersBindingContext;
         this.ScanCommand = new Command(this.Scan);
     }
 
+    static void OnAnalyzerChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var view = (CameraView)bindable;
+        // a declared/assigned analyzer inherits this view's BindingContext so its Commands bind
+        if (newValue is BindableObject bo)
+            SetInheritedBindingContext(bo, view.BindingContext);
+    }
+
     /// <summary>
-    /// Arm every enabled analyzer for one scan: each stays silent (still drawing boxes) until its next confirmed
-    /// detection, which it then delivers once. An analyzer's <c>OnDetected</c> returning <c>true</c> keeps it
-    /// armed (continuous scanning); otherwise it disarms until the next call. Bind a button/Fab to
+    /// Arm the analyzer for one scan: it stays silent (still drawing boxes) until its next confirmed detection,
+    /// which it then delivers once. The analyzer's <c>OnDetected</c> returning <c>true</c> keeps it armed
+    /// (continuous scanning); otherwise it disarms until the next call. Bind a button/Fab to
     /// <see cref="ScanCommand"/>, or call this directly.
     /// </summary>
     public void Scan()
     {
-        foreach (var analyzer in this.Analyzers.OfType<FrameAnalyzer>())
-            if (analyzer.IsEnabled)
-                analyzer.Arm();
+        if (this.Analyzer is FrameAnalyzer { IsEnabled: true } analyzer)
+            analyzer.Arm();
     }
 
-    /// <summary>Command form of <see cref="Scan"/> — arms every enabled analyzer for one scan.</summary>
+    /// <summary>Command form of <see cref="Scan"/> — arms the analyzer for one scan.</summary>
     public ICommand ScanCommand { get; }
 
-    /// <summary>Disarm every analyzer, cancelling any in-progress scan. Boxes keep drawing; results stop until the next <see cref="Scan"/>.</summary>
+    /// <summary>Disarm the analyzer, cancelling any in-progress scan. Boxes keep drawing; results stop until the next <see cref="Scan"/>.</summary>
     public void StopScanning()
     {
-        foreach (var analyzer in this.Analyzers.OfType<FrameAnalyzer>())
+        if (this.Analyzer is FrameAnalyzer analyzer)
             analyzer.Disarm();
-    }
-
-    void OnAnalyzersBindingContext(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (e.NewItems is null)
-            return;
-        foreach (var analyzer in e.NewItems.OfType<BindableObject>())
-            SetInheritedBindingContext(analyzer, this.BindingContext);
     }
 
     protected override void OnBindingContextChanged()
     {
         base.OnBindingContextChanged();
-        foreach (var analyzer in this.Analyzers.OfType<BindableObject>())
+        if (this.Analyzer is BindableObject analyzer)
             SetInheritedBindingContext(analyzer, this.BindingContext);
     }
 
@@ -71,9 +80,9 @@ public partial class CameraView : View
     public event EventHandler<CameraErrorEventArgs>? CameraError;
 
     /// <summary>
-    /// Raised on the UI thread whenever the aggregated set of overlay boxes (across all analyzers) changes.
-    /// This is a presentation-only channel for drawing; subscribe to each analyzer's own typed event for
-    /// semantic results (e.g. the decoded barcode value).
+    /// Raised on the UI thread whenever the analyzer's set of overlay boxes changes. This is a
+    /// presentation-only channel for drawing; subscribe to the analyzer's own typed event for semantic
+    /// results (e.g. the decoded barcode value).
     /// </summary>
     public event EventHandler<CameraOverlaysChangedEventArgs>? OverlaysChanged;
 
@@ -146,11 +155,12 @@ public partial class CameraView : View
     }
 
 
-    /// <summary>Invoked by the handler/pipeline to publish the latest overlay boxes. Raises <see cref="OverlaysChanged"/>.</summary>
-    public void OnOverlaysChanged(IReadOnlyList<OverlayBox> overlays, int imageWidth, int imageHeight)
+    /// <summary>Invoked by the handler/pipeline to publish the latest overlay boxes + the analyzer's scan window. Raises <see cref="OverlaysChanged"/>.</summary>
+    public void OnOverlaysChanged(IReadOnlyList<OverlayBox> overlays, RectF? scanWindow, int imageWidth, int imageHeight)
     {
         this.Overlays = overlays;
-        this.OverlaysChanged?.Invoke(this, new CameraOverlaysChangedEventArgs(overlays, imageWidth, imageHeight));
+        this.ScanWindow = scanWindow;
+        this.OverlaysChanged?.Invoke(this, new CameraOverlaysChangedEventArgs(overlays, scanWindow, imageWidth, imageHeight));
     }
 
     /// <summary>Invoked by the handler to report an error. Raises <see cref="CameraError"/>.</summary>
@@ -166,11 +176,14 @@ public partial class CameraView : View
 }
 
 
-/// <summary>Carries the latest aggregated overlay boxes to <see cref="CameraView.OverlaysChanged"/> subscribers.</summary>
-public class CameraOverlaysChangedEventArgs(IReadOnlyList<OverlayBox> overlays, int imageWidth, int imageHeight) : EventArgs
+/// <summary>Carries the analyzer's latest overlay boxes (and scan window) to <see cref="CameraView.OverlaysChanged"/> subscribers.</summary>
+public class CameraOverlaysChangedEventArgs(IReadOnlyList<OverlayBox> overlays, RectF? scanWindow, int imageWidth, int imageHeight) : EventArgs
 {
-    /// <summary>The aggregated boxes across all analyzers, in normalized upright image space.</summary>
+    /// <summary>The analyzer's boxes, in normalized upright image space.</summary>
     public IReadOnlyList<OverlayBox> Overlays { get; } = overlays;
+
+    /// <summary>The analyzer's scan window (normalized upright space), or null when it scans the full frame.</summary>
+    public RectF? ScanWindow { get; } = scanWindow;
 
     /// <summary>Width of the analyzed image in pixels.</summary>
     public int ImageWidth { get; } = imageWidth;

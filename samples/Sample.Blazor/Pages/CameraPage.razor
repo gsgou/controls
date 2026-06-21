@@ -1,4 +1,5 @@
 @page "/camera"
+@using Microsoft.Maui.Graphics
 @using Shiny.Blazor.Controls.Camera
 @using Shiny.Controls.Camera
 
@@ -19,10 +20,10 @@
         <CameraView @ref="camera"
                     Facing="facing"
                     CameraId="@cameraId"
-                    EnableBarcode="enableBarcode"
+                    Analyzer="analyzer"
                     ShowOverlay="showBoxes"
                     Filter="filter"
-                    BarcodeDetected="OnBarcode"
+                    BarcodesDetected="OnBarcodes"
                     OnError="OnError"
                     OnStarted="LoadCamerasAsync"
                     Style="width:100%;height:100%;" />
@@ -42,8 +43,9 @@
     <!-- options (mirrors the MAUI options sheet, where the browser supports it) -->
     <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
         <fieldset style="border:1px solid #E5E7EB;border-radius:8px;padding:8px 14px;">
-            <legend style="font-size:12px;color:#6B7280;">Detectors</legend>
-            <label style="display:block;"><input type="checkbox" @bind="enableBarcode" /> Barcode / QR</label>
+            <legend style="font-size:12px;color:#6B7280;">Detector</legend>
+            <label style="display:block;"><input type="checkbox" @bind="enableBarcode" @bind:after="RebuildAnalyzer" /> Barcode / QR</label>
+            <label style="display:block;margin-top:6px;"><input type="checkbox" @bind="scanArea" @bind:after="RebuildAnalyzer" disabled="@(!enableBarcode)" /> Restrict scan area</label>
             <p style="margin:6px 0 0;font-size:12px;color:#9CA3AF;">Face / Motion / OCR / Documents — MAUI only</p>
         </fieldset>
 
@@ -109,8 +111,19 @@
     string? cameraId;
     CameraFilter filter = CameraFilter.None;
     bool enableBarcode = true;
+    bool scanArea;
+    CameraAnalyzer? analyzer = new BarcodeAnalyzer();
     bool showBoxes = true;
     bool continuous;
+
+    // the scan window enabled by "Restrict scan area" — a center band the barcode analyzer scans
+    static readonly RectF ScanBand = new(0.1f, 0.4f, 0.8f, 0.2f);
+
+    // swap in a fresh analyzer instance so the component restarts the stream with the new options
+    void RebuildAnalyzer()
+        => analyzer = enableBarcode
+            ? new BarcodeAnalyzer { ScanWindow = scanArea ? ScanBand : null }
+            : null;
     bool scanning;
     CancellationTokenSource? scanCts;
     readonly List<CameraBarcode> barcodes = [];
@@ -210,9 +223,9 @@
     void StopScan() => scanCts?.Cancel();
 
     // Still fires (gated) while a scan is outstanding — the demo drives the list from Scan() instead, but this
-    // shows the EventCallback path stays available.
-    void OnBarcode(CameraBarcode barcode)
-        => status = $"{barcode.Format}: {barcode.Value}";
+    // shows the EventCallback path stays available. A frame can hold several codes, so it's an array.
+    void OnBarcodes(IReadOnlyList<CameraBarcode> codes)
+        => status = $"{codes.Count} code(s): {codes[0].Format} {codes[0].Value}";
 
     void OnError(string message)
     {

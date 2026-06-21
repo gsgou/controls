@@ -21,8 +21,11 @@ public partial class CameraView : IAsyncDisposable
     /// <summary>Exact device id (from <see cref="GetAvailableCamerasAsync"/>) to use; overrides <see cref="Facing"/> when set.</summary>
     [Parameter] public string? CameraId { get; set; }
 
-    /// <summary>Run the in-browser barcode detector (native <c>BarcodeDetector</c> where available).</summary>
-    [Parameter] public bool EnableBarcode { get; set; } = true;
+    /// <summary>
+    /// The single in-browser frame analyzer (null = no analysis). Assign a <see cref="BarcodeAnalyzer"/> to scan
+    /// barcodes; swap it freely. Mirrors the MAUI <c>CameraView.Analyzer</c> property.
+    /// </summary>
+    [Parameter] public CameraAnalyzer? Analyzer { get; set; }
 
     /// <summary>Draw detection bounding boxes on the overlay canvas.</summary>
     [Parameter] public bool ShowOverlay { get; set; } = true;
@@ -40,11 +43,11 @@ public partial class CameraView : IAsyncDisposable
     [Parameter] public EventCallback<IReadOnlyList<OverlayBox>> OverlaysChanged { get; set; }
 
     /// <summary>
-    /// Raised with the decoded barcode (format + value) when one is detected in-browser — but only while a
-    /// <see cref="RequestBarcodeAsync"/> is outstanding (gated, so it's quiet by default rather than a per-frame
-    /// firehose). For most flows prefer awaiting <see cref="RequestBarcodeAsync"/> directly.
+    /// Raised with <b>every</b> barcode decoded in a frame (a frame can hold several) when detected in-browser —
+    /// but only while a <see cref="RequestBarcodeAsync"/> is outstanding (gated, so it's quiet by default rather
+    /// than a per-frame firehose). For most flows prefer awaiting <see cref="RequestBarcodeAsync"/> directly.
     /// </summary>
-    [Parameter] public EventCallback<CameraBarcode> BarcodeDetected { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<CameraBarcode>> BarcodesDetected { get; set; }
 
     /// <summary>Raised when the camera cannot start (permission denied, no device, insecure context).</summary>
     [Parameter] public EventCallback<string> OnError { get; set; }
@@ -70,7 +73,7 @@ public partial class CameraView : IAsyncDisposable
 
 
     CameraFilter appliedFilter = CameraFilter.None;
-    bool appliedBarcode;
+    CameraAnalyzer? appliedAnalyzer;
     bool appliedOverlay;
     CameraFacing appliedFacing;
     string? appliedCameraId;
@@ -83,10 +86,10 @@ public partial class CameraView : IAsyncDisposable
         if (this.Filter != this.appliedFilter)
             await this.ApplyFilterAsync();   // CSS filter — applied live without a restart
 
-        // EnableBarcode / ShowOverlay / Facing / CameraId are read by the JS `start` call, so changing them
+        // Analyzer / ShowOverlay / Facing / CameraId are read by the JS `start` call, so changing them
         // re-acquires the stream. Re-apply by restarting while running (matches MAUI's live toggling).
         if (this.started &&
-            (this.EnableBarcode != this.appliedBarcode ||
+            (!ReferenceEquals(this.Analyzer, this.appliedAnalyzer) ||
              this.ShowOverlay != this.appliedOverlay ||
              this.Facing != this.appliedFacing ||
              this.CameraId != this.appliedCameraId))
@@ -127,9 +130,10 @@ public partial class CameraView : IAsyncDisposable
             await this.module.InvokeVoidAsync(
                 "start", this.videoEl, this.overlayEl, this.selfRef,
                 this.Facing == CameraFacing.Front ? "user" : "environment",
-                this.EnableBarcode, this.ShowOverlay, this.CameraId);
+                this.Analyzer?.Kind, this.ShowOverlay, this.CameraId,
+                this.Analyzer?.ShowBoundingBox ?? true, this.Analyzer?.ScanWindowArray());
             this.started = true;
-            this.appliedBarcode = this.EnableBarcode;
+            this.appliedAnalyzer = this.Analyzer;
             this.appliedOverlay = this.ShowOverlay;
             this.appliedFacing = this.Facing;
             this.appliedCameraId = this.CameraId;
@@ -215,17 +219,20 @@ public partial class CameraView : IAsyncDisposable
 
 
     /// <summary>
-    /// Invoked from JS when a barcode is decoded (only while armed). Completes any outstanding
-    /// <see cref="RequestBarcodeAsync"/> and raises <see cref="BarcodeDetected"/>. Public + named DTO for
-    /// trim-safe interop.
+    /// Invoked from JS when barcodes are decoded (only while armed). Completes any outstanding
+    /// <see cref="RequestBarcodeAsync"/> with the first code and raises <see cref="BarcodesDetected"/> with all
+    /// of them. Public + named DTO for trim-safe interop.
     /// </summary>
     [JSInvokable]
-    public async Task OnBarcode(CameraBarcode barcode)
+    public async Task OnBarcodes(CameraBarcode[] barcodes)
     {
+        if (barcodes.Length == 0)
+            return;
+
         var pending = this.pendingScan;
         this.pendingScan = null;
-        pending?.TrySetResult(barcode);
-        await this.BarcodeDetected.InvokeAsync(barcode);
+        pending?.TrySetResult(barcodes[0]);
+        await this.BarcodesDetected.InvokeAsync(barcodes);
     }
 
 

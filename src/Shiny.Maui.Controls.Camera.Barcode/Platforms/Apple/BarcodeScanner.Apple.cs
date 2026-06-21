@@ -45,6 +45,21 @@ public partial class BarcodeScanner
             if (symbologies != null)
                 request.Symbologies = symbologies;
 
+            // Restrict Vision to the scan window so it only decodes that band — fewer pixels to process
+            // and it physically can't pick up codes outside it. RegionOfInterest is normalized in the
+            // (unoriented) image's space with a BOTTOM-LEFT origin, so invert our upright window back to
+            // raw sensor space and flip Y.
+            if (this.ScanWindow is { } window)
+            {
+                var raw = CoordinateTransform.InvertOrientation(window, frame.Rotation, frame.IsMirrored);
+                var x = Math.Clamp(raw.X, 0f, 1f);
+                var y = Math.Clamp(1f - raw.Y - raw.Height, 0f, 1f);
+                var w = Math.Clamp(raw.Width, 0f, 1f - x);
+                var h = Math.Clamp(raw.Height, 0f, 1f - y);
+                if (w > 0 && h > 0)
+                    request.RegionOfInterest = new CoreGraphics.CGRect(x, y, w, h);
+            }
+
             using var handler = new VNImageRequestHandler(cg, new NSDictionary());
             handler.Perform([request], out _);
         }

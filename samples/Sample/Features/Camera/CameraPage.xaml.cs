@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Camera;
@@ -16,9 +17,33 @@ public partial class CameraPage : ShinyContentPage
     // sample-only: shared app-session list the document analyzers feed (see DocumentSessionPage)
     readonly DocumentSessionStore session;
 
+    // one analyzer runs at a time; these are built once and swapped into Camera.Analyzer by the picker
+    readonly BarcodeAnalyzer barcode = new();
+    readonly Dictionary<string, IFrameAnalyzer> analyzers;
+
+    // a center band the barcode analyzer scans when "Restrict scan area" is on
+    static readonly RectF ScanBand = new(0.1f, 0.4f, 0.8f, 0.2f);
+
     // bound by the options-sheet TableView
     public CameraFilter[] Filters { get; } = Enum.GetValues<CameraFilter>();
     public ObservableCollection<CameraInfo> Cameras { get; } = [];
+
+    /// <summary>The detector names shown in the "Detector" picker.</summary>
+    public string[] Detectors { get; }
+
+    string selectedDetector = "None";
+
+    /// <summary>Two-way bound to the sheet's "Detector" picker; swaps <see cref="CameraView.Analyzer"/> live.</summary>
+    public string SelectedDetector
+    {
+        get => this.selectedDetector;
+        set
+        {
+            this.selectedDetector = value;
+            this.OnPropertyChanged(nameof(this.SelectedDetector));
+            this.ApplyDetector();
+        }
+    }
 
     CameraInfo? selectedCamera;
 
@@ -40,19 +65,19 @@ public partial class CameraPage : ShinyContentPage
         var n => $"{n} captured"
     };
 
-    // The analyzers are declared in XAML inside <cam:CameraView>; these OnDetected handlers are bound to them
-    // and run (on the UI thread) with each analyzer's typed args — but only while the analyzer is armed (tap
-    // "Scan" -> Camera.ScanCommand). Each returns whether to keep scanning: barcode honors the Continuous
-    // switch; documents are single-shot (return false), optionally capturing + stopping the preview.
-    public Func<BarcodeDetectedEventArgs, Task<bool>> OnBarcode { get; }
-    public Func<MotionEventArgs, Task<bool>> OnMotion { get; }
-    public Func<FacesDetectedEventArgs, Task<bool>> OnFace { get; }
-    public Func<DocumentDetectedEventArgs<Invoice>, Task<bool>> OnInvoice { get; }
-    public Func<DocumentDetectedEventArgs<Receipt>, Task<bool>> OnReceipt { get; }
-    public Func<DocumentDetectedEventArgs<HealthCard>, Task<bool>> OnHealthCard { get; }
-    public Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>> OnLicense { get; }
-    public Func<DocumentDetectedEventArgs<CreditCard>, Task<bool>> OnCreditCard { get; }
-    public Func<DocumentDetectedEventArgs<Passport>, Task<bool>> OnPassport { get; }
+    // Each analyzer's OnDetected handler runs (on the UI thread) with its typed args — but only while the
+    // analyzer is armed (tap "Scan" -> Camera.ScanCommand). Each returns whether to keep scanning: barcode /
+    // motion / face honor the Continuous switch; documents are single-shot (return false), optionally
+    // capturing + stopping the preview.
+    Func<BarcodesDetectedEventArgs, Task<bool>> OnBarcode { get; }
+    Func<MotionEventArgs, Task<bool>> OnMotion { get; }
+    Func<FacesDetectedEventArgs, Task<bool>> OnFace { get; }
+    Func<DocumentDetectedEventArgs<Invoice>, Task<bool>> OnInvoice { get; }
+    Func<DocumentDetectedEventArgs<Receipt>, Task<bool>> OnReceipt { get; }
+    Func<DocumentDetectedEventArgs<HealthCard>, Task<bool>> OnHealthCard { get; }
+    Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>> OnLicense { get; }
+    Func<DocumentDetectedEventArgs<CreditCard>, Task<bool>> OnCreditCard { get; }
+    Func<DocumentDetectedEventArgs<Passport>, Task<bool>> OnPassport { get; }
 
     public CameraPage()
     {
@@ -64,7 +89,7 @@ public partial class CameraPage : ShinyContentPage
             await Shell.Current.GoToAsync("//documentsession");
         });
 
-        this.OnBarcode = e => { this.ShowStatus($"{e.Format}: {e.Value}"); return Task.FromResult(this.ContinuousSwitch.On); };
+        this.OnBarcode = e => { this.ShowStatus($"{e.Barcodes.Count} code(s): {e.First.Format} {e.First.Value}"); return Task.FromResult(this.ContinuousSwitch.On); };
         this.OnMotion = e => { this.ShowStatus(e.InMotion ? "Motion detected" : "Motion stopped"); return Task.FromResult(this.ContinuousSwitch.On); };
         this.OnFace = e => { this.ShowStatus($"{e.Faces.Count} face(s)"); return Task.FromResult(this.ContinuousSwitch.On); };
 
@@ -145,8 +170,28 @@ public partial class CameraPage : ShinyContentPage
                 ("Sex", d.Sex.ToString())));
         };
 
+        // build the analyzers once and wire their OnDetected handlers; the picker swaps which one is active
+        this.barcode.OnDetected = this.OnBarcode;
+        this.analyzers = new()
+        {
+            ["Barcode / QR"] = this.barcode,
+            ["Motion"] = new MotionAnalyzer { OnDetected = this.OnMotion },
+            ["Face"] = new FaceAnalyzer { OnDetected = this.OnFace },
+            ["Invoice"] = new InvoiceAnalyzer { OnDetected = this.OnInvoice },
+            ["Receipt"] = new ReceiptAnalyzer { OnDetected = this.OnReceipt },
+            ["Health Card"] = new HealthCardAnalyzer { OnDetected = this.OnHealthCard },
+            ["Driver's License"] = new DriversLicenseAnalyzer { OnDetected = this.OnLicense },
+            ["Credit Card"] = new CreditCardAnalyzer { OnDetected = this.OnCreditCard },
+            ["Passport"] = new PassportAnalyzer { OnDetected = this.OnPassport },
+        };
+        this.Detectors = ["None", .. this.analyzers.Keys];
+
         InitializeComponent();
         this.BindingContext = this;
+
+        // re-apply ShowBoundingBox / ScanWindow on the active analyzer when their switches toggle
+        this.BoxesSwitch.PropertyChanged += (_, _) => this.ApplyBoxes();
+        this.ScanAreaSwitch.PropertyChanged += (_, _) => this.ApplyScanArea();
 
         // open the options sheet at full screen
         this.OptionsPanel.Detents = new ObservableCollection<DetentValue> { DetentValue.Full };
@@ -157,6 +202,26 @@ public partial class CameraPage : ShinyContentPage
         this.Camera.CameraError += (_, e) => this.ShowStatus(e.Message);
         this.Camera.VideoCaptured += (_, v) => this.ShowStatus($"Saved video: {v.FilePath}");
     }
+
+    // Swap the active analyzer (null = "None") and re-apply the box / scan-area options to it.
+    void ApplyDetector()
+    {
+        if (this.Camera is null)
+            return;
+        this.Camera.Analyzer = this.analyzers.GetValueOrDefault(this.selectedDetector);
+        this.ApplyBoxes();
+        this.ApplyScanArea();
+    }
+
+    void ApplyBoxes()
+    {
+        if (this.Camera?.Analyzer is FrameAnalyzer fa)
+            fa.ShowBoundingBox = this.BoxesSwitch.On;
+    }
+
+    // ScanWindow demo: restrict the barcode analyzer to a center band (the overlay frames it as a reticle).
+    void ApplyScanArea()
+        => this.barcode.ScanWindow = this.ScanAreaSwitch.On ? ScanBand : null;
 
     // Show the headline on-screen and add the document to the shared session list.
     void Capture(string kind, string summary, string detail)
@@ -287,7 +352,7 @@ public partial class CameraPage : ShinyContentPage
 
     void OnScanClicked(object? sender, EventArgs e)
     {
-        this.Camera.Scan(); // arm every enabled analyzer for one scan
+        this.Camera.Scan(); // arm the active analyzer for one scan
         this.ShowStatus("Scanning…");
     }
 

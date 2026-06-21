@@ -146,7 +146,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
             return;
 
         // pipeline copy (synchronous), then keep a copy for preview + still capture
-        if (this.Pipeline.HasAnalyzers)
+        if (this.Pipeline.HasAnalyzer)
             this.Pipeline.Process(new WindowsCameraFrame(bitmap, mirrored: false), default);
 
         var display = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);

@@ -9,8 +9,8 @@ public static class CameraMauiAppBuilderExtensions
 {
     /// <summary>
     /// Register the Shiny <see cref="CameraView"/> handler. Call alongside <c>UseShinyControls()</c> in
-    /// your MAUI program. Analyzer packages (Barcode/Face/Motion/OCR) are added to a
-    /// <see cref="CameraView.Analyzers"/> collection at the call site — no separate registration needed.
+    /// your MAUI program. Analyzer packages (Barcode/Face/Motion/OCR) are assigned to the single
+    /// <see cref="CameraView.Analyzer"/> property at the call site — no separate registration needed.
     /// </summary>
     public static MauiAppBuilder UseShinyCamera(this MauiAppBuilder builder)
     {

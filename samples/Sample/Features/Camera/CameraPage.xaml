@@ -9,48 +9,15 @@
 
     <shiny:ShinyContentPage.PageContent>
         <Grid>
-            <!-- Analyzers are declared in XAML so their Commands stay bound; each is toggled on/off live via
-                 its IsEnabled binding to a SwitchCell in the options sheet (all start off). The shared
-                 BoxesSwitch toggles every analyzer's bounding-box rendering via ShowBoundingBox. -->
+            <!-- A single analyzer runs at a time. The "Detector" picker in the options sheet swaps
+                 Camera.Analyzer live (see code-behind); the analyzer instances are built there so their
+                 OnDetected handlers stay wired across swaps. The BoxesSwitch toggles the active analyzer's
+                 ShowBoundingBox; the ScanAreaSwitch sets a center-band ScanWindow on the barcode analyzer. -->
             <cam:CameraView x:Name="Camera"
                             Facing="Back"
-                            ScaleMode="AspectFill">
-                <!-- Each analyzer draws its boxes continuously, but only delivers a result (its OnDetected
-                     handler) while armed — tap "Scan" (-> Camera.ScanCommand) to arm every enabled analyzer.
-                     Scans all symbologies. To limit the native scanner, set Formats inline as a comma-separated
-                     list, e.g. Formats="QrCode,Ean13,Code128" (omit = all). -->
-                <cam:BarcodeAnalyzer OnDetected="{Binding OnBarcode}"
-                                     IsEnabled="{Binding On, Source={x:Reference BarcodeSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <!-- motion draws a box around each region where movement was detected -->
-                <cam:MotionAnalyzer OnDetected="{Binding OnMotion}"
-                                    IsEnabled="{Binding On, Source={x:Reference MotionSwitch}}"
-                                    ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:FaceAnalyzer OnDetected="{Binding OnFace}"
-                                  IsEnabled="{Binding On, Source={x:Reference FaceSwitch}}"
-                                  ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <!-- each document's OnDetected optionally captures + stops via the CaptureStopSwitch -->
-                <cam:InvoiceAnalyzer OnDetected="{Binding OnInvoice}"
-                                     IsEnabled="{Binding On, Source={x:Reference InvoiceSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:ReceiptAnalyzer OnDetected="{Binding OnReceipt}"
-                                     IsEnabled="{Binding On, Source={x:Reference ReceiptSwitch}}"
-                                     ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:HealthCardAnalyzer OnDetected="{Binding OnHealthCard}"
-                                        IsEnabled="{Binding On, Source={x:Reference HealthCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:DriversLicenseAnalyzer OnDetected="{Binding OnLicense}"
-                                            IsEnabled="{Binding On, Source={x:Reference LicenseSwitch}}"
-                                            ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:CreditCardAnalyzer OnDetected="{Binding OnCreditCard}"
-                                        IsEnabled="{Binding On, Source={x:Reference CreditCardSwitch}}"
-                                        ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-                <cam:PassportAnalyzer OnDetected="{Binding OnPassport}"
-                                      IsEnabled="{Binding On, Source={x:Reference PassportSwitch}}"
-                                      ShowBoundingBox="{Binding On, Source={x:Reference BoxesSwitch}}" />
-            </cam:CameraView>
+                            ScaleMode="AspectFill" />
 
-            <!-- bounding-box overlay (auto-binds to the camera's analyzer boxes) -->
+            <!-- bounding-box overlay + scan-window reticle (auto-binds to the camera's analyzer) -->
             <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
 
             <!-- last captured photo (confirms the filter is applied to stills); tap to resume after a capture+stop -->
@@ -118,16 +85,13 @@
             <!-- TableView scrolls itself, so disable the panel's outer ScrollView (nested scrolls collapse the table) -->
             <shiny:TableView>
                 <shiny:TableRoot>
-                    <shiny:TableSection Title="Detectors">
-                        <shiny:SwitchCell x:Name="BarcodeSwitch" Title="Barcode / QR" />
-                        <shiny:SwitchCell x:Name="MotionSwitch" Title="Motion" Description="Fires a command only — no box" />
-                        <shiny:SwitchCell x:Name="FaceSwitch" Title="Face" />
-                        <shiny:SwitchCell x:Name="InvoiceSwitch" Title="Invoice" Description="OCR — header + order lines" />
-                        <shiny:SwitchCell x:Name="ReceiptSwitch" Title="Receipt" Description="OCR — items, tax breakdown, totals" />
-                        <shiny:SwitchCell x:Name="HealthCardSwitch" Title="Health Card" Description="OCR — member / issuer" />
-                        <shiny:SwitchCell x:Name="LicenseSwitch" Title="Driver's License" Description="PDF417 / AAMVA" />
-                        <shiny:SwitchCell x:Name="CreditCardSwitch" Title="Credit Card" Description="IIN brand + Luhn" />
-                        <shiny:SwitchCell x:Name="PassportSwitch" Title="Passport" Description="MRZ" />
+                    <shiny:TableSection Title="Detector">
+                        <!-- one analyzer at a time — picking swaps Camera.Analyzer -->
+                        <shiny:TextPickerCell x:Name="DetectorPicker"
+                                              Title="Detector"
+                                              PickerTitle="Detector"
+                                              ItemsSource="{Binding Detectors}"
+                                              SelectedItem="{Binding SelectedDetector, Mode=TwoWay}" />
                     </shiny:TableSection>
 
                     <shiny:TableSection Title="Camera">
@@ -135,6 +99,9 @@
                                           Title="Detection boxes"
                                           Description="Draw bounding boxes for detections"
                                           On="True" />
+                        <shiny:SwitchCell x:Name="ScanAreaSwitch"
+                                          Title="Restrict scan area"
+                                          Description="Barcode only — scan a center band and frame it with a viewfinder reticle" />
                         <shiny:SwitchCell x:Name="ContinuousSwitch"
                                           Title="Keep scanning"
                                           Description="Barcode / motion / face stay armed after each result (tap Scan once); off = one result per Scan" />

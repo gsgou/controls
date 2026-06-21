@@ -1,3 +1,5 @@
+using Microsoft.Maui.Graphics;
+
 namespace Shiny.Maui.Controls.Camera;
 
 public partial class CameraView
@@ -53,9 +55,17 @@ public partial class CameraView
     public static readonly BindableProperty IsRecordingProperty = BindableProperty.Create(
         nameof(IsRecording), typeof(bool), typeof(CameraView), false, BindingMode.OneWayToSource);
 
-    /// <summary>The most recent aggregated overlay boxes (read-only; updated by the pipeline).</summary>
+    /// <summary>The most recent overlay boxes from the analyzer (read-only; updated by the pipeline).</summary>
     public static readonly BindableProperty OverlaysProperty = BindableProperty.Create(
         nameof(Overlays), typeof(IReadOnlyList<OverlayBox>), typeof(CameraView), Array.Empty<OverlayBox>());
+
+    /// <summary>
+    /// The analyzer's current scan window in normalized upright space (read-only; mirrors
+    /// <see cref="FrameAnalyzer.ScanWindow"/>), or null when it scans the full frame. The built-in overlay
+    /// dims outside it and frames a viewfinder reticle.
+    /// </summary>
+    public static readonly BindableProperty ScanWindowProperty = BindableProperty.Create(
+        nameof(ScanWindow), typeof(RectF?), typeof(CameraView), null);
 
 
     /// <inheritdoc cref="FacingProperty"/>
@@ -147,6 +157,13 @@ public partial class CameraView
     {
         get => (IReadOnlyList<OverlayBox>)this.GetValue(OverlaysProperty);
         private set => this.SetValue(OverlaysProperty, value);
+    }
+
+    /// <inheritdoc cref="ScanWindowProperty"/>
+    public RectF? ScanWindow
+    {
+        get => (RectF?)this.GetValue(ScanWindowProperty);
+        private set => this.SetValue(ScanWindowProperty, value);
     }
 
 

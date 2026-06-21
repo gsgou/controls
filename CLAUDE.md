@@ -35,6 +35,19 @@ With each fix and each new feature, update all of the following so they stay in 
 4. Add its docs folder under `src/content/docs/controls/<control>/`.
 5. Add it to the **homepage section** — the "UI Controls" `<Card>` in `src/content/docs/index.mdx` (place it in the appropriate category group).
 6. Add its top-level node to the **main menu** (`src/sidebar-topics.mjs`) under the `Controls` topic — which also surfaces it in the homepage menu.
+7. **Leave a screenshot TODO** — do **not** capture screenshots as part of the feature/release work. Instead, after wiring up a new component, note a TODO (e.g. `TODO: capture screenshots for <control>`) so they can be done later on request. See **Screenshots** below.
+
+## Screenshots (on request)
+
+Capturing control screenshots is a **separate, on-request task** — never run it automatically as part of a fix, feature, or release. When a new control ships, just leave a TODO (see step 7 above). Only capture when the user explicitly asks.
+
+When asked to capture screenshots for a control:
+
+1. **MAUI** — drive the demo app (`samples/Sample/`) to the control's feature page (`samples/Sample/Features/<Area>/`) and capture the screenshot with **mauidevflow**.
+2. **Blazor** — drive the Blazor sample to the matching page and capture the screenshot with **Playwright**.
+3. **Add them to the docs repo** (`~/Desktop/dev/documentation`):
+   - Save images under `public/images/<control>/`, named `s1.png`, `s2.png`, … (one folder per control, sequential names).
+   - Reference them from the control's `.mdx` (e.g. `src/content/docs/controls/<control>/index.mdx`) with `<img src="/images/<control>/s1.png" width="220" alt="<Control>" />`.
 
 ## Blog posts (only when explicitly requested)
 

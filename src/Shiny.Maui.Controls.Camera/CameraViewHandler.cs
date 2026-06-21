@@ -1,5 +1,4 @@
 #if ANDROID || IOS || MACCATALYST || WINDOWS || MACOS
-using System.Collections.Specialized;
 using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls.Camera.Internal;
 
@@ -9,34 +8,29 @@ public partial class CameraViewHandler
 {
     internal readonly CameraPipeline Pipeline = new();
 
-    // Wire overlay delivery (marshaled to the UI thread) and keep the runner set in sync with the
-    // control's Analyzers collection. Call from each platform's ConnectHandler.
+    // Wire overlay delivery (marshaled to the UI thread) and bind the active analyzer to the control's
+    // single Analyzer property. Call from each platform's ConnectHandler.
     private protected void InitPipeline()
     {
-        this.Pipeline.OnOverlays = (boxes, w, h) =>
-            this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnOverlaysChanged(boxes, w, h));
+        this.Pipeline.OnOverlays = (boxes, window, w, h) =>
+            this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnOverlaysChanged(boxes, window, w, h));
 
-        // the enabled-analyzer set changed (collection edit or an IsEnabled toggle); platforms that bind use
-        // cases up-front (Android) re-evaluate, others no-op
+        // the active analyzer changed (assignment or an IsEnabled toggle); platforms that bind use cases
+        // up-front (Android) re-evaluate, others no-op
         this.Pipeline.OnActiveChanged = () => this.OnAnalyzersSynced();
 
-        // analyzers raise their typed events on the UI thread via this dispatcher
+        // the analyzer raises its typed events on the UI thread via this dispatcher
         this.Pipeline.SetDispatcher(a => this.VirtualView?.Dispatcher.Dispatch(a));
 
-        this.SyncAnalyzers();
-        if (this.VirtualView.Analyzers is INotifyCollectionChanged incc)
-            incc.CollectionChanged += this.OnAnalyzersChanged;
+        this.SyncAnalyzer();
     }
 
     private protected void TeardownPipeline()
     {
-        if (this.VirtualView?.Analyzers is INotifyCollectionChanged incc)
-            incc.CollectionChanged -= this.OnAnalyzersChanged;
+        this.Pipeline.SetAnalyzer(null);
     }
 
-    void OnAnalyzersChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.SyncAnalyzers();
-
-    void SyncAnalyzers() => this.Pipeline.SetAnalyzers(this.VirtualView.Analyzers);
+    void SyncAnalyzer() => this.Pipeline.SetAnalyzer(this.VirtualView?.Analyzer);
 
     public static IPropertyMapper<CameraView, CameraViewHandler> Mapper =
         new PropertyMapper<CameraView, CameraViewHandler>(ViewHandler.ViewMapper)
@@ -50,8 +44,12 @@ public partial class CameraViewHandler
             [nameof(CameraView.ScaleMode)] = MapScaleMode,
             [nameof(CameraView.ShowDetectionOverlay)] = MapOverlay,
             [nameof(CameraView.Overlays)] = MapOverlay,
+            [nameof(CameraView.ScanWindow)] = MapOverlay,
+            [nameof(CameraView.Analyzer)] = MapAnalyzer,
             [nameof(CameraView.Filter)] = MapFilter,
         };
+
+    static void MapAnalyzer(CameraViewHandler handler, CameraView view) => handler.SyncAnalyzer();
 
     public static CommandMapper<CameraView, CameraViewHandler> CommandMapper =
         new(ViewHandler.ViewCommandMapper);

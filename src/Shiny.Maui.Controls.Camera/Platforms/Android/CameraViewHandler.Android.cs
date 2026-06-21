@@ -179,7 +179,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     public async Task StartVideoRecordingAsync(VideoRecordingOptions options, CancellationToken ct = default)
     {
         if (this.recorder == null)
-            throw new InvalidOperationException("Video recording is unavailable while frame analyzers are active (Android binds ImageAnalysis instead of VideoCapture). Clear CameraView.Analyzers to record.");
+            throw new InvalidOperationException("Video recording is unavailable while a frame analyzer is active (Android binds ImageAnalysis instead of VideoCapture). Clear CameraView.Analyzer to record.");
 
         var withAudio = options.IncludeAudio;
         if (withAudio)
@@ -228,7 +228,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
             return; // not started yet — BindUseCases will read the current set when it runs
         if (this.activeRecording != null)
             return; // can't swap the video use case mid-recording; deferred until it finalizes
-        if (this.Pipeline.HasAnalyzers == this.boundAnalysisMode)
+        if (this.Pipeline.HasAnalyzer == this.boundAnalysisMode)
             return; // mode unchanged (e.g. a 2nd analyzer added) — runner set already updated, no rebind
 
         MainThread.BeginInvokeOnMainThread(this.RebindIfModeChanged);
@@ -239,7 +239,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         // re-check after marshalling to the main thread: state may have moved on
         if (this.cameraProvider != null
             && this.activeRecording == null
-            && this.Pipeline.HasAnalyzers != this.boundAnalysisMode)
+            && this.Pipeline.HasAnalyzer != this.boundAnalysisMode)
             this.BindUseCases();
     }
 
@@ -318,7 +318,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.videoCapture = null;
         this.recorder = null;
 
-        if (this.Pipeline.HasAnalyzers)
+        if (this.Pipeline.HasAnalyzer)
         {
             this.analysisExecutor ??= Java.Util.Concurrent.Executors.NewSingleThreadExecutor();
             this.imageAnalysis = new ImageAnalysis.Builder()
@@ -338,7 +338,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
         this.cameraProvider.UnbindAll();
         this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, useCases.ToArray());
-        this.boundAnalysisMode = this.Pipeline.HasAnalyzers;
+        this.boundAnalysisMode = this.Pipeline.HasAnalyzer;
 
         this.ApplyFilter(this.VirtualView.Filter);
 

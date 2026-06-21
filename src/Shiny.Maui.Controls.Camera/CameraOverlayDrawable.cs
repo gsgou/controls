@@ -11,6 +11,15 @@ public class CameraOverlayDrawable : IDrawable
     /// <summary>Boxes to draw (normalized, upright image space).</summary>
     public IReadOnlyList<OverlayBox> Boxes { get; set; } = [];
 
+    /// <summary>The analyzer's scan window (normalized, upright image space), or null when it scans the full frame.</summary>
+    public RectF? ScanWindow { get; set; }
+
+    /// <summary>Scrim color dimming the area outside <see cref="ScanWindow"/>; null draws no scrim.</summary>
+    public Color? ScanWindowScrimColor { get; set; } = Color.FromRgba(0, 0, 0, 110);
+
+    /// <summary>Viewfinder reticle color framing <see cref="ScanWindow"/>; null draws no outline.</summary>
+    public Color? ScanWindowColor { get; set; } = Colors.White;
+
     /// <summary>Upright image aspect ratio (width / height) of the analyzed frame.</summary>
     public float ImageAspect { get; set; } = 1f;
 
@@ -31,6 +40,8 @@ public class CameraOverlayDrawable : IDrawable
 
     public void Draw(ICanvas canvas, RectF dirtyRect)
     {
+        this.DrawScanWindow(canvas, dirtyRect);
+
         var boxes = this.Boxes;
         if (boxes.Count == 0)
             return;
@@ -56,6 +67,32 @@ public class CameraOverlayDrawable : IDrawable
                 canvas.DrawString(b.Text, r.X, Math.Max(0, r.Y - 18), r.Width <= 0 ? 200 : r.Width + 80, 18,
                     HorizontalAlignment.Left, VerticalAlignment.Top);
             }
+        }
+    }
+
+    // Dim everything outside the analyzer's scan window and frame it with a viewfinder reticle.
+    void DrawScanWindow(ICanvas canvas, RectF dirtyRect)
+    {
+        if (this.ScanWindow is not { } window)
+            return;
+
+        var w = CoordinateTransform.MapToView(window, dirtyRect.Width, dirtyRect.Height, this.ImageAspect, this.ScaleMode);
+
+        if (this.ScanWindowScrimColor is { } scrim)
+        {
+            canvas.FillColor = scrim;
+            // four bands around the window (top, bottom, left, right) — leaves the window itself clear
+            canvas.FillRectangle(0, 0, dirtyRect.Width, w.Top);
+            canvas.FillRectangle(0, w.Bottom, dirtyRect.Width, dirtyRect.Height - w.Bottom);
+            canvas.FillRectangle(0, w.Top, w.Left, w.Height);
+            canvas.FillRectangle(w.Right, w.Top, dirtyRect.Width - w.Right, w.Height);
+        }
+
+        if (this.ScanWindowColor is { } outline)
+        {
+            canvas.StrokeColor = outline;
+            canvas.StrokeSize = 2f;
+            canvas.DrawRectangle(w);
         }
     }
 }

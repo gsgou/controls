@@ -25,21 +25,39 @@ public static class CoordinateTransform
     /// <param name="mirrored"><c>true</c> to mirror horizontally (front camera).</param>
     public static RectF ApplyOrientation(RectF raw, int rotationDegrees, bool mirrored)
     {
-        var rot = NormalizeRotation(rotationDegrees);
-
-        // transform two opposite corners, then rebuild the axis-aligned rect from the extents
-        var a = RotatePoint(new PointF(raw.X, raw.Y), rot);
-        var b = RotatePoint(new PointF(raw.X + raw.Width, raw.Y + raw.Height), rot);
-
-        var x = MathF.Min(a.X, b.X);
-        var y = MathF.Min(a.Y, b.Y);
-        var w = MathF.Abs(b.X - a.X);
-        var h = MathF.Abs(b.Y - a.Y);
-
+        var r = RotateRect(raw, NormalizeRotation(rotationDegrees));
         if (mirrored)
-            x = 1f - x - w;
+            r = new RectF(1f - r.X - r.Width, r.Y, r.Width, r.Height);
+        return r;
+    }
 
-        return new RectF(x, y, w, h);
+
+    /// <summary>
+    /// The inverse of <see cref="ApplyOrientation(RectF,int,bool)"/>: map an upright, mirror-corrected
+    /// normalized rectangle back into raw sensor space. Used to push an analyzer's
+    /// <c>ScanWindow</c> (which lives in upright space) down to a native engine's region-of-interest / crop,
+    /// which work in the sensor's own coordinates. Origin stays top-left; callers flip Y where the native API
+    /// is bottom-left (e.g. Vision).
+    /// </summary>
+    /// <param name="upright">Normalized rect (0..1) in upright, mirror-corrected space.</param>
+    /// <param name="rotationDegrees">The same clockwise rotation that made the scene upright (0, 90, 180, 270).</param>
+    /// <param name="mirrored"><c>true</c> if the upright space is mirrored (front camera).</param>
+    public static RectF InvertOrientation(RectF upright, int rotationDegrees, bool mirrored)
+    {
+        var u = upright;
+        if (mirrored) // mirror is its own inverse
+            u = new RectF(1f - u.X - u.Width, u.Y, u.Width, u.Height);
+        var inv = (360 - NormalizeRotation(rotationDegrees)) % 360;
+        return RotateRect(u, inv);
+    }
+
+
+    // Rotate a normalized rect clockwise within the unit square, rebuilding the axis-aligned bounds.
+    static RectF RotateRect(RectF r, int rot)
+    {
+        var a = RotatePoint(new PointF(r.X, r.Y), rot);
+        var b = RotatePoint(new PointF(r.X + r.Width, r.Y + r.Height), rot);
+        return new RectF(MathF.Min(a.X, b.X), MathF.Min(a.Y, b.Y), MathF.Abs(b.X - a.X), MathF.Abs(b.Y - a.Y));
     }
 
 

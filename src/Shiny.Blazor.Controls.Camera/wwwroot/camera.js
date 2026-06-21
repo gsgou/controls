@@ -13,7 +13,7 @@ export async function listCameras() {
         .map((d, i) => ({ id: d.deviceId, name: d.label || `Camera ${i + 1}` }));
 }
 
-export async function start(video, overlay, dotnetRef, facingMode, enableBarcode, showOverlay, deviceId) {
+export async function start(video, overlay, dotnetRef, facingMode, analyzerKind, showOverlay, deviceId, showBoundingBox, scanWindow) {
     if (!navigator.mediaDevices?.getUserMedia)
         throw new Error('getUserMedia is unavailable (requires a secure context / HTTPS).');
 
@@ -28,7 +28,9 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
 
     const state = {
         video, overlay, dotnet: dotnetRef, stream,
-        enableBarcode, showOverlay,
+        analyzerKind, showOverlay,
+        showBoundingBox: showBoundingBox !== false,
+        scanWindow: scanWindow || null,   // [x, y, w, h] normalized, or null for the whole frame
         running: true,
         rafId: null,
         detector: null,
@@ -37,13 +39,18 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
     };
     states.set(video, state);
 
-    if (enableBarcode && 'BarcodeDetector' in globalThis) {
+    if (analyzerKind === 'barcode' && 'BarcodeDetector' in globalThis) {
         try { state.detector = new globalThis.BarcodeDetector(); }
         catch { state.detector = null; }
     }
-    else if (enableBarcode) {
+    else if (analyzerKind === 'barcode') {
         // No native detector (Firefox/Safari). Report once; a ZXing-js module can be slotted in here.
         try { await dotnetRef.invokeMethodAsync('OnJsError', 'BarcodeDetector not supported in this browser'); }
+        catch { /* ignore */ }
+    }
+    else if (analyzerKind) {
+        // only barcode has an in-browser engine today; other kinds are placeholders
+        try { await dotnetRef.invokeMethodAsync('OnJsError', `Analyzer '${analyzerKind}' is not supported in the browser`); }
         catch { /* ignore */ }
     }
 
@@ -55,14 +62,18 @@ export async function start(video, overlay, dotnetRef, facingMode, enableBarcode
         if (state.detector && !state.busy) {
             state.busy = true;
             try {
-                const codes = await state.detector.detect(video);
-                const boxes = codes.map(c => toOverlayBox(c, video));
+                let codes = await state.detector.detect(video);
+                // restrict to the scan window (codes whose center falls inside it)
+                if (state.scanWindow)
+                    codes = codes.filter(c => inScanWindow(c, video, state.scanWindow));
+
+                const boxes = state.showBoundingBox ? codes.map(c => toOverlayBox(c, video)) : [];
                 // boxes always draw + flow to .NET (presentation); the decoded value is gated behind arm()
-                if (state.showOverlay) drawOverlay(ctx, overlay, boxes);
+                if (state.showOverlay) drawOverlay(ctx, overlay, boxes, state.scanWindow);
                 await state.dotnet.invokeMethodAsync('OnOverlays', boxes);
                 if (state.armed && codes.length > 0) {
                     state.armed = false; // one delivery per arm; .NET re-arms to keep scanning
-                    await state.dotnet.invokeMethodAsync('OnBarcode', toBarcode(codes[0], video));
+                    await state.dotnet.invokeMethodAsync('OnBarcodes', codes.map(c => toBarcode(c, video)));
                 }
             }
             catch { /* transient detect error; keep looping */ }
@@ -87,8 +98,8 @@ export function stop(video) {
 }
 
 
-// Arm the detector to deliver the next decoded barcode to .NET (then it self-disarms). Boxes keep drawing
-// every frame regardless; this only gates the OnBarcode callback.
+// Arm the detector to deliver the next frame's decoded barcodes to .NET (then it self-disarms). Boxes keep
+// drawing every frame regardless; this only gates the OnBarcodes callback.
 export function arm(video) {
     const state = states.get(video);
     if (state) state.armed = true;
@@ -181,6 +192,17 @@ function toOverlayBox(code, video) {
 }
 
 
+// True when the code's center falls inside the normalized scan window [x, y, w, h].
+function inScanWindow(code, video, win) {
+    const vw = video.videoWidth || 1;
+    const vh = video.videoHeight || 1;
+    const b = code.boundingBox;
+    const cx = (b.x + b.width / 2) / vw;
+    const cy = (b.y + b.height / 2) / vh;
+    return cx >= win[0] && cx <= win[0] + win[2] && cy >= win[1] && cy <= win[1] + win[3];
+}
+
+
 function toBarcode(code, video) {
     const w = video.videoWidth || 1;
     const h = video.videoHeight || 1;
@@ -205,8 +227,25 @@ function syncOverlaySize(state) {
 }
 
 
-function drawOverlay(ctx, overlay, boxes) {
+function drawOverlay(ctx, overlay, boxes, scanWindow) {
     ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    // scan-window viewfinder: dim outside it and frame it with a reticle
+    if (scanWindow) {
+        const wx = scanWindow[0] * overlay.width;
+        const wy = scanWindow[1] * overlay.height;
+        const ww = scanWindow[2] * overlay.width;
+        const wh = scanWindow[3] * overlay.height;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.43)';
+        ctx.fillRect(0, 0, overlay.width, wy);
+        ctx.fillRect(0, wy + wh, overlay.width, overlay.height - (wy + wh));
+        ctx.fillRect(0, wy, wx, wh);
+        ctx.fillRect(wx + ww, wy, overlay.width - (wx + ww), wh);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeRect(wx, wy, ww, wh);
+    }
+
     ctx.lineWidth = 3;
     ctx.font = '16px sans-serif';
     for (const b of boxes) {

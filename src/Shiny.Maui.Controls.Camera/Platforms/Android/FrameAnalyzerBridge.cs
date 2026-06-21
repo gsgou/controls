@@ -8,7 +8,7 @@ sealed class FrameAnalyzerBridge(CameraViewHandler handler) : Java.Lang.Object, 
 {
     public void Analyze(IImageProxy image)
     {
-        if (!handler.Pipeline.HasAnalyzers)
+        if (!handler.Pipeline.HasAnalyzer)
         {
             image.Close();
             return;

@@ -37,6 +37,16 @@ public class CameraOverlayView : GraphicsView
         nameof(DefaultTextColor), typeof(Color), typeof(CameraOverlayView), Colors.White,
         propertyChanged: (b, _, v) => ((CameraOverlayView)b).drawable.LabelColor = (Color)v);
 
+    /// <summary>Color of the scrim dimming the area outside the analyzer's scan window. Null disables the scrim.</summary>
+    public static readonly BindableProperty ScanWindowScrimColorProperty = BindableProperty.Create(
+        nameof(ScanWindowScrimColor), typeof(Color), typeof(CameraOverlayView), Color.FromRgba(0, 0, 0, 110),
+        propertyChanged: (b, _, v) => ((CameraOverlayView)b).drawable.ScanWindowScrimColor = (Color?)v);
+
+    /// <summary>Color of the viewfinder reticle framing the analyzer's scan window. Null disables the reticle outline.</summary>
+    public static readonly BindableProperty ScanWindowColorProperty = BindableProperty.Create(
+        nameof(ScanWindowColor), typeof(Color), typeof(CameraOverlayView), Colors.White,
+        propertyChanged: (b, _, v) => ((CameraOverlayView)b).drawable.ScanWindowColor = (Color?)v);
+
     /// <inheritdoc cref="CameraProperty"/>
     public CameraView? Camera
     {
@@ -58,6 +68,20 @@ public class CameraOverlayView : GraphicsView
         set => this.SetValue(DefaultTextColorProperty, value);
     }
 
+    /// <inheritdoc cref="ScanWindowScrimColorProperty"/>
+    public Color? ScanWindowScrimColor
+    {
+        get => (Color?)this.GetValue(ScanWindowScrimColorProperty);
+        set => this.SetValue(ScanWindowScrimColorProperty, value);
+    }
+
+    /// <inheritdoc cref="ScanWindowColorProperty"/>
+    public Color? ScanWindowColor
+    {
+        get => (Color?)this.GetValue(ScanWindowColorProperty);
+        set => this.SetValue(ScanWindowColorProperty, value);
+    }
+
     static void OnCameraChanged(BindableObject bindable, object oldValue, object newValue)
     {
         var self = (CameraOverlayView)bindable;
@@ -70,6 +94,7 @@ public class CameraOverlayView : GraphicsView
     void OnOverlaysChanged(object? sender, CameraOverlaysChangedEventArgs e)
     {
         this.drawable.Boxes = e.Overlays;
+        this.drawable.ScanWindow = e.ScanWindow;
         this.drawable.ImageAspect = e.ImageHeight == 0 ? 1f : (float)e.ImageWidth / e.ImageHeight;
         if (this.Camera is { } cam)
             this.drawable.ScaleMode = cam.ScaleMode;

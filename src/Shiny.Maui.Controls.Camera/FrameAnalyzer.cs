@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Microsoft.Maui.Graphics;
 
 namespace Shiny.Controls.Camera;
 
@@ -16,10 +17,10 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
 
     /// <summary>
     /// Whether this analyzer runs at all. Default <c>true</c>. Set <c>false</c> (e.g. bind it to a switch in
-    /// XAML) to turn the analyzer off without removing it from <see cref="CameraView.Analyzers"/> — its
-    /// command/event bindings stay wired and its internal state is preserved, so toggling it back on resumes
-    /// instantly. A disabled analyzer is skipped by the pipeline and its overlay boxes are cleared. When every
-    /// analyzer is disabled the camera behaves as if it had none (e.g. on Android, video recording is allowed).
+    /// XAML) to turn the analyzer off without clearing <see cref="CameraView.Analyzer"/> — its command/event
+    /// bindings stay wired and its internal state is preserved, so toggling it back on resumes instantly. A
+    /// disabled analyzer is skipped by the pipeline and its overlay boxes are cleared, so the camera behaves as
+    /// if it had none (e.g. on Android, video recording is allowed).
     /// </summary>
     public static readonly BindableProperty IsEnabledProperty = BindableProperty.Create(
         nameof(IsEnabled), typeof(bool), typeof(FrameAnalyzer), true);
@@ -44,6 +45,37 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     {
         get => (bool)this.GetValue(ShowBoundingBoxProperty);
         set => this.SetValue(ShowBoundingBoxProperty, value);
+    }
+
+    /// <summary>
+    /// Restricts both detection and the overlay to a normalized rectangle (0..1) in upright image space; null
+    /// (default) scans the whole frame. Analyzers that honor it only report detections whose center falls inside
+    /// the window (and, where the native engine supports it — e.g. Apple Vision's <c>regionOfInterest</c> — skip
+    /// the rest of the frame for a real perf win). The built-in camera overlay dims everything outside the window
+    /// and frames a viewfinder reticle, so it doubles as an aim guide (e.g. a tight band for single-barcode scans).
+    /// </summary>
+    public static readonly BindableProperty ScanWindowProperty = BindableProperty.Create(
+        nameof(ScanWindow), typeof(RectF?), typeof(FrameAnalyzer), null);
+
+    /// <inheritdoc cref="ScanWindowProperty"/>
+    public RectF? ScanWindow
+    {
+        get => (RectF?)this.GetValue(ScanWindowProperty);
+        set => this.SetValue(ScanWindowProperty, value);
+    }
+
+    /// <summary>
+    /// True when <paramref name="rect"/> should be reported given the current <see cref="ScanWindow"/>: always
+    /// true with no window, else true when the rect's center falls inside the window. Use to post-filter
+    /// detections on platforms whose native engine can't clip to a region.
+    /// </summary>
+    protected bool InScanWindow(RectF rect)
+    {
+        if (this.ScanWindow is not { } w)
+            return true;
+        var cx = rect.X + rect.Width / 2f;
+        var cy = rect.Y + rect.Height / 2f;
+        return cx >= w.X && cx <= w.X + w.Width && cy >= w.Y && cy <= w.Y + w.Height;
     }
 
     /// <summary>

@@ -1,80 +1,83 @@
 using System.ComponentModel;
+using Microsoft.Maui.Graphics;
 
 namespace Shiny.Maui.Controls.Camera.Internal;
 
 /// <summary>
-/// Fans each camera frame out to the registered analyzers and aggregates the styled <see cref="OverlayBox"/>es
-/// they currently see into a single set for the overlay. Owns the frame reference the platform handler hands
-/// it: it retains per accepting analyzer and releases its own reference after dispatch, so the native buffer
-/// frees once every analyzer that took the frame has finished. Keeps the last box set per analyzer so boxes
-/// persist across dropped/slow frames until an analyzer replaces them (new list) or clears them (<c>null</c>).
-/// An analyzer whose <see cref="FrameAnalyzer.IsEnabled"/> is <c>false</c> is skipped and its boxes cleared; the
-/// pipeline reports <see cref="HasAnalyzers"/> from the count of <i>enabled</i> analyzers, so a collection full
-/// of disabled analyzers reads as "none".
+/// Drives the single active <see cref="IFrameAnalyzer"/> against each camera frame and forwards the styled
+/// <see cref="OverlayBox"/>es it currently sees (plus its <see cref="FrameAnalyzer.ScanWindow"/>) to the
+/// overlay. Owns the frame reference the platform handler hands it: the runner retains it while analyzing and
+/// the pipeline releases its own reference after dispatch, so the native buffer frees once analysis finishes.
+/// Keeps the last box set so boxes persist across dropped/slow frames until the analyzer replaces them (new
+/// list) or clears them (<c>null</c>). An analyzer whose <see cref="FrameAnalyzer.IsEnabled"/> is <c>false</c>
+/// (or no analyzer at all) reads as <see cref="HasAnalyzer"/> false, so the camera behaves as if it had none.
 /// </summary>
 sealed class CameraPipeline
 {
-    readonly Dictionary<string, IReadOnlyList<OverlayBox>> latest = new();
     readonly object gate = new();
-    AnalyzerRunner[] runners = [];
-    IFrameAnalyzer[] analyzers = [];
-    volatile int enabledCount;
+    AnalyzerRunner? runner;
+    IFrameAnalyzer? analyzer;
+    IReadOnlyList<OverlayBox> latest = [];
+    RectF? scanWindow;
+    volatile bool enabled;
 
-    /// <summary>Invoked (off the UI thread) with the aggregated boxes + the upright image size.</summary>
-    public Action<IReadOnlyList<OverlayBox>, int, int>? OnOverlays;
+    /// <summary>Invoked (off the UI thread) with the analyzer's boxes, its scan window, and the upright image size.</summary>
+    public Action<IReadOnlyList<OverlayBox>, RectF?, int, int>? OnOverlays;
 
     /// <summary>
-    /// Invoked when the set of <i>enabled</i> analyzers may have changed (collection edit or an
-    /// <see cref="FrameAnalyzer.IsEnabled"/> toggle). Platforms that bind use cases up-front (Android) use this
-    /// to re-evaluate; those that gate frame delivery per-frame (Apple/Windows) can ignore it.
+    /// Invoked when the active analyzer may have changed (assignment or an <see cref="FrameAnalyzer.IsEnabled"/>
+    /// toggle). Platforms that bind use cases up-front (Android) use this to re-evaluate; those that gate frame
+    /// delivery per-frame (Apple/Windows) can ignore it.
     /// </summary>
     public Action? OnActiveChanged;
 
     Action<Action>? dispatcher;
     int uprightW;
     int uprightH;
+    int emittedW = -1;
+    int emittedH = -1;
 
-    public bool HasAnalyzers => this.enabledCount > 0;
+    public bool HasAnalyzer => this.enabled;
 
-    /// <summary>Dispatcher analyzers use to raise their typed events on the UI thread (re-applied on change).</summary>
+    /// <summary>Dispatcher the analyzer uses to raise its typed events on the UI thread (re-applied on change).</summary>
     public void SetDispatcher(Action<Action>? post)
     {
         lock (this.gate)
         {
             this.dispatcher = post;
-            foreach (var a in this.analyzers)
-                (a as FrameAnalyzer)?.SetDispatcher(post);
+            (this.analyzer as FrameAnalyzer)?.SetDispatcher(post);
         }
     }
 
-    public void SetAnalyzers(IEnumerable<IFrameAnalyzer> analyzers)
+    public void SetAnalyzer(IFrameAnalyzer? analyzer)
     {
-        var list = analyzers.ToArray();
+        RectF? window;
         lock (this.gate)
         {
-            foreach (var old in this.analyzers)
+            if (this.analyzer is FrameAnalyzer old)
             {
-                if (old is FrameAnalyzer fa)
-                {
-                    fa.SetDispatcher(null);
-                    fa.PropertyChanged -= this.OnAnalyzerPropertyChanged;
-                }
+                old.SetDispatcher(null);
+                old.PropertyChanged -= this.OnAnalyzerPropertyChanged;
             }
 
-            this.analyzers = list;
-            this.runners = list.Select(a => new AnalyzerRunner(a, this.OnResult)).ToArray();
-            foreach (var a in list)
+            this.analyzer = analyzer;
+            this.runner = analyzer is null ? null : new AnalyzerRunner(analyzer, this.OnResult);
+
+            if (analyzer is FrameAnalyzer fa)
             {
-                if (a is FrameAnalyzer fa)
-                {
-                    fa.SetDispatcher(this.dispatcher);
-                    fa.PropertyChanged += this.OnAnalyzerPropertyChanged;
-                }
+                fa.SetDispatcher(this.dispatcher);
+                fa.PropertyChanged += this.OnAnalyzerPropertyChanged;
             }
 
-            this.RecomputeEnabled();
-            this.latest.Clear();
+            this.Recompute();
+            this.latest = [];
+            this.emittedW = -1; // force the next frame to re-publish dims for the reticle
+            this.emittedH = -1;
+            window = this.scanWindow;
         }
+        // clear any prior boxes and surface the new analyzer's scan window so the reticle draws before the
+        // first detection
+        this.OnOverlays?.Invoke([], window, this.uprightW, this.uprightH);
         this.OnActiveChanged?.Invoke();
     }
 
@@ -93,81 +96,85 @@ sealed class CameraPipeline
             this.uprightH = frame.Height;
         }
 
-        var current = this.runners;
-        foreach (var runner in current)
+        // A standing scan-window reticle is drawn even with no detections, but its position depends on the
+        // upright image aspect — which the overlay only learns when we publish. When the dimensions change (the
+        // first frame after the analyzer is set, or a rotation) and a window is active, re-publish so the reticle
+        // lands correctly without waiting for a detection.
+        if ((this.uprightW != this.emittedW || this.uprightH != this.emittedH) && this.scanWindow is not null)
         {
-            if (runner.Enabled)
-                runner.TrySubmit(frame, ct);
+            RectF? window = null;
+            IReadOnlyList<OverlayBox> boxes = [];
+            var emit = false;
+            lock (this.gate)
+            {
+                if (this.enabled && this.scanWindow is not null)
+                {
+                    this.emittedW = this.uprightW;
+                    this.emittedH = this.uprightH;
+                    window = this.scanWindow;
+                    boxes = this.latest;
+                    emit = true;
+                }
+            }
+            if (emit)
+                this.OnOverlays?.Invoke(boxes, window, this.uprightW, this.uprightH);
         }
+
+        var current = this.runner;
+        if (current is not null && this.enabled)
+            current.TrySubmit(frame, ct);
 
         frame.Dispose();
     }
 
-    // Refresh each runner's cached enabled flag + the enabled count. Call under gate.
-    void RecomputeEnabled()
+    // Refresh the cached enabled flag + scan window. Call under gate.
+    void Recompute()
     {
-        var count = 0;
-        foreach (var runner in this.runners)
-        {
-            var enabled = (runner.Analyzer as FrameAnalyzer)?.IsEnabled ?? true;
-            runner.Enabled = enabled;
-            if (enabled)
-                count++;
-        }
-        this.enabledCount = count;
+        var fa = this.analyzer as FrameAnalyzer;
+        this.enabled = this.analyzer is not null && (fa?.IsEnabled ?? true);
+        this.scanWindow = this.enabled ? fa?.ScanWindow : null;
     }
 
     void OnAnalyzerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != FrameAnalyzer.IsEnabledProperty.PropertyName)
+        if (e.PropertyName != FrameAnalyzer.IsEnabledProperty.PropertyName &&
+            e.PropertyName != FrameAnalyzer.ScanWindowProperty.PropertyName)
             return;
 
-        IReadOnlyList<OverlayBox> aggregated;
+        var enabledChanged = e.PropertyName == FrameAnalyzer.IsEnabledProperty.PropertyName;
+        IReadOnlyList<OverlayBox> boxes;
+        RectF? window;
         lock (this.gate)
         {
-            this.RecomputeEnabled();
-            // a disabled analyzer should stop drawing immediately
-            foreach (var runner in this.runners)
-                if (!runner.Enabled)
-                    this.latest.Remove(runner.Id);
-
-            aggregated = this.latest.Values.SelectMany(x => x).ToList();
+            this.Recompute();
+            if (!this.enabled)
+                this.latest = []; // a disabled analyzer stops drawing immediately
+            boxes = this.latest;
+            window = this.scanWindow;
         }
-        this.OnOverlays?.Invoke(aggregated, this.uprightW, this.uprightH);
-        this.OnActiveChanged?.Invoke();
-    }
-
-    // Whether the runner for this id is currently disabled. Call under gate.
-    bool IsDisabled(string analyzerId)
-    {
-        foreach (var runner in this.runners)
-            if (runner.Id == analyzerId)
-                return !runner.Enabled;
-        return false;
+        this.OnOverlays?.Invoke(boxes, window, this.uprightW, this.uprightH);
+        if (enabledChanged)
+            this.OnActiveChanged?.Invoke();
     }
 
     void OnResult(string analyzerId, IReadOnlyList<OverlayBox>? boxes)
     {
-        IReadOnlyList<OverlayBox> aggregated;
+        IReadOnlyList<OverlayBox> emit;
+        RectF? window;
         lock (this.gate)
         {
-            // null clears this analyzer's boxes; a non-null set replaces them. Skip the redraw when a
-            // "nothing seen" result clears a key that was already empty (the common steady state). Treat a
-            // result from a just-disabled analyzer (in flight when it was toggled off) as a clear.
-            bool changed;
-            if (boxes is null || this.IsDisabled(analyzerId))
-                changed = this.latest.Remove(analyzerId);
-            else
-            {
-                this.latest[analyzerId] = boxes;
-                changed = true;
-            }
+            if (!this.enabled)
+                return; // a result in flight when the analyzer was disabled/swapped — drop it
 
-            if (!changed)
+            var next = boxes ?? [];
+            // skip the redraw when a "nothing seen" result clears an already-empty set (the common steady state)
+            if (next.Count == 0 && this.latest.Count == 0)
                 return;
 
-            aggregated = this.latest.Values.SelectMany(x => x).ToList();
+            this.latest = next;
+            emit = next;
+            window = this.scanWindow;
         }
-        this.OnOverlays?.Invoke(aggregated, this.uprightW, this.uprightH);
+        this.OnOverlays?.Invoke(emit, window, this.uprightW, this.uprightH);
     }
 }
