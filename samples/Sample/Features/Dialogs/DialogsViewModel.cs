@@ -52,6 +52,19 @@ public partial class DialogsViewModel(IDialogService dialogs) : ObservableObject
     }
 
     [RelayCommand]
+    async Task ActionSheet()
+    {
+        var choice = await dialogs.ActionSheet(
+            "Photo",
+            ["Take Photo", "Choose from Library", "Delete Photo"],
+            cancelText: "Cancel",
+            destructive: "Delete Photo",
+            configure: c => c.Animation = this.SelectedAnimation
+        );
+        this.StatusMessage = choice is null ? "Action sheet cancelled" : $"Picked: {choice}";
+    }
+
+    [RelayCommand]
     async Task Styled()
     {
         await dialogs.Confirm(

@@ -33,6 +33,7 @@
             <Button Text="Alert" Command="{Binding AlertCommand}" />
             <Button Text="Confirm" Command="{Binding ConfirmCommand}" />
             <Button Text="Prompt" Command="{Binding PromptCommand}" />
+            <Button Text="Action Sheet" Command="{Binding ActionSheetCommand}" />
             <Button Text="Custom Styled" Command="{Binding StyledCommand}" />
 
         </VerticalStackLayout>

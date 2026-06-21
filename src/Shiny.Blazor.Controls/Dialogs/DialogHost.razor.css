@@ -92,6 +92,48 @@
 }
 
 /* ============================================================ */
+/*  Action sheet — bottom-anchored list of options             */
+/* ============================================================ */
+.shiny-dialog-actionsheet {
+    align-self: flex-end;          /* sit at the bottom of the backdrop */
+}
+
+.shiny-dialog-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shiny-dialog-action {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 13px 16px;
+    border-radius: 10px;
+    background-color: var(--shiny-color-surface-variant, #ececec);
+    color: var(--shiny-color-on-surface, #1a1a1a);
+    transition: filter 0.15s ease;
+}
+
+.shiny-dialog-action:hover {
+    filter: brightness(0.95);
+}
+
+.shiny-dialog-action-destructive {
+    color: var(--shiny-color-error, #c20014);
+    font-weight: 600;
+}
+
+.shiny-dialog-actionsheet-cancel {
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* ============================================================ */
 /*  Backdrop fade                                               */
 /* ============================================================ */
 @keyframes shiny-dialog-fade-in {

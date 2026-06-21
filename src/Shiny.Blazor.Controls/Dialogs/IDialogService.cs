@@ -23,4 +23,11 @@ public interface IDialogService
     /// carrying whether the user confirmed and the entered text.
     /// </summary>
     Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string cancelText = "Cancel", Action<DialogConfig>? configure = null);
+
+    /// <summary>
+    /// Shows a list of options (an action sheet) with a cancel button. Returns the chosen option's text, or
+    /// <c>null</c> when cancelled (button, backdrop, or Escape). Pass <paramref name="destructive"/> (matching
+    /// one of the <paramref name="options"/>) to render that option in red. Defaults to a bottom slide-up.
+    /// </summary>
+    Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null);
 }

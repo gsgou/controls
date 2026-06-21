@@ -35,6 +35,21 @@ public sealed class DialogService : IDialogService
         return new PromptResult(outcome.Ok, outcome.Value);
     }
 
+    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
+    {
+        var entry = this.Enqueue(DialogKind.ActionSheet, title, string.Empty, "OK", cancelText, null, c =>
+        {
+            c.Actions = options;
+            c.DestructiveAction = destructive;
+            // action sheets read best sliding up from the bottom; per-call configure can still override
+            c.Animation = DialogAnimation.SlideBottom;
+            c.MaxWidth = 500;
+            configure?.Invoke(c);
+        });
+        var outcome = await entry.ResultTcs.Task;
+        return outcome.Ok ? outcome.Value : null;
+    }
+
     DialogEntry Enqueue(DialogKind kind, string title, string message, string okText, string? cancelText, string? placeholder, Action<DialogConfig>? configure)
     {
         var config = new DialogConfig
@@ -94,6 +109,10 @@ public sealed class DialogService : IDialogService
     /// <summary>Cancel the dialog (Cancel button / backdrop / Escape).</summary>
     public void Cancel(DialogEntry entry)
         => this.Complete(entry, false, null);
+
+    /// <summary>Select an ActionSheet option; resolves the dialog with that option's text.</summary>
+    public void SelectAction(DialogEntry entry, string option)
+        => this.Complete(entry, true, option);
 
     void Complete(DialogEntry entry, bool ok, string? value)
     {

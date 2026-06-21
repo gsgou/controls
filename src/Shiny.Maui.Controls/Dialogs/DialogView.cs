@@ -15,6 +15,7 @@ sealed class DialogView : ContentView
     static readonly Color FallbackPrimary = Color.FromArgb("#7C3AED");
     static readonly Color FallbackOnPrimary = Color.FromArgb("#FFFFFF");
     static readonly Color FallbackSurfaceVariant = Color.FromArgb("#ECECEC");
+    static readonly Color FallbackError = Color.FromArgb("#C20014");
 
     readonly DialogConfig config;
     readonly DialogContext context;
@@ -26,7 +27,7 @@ sealed class DialogView : ContentView
     public DialogView(DialogConfig config, DialogOptions options)
     {
         this.config = config;
-        this.context = new DialogContext(config, this.OnConfirm, this.OnCancel);
+        this.context = new DialogContext(config, this.OnConfirm, this.OnCancel, this.OnSelect);
 
         this.backdrop = new BoxView
         {
@@ -45,8 +46,17 @@ sealed class DialogView : ContentView
             : this.BuildDefaultCard();
 
         this.card.BindingContext = this.context;
-        this.card.HorizontalOptions = LayoutOptions.Center;
-        this.card.VerticalOptions = LayoutOptions.Center;
+        // action sheets sit full-width at the bottom; everything else is a centered card
+        if (config.Kind == DialogKind.ActionSheet)
+        {
+            this.card.HorizontalOptions = LayoutOptions.Fill;
+            this.card.VerticalOptions = LayoutOptions.End;
+        }
+        else
+        {
+            this.card.HorizontalOptions = LayoutOptions.Center;
+            this.card.VerticalOptions = LayoutOptions.Center;
+        }
 
         var root = new Grid { Padding = new Thickness(24) };
         root.Children.Add(this.backdrop);
@@ -94,46 +104,53 @@ sealed class DialogView : ContentView
             stack.Add(message);
         }
 
-        if (this.config.Kind == DialogKind.Prompt)
+        if (this.config.Kind == DialogKind.ActionSheet)
         {
-            var entry = new Entry
+            this.AddActionSheetBody(stack);
+        }
+        else
+        {
+            if (this.config.Kind == DialogKind.Prompt)
             {
-                Placeholder = this.config.Placeholder,
-                Keyboard = this.config.Keyboard,
-                IsPassword = this.config.IsPassword,
-                ReturnType = ReturnType.Done
+                var entry = new Entry
+                {
+                    Placeholder = this.config.Placeholder,
+                    Keyboard = this.config.Keyboard,
+                    IsPassword = this.config.IsPassword,
+                    ReturnType = ReturnType.Done
+                };
+                entry.SetBinding(Entry.TextProperty, new Binding(nameof(DialogContext.PromptValue), BindingMode.TwoWay));
+                entry.Completed += (_, _) => this.OnConfirm();
+                stack.Add(entry);
+            }
+
+            var buttons = new HorizontalStackLayout
+            {
+                Spacing = 8,
+                HorizontalOptions = LayoutOptions.End
             };
-            entry.SetBinding(Entry.TextProperty, new Binding(nameof(DialogContext.PromptValue), BindingMode.TwoWay));
-            entry.Completed += (_, _) => this.OnConfirm();
-            stack.Add(entry);
-        }
 
-        var buttons = new HorizontalStackLayout
-        {
-            Spacing = 8,
-            HorizontalOptions = LayoutOptions.End
-        };
+            if (!string.IsNullOrEmpty(this.config.CancelText))
+            {
+                var cancel = this.BuildButton(
+                    this.config.CancelText!,
+                    this.config.CancelButtonColor, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant,
+                    this.config.CancelButtonTextColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant
+                );
+                cancel.Clicked += (_, _) => this.OnCancel();
+                buttons.Add(cancel);
+            }
 
-        if (!string.IsNullOrEmpty(this.config.CancelText))
-        {
-            var cancel = this.BuildButton(
-                this.config.CancelText!,
-                this.config.CancelButtonColor, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant,
-                this.config.CancelButtonTextColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant
+            var ok = this.BuildButton(
+                this.config.OkText,
+                this.config.OkButtonColor, ShinyThemeKeys.Color.Primary, FallbackPrimary,
+                this.config.OkButtonTextColor, ShinyThemeKeys.Color.OnPrimary, FallbackOnPrimary
             );
-            cancel.Clicked += (_, _) => this.OnCancel();
-            buttons.Add(cancel);
+            ok.Clicked += (_, _) => this.OnConfirm();
+            buttons.Add(ok);
+
+            stack.Add(buttons);
         }
-
-        var ok = this.BuildButton(
-            this.config.OkText,
-            this.config.OkButtonColor, ShinyThemeKeys.Color.Primary, FallbackPrimary,
-            this.config.OkButtonTextColor, ShinyThemeKeys.Color.OnPrimary, FallbackOnPrimary
-        );
-        ok.Clicked += (_, _) => this.OnConfirm();
-        buttons.Add(ok);
-
-        stack.Add(buttons);
 
         var border = new Border
         {
@@ -152,6 +169,48 @@ sealed class DialogView : ContentView
         };
         ApplyColor(border, VisualElement.BackgroundColorProperty, this.config.BackgroundColor, ShinyThemeKeys.Color.Surface, FallbackSurface);
         return border;
+    }
+
+    // ActionSheet: a full-width button per option (destructive one in red) + a separated cancel button.
+    void AddActionSheetBody(VerticalStackLayout stack)
+    {
+        var list = new VerticalStackLayout { Spacing = 8 };
+        foreach (var option in this.config.Actions)
+        {
+            var button = new Button
+            {
+                Text = option,
+                FontSize = 15,
+                Padding = new Thickness(16, 12),
+                CornerRadius = 10,
+                HorizontalOptions = LayoutOptions.Fill
+            };
+            ApplyColor(button, Button.BackgroundColorProperty, null, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant);
+            if (string.Equals(option, this.config.DestructiveAction, StringComparison.Ordinal))
+                ApplyColor(button, Button.TextColorProperty, null, ShinyThemeKeys.Color.Error, FallbackError);
+            else
+                ApplyColor(button, Button.TextColorProperty, null, ShinyThemeKeys.Color.OnSurface, FallbackOnSurface);
+
+            var captured = option;
+            button.Clicked += (_, _) => this.OnSelect(captured);
+            list.Add(button);
+        }
+
+        // keep long option lists scrollable rather than overflowing the screen
+        stack.Add(new ScrollView { Content = list, Orientation = ScrollOrientation.Vertical, MaximumHeightRequest = 360 });
+
+        if (!string.IsNullOrEmpty(this.config.CancelText))
+        {
+            var cancel = this.BuildButton(
+                this.config.CancelText!,
+                this.config.CancelButtonColor, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant,
+                this.config.CancelButtonTextColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant
+            );
+            cancel.HorizontalOptions = LayoutOptions.Fill;
+            cancel.Margin = new Thickness(0, 4, 0, 0);
+            cancel.Clicked += (_, _) => this.OnCancel();
+            stack.Add(cancel);
+        }
     }
 
     Button BuildButton(string text, Color? overrideBg, string bgToken, Color bgFallback, Color? overrideText, string textToken, Color textFallback)
@@ -193,6 +252,12 @@ sealed class DialogView : ContentView
     void OnCancel()
     {
         this.Outcome = new DialogOutcome(false, null);
+        _ = this.AnimateOutAsync();
+    }
+
+    void OnSelect(string option)
+    {
+        this.Outcome = new DialogOutcome(true, option);
         _ = this.AnimateOutAsync();
     }
 

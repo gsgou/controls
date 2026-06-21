@@ -46,6 +46,15 @@
 </section>
 
 <!-- ============================================================ -->
+<!--  ACTION SHEET -->
+<!-- ============================================================ -->
+<section class="demo-section">
+    <h2>Action Sheet</h2>
+    <p>A bottom list of options with a cancel button. Returns the chosen option text (or <code>null</code>).</p>
+    <button @onclick="ShowActionSheet" style="background:#7C3AED;">Show Action Sheet</button>
+</section>
+
+<!-- ============================================================ -->
 <!--  CUSTOM STYLING -->
 <!-- ============================================================ -->
 <section class="demo-section">
@@ -90,6 +99,18 @@
         statusMessage = result.Ok
             ? $"Hello, {result.Value}!"
             : "Prompt cancelled";
+    }
+
+    async Task ShowActionSheet()
+    {
+        var choice = await Dialogs.ActionSheet(
+            "Photo",
+            new[] { "Take Photo", "Choose from Library", "Delete Photo" },
+            cancelText: "Cancel",
+            destructive: "Delete Photo",
+            configure: c => c.Animation = animation
+        );
+        statusMessage = choice is null ? "Action sheet cancelled" : $"Picked: {choice}";
     }
 
     async Task ShowStyled()

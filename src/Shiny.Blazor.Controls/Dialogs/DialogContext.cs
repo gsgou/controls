@@ -10,11 +10,14 @@ public sealed class DialogContext
     readonly Action confirm;
     readonly Action cancel;
 
-    internal DialogContext(DialogEntry entry, Action confirm, Action cancel)
+    readonly Action<string>? select;
+
+    internal DialogContext(DialogEntry entry, Action confirm, Action cancel, Action<string>? select = null)
     {
         this.entry = entry;
         this.confirm = confirm;
         this.cancel = cancel;
+        this.select = select;
     }
 
     public DialogConfig Config => this.entry.Config;
@@ -25,7 +28,14 @@ public sealed class DialogContext
     public string? CancelText => this.entry.Config.CancelText;
     public string? Placeholder => this.entry.Config.Placeholder;
 
+    /// <summary>ActionSheet options, in display order.</summary>
+    public IReadOnlyList<string> Actions => this.entry.Config.Actions;
+
+    /// <summary>The option to render destructively, if any.</summary>
+    public string? DestructiveAction => this.entry.Config.DestructiveAction;
+
     public bool IsPrompt => this.entry.Config.Kind == DialogKind.Prompt;
+    public bool IsActionSheet => this.entry.Config.Kind == DialogKind.ActionSheet;
     public bool HasCancel => !string.IsNullOrEmpty(this.entry.Config.CancelText);
 
     /// <summary>Two-way bindable text for Prompt dialogs.</summary>
@@ -40,4 +50,7 @@ public sealed class DialogContext
 
     /// <summary>Cancel the dialog.</summary>
     public void Cancel() => this.cancel();
+
+    /// <summary>Select an ActionSheet option (pass the option text); resolves the dialog with that value.</summary>
+    public void Select(string option) => this.select?.Invoke(option);
 }

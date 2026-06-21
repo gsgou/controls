@@ -4,7 +4,8 @@ public enum DialogKind
 {
     Alert,
     Confirm,
-    Prompt
+    Prompt,
+    ActionSheet
 }
 
 public class DialogConfig
@@ -16,6 +17,12 @@ public class DialogConfig
 
     /// <summary>Cancel/secondary button text. Null hides the button (Alert).</summary>
     public string? CancelText { get; set; }
+
+    /// <summary>ActionSheet options, in display order. The chosen one is returned from <c>ActionSheet</c>.</summary>
+    public IReadOnlyList<string> Actions { get; set; } = [];
+
+    /// <summary>ActionSheet option to render destructively (red). Must match one of the <see cref="Actions"/>.</summary>
+    public string? DestructiveAction { get; set; }
 
     /// <summary>Prompt placeholder text.</summary>
     public string? Placeholder { get; set; }

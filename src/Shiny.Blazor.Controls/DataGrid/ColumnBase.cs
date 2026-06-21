@@ -63,6 +63,14 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
 
     bool registered;
 
+    // Snapshot of the stable (non-delegate) params that affect how the grid lays the column out. We only
+    // re-notify the grid when one of these actually changes — notifying on every OnParametersSet would loop:
+    // the grid's StateHasChanged re-renders this column, re-firing OnParametersSet, ad infinitum. Template /
+    // comparer / aggregate params are excluded on purpose — they get a fresh delegate identity on every parent
+    // render, so including them would re-introduce the loop (and the grid re-renders them as part of its tree).
+    (string?, bool?, bool?, bool?, bool?, bool, bool?, string?, bool, bool) layoutSnapshot;
+    bool hasSnapshot;
+
     protected override void OnInitialized()
     {
         this.Grid?.AddColumn(this);
@@ -71,8 +79,18 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
 
     protected override void OnParametersSet()
     {
-        if (this.registered)
+        if (!this.registered)
+            return;
+
+        var snapshot = (this.Title, this.Sortable, this.Filterable, this.Groupable, this.Editable,
+            this.Hidden, this.Resizable, this.Width, this.StickyLeft, this.StickyRight);
+
+        if (!this.hasSnapshot || !snapshot.Equals(this.layoutSnapshot))
+        {
+            this.layoutSnapshot = snapshot;
+            this.hasSnapshot = true;
             this.Grid?.NotifyColumnsChanged();
+        }
     }
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)

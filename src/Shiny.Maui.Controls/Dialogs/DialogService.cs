@@ -24,6 +24,21 @@ public sealed class DialogService(DialogOptions options) : IDialogService
         return new PromptResult(outcome.Ok, outcome.Value);
     }
 
+    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
+    {
+        var config = this.Build(DialogKind.ActionSheet, title, string.Empty, "OK", cancelText, null, c =>
+        {
+            c.Actions = options;
+            c.DestructiveAction = destructive;
+            // action sheets read best sliding up from the bottom; per-call configure can still override
+            c.Animation = DialogAnimation.SlideBottom;
+            c.MaxWidth = 500;
+            configure?.Invoke(c);
+        });
+        var outcome = await this.ShowAsync(config);
+        return outcome.Ok ? outcome.Value : null;
+    }
+
     DialogConfig Build(DialogKind kind, string title, string message, string okText, string? cancelText, string? placeholder, Action<DialogConfig>? configure)
     {
         var config = new DialogConfig

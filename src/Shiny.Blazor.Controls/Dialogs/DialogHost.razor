@@ -12,7 +12,7 @@
          style="@BackdropStyle(cfg)"
          @onclick="() => OnBackdrop(entry)">
 
-        <div class="shiny-dialog @AnimClass(cfg.Animation) @state @cfg.CssClass"
+        <div class="shiny-dialog @AnimClass(cfg.Animation) @state @cfg.CssClass @(cfg.Kind == DialogKind.ActionSheet ? "shiny-dialog-actionsheet" : null)"
              style="@CardStyle(cfg)"
              role="@(cfg.Kind == DialogKind.Alert ? "alertdialog" : "dialog")"
              aria-modal="true"
@@ -23,6 +23,38 @@
             @if (Template is not null)
             {
                 @Template(ctx)
+            }
+            else if (cfg.Kind == DialogKind.ActionSheet)
+            {
+                @if (!string.IsNullOrEmpty(cfg.Title))
+                {
+                    <div class="shiny-dialog-title" style="@Color("color", cfg.TitleColor)">@cfg.Title</div>
+                }
+                @if (!string.IsNullOrEmpty(cfg.Message))
+                {
+                    <div class="shiny-dialog-message" style="@Color("color", cfg.MessageColor)">@cfg.Message</div>
+                }
+                <div class="shiny-dialog-actions">
+                    @foreach (var option in cfg.Actions)
+                    {
+                        var label = option;
+                        var destructive = string.Equals(option, cfg.DestructiveAction, StringComparison.Ordinal);
+                        <button type="button"
+                                class="shiny-dialog-action @(destructive ? "shiny-dialog-action-destructive" : null)"
+                                @onclick="() => DialogService.SelectAction(entry, label)">
+                            @label
+                        </button>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(cfg.CancelText))
+                {
+                    <button type="button"
+                            class="shiny-dialog-button shiny-dialog-button-cancel shiny-dialog-actionsheet-cancel"
+                            style="@ButtonStyle(cfg.CancelButtonColor, cfg.CancelButtonTextColor)"
+                            @onclick="() => DialogService.Cancel(entry)">
+                        @cfg.CancelText
+                    </button>
+                }
             }
             else
             {

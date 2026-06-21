@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, ShinyDurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1401,7 +1401,7 @@ await ToastService.SuccessAsync("File saved");
 
 ### Dialogs
 
-A service-first dialog system that emulates the classic `alert`, `confirm`, and `prompt` primitives — with **owned (non-native), animated, themeable** dialogs on **both MAUI and Blazor**. Inject `IDialogService` and `await` a result — no markup per call. Calls are queued, so awaiting several in a row shows them one at a time.
+A service-first dialog system that emulates the classic `alert`, `confirm`, `prompt`, and `action sheet` primitives — with **owned (non-native), animated, themeable** dialogs on **both MAUI and Blazor**. Inject `IDialogService` and `await` a result — no markup per call. Calls are queued, so awaiting several in a row shows them one at a time.
 
 - **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to the current page (no XAML or OverlayHost required).
 - **Blazor**: register `AddShinyDialogs()` in DI and place a single `<DialogHost />` in your layout.
@@ -1427,6 +1427,9 @@ public class MyViewModel(IDialogService dialogs)
 await Dialogs.Alert("Heads up", "Your changes have been saved.", "Got it");
 var ok = await Dialogs.Confirm("Delete item?", "This cannot be undone.", okText: "Delete", cancelText: "Cancel");
 var result = await Dialogs.Prompt("Your name?", "Personalize things.", placeholder: "e.g. Allan");
+
+// action sheet — returns the chosen option's text (or null if cancelled); mark one option destructive (red)
+var choice = await Dialogs.ActionSheet("Photo", ["Take Photo", "Choose from Library", "Delete Photo"], destructive: "Delete Photo");
 ```
 
 | Method | Returns | Buttons |
@@ -1434,6 +1437,7 @@ var result = await Dialogs.Prompt("Your name?", "Personalize things.", placehold
 | `Alert(title, message, okText, configure?)` | `Task` | OK |
 | `Confirm(title, message, okText, cancelText, configure?)` | `Task<bool>` | confirm + cancel |
 | `Prompt(title, message, placeholder, okText, cancelText, configure?)` | `Task<PromptResult>` | confirm + cancel + text field |
+| `ActionSheet(title, options, cancelText, destructive?, configure?)` | `Task<string?>` | one button per option + cancel (returns the chosen option, or `null` if cancelled) |
 
 **Animations** — every call takes an optional `configure` delegate to set the entry/exit animation and styling. `DialogAnimation` values: `None`, `Fade`, `SlideTop`, `SlideBottom`, `SlideLeft`, `SlideRight`, `Zoom`, `Pop` (default).
 
