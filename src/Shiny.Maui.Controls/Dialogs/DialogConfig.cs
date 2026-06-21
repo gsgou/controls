@@ -33,6 +33,9 @@ public class DialogConfig
     /// <summary>Keyboard for the Prompt entry.</summary>
     public Keyboard Keyboard { get; set; } = Keyboard.Default;
 
+    /// <summary>Maximum length of the Prompt entry. <see cref="int.MaxValue"/> (the default) means no limit.</summary>
+    public int MaxLength { get; set; } = int.MaxValue;
+
     /// <summary>Mask the Prompt entry (password).</summary>
     public bool IsPassword { get; set; }
 

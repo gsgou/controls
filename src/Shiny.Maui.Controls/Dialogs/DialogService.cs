@@ -17,14 +17,22 @@ public sealed class DialogService(DialogOptions options) : IDialogService
         return outcome.Ok;
     }
 
-    public async Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string cancelText = "Cancel", Action<DialogConfig>? configure = null)
+    public async Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string? cancelText = "Cancel", string? initialValue = null, int? maxLength = null, Keyboard? keyboard = null, Action<DialogConfig>? configure = null)
     {
-        var config = this.Build(DialogKind.Prompt, title, message, okText, cancelText, placeholder, configure);
+        var config = this.Build(DialogKind.Prompt, title, message, okText, cancelText, placeholder, c =>
+        {
+            c.InitialValue = initialValue;
+            if (maxLength is > 0)
+                c.MaxLength = maxLength.Value;
+            if (keyboard is not null)
+                c.Keyboard = keyboard;
+            configure?.Invoke(c);
+        });
         var outcome = await this.ShowAsync(config);
         return new PromptResult(outcome.Ok, outcome.Value);
     }
 
-    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
+    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string? cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
     {
         var config = this.Build(DialogKind.ActionSheet, title, string.Empty, "OK", cancelText, null, c =>
         {

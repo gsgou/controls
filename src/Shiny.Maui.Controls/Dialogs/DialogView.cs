@@ -117,6 +117,7 @@ sealed class DialogView : ContentView
                     Placeholder = this.config.Placeholder,
                     Keyboard = this.config.Keyboard,
                     IsPassword = this.config.IsPassword,
+                    MaxLength = this.config.MaxLength,
                     ReturnType = ReturnType.Done
                 };
                 entry.SetBinding(Entry.TextProperty, new Binding(nameof(DialogContext.PromptValue), BindingMode.TwoWay));

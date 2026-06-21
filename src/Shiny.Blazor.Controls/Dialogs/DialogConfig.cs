@@ -33,6 +33,9 @@ public class DialogConfig
     /// <summary>Prompt input type (e.g. "text", "password", "email", "number").</summary>
     public string InputType { get; set; } = "text";
 
+    /// <summary>Maximum length of the Prompt input. <c>null</c> (the default) means no limit.</summary>
+    public int? MaxLength { get; set; }
+
     // --- Appearance ---
 
     public DialogAnimation Animation { get; set; } = DialogAnimation.Pop;

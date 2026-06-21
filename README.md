@@ -1436,8 +1436,10 @@ var choice = await Dialogs.ActionSheet("Photo", ["Take Photo", "Choose from Libr
 |---|---|---|
 | `Alert(title, message, okText, configure?)` | `Task` | OK |
 | `Confirm(title, message, okText, cancelText, configure?)` | `Task<bool>` | confirm + cancel |
-| `Prompt(title, message, placeholder, okText, cancelText, configure?)` | `Task<PromptResult>` | confirm + cancel + text field |
+| `Prompt(title, message, placeholder, okText, cancelText, initialValue?, maxLength?, keyboard?/inputType?, configure?)` | `Task<PromptResult>` | confirm + cancel + text field |
 | `ActionSheet(title, options, cancelText, destructive?, configure?)` | `Task<string?>` | one button per option + cancel (returns the chosen option, or `null` if cancelled) |
+
+`Prompt` forwards `initialValue`, `maxLength`, and the keyboard directly (MAUI takes a `Keyboard`; Blazor takes an HTML `inputType` string). Pass `cancelText: null` to `Prompt` or `ActionSheet` to **hide the cancel button** entirely (the ActionSheet otherwise always renders one).
 
 **Animations** — every call takes an optional `configure` delegate to set the entry/exit animation and styling. `DialogAnimation` values: `None`, `Fade`, `SlideTop`, `SlideBottom`, `SlideLeft`, `SlideRight`, `Zoom`, `Pop` (default).
 

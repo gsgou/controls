@@ -28,14 +28,22 @@ public sealed class DialogService : IDialogService
         return outcome.Ok;
     }
 
-    public async Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string cancelText = "Cancel", Action<DialogConfig>? configure = null)
+    public async Task<PromptResult> Prompt(string title, string message, string? placeholder = null, string okText = "OK", string? cancelText = "Cancel", string? initialValue = null, int? maxLength = null, string? inputType = null, Action<DialogConfig>? configure = null)
     {
-        var entry = this.Enqueue(DialogKind.Prompt, title, message, okText, cancelText, placeholder, configure);
+        var entry = this.Enqueue(DialogKind.Prompt, title, message, okText, cancelText, placeholder, c =>
+        {
+            c.InitialValue = initialValue;
+            if (maxLength is > 0)
+                c.MaxLength = maxLength;
+            if (!string.IsNullOrEmpty(inputType))
+                c.InputType = inputType;
+            configure?.Invoke(c);
+        });
         var outcome = await entry.ResultTcs.Task;
         return new PromptResult(outcome.Ok, outcome.Value);
     }
 
-    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
+    public async Task<string?> ActionSheet(string title, IReadOnlyList<string> options, string? cancelText = "Cancel", string? destructive = null, Action<DialogConfig>? configure = null)
     {
         var entry = this.Enqueue(DialogKind.ActionSheet, title, string.Empty, "OK", cancelText, null, c =>
         {
