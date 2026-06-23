@@ -115,6 +115,9 @@ sealed class MacCatalystTrayIcon : TrayIconBase
         var image = MsgSend(imgAlloc, Sel("initWithData:"), data);
         MsgSendBool(image, Sel("setTemplate:"), this.IsTemplateImage);
         MsgSend(this.button, Sel("setImage:"), image);
+        // setImage: retained the image (and released any prior one); release the +1
+        // from our alloc so swapping the icon doesn't leak an NSImage each time.
+        MsgSend(image, Sel("release"));
     }
 
     protected override void OnTooltipChanged(string? value)
@@ -153,13 +156,23 @@ sealed class MacCatalystTrayIcon : TrayIconBase
         MsgSend(notif, Sel("setTitle:"), NSString(title ?? string.Empty));
         MsgSend(notif, Sel("setInformativeText:"), NSString(message ?? string.Empty));
         MsgSend(center, Sel("deliverNotification:"), notif);
+        // The center retains the notification for async display; release our alloc's +1.
+        MsgSend(notif, Sel("release"));
     }
 
     protected override void OnMenuChanged(object? sender, EventArgs e)
     {
         this.ClearOwnedTags();
         if (this.Menu == null) return;
+
+        // BuildMenu hands back an alloc/init'd NSMenu we own a +1 on; releasing the
+        // previous one balances that alloc so rebuilds (e.g. on a poll/timer) don't
+        // leak a native menu tree each time. See the MacTrayIcon note for why GC won't
+        // reclaim these promptly on its own.
+        var previous = this.menu;
         this.menu = this.BuildMenu(this.Menu.Items);
+        if (previous != IntPtr.Zero)
+            MsgSend(previous, Sel("release"));
     }
 
     public override void ShowMenu()
@@ -192,6 +205,10 @@ sealed class MacCatalystTrayIcon : TrayIconBase
                     MsgSend(nsi, Sel("setSubmenu:"), childMenu);
                     MsgSendBool(nsi, Sel("setEnabled:"), sub.IsEnabled);
                     MsgSend(m, Sel("addItem:"), nsi);
+                    // setSubmenu:/addItem: each retained; release the +1 we own from
+                    // BuildMenu's alloc and NewItem's alloc so they don't leak.
+                    MsgSend(childMenu, Sel("release"));
+                    MsgSend(nsi, Sel("release"));
                     break;
                 }
                 case TrayCheckMenuItem check:
@@ -201,6 +218,7 @@ sealed class MacCatalystTrayIcon : TrayIconBase
                     MsgSendLong(nsi, Sel("setState:"), check.IsChecked ? 1 : 0);
                     MsgSendBool(nsi, Sel("setEnabled:"), check.IsEnabled);
                     MsgSend(m, Sel("addItem:"), nsi);
+                    MsgSend(nsi, Sel("release"));
                     break;
                 }
                 case TrayMenuItem mi:
@@ -220,10 +238,14 @@ sealed class MacCatalystTrayIcon : TrayIconBase
                             var image = MsgSend(imgAlloc, Sel("initWithData:"), data);
                             MsgSendCGSize(image, Sel("setSize:"), new NSSize { Width = 16, Height = 16 });
                             MsgSend(nsi, Sel("setImage:"), image);
+                            // setImage: retained the image; release our alloc's +1.
+                            // (data is an autoreleased dataWithBytes: — don't release.)
+                            MsgSend(image, Sel("release"));
                         }
                         catch { /* best-effort */ }
                     }
                     MsgSend(m, Sel("addItem:"), nsi);
+                    MsgSend(nsi, Sel("release"));
                     break;
                 }
             }
@@ -298,6 +320,11 @@ sealed class MacCatalystTrayIcon : TrayIconBase
     {
         this.ClearOwnedTags();
         lock (ButtonOwners) ButtonOwners.Remove(this.buttonTag);
+        if (this.menu != IntPtr.Zero)
+        {
+            MsgSend(this.menu, Sel("release"));
+            this.menu = IntPtr.Zero;
+        }
         var nsStatusBar = GetClass("NSStatusBar");
         var systemBar = MsgSend(nsStatusBar, Sel("systemStatusBar"));
         MsgSend(systemBar, Sel("removeStatusItem:"), this.statusItem);

@@ -111,6 +111,12 @@ sealed class LinuxTrayIcon : TrayIconBase
         this.ClearOwnedTags();
         this.ClearMenuIconFiles();
         if (this.Menu == null) return;
+
+        // AppIndicatorSetMenu takes ownership of the new menu and drops the old one,
+        // but the accel group we allocate per rebuild has no such owner — unref the
+        // previous one so repeated rebuilds don't leak a GObject each time.
+        if (this.accelGroup != IntPtr.Zero)
+            GObjectUnref(this.accelGroup);
         this.accelGroup = GtkAccelGroupNew();
         var menu = this.BuildMenu(this.Menu.Items);
         GtkMenuSetAccelGroup(menu, this.accelGroup);
@@ -285,6 +291,11 @@ sealed class LinuxTrayIcon : TrayIconBase
     {
         this.ClearOwnedTags();
         this.ClearMenuIconFiles();
+        if (this.accelGroup != IntPtr.Zero)
+        {
+            GObjectUnref(this.accelGroup);
+            this.accelGroup = IntPtr.Zero;
+        }
         AppIndicatorSetStatus(this.indicator, (int)AppIndicatorStatus.Passive);
         GObjectUnref(this.indicator);
         if (this.iconFilePath != null) try { File.Delete(this.iconFilePath); } catch { }

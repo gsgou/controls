@@ -54,7 +54,12 @@ sealed class MacTrayIcon : TrayIconBase
             using var data = NSData.FromArray(bytes);
             var image = new NSImage(data);
             image.Template = isTemplate;
+            // Same rationale as OnMenuChanged: release the outgoing image's native
+            // backing now rather than leaving it for a GC that the small managed
+            // footprint won't promptly trigger.
+            var previous = this.statusItem.Button.Image;
             this.statusItem.Button.Image = image;
+            previous?.Dispose();
         });
     }
 
@@ -103,8 +108,19 @@ sealed class MacTrayIcon : TrayIconBase
         => MacMainThread.Invoke(() =>
         {
             if (this.Menu == null) return;
+
+            // Dispose the previous menu explicitly. The status item retains/releases
+            // the native menu on assignment, but the managed NSMenu peer holds its own
+            // +1 until GC — and because the managed heap footprint of a menu wrapper is
+            // tiny while the native NSMenu/NSMenuItem/NSImage graph behind it is large,
+            // the GC rarely runs, finalizers don't fire, and the native bytes pile up.
+            // Apps that rebuild the menu on a poll/timer leak a whole menu tree each
+            // rebuild (observed: tens of GB over a long-running session). Disposing here
+            // releases the native graph immediately instead of waiting on GC.
+            var previous = this.nsMenu;
             this.nsMenu = BuildNSMenu(this.Menu.Items);
             this.statusItem.Menu = this.nsMenu;
+            previous?.Dispose();
         });
 
     public override void ShowMenu()
