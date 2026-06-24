@@ -8,8 +8,8 @@
         <IsAotCompatible>true</IsAotCompatible>
         <SingleProject>true</SingleProject>
         <RootNamespace>Shiny.Maui.Controls.Camera.Documents</RootNamespace>
-        <Description>Structured document analyzers for the Shiny CameraView — each document type (Invoice, Receipt, DriversLicense, HealthCard, CreditCard, Passport) is its own analyzer with a strongly-typed event. Driver's licenses (AAMVA PDF417), passports (MRZ) and credit cards (IIN + Luhn) are parsed deterministically; invoices/receipts/health cards via OCR + swappable rules.</Description>
-        <PackageTags>maui camera document invoice receipt driverslicense aamva healthcard creditcard passport mrz ocr pdf417</PackageTags>
+        <Description>Structured document analyzers for the Shiny CameraView — each document type (Invoice, Receipt, BusinessCard, DriversLicense, HealthCard, CreditCard, Passport) is its own analyzer with a strongly-typed event. Driver's licenses (AAMVA PDF417), passports (MRZ) and credit cards (IIN + Luhn) are parsed deterministically; invoices/receipts/business cards/health cards via OCR + swappable rules.</Description>
+        <PackageTags>maui camera document invoice receipt businesscard contact driverslicense aamva healthcard creditcard passport mrz ocr pdf417</PackageTags>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     </PropertyGroup>
 

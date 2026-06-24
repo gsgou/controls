@@ -74,6 +74,7 @@ public partial class CameraPage : ShinyContentPage
     Func<FacesDetectedEventArgs, Task<bool>> OnFace { get; }
     Func<DocumentDetectedEventArgs<Invoice>, Task<bool>> OnInvoice { get; }
     Func<DocumentDetectedEventArgs<Receipt>, Task<bool>> OnReceipt { get; }
+    Func<DocumentDetectedEventArgs<BusinessCard>, Task<bool>> OnBusinessCard { get; }
     Func<DocumentDetectedEventArgs<HealthCard>, Task<bool>> OnHealthCard { get; }
     Func<DocumentDetectedEventArgs<DriversLicense>, Task<bool>> OnLicense { get; }
     Func<DocumentDetectedEventArgs<CreditCard>, Task<bool>> OnCreditCard { get; }
@@ -120,6 +121,19 @@ public partial class CameraPage : ShinyContentPage
                 ("Total", d.Total?.ToString("0.00")),
                 ("Payment", d.PaymentMethod),
                 ("Card", d.CardLast4 is null ? null : $"•••• {d.CardLast4}")));
+        };
+        this.OnBusinessCard = e =>
+        {
+            var d = e.Document;
+            var summary = $"{d.Name ?? "Business Card"}{(d.Company is null ? "" : $" — {d.Company}")}";
+            return this.OnDocument("Business Card", summary, Detail(
+                ("Name", d.Name),
+                ("Title", d.JobTitle),
+                ("Company", d.Company),
+                ("Email", d.Email),
+                ("Phone", d.Phone),
+                ("Website", d.Website),
+                ("Address", d.Address)));
         };
         this.OnHealthCard = e =>
         {
@@ -179,6 +193,7 @@ public partial class CameraPage : ShinyContentPage
             ["Face"] = new FaceAnalyzer { OnDetected = this.OnFace },
             ["Invoice"] = new InvoiceAnalyzer { OnDetected = this.OnInvoice },
             ["Receipt"] = new ReceiptAnalyzer { OnDetected = this.OnReceipt },
+            ["Business Card"] = new BusinessCardAnalyzer { OnDetected = this.OnBusinessCard },
             ["Health Card"] = new HealthCardAnalyzer { OnDetected = this.OnHealthCard },
             ["Driver's License"] = new DriversLicenseAnalyzer { OnDetected = this.OnLicense },
             ["Credit Card"] = new CreditCardAnalyzer { OnDetected = this.OnCreditCard },

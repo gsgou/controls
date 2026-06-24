@@ -18,7 +18,7 @@
                        FontSize="18"
                        FontAttributes="Bold"
                        HorizontalTextAlignment="Center" />
-                <Label Text="Open the Camera, enable a document detector (Invoice, License, Credit Card, Passport) and point it at a document. Captures collect here for this app session."
+                <Label Text="Open the Camera, enable a document detector (Invoice, Receipt, Business Card, License, Credit Card, Passport) and point it at a document. Captures collect here for this app session."
                        FontSize="13"
                        TextColor="Gray"
                        HorizontalTextAlignment="Center" />
