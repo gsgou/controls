@@ -80,7 +80,9 @@ public class PillView : ContentView
         set => SetValue(TextProperty, value);
     }
 
-    public static readonly BindableProperty PillTypeProperty = BindableProperty.Create(
+    // NOTE: the field MUST be named "TypeProperty" to match the CLR property "Type" — MAUI's XAML
+    // binding resolver looks up "{PropertyName}Property", so a mismatched name makes Type un-bindable.
+    public static readonly BindableProperty TypeProperty = BindableProperty.Create(
         nameof(Type),
         typeof(PillType),
         typeof(PillView),
@@ -89,8 +91,8 @@ public class PillView : ContentView
 
     public PillType Type
     {
-        get => (PillType)GetValue(PillTypeProperty);
-        set => SetValue(PillTypeProperty, value);
+        get => (PillType)GetValue(TypeProperty);
+        set => SetValue(TypeProperty, value);
     }
 
     public static readonly BindableProperty PillColorProperty = BindableProperty.Create(
