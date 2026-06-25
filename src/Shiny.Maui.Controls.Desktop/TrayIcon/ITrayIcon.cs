@@ -34,10 +34,14 @@ public interface ITrayIcon : IDisposable
     /// <summary>Set the icon. Pass a function that returns a fresh stream each time so the host can re-read it for DPI/theme changes.</summary>
     void SetIcon(Func<Stream> iconStreamFactory);
 
-    /// <summary>Set the menu shown on right-click (Windows/Linux) or primary-click (macOS default).</summary>
+    /// <summary>
+    /// Set the menu shown on secondary (right) click. Primary (left) click is left free to
+    /// raise <see cref="PrimaryClick"/>. On Linux the app indicator owns click handling and
+    /// shows the menu itself.
+    /// </summary>
     void SetMenu(TrayMenu menu);
 
-    /// <summary>Programmatically open the menu — useful from left-click handlers on Windows.</summary>
+    /// <summary>Programmatically open the menu. No-op on Linux, where the app indicator opens it on click.</summary>
     void ShowMenu();
 
     /// <summary>
@@ -58,10 +62,14 @@ public interface ITrayIcon : IDisposable
     /// <summary>Stop a running animation and restore the last static icon.</summary>
     void StopAnimation();
 
-    /// <summary>Raised on primary click. Suppressed on platforms where primary click opens the menu (macOS).</summary>
+    /// <summary>
+    /// Raised on primary (left) click on Windows, macOS, and MacCatalyst. A menu set via
+    /// <see cref="SetMenu"/> no longer steals the primary click, so wire this to open your
+    /// main window. Not raised on Linux, where the app indicator handles clicks itself.
+    /// </summary>
     event EventHandler<TrayClickEventArgs>? PrimaryClick;
 
-    /// <summary>Raised on secondary click. On macOS this fires for control-click / right-click only.</summary>
+    /// <summary>Raised on secondary (right) click, immediately before the menu is shown. Not raised on Linux.</summary>
     event EventHandler<TrayClickEventArgs>? SecondaryClick;
 
     /// <summary>Raised on double-click of the icon (Windows / macOS only).</summary>

@@ -109,24 +109,36 @@ sealed class MacTrayIcon : TrayIconBase
         {
             if (this.Menu == null) return;
 
-            // Dispose the previous menu explicitly. The status item retains/releases
-            // the native menu on assignment, but the managed NSMenu peer holds its own
-            // +1 until GC — and because the managed heap footprint of a menu wrapper is
-            // tiny while the native NSMenu/NSMenuItem/NSImage graph behind it is large,
-            // the GC rarely runs, finalizers don't fire, and the native bytes pile up.
-            // Apps that rebuild the menu on a poll/timer leak a whole menu tree each
-            // rebuild (observed: tens of GB over a long-running session). Disposing here
-            // releases the native graph immediately instead of waiting on GC.
+            // Deliberately do NOT assign statusItem.Menu here. Assigning it makes AppKit
+            // pop the menu automatically on *any* button click and suppresses the button's
+            // action entirely, so primary (left) click could never be distinguished from
+            // secondary (right) click. Instead we keep the built menu in a field and pop it
+            // on demand from ShowMenu() (secondary click), leaving primary click free to
+            // raise PrimaryClick — matching the Windows and MacCatalyst implementations.
+            //
+            // Dispose the previous menu explicitly. The managed NSMenu peer holds a native
+            // +1 until GC, and because the managed footprint of a menu wrapper is tiny while
+            // the native NSMenu/NSMenuItem/NSImage graph behind it is large, the GC rarely
+            // runs, finalizers don't fire, and the native bytes pile up. Apps that rebuild
+            // the menu on a poll/timer leak a whole menu tree each rebuild (observed: tens of
+            // GB over a long-running session). Disposing here releases it immediately.
             var previous = this.nsMenu;
             this.nsMenu = BuildNSMenu(this.Menu.Items);
-            this.statusItem.Menu = this.nsMenu;
             previous?.Dispose();
         });
 
     public override void ShowMenu()
         => MacMainThread.Invoke(() =>
         {
-            if (this.nsMenu != null) this.statusItem.Menu = this.nsMenu;
+            // Pop the menu on demand rather than leaving it assigned to statusItem.Menu, so
+            // the button keeps sending its action and primary-click stays distinguishable
+            // from secondary-click. PopUpStatusItemMenu is the same call the MacCatalyst head
+            // uses; it's been soft-deprecated since 10.10 but remains the simplest reliable
+            // way to anchor a status-bar menu under the icon, and there's no AOT-safe
+            // replacement bound for status items.
+#pragma warning disable CA1422 // PopUpStatusItemMenu obsoleted since 10.10 — intentional, see above
+            if (this.nsMenu != null) this.statusItem.PopUpStatusItemMenu(this.nsMenu);
+#pragma warning restore CA1422
         });
 
     static NSMenu BuildNSMenu(IEnumerable<TrayMenuItemBase> items)
