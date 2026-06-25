@@ -18,7 +18,13 @@ sealed class MacTrayIcon : TrayIconBase
             if (this.statusItem.Button != null)
             {
                 this.statusItem.Button.Activated += this.OnButtonActivated;
-                this.statusItem.Button.SendActionOn(NSEventType.LeftMouseUp | NSEventType.RightMouseUp);
+                // sendActionOn: takes an NSEvent *mask* (1 << eventType), not raw NSEventType
+                // values — but the .NET binding only exposes SendActionOn(NSEventType). Passing
+                // (NSEventType.LeftMouseUp | NSEventType.RightMouseUp) = 6 actually means the mask
+                // (LeftMouseDown | LeftMouseUp); right-click is excluded, so the action never
+                // fires on secondary click. Build the correct mask via NSEventMask (LeftMouseUp=4 |
+                // RightMouseUp=16 = 20) and cast it back to satisfy the binding signature.
+                this.statusItem.Button.SendActionOn((NSEventType)(NSEventMask.LeftMouseUp | NSEventMask.RightMouseUp));
             }
         });
     }
