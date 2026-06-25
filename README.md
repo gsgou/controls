@@ -1233,7 +1233,7 @@ A signature capture control that opens in a FloatingPanel overlay (MAUI) or Shee
 
 **Important:** Like FloatingPanel, SignaturePad must be placed inside an `OverlayHost` or `ShinyContentPage` on MAUI — it uses a FloatingPanel internally.
 
-On iOS, the control automatically suppresses the navigation controller's interactive "swipe back" gesture while the pad is open (restoring it on close), so strokes that begin near the left screen edge are drawn instead of triggering back-navigation.
+While the pad is open the control automatically suppresses system navigation gestures that would otherwise steal edge-started strokes (restoring them on close): on iOS, the navigation controller's interactive "swipe back" pop; on Android, the system back edge-swipe (API 29+) and — when the pad is hosted inside a `TabbedPage` — the swipe-between-tabs gesture. So strokes that begin near the screen edges are drawn instead of navigating away.
 
 ```xml
 <!-- MAUI — must be inside ShinyContentPage.Panels or OverlayHost -->

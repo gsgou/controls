@@ -126,8 +126,9 @@ public partial class SignaturePad : ContentView
 
         floatingPanel.Opened += (_, _) =>
         {
-            // Prevent the iOS interactive "swipe back" pop gesture from
-            // hijacking strokes that start near the left screen edge.
+            // Prevent system navigation gestures (iOS interactive "swipe back"
+            // pop; Android edge-swipe back and TabbedPage swipe-between-tabs)
+            // from hijacking strokes that start near the screen edges.
             SetBackGestureEnabled(false);
 
             if (isSyncing) return;
@@ -209,8 +210,11 @@ public partial class SignaturePad : ContentView
         signButton.IsEnabled = false;
     }
 
-    // Implemented on iOS to toggle the navigation controller's interactive
-    // pop ("swipe back") gesture so it doesn't steal edge-started strokes.
-    // No-op on other platforms.
+    // Implemented per-platform to suppress system navigation gestures that
+    // would otherwise steal edge-started strokes while the pad is open:
+    //   iOS     - the navigation controller's interactive "swipe back" pop.
+    //   Android - the API 29+ system back edge-swipe (via gesture exclusion
+    //             rects) and a hosting TabbedPage's ViewPager2 swipe.
+    // No-op on platforms without such gestures (Windows).
     partial void SetBackGestureEnabled(bool enabled);
 }
