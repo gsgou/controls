@@ -204,3 +204,4 @@ public partial class SignatureViewModel : ObservableObject
 - On Blazor, `Signed` callback receives `byte[]` (raw PNG bytes)
 - Set `ExportWidth`/`ExportHeight` to control the resolution of the exported PNG. The drawn signature (captured in the on-screen canvas coordinate space) is scaled **uniformly to fit and centered** within those dimensions, so the whole signature is preserved without clipping or aspect-ratio distortion even when the canvas and the export size differ — if the aspect ratios differ the image is letterboxed with the background color
 - Panel closes automatically after sign or cancel
+- On iOS, the control automatically disables the navigation controller's interactive "swipe back" pop gesture while the pad is open and restores it on close, so strokes that start near the left screen edge draw instead of triggering back-navigation — no consumer code required

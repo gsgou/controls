@@ -126,6 +126,10 @@ public partial class SignaturePad : ContentView
 
         floatingPanel.Opened += (_, _) =>
         {
+            // Prevent the iOS interactive "swipe back" pop gesture from
+            // hijacking strokes that start near the left screen edge.
+            SetBackGestureEnabled(false);
+
             if (isSyncing) return;
             isSyncing = true;
             SetValue(IsOpenProperty, true);
@@ -134,6 +138,8 @@ public partial class SignaturePad : ContentView
 
         floatingPanel.Closed += (_, _) =>
         {
+            SetBackGestureEnabled(true);
+
             if (isSyncing) return;
             isSyncing = true;
             SetValue(IsOpenProperty, false);
@@ -202,4 +208,9 @@ public partial class SignaturePad : ContentView
         graphicsView.Invalidate();
         signButton.IsEnabled = false;
     }
+
+    // Implemented on iOS to toggle the navigation controller's interactive
+    // pop ("swipe back") gesture so it doesn't steal edge-started strokes.
+    // No-op on other platforms.
+    partial void SetBackGestureEnabled(bool enabled);
 }
