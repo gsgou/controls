@@ -1,249 +1,48 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Shiny.Maui.Controls.Chat;
-
 using Shiny;
+using Shiny.Maui.Controls.Chat;
+using Shiny.Maui.Controls.SpeechAddins.Chat;
 
 namespace Sample.Features.Chat;
 
 [ShellMap<ChatPage>(registerRoute: false)]
 public partial class ChatViewModel : ObservableObject
 {
-    readonly AppSettings appSettings;
-    readonly string myId = "me";
-
-    readonly ChatParticipant alice = new()
+    public ChatViewModel(InMemoryChatSessionProvider provider)
     {
-        Id = "alice",
-        DisplayName = "Alice Johnson",
-        BubbleColor = Color.FromArgb("#E3F2FD"),
-        Avatar = ImageSource.FromFile("dotnet_bot.png")
-    };
+        this.Provider = provider;
 
-    readonly ChatParticipant bob = new()
-    {
-        Id = "bob",
-        DisplayName = "Bob Smith",
-        BubbleColor = Color.FromArgb("#FFF3E0")
-    };
-
-    public ChatViewModel(AppSettings appSettings)
-    {
-        this.appSettings = appSettings;
-        participants.Add(alice);
-        participants.Add(bob);
-        LoadSampleMessages();
-    }
-
-    [ObservableProperty] ObservableCollection<ChatMessage> messages = [];
-    [ObservableProperty] ObservableCollection<ChatParticipant> participants = [];
-    [ObservableProperty] ObservableCollection<ChatParticipant> typingParticipants = [];
-    [ObservableProperty] bool isMultiPerson = true;
-
-    [RelayCommand]
-    void Send(string text)
-    {
-        var msg = new ChatMessage
-        {
-            Text = text,
-            SenderId = myId,
-            IsFromMe = true,
-            Identifier = Guid.NewGuid().ToString(),
-            Timestamp = DateTimeOffset.Now,
-            DateSent = null // Dimmed until confirmed
-        };
-        Messages.Add(msg);
-
-        // Simulate server confirmation after a short delay
-        _ = SimulateSendConfirmationAsync(msg);
-
-        // Simulate a reply after a short delay
-        _ = SimulateReplyAsync();
-    }
-
-    [RelayCommand]
-    void AttachImage(string filePath)
-    {
-        Messages.Add(new ChatMessage
-        {
-            ImageUrl = filePath,
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = DateTimeOffset.Now
-        });
-    }
-
-    [RelayCommand]
-    void LoadMore()
-    {
-        var earliest = Messages.Count > 0
-            ? Messages[0].Timestamp.AddMinutes(-5)
-            : DateTimeOffset.Now.AddHours(-2);
-
-        var olderMessages = new List<ChatMessage>
-        {
-            new()
+        // Example consumer-supplied input-bar actions (surfaced via the overflow button).
+        this.InputActions =
+        [
+            new SpeechToTextTool { AutoSend = false, SilenceTimeout = TimeSpan.FromSeconds(3) },
+            new ChatInputAction
             {
-                Text = "This is an older message that was loaded.",
-                SenderId = alice.Id,
-                Timestamp = earliest.AddMinutes(-3)
-            },
-            new()
-            {
-                Text = "And another one from earlier in the conversation.",
-                SenderId = myId,
-                IsFromMe = true,
-                Timestamp = earliest.AddMinutes(-2)
-            },
-            new()
-            {
-                Text = "Check this link: https://github.com/shinyorg/controls",
-                SenderId = bob.Id,
-                Timestamp = earliest.AddMinutes(-1)
+                Text = "Insert Greeting",
+                Handler = view =>
+                {
+                    var existing = view.EntryText?.Trim();
+                    view.EntryText = string.IsNullOrEmpty(existing) ? "Hello \U0001F44B" : $"{existing} Hello \U0001F44B";
+                    return Task.CompletedTask;
+                }
             }
-        };
+        ];
 
-        for (var i = olderMessages.Count - 1; i >= 0; i--)
-            Messages.Insert(0, olderMessages[i]);
+        // Example consumer-supplied bubble actions (appended to the built-in action set).
+        this.CustomBubbleActions =
+        [
+            new TextToSpeechBubbleTool(),
+            new ChatBubbleAction
+            {
+                Text = "Translate",
+                Handler = async msg =>
+                    await Shell.Current.DisplayAlert("Translate", $"Translating: {msg.Body}", "OK")
+            }
+        ];
     }
 
-    [RelayCommand]
-    async Task SimulateIncoming()
-    {
-        TypingParticipants.Add(bob);
-        await Task.Delay(3000);
-        TypingParticipants.Remove(bob);
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Hey, just checking in! Did you see the latest build?",
-            SenderId = bob.Id,
-            Timestamp = DateTimeOffset.Now
-        });
-    }
-
-    [RelayCommand]
-    async Task Translate(ChatMessage message)
-    {
-        await Shell.Current.DisplayAlert("Translate", $"Translating: {message.Text}", "OK");
-    }
-
-    [RelayCommand]
-    void ToggleTyping()
-    {
-        if (TypingParticipants.Count == 0)
-            TypingParticipants.Add(alice);
-        else if (TypingParticipants.Count == 1)
-            TypingParticipants.Add(bob);
-        else
-            TypingParticipants.Clear();
-    }
-
-    void LoadSampleMessages()
-    {
-        var now = DateTimeOffset.Now;
-        var yesterday = now.AddDays(-1);
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Hey everyone! Has anyone tried the new controls library?",
-            SenderId = alice.Id,
-            Timestamp = yesterday.AddHours(-2),
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Yes! The TableView is really nice.",
-            SenderId = bob.Id,
-            Timestamp = yesterday.AddHours(-2).AddMinutes(1),
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "I agree, the styling system is great.",
-            SenderId = myId,
-            IsFromMe = true,
-            DateSent = DateTimeOffset.Now,
-            Timestamp = yesterday.AddHours(-1).AddMinutes(30),
-            Acknowledgements =
-            [
-                new() { Glyph = "\ud83d\udc4d", UserId = alice.Id, Timestamp = DateTime.Now },
-                new() { Glyph = "\ud83d\udc4d", UserId = bob.Id, Timestamp = DateTime.Now },
-                new() { Glyph = "\u2764\ufe0f", UserId = alice.Id, Timestamp = DateTime.Now }
-            ]
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Check out https://github.com/shinyorg/controls for the latest updates.",
-            SenderId = alice.Id,
-            Timestamp = now.AddMinutes(-30),
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "The scheduler component is my favorite so far.",
-            SenderId = alice.Id,
-            DateSent = DateTimeOffset.Now,
-            Timestamp = now.AddMinutes(-30),
-            Acknowledgements =
-            [
-                new() { Glyph = "\ud83d\udcaf", UserId = myId, Timestamp = DateTime.Now }
-            ]
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Same here! Really clean API.",
-            SenderId = bob.Id,
-            Timestamp = now.AddMinutes(-28),
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "Here's a screenshot of what I built:",
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = now.AddMinutes(-5),
-        });
-
-        Messages.Add(new ChatMessage
-        {
-            ImageUrl = "https://picsum.photos/300/200",
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = now.AddMinutes(-5)
-        });
-    }
-
-    async Task SimulateSendConfirmationAsync(ChatMessage msg)
-    {
-        await Task.Delay(800);
-        msg.DateSent = DateTimeOffset.Now;
-
-        // Force UI refresh by notifying collection
-        var idx = Messages.IndexOf(msg);
-        if (idx >= 0)
-        {
-            Messages.RemoveAt(idx);
-            Messages.Insert(idx, msg);
-        }
-    }
-
-    async Task SimulateReplyAsync()
-    {
-        TypingParticipants.Add(alice);
-        await Task.Delay(2000);
-        TypingParticipants.Remove(alice);
-
-        Messages.Add(new ChatMessage
-        {
-            Text = "That's great! Thanks for sharing.",
-            SenderId = alice.Id,
-            DateSent = DateTimeOffset.Now,
-            Timestamp = DateTimeOffset.Now,
-        });
-    }
-
+    public IChatSessionProvider Provider { get; }
+    public string SessionId => InMemoryChatSessionProvider.DemoSessionId;
+    public IList<ChatInputAction> InputActions { get; }
+    public IList<ChatBubbleAction> CustomBubbleActions { get; }
 }

@@ -51,6 +51,7 @@ public static class MauiProgram
 #endif
         builder.Services.AddSpeechServices();
         builder.Services.AddSingleton<AppSettings>();
+        builder.Services.AddSingleton<Sample.Features.Chat.InMemoryChatSessionProvider>();
 
         builder.Services.AddTransient<MusicBrowsePage>();
         builder.Services.AddTransient<MusicLibraryPage>();

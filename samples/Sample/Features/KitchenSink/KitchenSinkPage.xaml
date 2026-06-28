@@ -69,14 +69,8 @@
             </Border>
         </shiny:FloatingPanel.HeaderTemplate>
 
-        <shiny:ChatView Messages="{Binding Messages}"
-                        Participants="{Binding Participants}"
-                        TypingParticipants="{Binding TypingParticipants}"
-                        IsMultiPerson="False"
-                        ShowAvatarsInSingleChat="True"
-                        SendCommand="{Binding SendCommand}"
-                        MessageTappedCommand="{Binding MessageTappedCommand}"
-                        ToolsIcon="dotnet_bot.png"
+        <shiny:ChatView Provider="{Binding ChatProvider}"
+                        SessionId="{Binding ActiveSessionId}"
                         MyBubbleColor="#DCF8C6"
                         OtherBubbleColor="White"
                         PlaceholderText="Type a message..."
@@ -86,7 +80,7 @@
                 <local:KitchenSinkMessageTemplateSelector>
                     <local:KitchenSinkMessageTemplateSelector.TextTemplate>
                         <DataTemplate x:DataType="shiny:ChatMessage">
-                            <Label Text="{Binding Text}" />
+                            <Label Text="{Binding Body}" />
                         </DataTemplate>
                     </local:KitchenSinkMessageTemplateSelector.TextTemplate>
                     <local:KitchenSinkMessageTemplateSelector.ImageTemplate>
@@ -99,16 +93,6 @@
                     </local:KitchenSinkMessageTemplateSelector.ImageTemplate>
                 </local:KitchenSinkMessageTemplateSelector>
             </shiny:ChatView.MessageTemplateSelector>
-            <shiny:ChatView.ToolItems>
-                <shiny:ChatEntryTool Text="Take Photo"
-                                     Icon="dotnet_bot.png"
-                                     FabBackgroundColor="#4CAF50"
-                                     Command="{Binding TakePhotoCommand}" />
-                <shiny:ChatEntryTool Text="Pick Image"
-                                     Icon="dotnet_bot.png"
-                                     FabBackgroundColor="#FF9800"
-                                     Command="{Binding PickImageCommand}" />
-            </shiny:ChatView.ToolItems>
         </shiny:ChatView>
     </shiny:FloatingPanel>
   </shiny:ShinyContentPage.Panels>

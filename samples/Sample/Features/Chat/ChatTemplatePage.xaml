@@ -8,10 +8,8 @@
     x:DataType="local:ChatTemplateViewModel"
     Title="Chat Templates">
 
-    <shiny:ChatView Messages="{Binding Messages}"
-                    Participants="{Binding Participants}"
-                    IsMultiPerson="True"
-                    SendCommand="{Binding SendCommand}"
+    <shiny:ChatView Provider="{Binding Provider}"
+                    SessionId="{Binding SessionId}"
                     MyBubbleColor="#DCF8C6"
                     OtherBubbleColor="White"
                     PlaceholderText="Type a message...">
@@ -19,19 +17,19 @@
             <local:ChatMessageTemplateSelector>
                 <local:ChatMessageTemplateSelector.TextTemplate>
                     <DataTemplate x:DataType="shiny:ChatMessage">
-                        <Label Text="{Binding Text}"
+                        <Label Text="{Binding Body}"
                                FontSize="15"
                                LineBreakMode="WordWrap" />
                     </DataTemplate>
                 </local:ChatMessageTemplateSelector.TextTemplate>
                 <local:ChatMessageTemplateSelector.ActionTemplate>
-                    <DataTemplate x:DataType="local:ActionChatMessage">
+                    <DataTemplate x:DataType="shiny:ChatMessage">
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="{Binding Text}"
+                            <Label Text="{Binding Body}"
                                    FontSize="15"
                                    LineBreakMode="WordWrap" />
                             <HorizontalStackLayout Spacing="8">
-                                <Button Text="{Binding ActionText}"
+                                <Button Text="{Binding Metadata[actionText]}"
                                         FontSize="12"
                                         HeightRequest="32"
                                         Padding="12,0"
@@ -54,7 +52,7 @@
                     </DataTemplate>
                 </local:ChatMessageTemplateSelector.ActionTemplate>
                 <local:ChatMessageTemplateSelector.CardTemplate>
-                    <DataTemplate x:DataType="local:CardChatMessage">
+                    <DataTemplate x:DataType="shiny:ChatMessage">
                         <Border StrokeThickness="1"
                                 Stroke="#E0E0E0"
                                 StrokeShape="RoundRectangle 8"
@@ -65,11 +63,11 @@
                                        HeightRequest="120"
                                        Aspect="AspectFill" />
                                 <VerticalStackLayout Padding="12" Spacing="4">
-                                    <Label Text="{Binding CardTitle}"
+                                    <Label Text="{Binding Metadata[cardTitle]}"
                                            FontSize="14"
                                            FontAttributes="Bold"
                                            TextColor="Black" />
-                                    <Label Text="{Binding Text}"
+                                    <Label Text="{Binding Body}"
                                            FontSize="12"
                                            TextColor="Gray"
                                            LineBreakMode="WordWrap" />

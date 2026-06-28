@@ -1,11 +1,20 @@
-using System.Collections.Specialized;
+using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.Chat.Internal;
 
 namespace Shiny.Maui.Controls.Chat;
 
+/// <summary>
+/// A provider-driven chat surface. Bind <see cref="Provider"/> + <see cref="SessionId"/> and the
+/// control resolves an <see cref="IChatSession"/>, subscribes to its live events, performs cursor
+/// paging, renders bubbles, and disposes the session on detach. The control is styles + layout
+/// only; all data and behavior live behind the provider.
+/// </summary>
 public partial class ChatView : ContentView
 {
+    /// <summary>Raised when a non-image bubble is tapped (image taps open the viewer).</summary>
     public event EventHandler<ChatMessage>? MessageTapped;
+
+    readonly ObservableCollection<ChatMessage> messages = new();
 
     readonly CollectionView collectionView;
     readonly ChatInputBar inputBar;
@@ -15,33 +24,53 @@ public partial class ChatView : ContentView
     readonly Label toastTypingLabel;
     readonly Grid messageArea;
     readonly Grid rootGrid;
-    readonly FabMenu toolsMenu;
-    readonly FabMenu bubbleToolsMenu;
-    ChatMessage? activeBubbleToolMessage;
+    readonly ImageViewer imageViewer;
 
-    INotifyCollectionChanged? observedCollection;
-    INotifyCollectionChanged? observedTypingCollection;
-    INotifyCollectionChanged? observedToolItems;
-    bool isLoadingMore;
+    // connection banner
+    readonly Border connectionBanner;
+    readonly Label connectionBannerLabel;
+
+    // loader / error overlays
+    readonly Grid loaderOverlay;
+    readonly VerticalStackLayout errorOverlay;
+    readonly Label errorLabel;
+
+    // session state
+    IChatSession? session;
+
+    // scroll / unread
     bool isNearBottom = true;
     int unreadCount;
 
+    // paging
+    bool isLoadingOlder;
+    bool hasMoreOlder = true;
+    CancellationTokenSource? loadCts;
+
+    // typing
+    readonly Dictionary<string, DateTimeOffset> typingUsers = new();
+    IDispatcherTimer? typingExpiryTimer;
+
+    // read receipts
+    readonly HashSet<string> markReadRequested = new();
+
+    // edit mode
+    string? editingMessageId;
+
     public ChatView()
     {
-        collectionView = new CollectionView
+        this.collectionView = new CollectionView
         {
-            ItemsLayout = new LinearItemsLayout(ItemsLayoutOrientation.Vertical)
-            {
-                ItemSpacing = 0
-            },
+            ItemsSource = this.messages,
+            ItemsLayout = new LinearItemsLayout(ItemsLayoutOrientation.Vertical) { ItemSpacing = 0 },
             ItemTemplate = new ChatBubbleTemplateSelector(this),
             RemainingItemsThreshold = 5
         };
-        collectionView.RemainingItemsThresholdReached += OnRemainingItemsThresholdReached;
-        collectionView.Scrolled += OnCollectionViewScrolled;
+        this.collectionView.RemainingItemsThresholdReached += this.OnRemainingItemsThresholdReached;
+        this.collectionView.Scrolled += this.OnCollectionViewScrolled;
 
-        // Shared toast pill — shows new messages on top, typing below
-        toastNewMessagesLabel = new Label
+        // Shared toast pill — new messages on top, typing below
+        this.toastNewMessagesLabel = new Label
         {
             TextColor = Colors.White,
             FontSize = 13,
@@ -50,8 +79,7 @@ public partial class ChatView : ContentView
             VerticalTextAlignment = TextAlignment.Center,
             IsVisible = false
         };
-
-        toastTypingLabel = new Label
+        this.toastTypingLabel = new Label
         {
             TextColor = Color.FromArgb("#D0E8FF"),
             FontSize = 12,
@@ -59,8 +87,7 @@ public partial class ChatView : ContentView
             VerticalTextAlignment = TextAlignment.Center,
             IsVisible = false
         };
-
-        toastPill = new Border
+        this.toastPill = new Border
         {
             StrokeThickness = 0,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
@@ -73,67 +100,81 @@ public partial class ChatView : ContentView
             Content = new VerticalStackLayout
             {
                 Spacing = 2,
-                Children = { toastNewMessagesLabel, toastTypingLabel }
+                Children = { this.toastNewMessagesLabel, this.toastTypingLabel }
+            }
+        };
+        var pillTap = new TapGestureRecognizer();
+        pillTap.Tapped += this.OnToastPillTapped;
+        this.toastPill.GestureRecognizers.Add(pillTap);
+
+        // connection banner (top)
+        this.connectionBannerLabel = new Label
+        {
+            TextColor = Colors.White,
+            FontSize = 12,
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center
+        };
+        this.connectionBanner = new Border
+        {
+            StrokeThickness = 0,
+            BackgroundColor = Color.FromArgb("#B00020"),
+            Padding = new Thickness(8, 4),
+            VerticalOptions = LayoutOptions.Start,
+            IsVisible = false,
+            Content = this.connectionBannerLabel
+        };
+
+        // loader overlay
+        this.loaderOverlay = new Grid
+        {
+            IsVisible = false,
+            Children =
+            {
+                new ActivityIndicator
+                {
+                    IsRunning = true,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
+                }
             }
         };
 
-        var pillTap = new TapGestureRecognizer();
-        pillTap.Tapped += OnToastPillTapped;
-        toastPill.GestureRecognizers.Add(pillTap);
+        // error overlay
+        this.errorLabel = new Label
+        {
+            HorizontalTextAlignment = TextAlignment.Center,
+            Margin = new Thickness(24, 0)
+        };
+        var errorRetry = new Button { Text = "Retry" };
+        errorRetry.Clicked += (_, _) => this.ReloadSession();
+        this.errorOverlay = new VerticalStackLayout
+        {
+            IsVisible = false,
+            Spacing = 12,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Children = { this.errorLabel, errorRetry }
+        };
 
-        // Messages area: CollectionView + toast pill overlay
-        messageArea = new Grid
+        this.messageArea = new Grid
         {
             IsClippedToBounds = true,
-            Children = { collectionView, toastPill }
+            Children = { this.collectionView, this.connectionBanner, this.toastPill, this.loaderOverlay, this.errorOverlay }
         };
 
-        // Typing bubble host — sits between messages and input bar, outside the CollectionView
-        typingBubbleHost = new VerticalStackLayout
-        {
-            IsVisible = false,
-            Spacing = 0
-        };
+        this.typingBubbleHost = new VerticalStackLayout { IsVisible = false, Spacing = 0 };
 
-        // Input bar: always visible, pinned at bottom
-        inputBar = new ChatInputBar();
-        inputBar.SendRequested += OnSendRequested;
-        inputBar.AttachRequested += OnAttachRequested;
-        inputBar.ToolsRequested += OnToolsButtonRequested;
+        this.inputBar = new ChatInputBar();
+        this.inputBar.SendRequested += this.OnSendRequested;
+        this.inputBar.AttachRequested += this.OnAttachRequested;
+        this.inputBar.ActionsRequested += this.OnInputActionsRequested;
+        this.inputBar.LinkRequested += this.OnLinkRequested;
+        this.inputBar.EditCancelled += this.OnEditCancelled;
 
-        // Tools FabMenu overlay — spans full chat area for proper backdrop/item expansion
-        toolsMenu = new FabMenu
-        {
-            IsVisible = false,
-            FabSize = 40,
-            HasShadow = false,
-            HasBackdrop = true,
-            CloseOnBackdropTap = true,
-            CloseOnItemTap = true,
-            MenuAlignment = LayoutOptions.Start,
-            FabBackgroundColor = Color.FromArgb("#007AFF"),
-            Margin = new Thickness(8, 0, 0, 6)
-        };
-        toolsMenu.ItemTapped += OnToolItemTapped;
-        toolsMenu.PropertyChanged += OnToolsMenuPropertyChanged;
+        this.imageViewer = new ImageViewer { OpenViewerOnTap = false };
 
-        // Bubble tools FabMenu overlay — shared across all bubbles, populated dynamically
-        bubbleToolsMenu = new FabMenu
-        {
-            IsVisible = false,
-            FabSize = 36,
-            HasShadow = false,
-            HasBackdrop = true,
-            CloseOnBackdropTap = true,
-            CloseOnItemTap = true,
-            FabBackgroundColor = Color.FromArgb("#007AFF"),
-            Text = "\u22ee"
-        };
-        bubbleToolsMenu.ItemTapped += OnBubbleToolItemTapped;
-        bubbleToolsMenu.PropertyChanged += OnBubbleToolsMenuPropertyChanged;
-
-        // Root: messages fill space, typing bubbles below, input bar at bottom
-        rootGrid = new Grid
+        this.rootGrid = new Grid
         {
             RowDefinitions =
             {
@@ -142,51 +183,88 @@ public partial class ChatView : ContentView
                 new RowDefinition(GridLength.Auto)
             }
         };
-        rootGrid.Add(messageArea, 0, 0);
-        rootGrid.Add(typingBubbleHost, 0, 1);
-        rootGrid.Add(inputBar, 0, 2);
+        this.rootGrid.Add(this.messageArea, 0, 0);
+        this.rootGrid.Add(this.typingBubbleHost, 0, 1);
+        this.rootGrid.Add(this.inputBar, 0, 2);
 
-        // FabMenu overlay spans all rows, anchored to bottom-left
-        rootGrid.Add(toolsMenu, 0, 0);
-        Grid.SetRowSpan(toolsMenu, 3);
+        // image viewer overlay spans all rows
+        this.rootGrid.Add(this.imageViewer, 0, 0);
+        Grid.SetRowSpan(this.imageViewer, 3);
 
-        // Bubble tools FabMenu overlay spans all rows
-        rootGrid.Add(bubbleToolsMenu, 0, 0);
-        Grid.SetRowSpan(bubbleToolsMenu, 3);
+        this.Content = this.rootGrid;
 
-        Content = rootGrid;
+        // collections initialised so XAML can Add() directly
+        this.InputActions = new ObservableCollection<ChatInputAction>();
+        this.CustomBubbleActions = new ObservableCollection<ChatBubbleAction>();
 
-        // Initialize collections so XAML source generator can Add() items directly
-        ToolItems = new System.Collections.ObjectModel.ObservableCollection<ChatEntryTool>();
-        BubbleToolItems = new System.Collections.ObjectModel.ObservableCollection<ChatBubbleTool>();
-        MyBubbleToolItems = new System.Collections.ObjectModel.ObservableCollection<ChatBubbleTool>();
+        this.Loaded += (_, _) => this.OnLoaded();
+        this.Unloaded += (_, _) => this.OnUnloaded();
     }
 
-    /// <summary>
-    /// Gets or sets the current text in the input bar entry field.
-    /// </summary>
+    // ------- public entry helpers -------
+
+    /// <summary>Gets or sets the current text in the input bar entry field.</summary>
     public string EntryText
     {
-        get => inputBar.EntryText;
-        set => inputBar.EntryText = value;
+        get => this.inputBar.EntryText;
+        set => this.inputBar.EntryText = value;
     }
 
-    /// <summary>
-    /// Programmatically submits the current entry text as if the user pressed Send.
-    /// </summary>
+    /// <summary>Programmatically submits the current entry text as if Send was pressed.</summary>
     public void SubmitEntry()
     {
-        var text = inputBar.EntryText?.Trim();
+        var text = this.inputBar.EntryText?.Trim();
         if (string.IsNullOrEmpty(text))
             return;
 
-        inputBar.ClearText();
-        OnSendRequested(text);
+        this.OnSendRequested(text);
+    }
+
+    // ------- internal accessors used by bubbles -------
+
+    internal IList<ChatMessage> Items => this.messages;
+    internal ChatSessionInfo? Info => this.session?.Info;
+    internal string? CurrentUserId => this.session?.CurrentUserId;
+    internal bool IsMultiPerson => (this.session?.Info.Users.Length ?? 0) > 2;
+
+    internal bool IsOwnMessage(ChatMessage message)
+        => this.session is not null && message.SenderId == this.session.CurrentUserId;
+
+    internal ChatSessionUserInfo? GetUser(string userId)
+    {
+        var users = this.session?.Info.Users;
+        if (users is null)
+            return null;
+
+        for (var i = 0; i < users.Length; i++)
+        {
+            if (users[i].UserId == userId)
+                return users[i];
+        }
+        return null;
+    }
+
+    internal void RefreshBubbles()
+    {
+        this.collectionView.ItemsSource = null;
+        this.Dispatcher.Dispatch(() => this.collectionView.ItemsSource = this.messages);
+    }
+
+    Page? GetPage()
+    {
+        Element? e = this;
+        while (e is not null)
+        {
+            if (e is Page page)
+                return page;
+            e = e.Parent;
+        }
+        return Application.Current?.Windows.Count > 0 ? Application.Current.Windows[0].Page : null;
     }
 
     /// <summary>
-    /// Displays a centered grid of tappable glyphs over the chat area and returns the
-    /// glyph the user selects, or null if the backdrop is tapped to cancel.
+    /// Displays a centered grid of tappable glyphs over the chat area and returns the glyph the
+    /// user selects, or null if the backdrop is tapped to cancel.
     /// </summary>
     internal Task<string?> ShowGlyphPickerAsync(IReadOnlyList<string> glyphs, int columns = 6)
     {
@@ -229,10 +307,10 @@ public partial class ChatView : ContentView
         void Close(string? result)
         {
             backdrop.GestureRecognizers.Remove(backdropTap);
-            if (rootGrid.Children.Contains(backdrop))
-                rootGrid.Children.Remove(backdrop);
-            if (rootGrid.Children.Contains(container))
-                rootGrid.Children.Remove(container);
+            if (this.rootGrid.Children.Contains(backdrop))
+                this.rootGrid.Children.Remove(backdrop);
+            if (this.rootGrid.Children.Contains(container))
+                this.rootGrid.Children.Remove(container);
             tcs.TrySetResult(result);
         }
 
@@ -262,9 +340,9 @@ public partial class ChatView : ContentView
             pickerGrid.Add(cell, i % columns, i / columns);
         }
 
-        rootGrid.Add(backdrop, 0, 0);
+        this.rootGrid.Add(backdrop, 0, 0);
         Grid.SetRowSpan(backdrop, 3);
-        rootGrid.Add(container, 0, 0);
+        this.rootGrid.Add(container, 0, 0);
         Grid.SetRowSpan(container, 3);
 
         _ = Task.WhenAll(
@@ -282,13 +360,13 @@ public partial class ChatView : ContentView
     {
         base.OnHandlerChanging(args);
         if (args.OldHandler != null)
-            UnhookKeyboard();
+            this.UnhookKeyboard();
     }
 
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
-        if (Handler != null)
-            HookKeyboard();
+        if (this.Handler != null)
+            this.HookKeyboard();
     }
 }

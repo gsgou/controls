@@ -1,93 +1,176 @@
 @namespace Shiny.Blazor.Controls.Chat
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div class="shiny-chat" @ref="rootEl">
-    <div class="shiny-chat-messages" @ref="messagesEl">
-        @if (LoadMoreCommand.HasDelegate)
-        {
-            <button class="shiny-chat-loadmore" @onclick="OnLoadMoreClick">Load earlier messages</button>
-        }
+<div class="shiny-chat">
+    @if (ConnectionBannerText is not null)
+    {
+        <div class="shiny-chat-banner">@ConnectionBannerText</div>
+    }
 
-        @if (Messages is not null)
+    <div class="shiny-chat-messages" @ref="messagesEl">
+        @if (loading)
         {
-            @for (var i = 0; i < Messages.Count; i++)
+            <div class="shiny-chat-loader">
+                <span class="shiny-chat-spinner"></span>
+            </div>
+        }
+        else if (errorMessage is not null)
+        {
+            <div class="shiny-chat-error">@errorMessage</div>
+        }
+        else
+        {
+            @if (loadingOlder)
             {
-                var msg = Messages[i];
-                var prev = i > 0 ? Messages[i - 1] : null;
-                var next = i < Messages.Count - 1 ? Messages[i + 1] : null;
+                <div class="shiny-chat-loadmore" role="status">Loading earlier messages…</div>
+            }
+
+            @for (var i = 0; i < messages.Count; i++)
+            {
+                var msg = messages[i];
+                var prev = i > 0 ? messages[i - 1] : null;
+                var next = i < messages.Count - 1 ? messages[i + 1] : null;
                 var isFirst = ChatGroupHelper.IsNewGroup(msg, prev);
                 var isLast = next is null || ChatGroupHelper.IsNewGroup(next, msg);
-                var participant = GetParticipant(msg.SenderId);
-                var showAvatar = ShouldShowAvatar(msg, isFirst);
-                var bubbleColor = msg.IsFromMe ? MyBubbleColor : (participant?.BubbleColor ?? OtherBubbleColor);
-                var textColor = msg.IsFromMe ? MyTextColor : OtherTextColor;
+                var mine = IsMine(msg);
+                var user = GetUser(msg.SenderId);
+                var showAvatar = !mine && isFirst && IsMultiPerson;
+                var bubbleColor = mine ? MyBubbleColor : (user?.BubbleColor ?? OtherBubbleColor);
+                var textColor = mine ? MyTextColor : OtherTextColor;
+                var tapMsg = msg;
 
-                <div class="shiny-chat-bubble-wrap @(msg.IsFromMe ? "is-me" : "is-other") @(isFirst ? "group-first" : "") @(isLast ? "group-last" : "")">
+                <div class="shiny-chat-bubble-wrap @(mine ? "is-me" : "is-other") @(isFirst ? "group-first" : "") @(isLast ? "group-last" : "")">
                     @if (showAvatar)
                     {
                         <div class="shiny-chat-sender-row">
-                            <div class="shiny-chat-avatar" style="background:@(participant?.BubbleColor ?? OtherBubbleColor);">
-                                @if (participant?.AvatarUrl is not null)
+                            <div class="shiny-chat-avatar" style="background:@(user?.BubbleColor ?? OtherBubbleColor);">
+                                @if (user?.AvatarUrl is not null)
                                 {
-                                    <img src="@participant.AvatarUrl" alt="@participant.DisplayName" />
+                                    <img src="@user.AvatarUrl" alt="@user.DisplayName" />
                                 }
                                 else
                                 {
-                                    @ChatGroupHelper.GetInitials(participant?.DisplayName)
+                                    @ChatGroupHelper.GetInitials(user?.DisplayName)
                                 }
                             </div>
-                            <span class="shiny-chat-name">@(participant?.DisplayName ?? "Unknown")</span>
+                            <span class="shiny-chat-name">@(user?.DisplayName ?? "Unknown")</span>
                         </div>
                     }
 
-                    @{var tapMsg = msg;}
-                    <div class="shiny-chat-bubble" style="background:@bubbleColor;color:@textColor;cursor:pointer;@(msg.IsFromMe && msg.DateSent == null ? "opacity:0.5;" : "")"
-                         @onclick="() => OnMessageTap(tapMsg)">
-                        @if (msg.ImageUrl is not null)
-                        {
-                            <img class="shiny-chat-image" src="@msg.ImageUrl" alt="Image" />
-                        }
-                        else
-                        {
-                            <span>@((MarkupString)Linkify(msg.Text ?? ""))</span>
-                        }
-                    </div>
+                    @if (editingMessageId == msg.MessageId)
+                    {
+                        <div class="shiny-chat-edit">
+                            <textarea class="shiny-chat-input" @bind="editText" @bind:event="oninput" rows="2"></textarea>
+                            <div class="shiny-chat-edit-actions">
+                                <button type="button" class="shiny-chat-linkbtn" @onclick="CancelEdit">Cancel</button>
+                                <button type="button" class="shiny-chat-send" @onclick="() => SaveEditAsync(tapMsg)">Save</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="shiny-chat-bubble @(msg.Status == MessageStatus.Sending ? "is-sending" : "")"
+                             style="background:@bubbleColor;color:@textColor;">
+                            @if (msg.ImageUrl is not null)
+                            {
+                                <img class="shiny-chat-image" src="@msg.ImageUrl" alt="Image"
+                                     style="cursor:@(OpenImagesInViewer ? "zoom-in" : "default");"
+                                     @onclick="() => OnImageTap(tapMsg)" />
+                            }
+                            else
+                            {
+                                <span>@((MarkupString)ChatMarkdown.ToHtml(msg.Body))</span>
+                            }
 
-                    @if (msg.Acknowledgements is { Count: > 0 })
+                            @if (HasAnyAction(msg))
+                            {
+                                <button type="button" class="shiny-chat-actions-btn" @onclick="() => ToggleActions(tapMsg)">⋯</button>
+                            }
+                        </div>
+
+                        @if (actionsMessageId == msg.MessageId)
+                        {
+                            <div class="shiny-chat-actions-menu">
+                                @if (CanReact && ReactionEmojis.Length > 0)
+                                {
+                                    <button type="button" @onclick="() => OpenReactionPicker(tapMsg)">React</button>
+                                }
+                                @if (msg.Body is not null)
+                                {
+                                    <button type="button" @onclick="() => CopyAsync(tapMsg)">Copy</button>
+                                }
+                                @if (CanEdit && IsMine(msg) && msg.ImageUrl is null)
+                                {
+                                    <button type="button" @onclick="() => BeginEdit(tapMsg)">Edit</button>
+                                }
+                                @if (CanDelete && IsMine(msg))
+                                {
+                                    <button type="button" class="is-destructive" @onclick="() => DeleteAsync(tapMsg)">Delete</button>
+                                }
+                            </div>
+                        }
+
+                        @if (reactionPickerMessageId == msg.MessageId)
+                        {
+                            <div class="shiny-chat-reaction-picker">
+                                @foreach (var emoji in ReactionEmojis)
+                                {
+                                    var e = emoji;
+                                    <button type="button" @onclick="() => ToggleReactionAsync(tapMsg, e)">@e</button>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @if (msg.Reactions is { Count: > 0 })
                     {
                         <div class="shiny-chat-acks">
-                            @foreach (var group in msg.Acknowledgements.Where(a => !string.IsNullOrEmpty(a.Glyph)).GroupBy(a => a.Glyph))
+                            @foreach (var group in msg.Reactions.GroupBy(r => r.Emoji))
                             {
-                                <span class="shiny-chat-ack-badge">
-                                    <span class="shiny-chat-ack-glyph">@group.Key</span>
+                                var emoji = group.Key;
+                                var mineReacted = group.Any(r => r.UserId == CurrentUserId);
+                                <button type="button" class="shiny-chat-ack-badge @(mineReacted ? "is-mine" : "")"
+                                        @onclick="() => ToggleReactionAsync(tapMsg, emoji)">
+                                    <span class="shiny-chat-ack-glyph">@emoji</span>
                                     @if (group.Count() > 1)
                                     {
                                         <span class="shiny-chat-ack-count">@group.Count()</span>
                                     }
-                                </span>
+                                </button>
                             }
                         </div>
                     }
 
-                    @if (isLast)
+                    @if (mine && (msg.Status == MessageStatus.Failed || msg.Status == MessageStatus.Rejected))
                     {
-                        <div class="shiny-chat-time">@ChatGroupHelper.FormatTimestamp(msg.Timestamp)</div>
+                        <div class="shiny-chat-status is-error">
+                            <span>@(msg.StatusReason ?? (msg.Status == MessageStatus.Rejected ? "Message rejected" : "Failed to send"))</span>
+                            @if (msg.Status == MessageStatus.Failed)
+                            {
+                                <button type="button" class="shiny-chat-linkbtn" @onclick="() => ResendAsync(tapMsg)">Retry</button>
+                            }
+                        </div>
+                    }
+                    else if (mine && msg.Status == MessageStatus.Sending)
+                    {
+                        <div class="shiny-chat-status">Sending…</div>
+                    }
+
+                    @if (isLast && msg.Status != MessageStatus.Sending)
+                    {
+                        <div class="shiny-chat-time">
+                            @ChatGroupHelper.FormatTimestamp(msg.Timestamp)@(msg.EditedTimestamp is not null ? " · edited" : "")
+                        </div>
                     }
                 </div>
             }
         }
     </div>
 
-    @if (unreadCount > 0)
-    {
-        <div class="shiny-chat-newmessages" @onclick="OnNewMessagesPillClick">
-            @(unreadCount == 1 ? "1 New Message" : $"{unreadCount} New Messages")
-        </div>
-    }
-
-    @if (ShowTypingIndicator && typingText is not null)
+    @if (ShowTypingIndicator && BuildTypingText() is { } typingText)
     {
         <div class="shiny-chat-typing">
             <span class="shiny-chat-typing-dots"><span></span><span></span><span></span></span>
@@ -95,20 +178,61 @@
         </div>
     }
 
-    @if (IsInputBarVisible)
+    @if (IsInputBarVisible && session is not null && errorMessage is null)
     {
+        @if (BodyPermissions != MessageBodyPermissions.None)
+        {
+            <div class="shiny-chat-mdtoolbar">
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Bold))
+                {
+                    <button type="button" title="Bold" @onclick='() => ApplyMarkdownAsync("**", "**", "bold")'><b>B</b></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Italics))
+                {
+                    <button type="button" title="Italic" @onclick='() => ApplyMarkdownAsync("*", "*", "italic")'><i>I</i></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Underline))
+                {
+                    <button type="button" title="Underline" @onclick='() => ApplyMarkdownAsync("++", "++", "underline")'><u>U</u></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Strikethrough))
+                {
+                    <button type="button" title="Strikethrough" @onclick='() => ApplyMarkdownAsync("~~", "~~", "strike")'><s>S</s></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Codeblocks))
+                {
+                    <button type="button" title="Code" @onclick='() => ApplyMarkdownAsync("`", "`", "code")'>&lt;/&gt;</button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Links))
+                {
+                    <button type="button" title="Link" @onclick="InsertLinkAsync">🔗</button>
+                }
+            </div>
+        }
+
         <div class="shiny-chat-inputbar">
-            @if (AttachImageCommand.HasDelegate)
+            @if (CanSendImages)
             {
-                <button class="shiny-chat-attach" @onclick="OnAttachClick" type="button">+</button>
+                <label class="shiny-chat-attach" title="Attach image">
+                    +
+                    <InputFile OnChange="OnImageSelected" accept="image/*" capture="environment" style="display:none;" />
+                </label>
             }
-            <input class="shiny-chat-input"
-                   @ref="inputEl"
-                   placeholder="@PlaceholderText"
-                   @bind="inputText"
-                   @bind:event="oninput"
-                   @onkeydown="OnKeyDown" />
-            <button class="shiny-chat-send" @onclick="OnSendClick" type="button">@SendButtonText</button>
+            <textarea class="shiny-chat-input"
+                      @ref="inputEl"
+                      placeholder="@PlaceholderText"
+                      rows="1"
+                      disabled="@(!CanSend)"
+                      @bind="inputText"
+                      @bind:event="oninput"
+                      @bind:after="OnInputChanged"
+                      @onkeydown="OnKeyDown"></textarea>
+            <button class="shiny-chat-send" type="button" disabled="@(!CanSend)" @onclick="SendTextAsync">@SendButtonText</button>
         </div>
     }
 </div>
+
+@if (OpenImagesInViewer)
+{
+    <Shiny.Blazor.Controls.ImageViewer Source="@viewerSource" IsOpen="viewerOpen" IsOpenChanged="@(v => viewerOpen = v)" />
+}

@@ -1,15 +1,12 @@
 using Plugin.Maui.Audio;
 using Shiny.Maui.Controls;
-using Shiny.Maui.Controls.Chat;
 using Shiny.Maui.Controls.Infrastructure;
-using Shiny.Speech;
 
 namespace Sample;
 
 // we take in the haptic feedback service because we still like it as a base
 public class MyCustomFeedbackService(
     AppSettings appSettings,
-    ITextToSpeechService textToSpeech,
     IAudioManager audioManager
 ) : HapticFeedbackService
 {
@@ -18,12 +15,7 @@ public class MyCustomFeedbackService(
         // let haptic do its thing first
         base.OnRequested(control, eventName, args);
 
-        // we have chat bubble tools now that take care of this
-        // if (control is ChatView && appSettings.IsChatSpeakingEnabled && args is ChatMessage { IsFromMe: false } msg)
-        // {
-        //     var say = $"Message from {msg.SenderId}. {msg.Text}";
-        //     await textToSpeech.SpeakAsync(say);
-        // }
+        // ChatView speech is now handled by the SpeechAddins bubble tools (TextToSpeechBubbleTool).
         if (control is SecurityPin && appSettings.IsSecurityBeepEnabled)
         {
             var sound = eventName.Equals("completed", StringComparison.OrdinalIgnoreCase)

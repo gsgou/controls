@@ -1,8 +1,10 @@
 @page "/kitchensink"
 @using Shiny.Blazor.Controls.Chat
+@using Sample.Blazor.Chat
+@inject KitchenSinkChatProvider ChatProvider
 
 <h3>Kitchen Sink</h3>
-<p style="color:gray;font-size:14px;">Demonstrates integrated components: FabMenu chat picker + Sheet with embedded ChatView.</p>
+<p style="color:gray;font-size:14px;">Demonstrates integrated components: FabMenu chat picker + Sheet with a provider-driven ChatView.</p>
 
 <div style="position:relative;height:500px;display:flex;align-items:center;justify-content:center;">
     <div style="text-align:center;">
@@ -29,14 +31,8 @@
     </HeaderTemplate>
     <SheetContent>
         <div style="height:450px;">
-            <ChatView Messages="messages"
-                      Participants="participants"
-                      TypingParticipants="typingParticipants"
-                      IsMultiPerson="false"
-                      ShowAvatarsInSingleChat="true"
-                      SendCommand="OnSend"
-                      AttachImageCommand="OnAttachImage"
-                      MessageTappedCommand="OnMessageTapped"
+            <ChatView Provider="ChatProvider"
+                      SessionId="@activeSessionId"
                       MyBubbleColor="#DCF8C6"
                       OtherBubbleColor="#FFFFFF"
                       PlaceholderText="Type a message..." />
@@ -44,23 +40,10 @@
     </SheetContent>
 </SheetView>
 
-@if (isImageViewerOpen)
-{
-    <ImageViewer Source="@viewerImageUrl"
-                 @bind-IsOpen="isImageViewerOpen" />
-}
-
 @code {
-    readonly string myId = "me";
     bool isChatOpen;
     string chatTitle = string.Empty;
-    string? activeChatId;
-    bool isImageViewerOpen;
-    string? viewerImageUrl;
-
-    List<ChatMessage> messages = new();
-    List<ChatParticipant> participants = new();
-    List<ChatParticipant> typingParticipants = new();
+    string? activeSessionId;
 
     IList<DetentValue> sheetDetents = new List<DetentValue> { DetentValue.Half, DetentValue.Full };
 
@@ -71,146 +54,16 @@
         new FabMenuItem { Text = "Carol Davis",   FabBackgroundColor = "#F3E5F5", Tag = "carol" },
     };
 
-    record ChatDefinition(
-        string Id,
-        string DisplayName,
-        string BubbleColorHex,
-        string? AvatarUrl,
-        (string Content, int MinutesAgo)[] SeedMessages);
-
-    readonly ChatDefinition[] chatDefinitions =
-    [
-        new("alice", "Alice Johnson", "#E3F2FD", "_content/Shiny.Blazor.Controls/shiny_logo.png", [
-            ("Hey! Just got back from the hike.", -60),
-            ("The views were incredible.", -59),
-            ("https://picsum.photos/seed/mountain/400/300", -58),
-            ("You should come next time!", -55)
-        ]),
-        new("bob", "Bob Smith", "#FFF3E0", null, [
-            ("Did you see the game last night?", -120),
-            ("What a finish!", -119),
-            ("https://picsum.photos/seed/stadium/400/300", -90),
-            ("We should watch the next one together.", -85)
-        ]),
-        new("carol", "Carol Davis", "#F3E5F5", null, [
-            ("Meeting moved to 3pm.", -30),
-            ("Can you bring the design mockups?", -28),
-            ("https://picsum.photos/seed/office/400/300", -20),
-            ("Thanks!", -18)
-        ])
-    ];
-
     void OnChatMenuItemTapped(FabMenuItem item)
     {
         var participantId = item.Tag?.ToString();
         if (participantId is null) return;
 
-        var chatDef = chatDefinitions.FirstOrDefault(c => c.Id == participantId);
-        if (chatDef is null) return;
+        var contact = KitchenSinkChatProvider.Contacts.FirstOrDefault(c => c.Id == participantId);
+        if (contact is null) return;
 
-        activeChatId = chatDef.Id;
-        chatTitle = chatDef.DisplayName;
-
-        var participant = new ChatParticipant
-        {
-            Id = chatDef.Id,
-            DisplayName = chatDef.DisplayName,
-            BubbleColor = chatDef.BubbleColorHex,
-            AvatarUrl = chatDef.AvatarUrl
-        };
-
-        participants = [participant];
-        messages = new();
-        typingParticipants = new();
-
-        var now = DateTimeOffset.Now;
-        foreach (var (content, minutesAgo) in chatDef.SeedMessages)
-        {
-            var isImage = content.StartsWith("https://");
-            messages.Add(new ChatMessage
-            {
-                Text = isImage ? null : content,
-                ImageUrl = isImage ? content : null,
-                SenderId = chatDef.Id,
-                Timestamp = now.AddMinutes(minutesAgo)
-            });
-        }
-
-        messages.Add(new ChatMessage
-        {
-            Text = $"Hey {chatDef.DisplayName}!",
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = now.AddMinutes(-10)
-        });
-
+        chatTitle = contact.DisplayName;
+        activeSessionId = contact.Id;
         isChatOpen = true;
-    }
-
-    async Task OnSend(string text)
-    {
-        messages.Add(new ChatMessage
-        {
-            Text = text,
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = DateTimeOffset.Now
-        });
-        StateHasChanged();
-
-        _ = SimulateReplyAsync();
-    }
-
-    Task OnAttachImage()
-    {
-        messages.Add(new ChatMessage
-        {
-            ImageUrl = $"https://picsum.photos/seed/{Guid.NewGuid():N}/300/200",
-            SenderId = myId,
-            IsFromMe = true,
-            Timestamp = DateTimeOffset.Now
-        });
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    Task OnMessageTapped(ChatMessage msg)
-    {
-        if (!string.IsNullOrEmpty(msg.ImageUrl))
-        {
-            viewerImageUrl = msg.ImageUrl;
-            isImageViewerOpen = true;
-        }
-        return Task.CompletedTask;
-    }
-
-    async Task SimulateReplyAsync()
-    {
-        if (activeChatId is null) return;
-
-        var participant = participants.FirstOrDefault(p => p.Id == activeChatId);
-        if (participant is null) return;
-
-        typingParticipants.Add(participant);
-        StateHasChanged();
-        await Task.Delay(1500);
-        typingParticipants.Remove(participant);
-
-        var replies = new[]
-        {
-            "That's awesome!",
-            "Tell me more!",
-            "Ha, nice one!",
-            "Sounds good to me.",
-            "Let's do it!"
-        };
-
-        messages.Add(new ChatMessage
-        {
-            Text = replies[Random.Shared.Next(replies.Length)],
-            SenderId = activeChatId,
-            Timestamp = DateTimeOffset.Now
-        });
-        StateHasChanged();
     }
 }

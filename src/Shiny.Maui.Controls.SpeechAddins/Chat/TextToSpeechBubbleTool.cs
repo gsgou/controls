@@ -5,17 +5,16 @@ using Shiny.Speech;
 namespace Shiny.Maui.Controls.SpeechAddins.Chat;
 
 /// <summary>
-/// A reusable bubble tool that reads the chat message text aloud using ITextToSpeechService.
+/// A <see cref="ChatBubbleAction"/> that reads a message's body aloud using
+/// <see cref="ITextToSpeechService"/>. Appended to the built-in bubble action set.
 /// </summary>
-public class TextToSpeechBubbleTool : ChatBubbleTool
+public class TextToSpeechBubbleTool : ChatBubbleAction
 {
     CancellationTokenSource? cts;
 
     public TextToSpeechBubbleTool()
     {
-        Text = "Read Aloud";
-        FabBackgroundColor = Color.FromArgb("#FF5722");
-        Clicked += OnClicked;
+        this.Text = "Read Aloud";
     }
 
     public static readonly BindableProperty SpeechRateProperty = BindableProperty.Create(
@@ -48,9 +47,7 @@ public class TextToSpeechBubbleTool : ChatBubbleTool
     public static readonly BindableProperty VoiceNameProperty = BindableProperty.Create(
         nameof(VoiceName), typeof(string), typeof(TextToSpeechBubbleTool));
 
-    /// <summary>
-    /// The name of the voice to use. If null, the system default is used.
-    /// </summary>
+    /// <summary>The name of the voice to use. Null uses the system default.</summary>
     public string? VoiceName
     {
         get => (string?)GetValue(VoiceNameProperty);
@@ -60,43 +57,37 @@ public class TextToSpeechBubbleTool : ChatBubbleTool
     public static readonly BindableProperty CultureProperty = BindableProperty.Create(
         nameof(Culture), typeof(string), typeof(TextToSpeechBubbleTool));
 
-    /// <summary>
-    /// Culture code (e.g. "en-US") for voice selection. If null, the system default is used.
-    /// </summary>
+    /// <summary>Culture code (e.g. "en-US") for voice selection. Null uses the system default.</summary>
     public string? Culture
     {
         get => (string?)GetValue(CultureProperty);
         set => SetValue(CultureProperty, value);
     }
 
-    async void OnClicked(object? sender, EventArgs e)
+    public override async Task InvokeAsync(ChatMessage message)
     {
-        if (Message is null)
-            return;
-
-        if (string.IsNullOrEmpty(Message.Text))
+        if (string.IsNullOrEmpty(message.Body))
             return;
 
         var tts = ResolveService<ITextToSpeechService>();
         if (tts is null || !tts.IsSupported)
             return;
 
-        // Cancel any previous speech
-        cts?.Cancel();
-        cts = new CancellationTokenSource();
+        this.cts?.Cancel();
+        this.cts = new CancellationTokenSource();
 
         try
         {
             var options = new TextToSpeechOptions
             {
-                SpeechRate = SpeechRate,
-                Pitch = Pitch,
-                Volume = Volume,
-                Culture = Culture is not null ? CultureInfo.GetCultureInfo(Culture) : null,
-                Voice = await ResolveVoiceAsync(tts)
+                SpeechRate = this.SpeechRate,
+                Pitch = this.Pitch,
+                Volume = this.Volume,
+                Culture = this.Culture is not null ? CultureInfo.GetCultureInfo(this.Culture) : null,
+                Voice = await this.ResolveVoiceAsync(tts)
             };
 
-            await tts.SpeakAsync(Message.Text, options, cts.Token);
+            await tts.SpeakAsync(message.Body, options, this.cts.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -107,15 +98,14 @@ public class TextToSpeechBubbleTool : ChatBubbleTool
 
     async Task<VoiceInfo?> ResolveVoiceAsync(ITextToSpeechService tts)
     {
-        if (string.IsNullOrEmpty(VoiceName))
+        if (string.IsNullOrEmpty(this.VoiceName))
             return null;
 
         try
         {
-            var culture = Culture is not null ? CultureInfo.GetCultureInfo(Culture) : null;
+            var culture = this.Culture is not null ? CultureInfo.GetCultureInfo(this.Culture) : null;
             var voices = await tts.GetVoicesAsync(culture);
-            return voices.FirstOrDefault(v =>
-                v.Name.Equals(VoiceName, StringComparison.OrdinalIgnoreCase));
+            return voices.FirstOrDefault(v => v.Name.Equals(this.VoiceName, StringComparison.OrdinalIgnoreCase));
         }
         catch
         {

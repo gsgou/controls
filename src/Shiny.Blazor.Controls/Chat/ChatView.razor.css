@@ -268,3 +268,211 @@
     font-size: 11px;
     color: var(--shiny-color-on-surface-variant, #666);
 }
+
+.shiny-chat-ack-badge {
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.shiny-chat-ack-badge.is-mine {
+    border-color: var(--shiny-color-primary, #007AFF);
+    background: var(--shiny-color-primary-container, #DCEBFF);
+}
+
+/* Connection banner */
+.shiny-chat-banner {
+    background: var(--shiny-color-error-container, #FFE0E0);
+    color: var(--shiny-color-on-error-container, #8a1f1f);
+    text-align: center;
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+/* Initial loader */
+.shiny-chat-loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+}
+
+.shiny-chat-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--shiny-color-outline-variant, #ddd);
+    border-top-color: var(--shiny-color-primary, #007AFF);
+    border-radius: 50%;
+    animation: shiny-chat-spin 0.8s linear infinite;
+}
+
+@keyframes shiny-chat-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error state */
+.shiny-chat-error {
+    margin: auto;
+    color: var(--shiny-color-error, #c0392b);
+    font-size: 14px;
+    text-align: center;
+    padding: 24px;
+}
+
+/* Optimistic / status */
+.shiny-chat-bubble.is-sending {
+    opacity: 0.6;
+}
+
+.shiny-chat-status {
+    font-size: 11px;
+    color: var(--shiny-color-on-surface-variant, #999);
+    margin-top: 2px;
+    padding: 0 4px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.shiny-chat-status.is-error {
+    color: var(--shiny-color-error, #c0392b);
+}
+
+.shiny-chat-linkbtn {
+    background: none;
+    border: none;
+    color: var(--shiny-color-primary, #007AFF);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+}
+
+/* Bubble actions */
+.shiny-chat-bubble {
+    position: relative;
+}
+
+.shiny-chat-actions-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: var(--shiny-color-surface-container-high, #e0e0e0);
+    color: var(--shiny-color-on-surface-variant, #555);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.shiny-chat-bubble-wrap:hover .shiny-chat-actions-btn {
+    opacity: 1;
+}
+
+.shiny-chat-actions-menu {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.shiny-chat-actions-menu button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    color: var(--shiny-color-on-surface, #222);
+}
+
+.shiny-chat-actions-menu button:hover {
+    background: var(--shiny-color-surface-container-high, #eee);
+}
+
+.shiny-chat-actions-menu button.is-destructive {
+    color: var(--shiny-color-error, #c0392b);
+}
+
+/* Reaction picker */
+.shiny-chat-reaction-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 4px;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
+    border-radius: 16px;
+    padding: 4px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.shiny-chat-reaction-picker button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 4px;
+    border-radius: 8px;
+}
+
+.shiny-chat-reaction-picker button:hover {
+    background: var(--shiny-color-surface-container-high, #eee);
+}
+
+/* Inline edit */
+.shiny-chat-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.shiny-chat-edit-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* Markdown toolbar */
+.shiny-chat-mdtoolbar {
+    display: flex;
+    gap: 2px;
+    padding: 4px 12px;
+    background: var(--shiny-color-surface, #fff);
+    border-top: 1px solid var(--shiny-color-outline-variant, #eee);
+}
+
+.shiny-chat-mdtoolbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 30px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--shiny-color-on-surface-variant, #555);
+}
+
+.shiny-chat-mdtoolbar button:hover {
+    background: var(--shiny-color-surface-container-high, #eee);
+}
+
+/* Textarea input bar adjustments */
+.shiny-chat-input {
+    resize: none;
+    font-family: inherit;
+}
+
+.shiny-chat-input:disabled,
+.shiny-chat-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

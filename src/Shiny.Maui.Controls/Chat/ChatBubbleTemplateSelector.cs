@@ -11,12 +11,12 @@ class ChatBubbleTemplateSelector : DataTemplateSelector
     public ChatBubbleTemplateSelector(ChatView chatView)
     {
         this.chatView = chatView;
-        myTemplate = new DataTemplate(() => new ChatBubbleView(chatView, isMe: true));
-        otherTemplate = new DataTemplate(() => new ChatBubbleView(chatView, isMe: false));
+        this.myTemplate = new DataTemplate(() => new ChatBubbleView(chatView, isMe: true));
+        this.otherTemplate = new DataTemplate(() => new ChatBubbleView(chatView, isMe: false));
     }
 
     protected override DataTemplate OnSelectTemplate(object item, BindableObject container)
-    {
-        return item is ChatMessage msg && msg.IsFromMe ? myTemplate : otherTemplate;
-    }
+        => item is ChatMessage msg && this.chatView.IsOwnMessage(msg)
+            ? this.myTemplate
+            : this.otherTemplate;
 }

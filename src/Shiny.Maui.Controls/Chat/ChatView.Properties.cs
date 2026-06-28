@@ -1,66 +1,91 @@
-using System.Windows.Input;
-
 namespace Shiny.Maui.Controls.Chat;
 
 public partial class ChatView
 {
-    // Data
-    public static readonly BindableProperty MessagesProperty = BindableProperty.Create(
-        nameof(Messages),
-        typeof(IList<ChatMessage>),
+    // ------- provider / session -------
+
+    public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
+        nameof(Provider),
+        typeof(IChatSessionProvider),
         typeof(ChatView),
         null,
-        propertyChanged: (b, _, _) => ((ChatView)b).OnMessagesChanged());
+        propertyChanged: (b, _, _) => ((ChatView)b).OnProviderOrSessionChanged());
 
-    public IList<ChatMessage>? Messages
+    public IChatSessionProvider? Provider
     {
-        get => (IList<ChatMessage>?)GetValue(MessagesProperty);
-        set => SetValue(MessagesProperty, value);
+        get => (IChatSessionProvider?)GetValue(ProviderProperty);
+        set => SetValue(ProviderProperty, value);
     }
 
-    public static readonly BindableProperty ParticipantsProperty = BindableProperty.Create(
-        nameof(Participants),
-        typeof(IList<ChatParticipant>),
-        typeof(ChatView));
+    public static readonly BindableProperty SessionIdProperty = BindableProperty.Create(
+        nameof(SessionId),
+        typeof(string),
+        typeof(ChatView),
+        null,
+        propertyChanged: (b, _, _) => ((ChatView)b).OnProviderOrSessionChanged());
 
-    public IList<ChatParticipant>? Participants
+    public string? SessionId
     {
-        get => (IList<ChatParticipant>?)GetValue(ParticipantsProperty);
-        set => SetValue(ParticipantsProperty, value);
+        get => (string?)GetValue(SessionIdProperty);
+        set => SetValue(SessionIdProperty, value);
     }
 
-    public static readonly BindableProperty IsMultiPersonProperty = BindableProperty.Create(
-        nameof(IsMultiPerson),
+    public static readonly BindableProperty PageSizeProperty = BindableProperty.Create(
+        nameof(PageSize),
+        typeof(int),
+        typeof(ChatView),
+        30);
+
+    public int PageSize
+    {
+        get => (int)GetValue(PageSizeProperty);
+        set => SetValue(PageSizeProperty, value);
+    }
+
+    public static readonly BindableProperty OpenImagesInViewerProperty = BindableProperty.Create(
+        nameof(OpenImagesInViewer),
         typeof(bool),
         typeof(ChatView),
-        false,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        true);
 
-    public bool IsMultiPerson
+    public bool OpenImagesInViewer
     {
-        get => (bool)GetValue(IsMultiPersonProperty);
-        set => SetValue(IsMultiPersonProperty, value);
+        get => (bool)GetValue(OpenImagesInViewerProperty);
+        set => SetValue(OpenImagesInViewerProperty, value);
     }
 
-    public static readonly BindableProperty ShowAvatarsInSingleChatProperty = BindableProperty.Create(
-        nameof(ShowAvatarsInSingleChat),
-        typeof(bool),
+    public static readonly BindableProperty InputActionsProperty = BindableProperty.Create(
+        nameof(InputActions),
+        typeof(IList<ChatInputAction>),
         typeof(ChatView),
-        false,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        null,
+        propertyChanged: (b, _, _) => ((ChatView)b).SyncInputActionsVisibility());
 
-    public bool ShowAvatarsInSingleChat
+    /// <summary>Consumer-supplied input-bar actions surfaced via the overflow button.</summary>
+    public IList<ChatInputAction>? InputActions
     {
-        get => (bool)GetValue(ShowAvatarsInSingleChatProperty);
-        set => SetValue(ShowAvatarsInSingleChatProperty, value);
+        get => (IList<ChatInputAction>?)GetValue(InputActionsProperty);
+        set => SetValue(InputActionsProperty, value);
     }
 
-    // Bubble colors
+    public static readonly BindableProperty CustomBubbleActionsProperty = BindableProperty.Create(
+        nameof(CustomBubbleActions),
+        typeof(IList<ChatBubbleAction>),
+        typeof(ChatView),
+        null);
+
+    /// <summary>Consumer-supplied bubble actions appended to the built-in action set.</summary>
+    public IList<ChatBubbleAction>? CustomBubbleActions
+    {
+        get => (IList<ChatBubbleAction>?)GetValue(CustomBubbleActionsProperty);
+        set => SetValue(CustomBubbleActionsProperty, value);
+    }
+
+    // ------- bubble colors -------
+
     public static readonly BindableProperty MyBubbleColorProperty = BindableProperty.Create(
-        nameof(MyBubbleColor),
-        typeof(Color),
-        typeof(ChatView),
-        Color.FromArgb("#DCF8C6"));
+        nameof(MyBubbleColor), typeof(Color), typeof(ChatView), Color.FromArgb("#DCF8C6"),
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public Color MyBubbleColor
     {
@@ -69,10 +94,8 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty MyTextColorProperty = BindableProperty.Create(
-        nameof(MyTextColor),
-        typeof(Color),
-        typeof(ChatView),
-        Colors.Black);
+        nameof(MyTextColor), typeof(Color), typeof(ChatView), Colors.Black,
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public Color MyTextColor
     {
@@ -81,10 +104,8 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty OtherBubbleColorProperty = BindableProperty.Create(
-        nameof(OtherBubbleColor),
-        typeof(Color),
-        typeof(ChatView),
-        Colors.White);
+        nameof(OtherBubbleColor), typeof(Color), typeof(ChatView), Colors.White,
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public Color OtherBubbleColor
     {
@@ -93,10 +114,8 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty OtherTextColorProperty = BindableProperty.Create(
-        nameof(OtherTextColor),
-        typeof(Color),
-        typeof(ChatView),
-        Colors.Black);
+        nameof(OtherTextColor), typeof(Color), typeof(ChatView), Colors.Black,
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public Color OtherTextColor
     {
@@ -104,12 +123,20 @@ public partial class ChatView
         set => SetValue(OtherTextColorProperty, value);
     }
 
-    // Input bar
+    public static readonly BindableProperty ChatBackgroundColorProperty = BindableProperty.Create(
+        nameof(ChatBackgroundColor), typeof(Color), typeof(ChatView), null,
+        propertyChanged: (b, _, n) => ((ChatView)b).messageArea.BackgroundColor = n as Color);
+
+    public Color? ChatBackgroundColor
+    {
+        get => (Color?)GetValue(ChatBackgroundColorProperty);
+        set => SetValue(ChatBackgroundColorProperty, value);
+    }
+
+    // ------- input bar -------
+
     public static readonly BindableProperty PlaceholderTextProperty = BindableProperty.Create(
-        nameof(PlaceholderText),
-        typeof(string),
-        typeof(ChatView),
-        "Type a message...",
+        nameof(PlaceholderText), typeof(string), typeof(ChatView), "Type a message...",
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.PlaceholderText = (string)n);
 
     public string PlaceholderText
@@ -119,10 +146,7 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty SendButtonTextProperty = BindableProperty.Create(
-        nameof(SendButtonText),
-        typeof(string),
-        typeof(ChatView),
-        "Send",
+        nameof(SendButtonText), typeof(string), typeof(ChatView), "Send",
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonText = (string)n);
 
     public string SendButtonText
@@ -131,268 +155,8 @@ public partial class ChatView
         set => SetValue(SendButtonTextProperty, value);
     }
 
-    public static readonly BindableProperty IsInputBarVisibleProperty = BindableProperty.Create(
-        nameof(IsInputBarVisible),
-        typeof(bool),
-        typeof(ChatView),
-        true,
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.IsVisible = (bool)n);
-
-    public bool IsInputBarVisible
-    {
-        get => (bool)GetValue(IsInputBarVisibleProperty);
-        set => SetValue(IsInputBarVisibleProperty, value);
-    }
-
-    // Typing
-    public static readonly BindableProperty ShowTypingIndicatorProperty = BindableProperty.Create(
-        nameof(ShowTypingIndicator),
-        typeof(bool),
-        typeof(ChatView),
-        true,
-        propertyChanged: (b, _, _) => ((ChatView)b).SyncTypingBubbles());
-
-    public bool ShowTypingIndicator
-    {
-        get => (bool)GetValue(ShowTypingIndicatorProperty);
-        set => SetValue(ShowTypingIndicatorProperty, value);
-    }
-
-    public static readonly BindableProperty TypingParticipantsProperty = BindableProperty.Create(
-        nameof(TypingParticipants),
-        typeof(IList<ChatParticipant>),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, _) => ((ChatView)b).OnTypingParticipantsChanged());
-
-    public IList<ChatParticipant>? TypingParticipants
-    {
-        get => (IList<ChatParticipant>?)GetValue(TypingParticipantsProperty);
-        set => SetValue(TypingParticipantsProperty, value);
-    }
-
-    // Commands
-    public static readonly BindableProperty LoadMoreCommandProperty = BindableProperty.Create(
-        nameof(LoadMoreCommand),
-        typeof(ICommand),
-        typeof(ChatView));
-
-    public ICommand? LoadMoreCommand
-    {
-        get => (ICommand?)GetValue(LoadMoreCommandProperty);
-        set => SetValue(LoadMoreCommandProperty, value);
-    }
-
-    public static readonly BindableProperty SendCommandProperty = BindableProperty.Create(
-        nameof(SendCommand),
-        typeof(ICommand),
-        typeof(ChatView));
-
-    public ICommand? SendCommand
-    {
-        get => (ICommand?)GetValue(SendCommandProperty);
-        set => SetValue(SendCommandProperty, value);
-    }
-
-    public static readonly BindableProperty AttachImageCommandProperty = BindableProperty.Create(
-        nameof(AttachImageCommand),
-        typeof(ICommand),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.ShowAttachButton = n is not null);
-
-    public ICommand? AttachImageCommand
-    {
-        get => (ICommand?)GetValue(AttachImageCommandProperty);
-        set => SetValue(AttachImageCommandProperty, value);
-    }
-
-    public static readonly BindableProperty MessageTappedCommandProperty = BindableProperty.Create(
-        nameof(MessageTappedCommand),
-        typeof(ICommand),
-        typeof(ChatView));
-
-    public ICommand? MessageTappedCommand
-    {
-        get => (ICommand?)GetValue(MessageTappedCommandProperty);
-        set => SetValue(MessageTappedCommandProperty, value);
-    }
-
-    // Scroll behavior
-    public static readonly BindableProperty ScrollToFirstUnreadProperty = BindableProperty.Create(
-        nameof(ScrollToFirstUnread),
-        typeof(bool),
-        typeof(ChatView),
-        false);
-
-    public bool ScrollToFirstUnread
-    {
-        get => (bool)GetValue(ScrollToFirstUnreadProperty);
-        set => SetValue(ScrollToFirstUnreadProperty, value);
-    }
-
-    public static readonly BindableProperty FirstUnreadMessageIdProperty = BindableProperty.Create(
-        nameof(FirstUnreadMessageId),
-        typeof(string),
-        typeof(ChatView));
-
-    public string? FirstUnreadMessageId
-    {
-        get => (string?)GetValue(FirstUnreadMessageIdProperty);
-        set => SetValue(FirstUnreadMessageIdProperty, value);
-    }
-
-    // Message template
-    public static readonly BindableProperty MessageTemplateProperty = BindableProperty.Create(
-        nameof(MessageTemplate),
-        typeof(DataTemplate),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
-
-    public DataTemplate? MessageTemplate
-    {
-        get => (DataTemplate?)GetValue(MessageTemplateProperty);
-        set => SetValue(MessageTemplateProperty, value);
-    }
-
-    public static readonly BindableProperty MessageTemplateSelectorProperty = BindableProperty.Create(
-        nameof(MessageTemplateSelector),
-        typeof(DataTemplateSelector),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
-
-    public DataTemplateSelector? MessageTemplateSelector
-    {
-        get => (DataTemplateSelector?)GetValue(MessageTemplateSelectorProperty);
-        set => SetValue(MessageTemplateSelectorProperty, value);
-    }
-
-    // Tools
-    public static readonly BindableProperty ToolItemsProperty = BindableProperty.Create(
-        nameof(ToolItems),
-        typeof(IList<ChatEntryTool>),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, o, n) => ((ChatView)b).OnToolItemsChanged(o as IList<ChatEntryTool>, n as IList<ChatEntryTool>));
-
-    public IList<ChatEntryTool>? ToolItems
-    {
-        get => (IList<ChatEntryTool>?)GetValue(ToolItemsProperty);
-        set => SetValue(ToolItemsProperty, value);
-    }
-
-    public static readonly BindableProperty ToolsIconProperty = BindableProperty.Create(
-        nameof(ToolsIcon),
-        typeof(ImageSource),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, n) =>
-        {
-            var cv = (ChatView)b;
-            cv.toolsMenu.Icon = n as ImageSource;
-            cv.inputBar.ToolsButtonIcon = n as ImageSource;
-        });
-
-    public ImageSource? ToolsIcon
-    {
-        get => (ImageSource?)GetValue(ToolsIconProperty);
-        set => SetValue(ToolsIconProperty, value);
-    }
-
-    public static readonly BindableProperty ToolsTextProperty = BindableProperty.Create(
-        nameof(ToolsText),
-        typeof(string),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, n) =>
-        {
-            var cv = (ChatView)b;
-            cv.toolsMenu.Text = n as string;
-            cv.inputBar.ToolsButtonText = n as string;
-        });
-
-    public string? ToolsText
-    {
-        get => (string?)GetValue(ToolsTextProperty);
-        set => SetValue(ToolsTextProperty, value);
-    }
-
-    public static readonly BindableProperty ToolsFabBackgroundColorProperty = BindableProperty.Create(
-        nameof(ToolsFabBackgroundColor),
-        typeof(Color),
-        typeof(ChatView),
-        Color.FromArgb("#007AFF"),
-        propertyChanged: (b, _, n) =>
-        {
-            if (n is Color c)
-            {
-                var cv = (ChatView)b;
-                cv.toolsMenu.FabBackgroundColor = c;
-                cv.inputBar.ToolsButtonBackgroundColor = c;
-            }
-        });
-
-    public Color? ToolsFabBackgroundColor
-    {
-        get => (Color?)GetValue(ToolsFabBackgroundColorProperty);
-        set => SetValue(ToolsFabBackgroundColorProperty, value);
-    }
-
-    // Bubble Tools
-    public static readonly BindableProperty BubbleToolItemsProperty = BindableProperty.Create(
-        nameof(BubbleToolItems),
-        typeof(IList<ChatBubbleTool>),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, _) => ((ChatView)b).SyncBubbleToolsButtonVisibility());
-
-    /// <summary>
-    /// Bubble tools shown on received (other user) messages.
-    /// </summary>
-    public IList<ChatBubbleTool>? BubbleToolItems
-    {
-        get => (IList<ChatBubbleTool>?)GetValue(BubbleToolItemsProperty);
-        set => SetValue(BubbleToolItemsProperty, value);
-    }
-
-    public static readonly BindableProperty MyBubbleToolItemsProperty = BindableProperty.Create(
-        nameof(MyBubbleToolItems),
-        typeof(IList<ChatBubbleTool>),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, _) => ((ChatView)b).SyncBubbleToolsButtonVisibility());
-
-    /// <summary>
-    /// Bubble tools shown on the local user's own messages.
-    /// </summary>
-    public IList<ChatBubbleTool>? MyBubbleToolItems
-    {
-        get => (IList<ChatBubbleTool>?)GetValue(MyBubbleToolItemsProperty);
-        set => SetValue(MyBubbleToolItemsProperty, value);
-    }
-
-    // Chat background
-    public static readonly BindableProperty ChatBackgroundColorProperty = BindableProperty.Create(
-        nameof(ChatBackgroundColor),
-        typeof(Color),
-        typeof(ChatView),
-        null,
-        propertyChanged: (b, _, n) => ((ChatView)b).OnChatBackgroundColorChanged(n as Color));
-
-    public Color? ChatBackgroundColor
-    {
-        get => (Color?)GetValue(ChatBackgroundColorProperty);
-        set => SetValue(ChatBackgroundColorProperty, value);
-    }
-
-    // Send button styling
     public static readonly BindableProperty SendButtonBackgroundColorProperty = BindableProperty.Create(
-        nameof(SendButtonBackgroundColor),
-        typeof(Color),
-        typeof(ChatView),
-        Color.FromArgb("#007AFF"),
+        nameof(SendButtonBackgroundColor), typeof(Color), typeof(ChatView), Color.FromArgb("#007AFF"),
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonBackgroundColor = (Color)n);
 
     public Color SendButtonBackgroundColor
@@ -402,10 +166,7 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty SendButtonTextColorProperty = BindableProperty.Create(
-        nameof(SendButtonTextColor),
-        typeof(Color),
-        typeof(ChatView),
-        Colors.White,
+        nameof(SendButtonTextColor), typeof(Color), typeof(ChatView), Colors.White,
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonTextColor = (Color)n);
 
     public Color SendButtonTextColor
@@ -414,12 +175,8 @@ public partial class ChatView
         set => SetValue(SendButtonTextColorProperty, value);
     }
 
-    // Input bar styling
     public static readonly BindableProperty InputBarBackgroundColorProperty = BindableProperty.Create(
-        nameof(InputBarBackgroundColor),
-        typeof(Color),
-        typeof(ChatView),
-        Color.FromArgb("#F5F5F5"),
+        nameof(InputBarBackgroundColor), typeof(Color), typeof(ChatView), Color.FromArgb("#F5F5F5"),
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.BarBackgroundColor = (Color)n);
 
     public Color InputBarBackgroundColor
@@ -429,10 +186,7 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty InputBarBorderColorProperty = BindableProperty.Create(
-        nameof(InputBarBorderColor),
-        typeof(Color),
-        typeof(ChatView),
-        Color.FromArgb("#E0E0E0"),
+        nameof(InputBarBorderColor), typeof(Color), typeof(ChatView), Color.FromArgb("#E0E0E0"),
         propertyChanged: (b, _, n) => ((ChatView)b).inputBar.BarBorderColor = (Color)n);
 
     public Color InputBarBorderColor
@@ -441,12 +195,54 @@ public partial class ChatView
         set => SetValue(InputBarBorderColorProperty, value);
     }
 
-    // Font properties
+    public static readonly BindableProperty IsInputBarVisibleProperty = BindableProperty.Create(
+        nameof(IsInputBarVisible), typeof(bool), typeof(ChatView), true,
+        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.IsVisible = (bool)n);
+
+    public bool IsInputBarVisible
+    {
+        get => (bool)GetValue(IsInputBarVisibleProperty);
+        set => SetValue(IsInputBarVisibleProperty, value);
+    }
+
+    // ------- typing -------
+
+    public static readonly BindableProperty ShowTypingIndicatorProperty = BindableProperty.Create(
+        nameof(ShowTypingIndicator), typeof(bool), typeof(ChatView), true,
+        propertyChanged: (b, _, _) => ((ChatView)b).SyncTypingBubbles());
+
+    public bool ShowTypingIndicator
+    {
+        get => (bool)GetValue(ShowTypingIndicatorProperty);
+        set => SetValue(ShowTypingIndicatorProperty, value);
+    }
+
+    // ------- message template -------
+
+    public static readonly BindableProperty MessageTemplateProperty = BindableProperty.Create(
+        nameof(MessageTemplate), typeof(DataTemplate), typeof(ChatView), null,
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+
+    public DataTemplate? MessageTemplate
+    {
+        get => (DataTemplate?)GetValue(MessageTemplateProperty);
+        set => SetValue(MessageTemplateProperty, value);
+    }
+
+    public static readonly BindableProperty MessageTemplateSelectorProperty = BindableProperty.Create(
+        nameof(MessageTemplateSelector), typeof(DataTemplateSelector), typeof(ChatView), null,
+        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+
+    public DataTemplateSelector? MessageTemplateSelector
+    {
+        get => (DataTemplateSelector?)GetValue(MessageTemplateSelectorProperty);
+        set => SetValue(MessageTemplateSelectorProperty, value);
+    }
+
+    // ------- fonts / shape -------
+
     public static readonly BindableProperty BubbleFontSizeProperty = BindableProperty.Create(
-        nameof(BubbleFontSize),
-        typeof(double),
-        typeof(ChatView),
-        15.0,
+        nameof(BubbleFontSize), typeof(double), typeof(ChatView), 15.0,
         propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public double BubbleFontSize
@@ -456,10 +252,7 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty BubbleFontFamilyProperty = BindableProperty.Create(
-        nameof(BubbleFontFamily),
-        typeof(string),
-        typeof(ChatView),
-        null,
+        nameof(BubbleFontFamily), typeof(string), typeof(ChatView), null,
         propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public string? BubbleFontFamily
@@ -469,10 +262,7 @@ public partial class ChatView
     }
 
     public static readonly BindableProperty TimestampFontSizeProperty = BindableProperty.Create(
-        nameof(TimestampFontSize),
-        typeof(double),
-        typeof(ChatView),
-        11.0,
+        nameof(TimestampFontSize), typeof(double), typeof(ChatView), 11.0,
         propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public double TimestampFontSize
@@ -481,12 +271,8 @@ public partial class ChatView
         set => SetValue(TimestampFontSizeProperty, value);
     }
 
-    // Bubble corner radius
     public static readonly BindableProperty BubbleCornerRadiusProperty = BindableProperty.Create(
-        nameof(BubbleCornerRadius),
-        typeof(double),
-        typeof(ChatView),
-        18.0,
+        nameof(BubbleCornerRadius), typeof(double), typeof(ChatView), 18.0,
         propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
 
     public double BubbleCornerRadius
@@ -495,12 +281,10 @@ public partial class ChatView
         set => SetValue(BubbleCornerRadiusProperty, value);
     }
 
-    // Haptic
+    // ------- behavior -------
+
     public static readonly BindableProperty UseFeedbackProperty = BindableProperty.Create(
-        nameof(UseFeedback),
-        typeof(bool),
-        typeof(ChatView),
-        true);
+        nameof(UseFeedback), typeof(bool), typeof(ChatView), true);
 
     public bool UseFeedback
     {
@@ -509,19 +293,24 @@ public partial class ChatView
     }
 
     /// <summary>
-    /// When true, the chat view automatically pads its bottom edge by the on-screen
-    /// keyboard height so the input bar is never covered. Android already resizes
-    /// via WindowSoftInputMode.AdjustResize, so this property only affects iOS.
+    /// When true, the chat view pads its bottom edge by the on-screen keyboard height so the
+    /// input bar is never covered. iOS only (Android resizes via WindowSoftInputMode).
     /// </summary>
     public static readonly BindableProperty AdjustForKeyboardProperty = BindableProperty.Create(
-        nameof(AdjustForKeyboard),
-        typeof(bool),
-        typeof(ChatView),
-        true);
+        nameof(AdjustForKeyboard), typeof(bool), typeof(ChatView), true);
 
     public bool AdjustForKeyboard
     {
         get => (bool)GetValue(AdjustForKeyboardProperty);
         set => SetValue(AdjustForKeyboardProperty, value);
+    }
+
+    public static readonly BindableProperty ScrollToFirstUnreadProperty = BindableProperty.Create(
+        nameof(ScrollToFirstUnread), typeof(bool), typeof(ChatView), false);
+
+    public bool ScrollToFirstUnread
+    {
+        get => (bool)GetValue(ScrollToFirstUnreadProperty);
+        set => SetValue(ScrollToFirstUnreadProperty, value);
     }
 }

@@ -412,113 +412,96 @@ An inline image editor with cropping, rotation, freehand drawing, line and arrow
 
 ### ChatView
 
-A modern chat UI control with message bubbles, typing indicators, load-more pagination, acknowledgement reactions, bubble tools, custom message templates, and a configurable input bar. Supports single-person and multi-person conversations with per-participant colors and avatars.
+> **v1 beta** — the API may still change.
+
+A modern, **provider-driven** chat UI control with message bubbles, typing indicators, cursor-based load-more paging, reactions, read receipts, a markdown composition toolbar, image attachments, and custom message templates. The control is *styles + layout only* — all data, lifecycle, permissions, and real-time behavior live behind an `IChatSessionProvider` you implement (the same integration pattern as the Scheduler control). You give the control a `Provider` and a `SessionId`; it resolves an `IChatSession`, subscribes to its events, and renders.
 
 ![ChatView](assets/chat1.png)
 
 ```xml
-<shiny:ChatView Messages="{Binding Messages}"
-                Participants="{Binding Participants}"
-                IsMultiPerson="True"
-                TypingParticipants="{Binding TypingParticipants}"
-                SendCommand="{Binding SendCommand}"
-                AttachImageCommand="{Binding AttachImageCommand}"
-                LoadMoreCommand="{Binding LoadMoreCommand}"
+<shiny:ChatView Provider="{Binding Provider}"
+                SessionId="{Binding SessionId}"
                 MyBubbleColor="#DCF8C6"
                 OtherBubbleColor="White"
                 PlaceholderText="Type a message..." />
 ```
 
+```csharp
+public interface IChatSessionProvider
+{
+    Task<IChatSession> CreateSessionAsync(string[] userIds, CancellationToken ct = default);
+    Task<IChatSession> GetSessionAsync(string sessionId, CancellationToken ct = default); // throws ChatSessionException
+}
+
+// IChatSession (IAsyncDisposable) exposes: Info, CurrentUserId, GetMessagesAsync (cursor paging),
+// SendMessageAsync/ResendMessageAsync/EditMessageAsync/DeleteMessageAsync, ReactToMessageAsync,
+// MarkReadAsync, ToggleTypingAsync, InviteUserAsync, LeaveAsync, RenameAsync, and live events
+// (MessageReceived, MessageUpdated, MessageDeleted, UserTyping, UserJoined/Left, SessionUpdated, ConnectionStateChanged).
+```
+
 | Property | Type | Default | Description |
 |---|---|---|---|
-| Messages | IList\<ChatMessage\> | null | Bindable message collection (supports INotifyCollectionChanged) |
-| Participants | IList\<ChatParticipant\> | null | Participant info for avatar/color lookup |
-| IsMultiPerson | bool | false | Show avatars and names for other participants |
-| ShowAvatarsInSingleChat | bool | false | Force avatars even in single-person mode |
+| Provider | IChatSessionProvider? | null | The integration provider |
+| SessionId | string? | null | Session to resolve via `GetSessionAsync` |
+| PageSize | int | 30 | Messages fetched per page |
+| OpenImagesInViewer | bool | true | Tapping an image bubble opens the built-in ImageViewer |
 | MyBubbleColor | Color | #DCF8C6 | Local user bubble color |
 | MyTextColor | Color | Black | Local user text color |
-| OtherBubbleColor | Color | White | Default other-user bubble color |
+| OtherBubbleColor | Color | White | Default other-user bubble color (overridden by user's BubbleColor) |
 | OtherTextColor | Color | Black | Other-user text color |
 | ChatBackgroundColor | Color? | null | Background color for the messages area |
-| BubbleFontSize | double | 15 | Font size for bubble text |
-| BubbleFontFamily | string? | null | Font family for bubble text |
-| TimestampFontSize | double | 11 | Font size for timestamps |
-| BubbleCornerRadius | double | 18 | Corner radius for bubbles (tail stays at 4) |
+| BubbleFontSize | double | 15 | Font size for bubble text (MAUI) |
+| BubbleFontFamily | string? | null | Font family for bubble text (MAUI) |
+| TimestampFontSize | double | 11 | Font size for timestamps (MAUI) |
+| BubbleCornerRadius | double | 18 | Corner radius for bubbles (tail stays at 4) (MAUI) |
 | PlaceholderText | string | "Type a message..." | Input placeholder |
 | SendButtonText | string | "Send" | Send button label |
-| SendButtonBackgroundColor | Color | #007AFF | Send button background color |
-| SendButtonTextColor | Color | White | Send button text color |
-| InputBarBackgroundColor | Color | #F5F5F5 | Input bar background color |
-| InputBarBorderColor | Color | #E0E0E0 | Input bar top border color |
-| IsInputBarVisible | bool | true | Show/hide the input bar |
-| ShowTypingIndicator | bool | true | Enable typing notifications |
-| TypingParticipants | IList\<ChatParticipant\> | null | Currently typing participants |
-| ScrollToFirstUnread | bool | false | Scroll to first unread instead of end |
-| FirstUnreadMessageId | string? | null | ID of the first unread message |
-| ToolItems | IList\<ChatEntryTool\> | null | Input bar tools FAB menu (MAUI only) |
-| BubbleToolItems | IList\<ChatBubbleTool\> | null | Bubble tools for received (other user) messages (MAUI only) |
-| MyBubbleToolItems | IList\<ChatBubbleTool\> | null | Bubble tools for the local user's own messages (MAUI only) |
+| IsInputBarVisible | bool | true | Show/hide the input bar (set false for read-only chats) |
+| ShowTypingIndicator | bool | true | Enable typing indicators |
+| ScrollToFirstUnread | bool | false | Anchor initial scroll at the first unread instead of the end |
+| InputActions | IList\<ChatInputAction\> | [] | Custom input-bar actions (MAUI only) |
+| CustomBubbleActions | IList\<ChatBubbleAction\> | [] | Custom bubble actions appended to the permission-driven set (MAUI only) |
 | MessageTemplate | DataTemplate? | null | Single template for all message content (MAUI only) |
 | MessageTemplateSelector | DataTemplateSelector? | null | Per-type template selector (MAUI only) |
 | UseFeedback | bool | true | Haptic feedback on interactions (MAUI only) |
+| AdjustForKeyboard | bool | true | iOS keyboard padding (set false inside a FloatingPanel) (MAUI only) |
 
-**Commands:** `SendCommand` (text string), `AttachImageCommand`, `LoadMoreCommand`, `MessageTappedCommand` (ChatMessage)
+**Methods (MAUI):** `ScrollToEnd(bool animate)`, `ScrollToMessage(string messageId, bool animate)`, `SubmitEntry()`, `EntryText` (get/set), `MessageTapped` event (non-image bubble taps).
 
-**Methods (MAUI):** `ScrollToEnd(bool animate)`, `ScrollToMessage(string messageId, bool animate)`, `SubmitEntry()`, `EntryText` (get/set)
+**Permissions:** every action affordance is derived from `ChatSessionPermissions` on `ChatSessionInfo` + ownership — `CanSendMessages`, `CanEditMessages`, `CanDeleteMessages`, `CanReactToMessages`, `CanInviteUsers`, `CanLeaveSession`, `CanChangeSessionName`, `CanSendImages`. `MessageBodyPermissions` drives the markdown composition toolbar (Bold/Italics/Underline/Strikethrough/Codeblocks/Links).
 
-**Tool Base Classes (MAUI only):**
+**Send results:** sends are optimistic. A transient failure → `MessageStatus.Failed` + retry (`ResendMessageAsync`); a provider rejection (`ChatSendRejectedException`) → `MessageStatus.Rejected` + reason, no retry. Validation (size, image count, content policy) lives in the provider, not the control.
 
-| Class | Purpose |
-|---|---|
-| `ChatEntryTool` | Base for input bar tools needing ChatView access (`ChatView` property auto-populated). Non-abstract — use directly with `Command` binding or subclass for self-contained tools. |
-| `ChatBubbleTool` | Base for bubble tools acting on a message (`Message` property auto-populated). Non-abstract — use directly with `Command` binding or subclass. |
-| `CopyBubbleTool` | Built-in: copies message text to clipboard |
-| `TextToSpeechBubbleTool` | Built-in: reads message aloud (requires `Shiny.Maui.Controls.SpeechAddins`) |
-| `SpeechToTextTool` | Built-in: voice input for chat entry (requires `Shiny.Maui.Controls.SpeechAddins`) |
-| `PhotoGalleryEntryTool` | Built-in: opens device photo gallery via MediaPicker, fires `AttachImageCommand` with file path |
-| `TakePhotoEntryTool` | Built-in: opens device camera via MediaPicker, fires `AttachImageCommand` with file path |
-| `AcknowledgementBubbleTool` | Built-in: single-tap toggle for a specific reaction emoji (e.g. 👍, 👎). Set `Glyph` property. |
-| `AcknowledgementSelectorBubbleTool` | Built-in: opens action sheet with 12 common emoji reactions to choose from |
+**Custom actions (MAUI):** the old `ChatEntryTool`/`ChatBubbleTool` FAB tool tree is replaced by permission-driven built-in actions (react/edit/delete/copy) plus two lightweight hooks — `ChatInputAction` (input bar) and `ChatBubbleAction` (bubble menu). `SpeechToTextTool : ChatInputAction` and `TextToSpeechBubbleTool : ChatBubbleAction` ship in `Shiny.Maui.Controls.SpeechAddins`.
 
-```csharp
-// Use ChatEntryTool directly with a Command binding
-// <shiny:ChatEntryTool Text="Camera" Command="{Binding TakePhotoCommand}" />
-
-// Or subclass for self-contained tools
-public class QuickReplyTool : ChatEntryTool
-{
-    public QuickReplyTool() { Text = "Quick Reply"; Clicked += (s, e) => { ChatView?.EntryText = "Thanks!"; ChatView?.SubmitEntry(); }; }
-}
-
-// Use ChatBubbleTool directly — Command receives AcknowledgementChangedContext or ChatMessage via CommandParameter
-// <shiny:ChatBubbleTool Text="Translate" Command="{Binding TranslateCommand}" />
-
-// Or subclass for self-contained tools
-public class TranslateTool : ChatBubbleTool
-{
-    public TranslateTool() { Text = "Translate"; Clicked += async (s, e) => { if (Message != null) { /* translate Message.Text */ } }; }
-}
-
-// Built-in acknowledgement tools
-// <shiny:AcknowledgementBubbleTool Glyph="👍" Command="{Binding AckCommand}" />
-// <shiny:AcknowledgementSelectorBubbleTool Command="{Binding AckCommand}" />
+```xml
+<shiny:ChatView Provider="{Binding Provider}" SessionId="{Binding SessionId}">
+    <shiny:ChatView.InputActions>
+        <speech:SpeechToTextTool AutoSend="False" SilenceTimeout="00:00:03" />
+    </shiny:ChatView.InputActions>
+    <shiny:ChatView.CustomBubbleActions>
+        <speech:TextToSpeechBubbleTool />
+    </shiny:ChatView.CustomBubbleActions>
+</shiny:ChatView>
 ```
 
 **Features:**
-- Chat bubbles with left/right alignment and customizable colors per participant
+- Provider-driven: bind a `Provider` + `SessionId`, implement the rest server-side
+- Chat bubbles with left/right alignment (by `CurrentUserId`) and per-user colors/avatars
 - Visual grouping by sender and minute; timestamps on last message in each group
-- Multi-person: avatar (initials or image) and name on first message in each group
-- Typing indicators with animated dots, scroll-aware toast pill
-- Acknowledgement reactions (emoji badges grouped by glyph with count)
-- Bubble tools: per-message ⋮ menu with built-in and custom actions
-- Input bar tools: FAB menu for camera, voice, custom actions
-- Auto-link detection in text messages
-- Image messages (text and image are mutually exclusive)
-- DateSent pending state (null = pending/offline, renders at 50% opacity until server confirmation)
-- Smart scrolling with unread message pill
-- Load-more pagination (auto-trigger on MAUI, button on Blazor)
-- Custom message templates for action buttons, cards, or rich content
+- Typing indicators with animated dots and a scroll-aware toast pill (debounced + auto-expiring)
+- Reactions (emoji badges grouped by glyph), gated by `CanReactToMessages` + `PermittedEmojis`
+- Per-user read receipts; per-message edit/delete gated by permission + ownership
+- Optimistic send with `Sending`/`Failed`/`Rejected` states and retry
+- Markdown composition toolbar + inline bubble rendering (self-contained, no Markdown-package dependency)
+- Image attachments from gallery or camera (camera shown only where the platform supports capture); tap an image to open the ImageViewer
+- Cursor-based load-more paging (stable under live inserts)
+- Connection banner that disables input while offline/reconnecting
+- Custom message templates via `Identifier`/`Metadata` discriminator
 - Entire input bar can be hidden for read-only use
+
+<!-- TODO: capture screenshots for chatview (provider, markdown toolbar, attachment picker) -->
+
 
 ### ColorPicker
 

@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
@@ -7,266 +7,651 @@ namespace Shiny.Blazor.Controls.Chat;
 
 public partial class ChatView : IAsyncDisposable
 {
-    static readonly Regex UrlRegex = new(
-        @"(https?://[^\s]+|www\.[^\s]+)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] DefaultEmojis =
+        ["\U0001F44D", "\U0001F44E", "❤️", "\U0001F602", "\U0001F62E", "\U0001F622",
+         "\U0001F621", "\U0001F525", "\U0001F44F", "\U0001F64F", "\U0001F4AF", "\U0001F389"];
+
+    const long MaxImageBytes = 20 * 1024 * 1024;
+    static readonly TimeSpan TypingExpiry = TimeSpan.FromSeconds(6);
+    static readonly TimeSpan TypingOutIdle = TimeSpan.FromSeconds(3);
 
     IJSObjectReference? module;
     DotNetObjectReference<ChatView>? selfRef;
-    ElementReference rootEl;
     ElementReference messagesEl;
     ElementReference inputEl;
+
+    IChatSession? session;
+    string? boundSessionId;          // tracks the (provider, session) we resolved against
+    IChatSessionProvider? boundProvider;
+
+    readonly List<ChatMessage> messages = new();
+    readonly Dictionary<string, DateTimeOffset> typing = new();  // userId -> expires-at
+
     string? inputText;
-    string? typingText;
-    int lastMessageCount;
+    string? errorMessage;
+    bool loading;
+    bool loadingOlder;
+    bool hasMoreOlder;
+    bool pendingScrollToEnd;
     bool initialized;
-    bool isNearBottom = true;
-    int unreadCount;
+    bool typingSent;
 
-    // Data
-    [Parameter] public IList<ChatMessage>? Messages { get; set; }
-    [Parameter] public IList<ChatParticipant>? Participants { get; set; }
-    [Parameter] public bool IsMultiPerson { get; set; }
-    [Parameter] public bool ShowAvatarsInSingleChat { get; set; }
+    ChatConnectionState connectionState = ChatConnectionState.Connected;
 
-    // Colors (CSS strings)
+    // transient UI state
+    string? actionsMessageId;        // bubble whose action menu is open
+    string? reactionPickerMessageId; // bubble whose emoji picker is open
+    string? editingMessageId;
+    string? editText;
+
+    // image viewer
+    bool viewerOpen;
+    string? viewerSource;
+
+    Timer? typingTimer;
+
+    // ---- Parameters: provider-driven ----
+    [Parameter] public IChatSessionProvider? Provider { get; set; }
+    [Parameter] public string? SessionId { get; set; }
+    [Parameter] public int PageSize { get; set; } = 30;
+    [Parameter] public bool OpenImagesInViewer { get; set; } = true;
+
+    // ---- Parameters: styling (kept) ----
     [Parameter] public string MyBubbleColor { get; set; } = "#DCF8C6";
     [Parameter] public string MyTextColor { get; set; } = "#000000";
     [Parameter] public string OtherBubbleColor { get; set; } = "#FFFFFF";
     [Parameter] public string OtherTextColor { get; set; } = "#000000";
-
-    // Input
     [Parameter] public string PlaceholderText { get; set; } = "Type a message...";
     [Parameter] public string SendButtonText { get; set; } = "Send";
     [Parameter] public bool IsInputBarVisible { get; set; } = true;
-
-    // Typing
     [Parameter] public bool ShowTypingIndicator { get; set; } = true;
-    [Parameter] public IList<ChatParticipant>? TypingParticipants { get; set; }
 
-    // Commands/Events
-    [Parameter] public EventCallback<string> SendCommand { get; set; }
-    [Parameter] public EventCallback AttachImageCommand { get; set; }
-    [Parameter] public EventCallback LoadMoreCommand { get; set; }
-    [Parameter] public EventCallback<ChatMessage> MessageTappedCommand { get; set; }
+    // ---- derived ----
+    string CurrentUserId => session?.CurrentUserId ?? string.Empty;
+    bool IsMultiPerson => (session?.Info.Users.Length ?? 0) > 2;
+    bool IsConnected => connectionState == ChatConnectionState.Connected;
 
-    // Scroll
-    [Parameter] public bool ScrollToFirstUnread { get; set; }
-    [Parameter] public string? FirstUnreadMessageId { get; set; }
+    ChatSessionPermissions Permissions => session?.Info.Permissions ?? ChatSessionPermissions.None;
+    MessageBodyPermissions BodyPermissions => session?.Info.BodyPermissions ?? MessageBodyPermissions.None;
+
+    bool CanSend => Permissions.HasFlag(ChatSessionPermissions.CanSendMessages) && IsConnected;
+    bool CanSendImages => Permissions.HasFlag(ChatSessionPermissions.CanSendImages) && IsConnected;
+    bool CanReact => Permissions.HasFlag(ChatSessionPermissions.CanReactToMessages);
+    bool CanEdit => Permissions.HasFlag(ChatSessionPermissions.CanEditMessages);
+    bool CanDelete => Permissions.HasFlag(ChatSessionPermissions.CanDeleteMessages);
+
+    string[] ReactionEmojis => session?.Info.PermittedEmojis ?? DefaultEmojis;
+
+    bool IsMine(ChatMessage m) => session is not null && m.SenderId == session.CurrentUserId;
+    ChatSessionUserInfo? GetUser(string userId) => session?.Info.Users.FirstOrDefault(u => u.UserId == userId);
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!ReferenceEquals(Provider, boundProvider) || SessionId != boundSessionId)
+        {
+            await TeardownSessionAsync();
+
+            boundProvider = Provider;
+            boundSessionId = SessionId;
+
+            if (Provider is not null && !string.IsNullOrEmpty(SessionId))
+                await InitSessionAsync(Provider, SessionId);
+        }
+    }
+
+
+    async Task InitSessionAsync(IChatSessionProvider provider, string sessionId)
+    {
+        loading = true;
+        errorMessage = null;
+        StateHasChanged();
+        try
+        {
+            session = await provider.GetSessionAsync(sessionId);
+            Subscribe(session);
+            connectionState = ChatConnectionState.Connected;
+
+            var page = await session.GetMessagesAsync(null, MessagePageDirection.Older, PageSize);
+            messages.Clear();
+            messages.AddRange(page.Messages.OrderBy(m => m.Timestamp));
+            hasMoreOlder = page.HasMore;
+            pendingScrollToEnd = true;
+
+            EnsureTypingTimer();
+        }
+        catch (ChatSessionException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    async Task TeardownSessionAsync()
+    {
+        typingTimer?.Dispose();
+        typingTimer = null;
+        typing.Clear();
+
+        if (session is not null)
+        {
+            Unsubscribe(session);
+            try { await session.DisposeAsync(); } catch { }
+            session = null;
+        }
+
+        messages.Clear();
+        hasMoreOlder = false;
+        errorMessage = null;
+        typingSent = false;
+        connectionState = ChatConnectionState.Connected;
+    }
+
+
+    void Subscribe(IChatSession s)
+    {
+        s.MessageReceived += OnMessageReceived;
+        s.MessageUpdated += OnMessageUpdated;
+        s.MessageDeleted += OnMessageDeleted;
+        s.UserTyping += OnUserTyping;
+        s.UserJoined += OnUserChanged;
+        s.UserLeft += OnUserChanged;
+        s.SessionUpdated += OnSessionUpdated;
+        s.ConnectionStateChanged += OnConnectionStateChanged;
+    }
+
+    void Unsubscribe(IChatSession s)
+    {
+        s.MessageReceived -= OnMessageReceived;
+        s.MessageUpdated -= OnMessageUpdated;
+        s.MessageDeleted -= OnMessageDeleted;
+        s.UserTyping -= OnUserTyping;
+        s.UserJoined -= OnUserChanged;
+        s.UserLeft -= OnUserChanged;
+        s.SessionUpdated -= OnSessionUpdated;
+        s.ConnectionStateChanged -= OnConnectionStateChanged;
+    }
+
+
+    // ---- event handlers (marshalled to the UI thread) ----
+
+    void OnMessageReceived(object? sender, ChatMessage m)
+        => _ = InvokeAsync(async () =>
+        {
+            var mine = IsMine(m);
+            var nearBottom = !mine && module is not null
+                ? await module.InvokeAsync<bool>("isNearBottom", messagesEl)
+                : true;
+
+            Merge(m);
+            if (mine || nearBottom)
+                pendingScrollToEnd = true;
+            StateHasChanged();
+        });
+
+    void OnMessageUpdated(object? sender, MessageChanged change)
+        => _ = InvokeAsync(() =>
+        {
+            // Replace by MessageId. Self read-receipts don't loop back (we never re-mark our own).
+            var idx = messages.FindIndex(x => x.MessageId == change.Message.MessageId);
+            if (idx >= 0)
+                messages[idx] = change.Message;
+            StateHasChanged();
+        });
+
+    void OnMessageDeleted(object? sender, string messageId)
+        => _ = InvokeAsync(() =>
+        {
+            messages.RemoveAll(x => x.MessageId == messageId);
+            StateHasChanged();
+        });
+
+    void OnUserTyping(object? sender, UserTypingEvent e)
+        => _ = InvokeAsync(() =>
+        {
+            if (e.UserId == CurrentUserId)
+                return;
+
+            if (e.IsTyping)
+                typing[e.UserId] = DateTimeOffset.UtcNow.Add(TypingExpiry);
+            else
+                typing.Remove(e.UserId);
+
+            StateHasChanged();
+        });
+
+    void OnUserChanged(object? sender, ChatSessionUserInfo user)
+        => _ = InvokeAsync(StateHasChanged);
+
+    void OnSessionUpdated(object? sender, ChatSessionInfo info)
+        => _ = InvokeAsync(StateHasChanged);
+
+    void OnConnectionStateChanged(object? sender, ChatConnectionState state)
+        => _ = InvokeAsync(() =>
+        {
+            connectionState = state;
+            StateHasChanged();
+        });
+
+
+    // ---- merge / reconcile ----
+
+    void Merge(ChatMessage m)
+    {
+        var idx = -1;
+        if (!string.IsNullOrEmpty(m.ClientMessageId))
+            idx = messages.FindIndex(x => x.ClientMessageId == m.ClientMessageId);
+        if (idx < 0)
+            idx = messages.FindIndex(x => x.MessageId == m.MessageId);
+
+        if (idx >= 0)
+            messages[idx] = m;
+        else
+            InsertSorted(m);
+    }
+
+    void InsertSorted(ChatMessage m)
+    {
+        var i = messages.Count - 1;
+        while (i >= 0 && messages[i].Timestamp > m.Timestamp)
+            i--;
+        messages.Insert(i + 1, m);
+    }
+
+    void ReplaceByClientId(string clientId, ChatMessage m)
+    {
+        var idx = messages.FindIndex(x => x.ClientMessageId == clientId);
+        if (idx >= 0)
+            messages[idx] = m;
+        else
+            Merge(m);
+    }
+
+    void SetStatus(string clientId, MessageStatus status, string? reason)
+    {
+        var idx = messages.FindIndex(x => x.ClientMessageId == clientId);
+        if (idx >= 0)
+            messages[idx] = messages[idx] with { Status = status, StatusReason = reason };
+    }
+
+
+    // ---- render lifecycle ----
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             module = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Shiny.Blazor.Controls/chat.js");
-
+                "import", "./_content/Shiny.Blazor.Controls/chat.js");
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", messagesEl, selfRef);
             initialized = true;
+        }
 
-            // Initial scroll
-            await PerformInitialScrollAsync();
-            lastMessageCount = Messages?.Count ?? 0;
+        if (initialized && module is not null && pendingScrollToEnd)
+        {
+            pendingScrollToEnd = false;
+            await module.InvokeVoidAsync("scrollToEnd", messagesEl, false);
         }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        UpdateTypingText();
 
-        if (!initialized || module is null)
+    // ---- paging (older) ----
+
+    [JSInvokable]
+    public Task OnScrolledToTop() => LoadOlderAsync();
+
+    async Task LoadOlderAsync()
+    {
+        if (loadingOlder || !hasMoreOlder || session is null || module is null || messages.Count == 0)
             return;
 
-        var currentCount = Messages?.Count ?? 0;
-        if (currentCount != lastMessageCount)
-        {
-            var wasAppended = currentCount > lastMessageCount;
-            lastMessageCount = currentCount;
+        loadingOlder = true;
+        StateHasChanged();
 
-            // Let the DOM update first
+        var prevHeight = await module.InvokeAsync<double>("getScrollHeight", messagesEl);
+        var oldest = messages[0].MessageId;
+        try
+        {
+            var page = await session.GetMessagesAsync(oldest, MessagePageDirection.Older, PageSize);
+            foreach (var m in page.Messages)
+            {
+                if (!messages.Any(x => x.MessageId == m.MessageId))
+                    InsertSorted(m);
+            }
+            hasMoreOlder = page.HasMore;
+        }
+        catch
+        {
+            // leave hasMoreOlder so the user can retry on next scroll
+        }
+        finally
+        {
+            loadingOlder = false;
+            StateHasChanged();
             await Task.Yield();
-
-            if (wasAppended)
-            {
-                // Check if the newest message is from the local user
-                var newest = Messages![currentCount - 1];
-
-                if (newest.IsFromMe)
-                {
-                    // Always scroll to bottom for own messages
-                    unreadCount = 0;
-                    await PerformInitialScrollAsync();
-                }
-                else
-                {
-                    isNearBottom = await module.InvokeAsync<bool>("isNearBottom", messagesEl);
-
-                    if (isNearBottom)
-                    {
-                        unreadCount = 0;
-                        await PerformInitialScrollAsync();
-                    }
-                    else
-                    {
-                        unreadCount++;
-                    }
-                }
-            }
+            await module.InvokeVoidAsync("maintainScrollPosition", messagesEl, prevHeight);
         }
     }
 
-    async Task PerformInitialScrollAsync()
-    {
-        if (module is null || Messages is not { Count: > 0 })
-            return;
 
-        if (ScrollToFirstUnread && FirstUnreadMessageId is not null)
-        {
-            var index = FindMessageIndex(FirstUnreadMessageId);
-            if (index >= 0)
-            {
-                await module.InvokeVoidAsync("scrollToMessage", messagesEl, index);
-                return;
-            }
-        }
-
-        await module.InvokeVoidAsync("scrollToEnd", messagesEl, false);
-    }
-
-    int FindMessageIndex(string messageId)
-    {
-        if (Messages is null)
-            return -1;
-
-        for (var i = 0; i < Messages.Count; i++)
-        {
-            if (Messages[i].Id == messageId)
-                return i;
-        }
-        return -1;
-    }
-
-    void UpdateTypingText()
-    {
-        if (!ShowTypingIndicator || TypingParticipants is not { Count: > 0 })
-        {
-            typingText = null;
-            return;
-        }
-
-        var p = TypingParticipants;
-        typingText = p.Count switch
-        {
-            1 => $"{p[0].DisplayName} is typing\u2026",
-            2 => $"{p[0].DisplayName}, {p[1].DisplayName} are typing\u2026",
-            3 => $"{p[0].DisplayName}, {p[1].DisplayName}, {p[2].DisplayName} are typing\u2026",
-            _ => "Multiple users are typing\u2026"
-        };
-    }
-
-    ChatParticipant? GetParticipant(string senderId)
-    {
-        if (Participants is null)
-            return null;
-
-        for (var i = 0; i < Participants.Count; i++)
-        {
-            if (Participants[i].Id == senderId)
-                return Participants[i];
-        }
-        return null;
-    }
-
-    bool ShouldShowAvatar(ChatMessage message, bool isFirstInGroup)
-    {
-        if (message.IsFromMe || !isFirstInGroup)
-            return false;
-
-        return IsMultiPerson || ShowAvatarsInSingleChat;
-    }
-
-    async Task OnSendClick()
-    {
-        await TrySendAsync();
-    }
+    // ---- sending ----
 
     async Task OnKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey)
-            await TrySendAsync();
+            await SendTextAsync();
     }
 
-    async Task TrySendAsync()
+    async Task SendTextAsync()
     {
-        var text = inputText?.Trim();
-        if (string.IsNullOrEmpty(text))
+        var body = inputText?.Trim();
+        if (string.IsNullOrEmpty(body) || session is null || !CanSend)
             return;
 
         inputText = string.Empty;
+        await StopTypingAsync();
 
-        if (SendCommand.HasDelegate)
-            await SendCommand.InvokeAsync(text);
+        var clientId = Guid.NewGuid().ToString();
+        var optimistic = new ChatMessage(
+            clientId, clientId, CurrentUserId, body, null,
+            MessageStatus.Sending, null, DateTimeOffset.UtcNow, null,
+            Array.Empty<Reaction>(), Array.Empty<ReadReceipt>());
+        messages.Add(optimistic);
+        pendingScrollToEnd = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await session.SendMessageAsync(new OutgoingMessage(body, null, clientId));
+            ReplaceByClientId(clientId, result);
+        }
+        catch (ChatSendRejectedException ex)
+        {
+            SetStatus(clientId, MessageStatus.Rejected, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(clientId, MessageStatus.Failed, ex.Message);
+        }
+        StateHasChanged();
     }
 
-    async Task OnMessageTap(ChatMessage msg)
+    async Task ResendAsync(ChatMessage m)
     {
-        if (MessageTappedCommand.HasDelegate)
-            await MessageTappedCommand.InvokeAsync(msg);
+        if (session is null || string.IsNullOrEmpty(m.ClientMessageId))
+            return;
+
+        SetStatus(m.ClientMessageId, MessageStatus.Sending, null);
+        StateHasChanged();
+        try
+        {
+            var result = await session.ResendMessageAsync(m.ClientMessageId);
+            ReplaceByClientId(m.ClientMessageId, result);
+        }
+        catch (ChatSendRejectedException ex)
+        {
+            SetStatus(m.ClientMessageId, MessageStatus.Rejected, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(m.ClientMessageId, MessageStatus.Failed, ex.Message);
+        }
+        StateHasChanged();
     }
 
-    async Task OnAttachClick()
+
+    // ---- image attachment ----
+
+    async Task OnImageSelected(InputFileChangeEventArgs e)
     {
-        if (AttachImageCommand.HasDelegate)
-            await AttachImageCommand.InvokeAsync();
+        var file = e.File;
+        if (file is null || session is null || !CanSendImages)
+            return;
+
+        byte[] bytes;
+        await using (var stream = file.OpenReadStream(MaxImageBytes))
+        await using (var ms = new MemoryStream())
+        {
+            await stream.CopyToAsync(ms);
+            bytes = ms.ToArray();
+        }
+
+        var contentType = string.IsNullOrEmpty(file.ContentType) ? "image/png" : file.ContentType;
+        var dataUrl = $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+
+        var clientId = Guid.NewGuid().ToString();
+        var optimistic = new ChatMessage(
+            clientId, clientId, CurrentUserId, null, dataUrl,
+            MessageStatus.Sending, null, DateTimeOffset.UtcNow, null,
+            Array.Empty<Reaction>(), Array.Empty<ReadReceipt>());
+        messages.Add(optimistic);
+        pendingScrollToEnd = true;
+        StateHasChanged();
+
+        // Provider owns + disposes this stream.
+        var sendStream = new MemoryStream(bytes);
+        var attachment = new OutgoingAttachment(ChatAttachmentKind.Image, sendStream, file.Name, contentType);
+        try
+        {
+            var result = await session.SendMessageAsync(new OutgoingMessage(null, attachment, clientId));
+            ReplaceByClientId(clientId, result);
+        }
+        catch (ChatSendRejectedException ex)
+        {
+            SetStatus(clientId, MessageStatus.Rejected, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            SetStatus(clientId, MessageStatus.Failed, ex.Message);
+        }
+        StateHasChanged();
     }
 
-    async Task OnLoadMoreClick()
+    void OnImageTap(ChatMessage m)
+    {
+        if (!OpenImagesInViewer || m.ImageUrl is null)
+            return;
+
+        viewerSource = m.ImageUrl;
+        viewerOpen = true;
+    }
+
+
+    // ---- reactions ----
+
+    bool HasAnyAction(ChatMessage m)
+        => (CanReact && ReactionEmojis.Length > 0)
+        || m.Body is not null
+        || (CanEdit && IsMine(m) && m.ImageUrl is null)
+        || (CanDelete && IsMine(m));
+
+    void ToggleActions(ChatMessage m)
+    {
+        actionsMessageId = actionsMessageId == m.MessageId ? null : m.MessageId;
+        reactionPickerMessageId = null;
+    }
+
+    void OpenReactionPicker(ChatMessage m)
+    {
+        reactionPickerMessageId = m.MessageId;
+        actionsMessageId = null;
+    }
+
+    async Task ToggleReactionAsync(ChatMessage m, string emoji)
+    {
+        reactionPickerMessageId = null;
+        if (session is null || !CanReact)
+            return;
+
+        var add = !m.Reactions.Any(r => r.UserId == CurrentUserId && r.Emoji == emoji);
+        try { await session.ReactToMessageAsync(m.MessageId, emoji, add); }
+        catch { /* provider re-validates; updates arrive via MessageUpdated */ }
+    }
+
+
+    // ---- edit / delete / copy ----
+
+    void BeginEdit(ChatMessage m)
+    {
+        editingMessageId = m.MessageId;
+        editText = m.Body;
+        actionsMessageId = null;
+    }
+
+    void CancelEdit()
+    {
+        editingMessageId = null;
+        editText = null;
+    }
+
+    async Task SaveEditAsync(ChatMessage m)
+    {
+        var body = editText?.Trim();
+        editingMessageId = null;
+        if (session is null || string.IsNullOrEmpty(body) || body == m.Body)
+        {
+            editText = null;
+            return;
+        }
+        editText = null;
+        try { await session.EditMessageAsync(m.MessageId, body); }
+        catch (ChatSendRejectedException ex)
+        {
+            var idx = messages.FindIndex(x => x.MessageId == m.MessageId);
+            if (idx >= 0)
+                messages[idx] = messages[idx] with { Status = MessageStatus.Rejected, StatusReason = ex.Message };
+        }
+        catch { /* surfaced via provider events */ }
+    }
+
+    async Task DeleteAsync(ChatMessage m)
+    {
+        actionsMessageId = null;
+        if (session is null)
+            return;
+        try { await session.DeleteMessageAsync(m.MessageId); }
+        catch { }
+    }
+
+    async Task CopyAsync(ChatMessage m)
+    {
+        actionsMessageId = null;
+        if (module is not null && m.Body is not null)
+            await module.InvokeVoidAsync("copyText", m.Body);
+    }
+
+
+    // ---- markdown toolbar ----
+
+    async Task ApplyMarkdownAsync(string before, string after, string placeholder)
     {
         if (module is null)
             return;
-
-        // Save scroll position before prepending
-        var prevHeight = await module.InvokeAsync<double>("getScrollHeight", messagesEl);
-
-        if (LoadMoreCommand.HasDelegate)
-            await LoadMoreCommand.InvokeAsync();
-
-        // After items prepended, maintain scroll position
-        await Task.Yield();
-        await module.InvokeVoidAsync("maintainScrollPosition", messagesEl, prevHeight);
+        inputText = await module.InvokeAsync<string>("wrapSelection", inputEl, before, after, placeholder);
     }
 
-    async Task OnNewMessagesPillClick()
+    async Task InsertLinkAsync()
     {
-        unreadCount = 0;
-        if (module is not null)
-            await module.InvokeVoidAsync("scrollToEnd", messagesEl, true);
+        if (module is null)
+            return;
+        inputText = await module.InvokeAsync<string>("insertLink", inputEl);
     }
 
-    [JSInvokable]
-    public async Task OnLoadMoreThreshold()
-    {
-        if (LoadMoreCommand.HasDelegate)
-            await LoadMoreCommand.InvokeAsync();
-    }
 
-    static string Linkify(string text)
+    // ---- typing (outgoing) ----
+
+    async Task OnInputChanged()
     {
-        return UrlRegex.Replace(text, match =>
+        if (session is null)
+            return;
+
+        if (!typingSent && !string.IsNullOrEmpty(inputText))
         {
-            var url = match.Value;
-            var href = url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                       url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                ? url
-                : "https://" + url;
-            return $"<a href=\"{System.Net.WebUtility.HtmlEncode(href)}\" target=\"_blank\" rel=\"noopener noreferrer\">{System.Net.WebUtility.HtmlEncode(url)}</a>";
-        });
+            typingSent = true;
+            try { await session.ToggleTypingAsync(true); } catch { }
+        }
+        lastInputAt = DateTimeOffset.UtcNow;
     }
+
+    DateTimeOffset lastInputAt;
+
+    async Task StopTypingAsync()
+    {
+        if (session is null || !typingSent)
+            return;
+        typingSent = false;
+        try { await session.ToggleTypingAsync(false); } catch { }
+    }
+
+
+    // ---- typing (incoming) expiry + outgoing idle timer ----
+
+    void EnsureTypingTimer()
+    {
+        typingTimer?.Dispose();
+        typingTimer = new Timer(_ => _ = InvokeAsync(TickTypingAsync), null,
+            TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    async Task TickTypingAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        var expired = typing.Where(kv => kv.Value <= now).Select(kv => kv.Key).ToList();
+        var changed = expired.Count > 0;
+        foreach (var id in expired)
+            typing.Remove(id);
+
+        if (typingSent && now - lastInputAt > TypingOutIdle)
+            await StopTypingAsync();
+
+        if (changed)
+            StateHasChanged();
+    }
+
+    string? BuildTypingText()
+    {
+        if (!ShowTypingIndicator || typing.Count == 0)
+            return null;
+
+        var names = typing.Keys
+            .Select(id => GetUser(id)?.DisplayName ?? "Someone")
+            .ToList();
+
+        return names.Count switch
+        {
+            1 => $"{names[0]} is typing…",
+            2 => $"{names[0]}, {names[1]} are typing…",
+            3 => $"{names[0]}, {names[1]}, {names[2]} are typing…",
+            _ => "Multiple people are typing…"
+        };
+    }
+
+
+    // ---- connection banner text ----
+
+    string? ConnectionBannerText => connectionState switch
+    {
+        ChatConnectionState.Reconnecting => "Reconnecting…",
+        ChatConnectionState.Offline => "You are offline",
+        _ => null
+    };
+
 
     public async ValueTask DisposeAsync()
     {
+        await TeardownSessionAsync();
+
         if (module is not null)
         {
             try { await module.InvokeVoidAsync("dispose", messagesEl); } catch { }

@@ -8,56 +8,13 @@
     Title="Chat"
     AutomationId="ChatPage">
 
-    <Grid RowDefinitions="Auto,*">
-
-        <HorizontalStackLayout Grid.Row="0" Spacing="8" Padding="12,8">
-            <Button AutomationId="SimulateIncomingButton" Text="Simulate Incoming"
-                    Command="{Binding SimulateIncomingCommand}"
-                    FontSize="12"
-                    HeightRequest="36" />
-            <Button Text="Toggle Typing"
-                    Command="{Binding ToggleTypingCommand}"
-                    FontSize="12"
-                    HeightRequest="36" />
-            <Switch IsToggled="{Binding IsMultiPerson}"
-                    VerticalOptions="Center" />
-            <Label Text="Multi-Person"
-                   VerticalOptions="Center"
-                   FontSize="12" />
-        </HorizontalStackLayout>
-
-        <shiny:ChatView AutomationId="ChatView" Grid.Row="1"
-                        Messages="{Binding Messages}"
-                        Participants="{Binding Participants}"
-                        IsMultiPerson="{Binding IsMultiPerson}"
-                        TypingParticipants="{Binding TypingParticipants}"
-                        SendCommand="{Binding SendCommand}"
-                        AttachImageCommand="{Binding AttachImageCommand}"
-                        LoadMoreCommand="{Binding LoadMoreCommand}"
-                        ToolsIcon="dotnet_bot.png"
-                        MyBubbleColor="#DCF8C6"
-                        OtherBubbleColor="White"
-                        PlaceholderText="Type a message...">
-            <shiny:ChatView.ToolItems>
-                <shiny:SpeechToTextTool AutoSend="False"
-                                        SilenceTimeout="00:00:03" />
-                <shiny:TakePhotoEntryTool />
-                <shiny:PhotoGalleryEntryTool />
-            </shiny:ChatView.ToolItems>
-            <shiny:ChatView.BubbleToolItems>
-                <shiny:CopyBubbleTool />
-                <shiny:TextToSpeechBubbleTool />
-                <shiny:AcknowledgementBubbleTool Glyph="&#x1F44D;" />
-                <shiny:AcknowledgementBubbleTool Glyph="&#x1F44E;" />
-                <shiny:AcknowledgementSelectorBubbleTool />
-                <shiny:ChatBubbleTool Text="Translate"
-                                      FabBackgroundColor="#9C27B0"
-                                      Command="{Binding TranslateCommand}" />
-            </shiny:ChatView.BubbleToolItems>
-            <shiny:ChatView.MyBubbleToolItems>
-                <shiny:CopyBubbleTool />
-            </shiny:ChatView.MyBubbleToolItems>
-        </shiny:ChatView>
-    </Grid>
+    <shiny:ChatView AutomationId="ChatView"
+                    Provider="{Binding Provider}"
+                    SessionId="{Binding SessionId}"
+                    InputActions="{Binding InputActions}"
+                    CustomBubbleActions="{Binding CustomBubbleActions}"
+                    MyBubbleColor="#DCF8C6"
+                    OtherBubbleColor="White"
+                    PlaceholderText="Type a message..." />
 
 </ContentPage>

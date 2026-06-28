@@ -5,31 +5,21 @@ using Shiny.Speech;
 namespace Shiny.Maui.Controls.SpeechAddins.Chat;
 
 /// <summary>
-/// A reusable input bar tool that listens for speech and backfills the chat entry.
-/// Shows a listening icon while recording. Optionally auto-sends on completion.
+/// A <see cref="ChatInputAction"/> that listens for speech via <see cref="ISpeechToTextService"/>
+/// and backfills the chat entry. Optionally auto-sends when recognition completes. Surfaced from the
+/// input bar's overflow actions.
 /// </summary>
-public class SpeechToTextTool : ChatEntryTool
+public class SpeechToTextTool : ChatInputAction
 {
-    CancellationTokenSource? cts;
-    bool isListening;
-    string? originalText;
-    ImageSource? originalIcon;
-
     public SpeechToTextTool()
     {
-        Text = "Voice Input";
-        FabBackgroundColor = Color.FromArgb("#4CAF50");
-        Clicked += OnClicked;
+        this.Text = "Voice Input";
     }
-
-    // ------- Configuration Properties -------
 
     public static readonly BindableProperty AutoSendProperty = BindableProperty.Create(
         nameof(AutoSend), typeof(bool), typeof(SpeechToTextTool), false);
 
-    /// <summary>
-    /// When true, automatically submits the entry text after speech recognition completes.
-    /// </summary>
+    /// <summary>When true, automatically submits the entry text after recognition completes.</summary>
     public bool AutoSend
     {
         get => (bool)GetValue(AutoSendProperty);
@@ -39,9 +29,7 @@ public class SpeechToTextTool : ChatEntryTool
     public static readonly BindableProperty SilenceTimeoutProperty = BindableProperty.Create(
         nameof(SilenceTimeout), typeof(TimeSpan), typeof(SpeechToTextTool), TimeSpan.FromSeconds(2));
 
-    /// <summary>
-    /// Duration of silence before recognition is considered complete.
-    /// </summary>
+    /// <summary>Duration of silence before recognition is considered complete.</summary>
     public TimeSpan SilenceTimeout
     {
         get => (TimeSpan)GetValue(SilenceTimeoutProperty);
@@ -51,9 +39,7 @@ public class SpeechToTextTool : ChatEntryTool
     public static readonly BindableProperty CultureProperty = BindableProperty.Create(
         nameof(Culture), typeof(string), typeof(SpeechToTextTool));
 
-    /// <summary>
-    /// Culture code (e.g. "en-US") for speech recognition. If null, the system default is used.
-    /// </summary>
+    /// <summary>Culture code (e.g. "en-US") for recognition. Null uses the system default.</summary>
     public string? Culture
     {
         get => (string?)GetValue(CultureProperty);
@@ -63,65 +49,25 @@ public class SpeechToTextTool : ChatEntryTool
     public static readonly BindableProperty PreferOnDeviceProperty = BindableProperty.Create(
         nameof(PreferOnDevice), typeof(bool), typeof(SpeechToTextTool), false);
 
-    /// <summary>
-    /// When true, prefers on-device speech recognition over cloud-based.
-    /// </summary>
+    /// <summary>When true, prefers on-device recognition over cloud-based.</summary>
     public bool PreferOnDevice
     {
         get => (bool)GetValue(PreferOnDeviceProperty);
         set => SetValue(PreferOnDeviceProperty, value);
     }
 
-    public static readonly BindableProperty ListeningIconProperty = BindableProperty.Create(
-        nameof(ListeningIcon), typeof(ImageSource), typeof(SpeechToTextTool));
-
-    /// <summary>
-    /// Optional icon displayed while listening. If not set, the tool text changes to indicate listening state.
-    /// </summary>
-    public ImageSource? ListeningIcon
-    {
-        get => (ImageSource?)GetValue(ListeningIconProperty);
-        set => SetValue(ListeningIconProperty, value);
-    }
-
     public static readonly BindableProperty ListeningTextProperty = BindableProperty.Create(
-        nameof(ListeningText), typeof(string), typeof(SpeechToTextTool), "Listening\u2026");
+        nameof(ListeningText), typeof(string), typeof(SpeechToTextTool), "Listening…");
 
-    /// <summary>
-    /// Text displayed on the tool while actively listening.
-    /// </summary>
+    /// <summary>Text used to represent the listening state (reserved for richer renderers).</summary>
     public string ListeningText
     {
         get => (string)GetValue(ListeningTextProperty);
         set => SetValue(ListeningTextProperty, value);
     }
 
-    public static readonly BindableProperty ListeningFabBackgroundColorProperty = BindableProperty.Create(
-        nameof(ListeningFabBackgroundColor), typeof(Color), typeof(SpeechToTextTool),
-        Color.FromArgb("#F44336"));
-
-    /// <summary>
-    /// Background color of the tool FAB while listening.
-    /// </summary>
-    public Color ListeningFabBackgroundColor
+    public override async Task InvokeAsync(ChatView chatView)
     {
-        get => (Color)GetValue(ListeningFabBackgroundColorProperty);
-        set => SetValue(ListeningFabBackgroundColorProperty, value);
-    }
-
-    // ------- Core Logic -------
-
-    async void OnClicked(object? sender, EventArgs e)
-    {
-        if (isListening)
-        {
-            StopListening();
-            return;
-        }
-
-        if (ChatView is null)
-            return;
-
         var stt = ResolveService<ISpeechToTextService>();
         if (stt is null || !stt.IsSupported)
             return;
@@ -130,68 +76,30 @@ public class SpeechToTextTool : ChatEntryTool
         if (access != AccessState.Available)
             return;
 
-        isListening = true;
-        cts = new CancellationTokenSource();
-        SetListeningAppearance(true);
-
+        using var cts = new CancellationTokenSource();
         try
         {
             var options = new SpeechRecognitionOptions
             {
-                SilenceTimeout = SilenceTimeout,
-                PreferOnDevice = PreferOnDevice,
-                Culture = Culture is not null ? CultureInfo.GetCultureInfo(Culture) : null
+                SilenceTimeout = this.SilenceTimeout,
+                PreferOnDevice = this.PreferOnDevice,
+                Culture = this.Culture is not null ? CultureInfo.GetCultureInfo(this.Culture) : null
             };
 
             var result = await stt.ListenUntilSilence(options, cts.Token);
-
             if (!string.IsNullOrEmpty(result))
             {
-                // Append to existing text with a space if needed
-                var existing = ChatView.EntryText?.Trim();
-                ChatView.EntryText = string.IsNullOrEmpty(existing)
-                    ? result
-                    : $"{existing} {result}";
+                var existing = chatView.EntryText?.Trim();
+                chatView.EntryText = string.IsNullOrEmpty(existing) ? result : $"{existing} {result}";
 
-                if (AutoSend)
-                    ChatView.SubmitEntry();
+                if (this.AutoSend)
+                    chatView.SubmitEntry();
             }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"SpeechToTextTool: {ex.Message}");
-        }
-        finally
-        {
-            isListening = false;
-            SetListeningAppearance(false);
-        }
-    }
-
-    void StopListening()
-    {
-        cts?.Cancel();
-        cts = null;
-    }
-
-    void SetListeningAppearance(bool listening)
-    {
-        if (listening)
-        {
-            originalText = Text;
-            originalIcon = Icon;
-            Text = ListeningText;
-            FabBackgroundColor = ListeningFabBackgroundColor;
-
-            if (ListeningIcon is not null)
-                Icon = ListeningIcon;
-        }
-        else
-        {
-            Text = originalText;
-            FabBackgroundColor = Color.FromArgb("#4CAF50");
-            Icon = originalIcon;
         }
     }
 
