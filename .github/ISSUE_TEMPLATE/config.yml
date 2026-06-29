@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://shinylib.net/controls
+    about: Browse the Shiny Controls documentation, samples, and release notes.
+  - name: 💬 Discussions / Community
+    url: https://mauiverse.net
+    about: Ask questions, share ideas, or get help on the Mauiverse Discord.
+  - name: 💖 Sponsor Shiny
+    url: https://github.com/sponsors/aritchie
+    about: Support ongoing development of Shiny.

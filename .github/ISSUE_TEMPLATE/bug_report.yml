@@ -1,0 +1,133 @@
+name: 🐛 Bug Report
+description: Report a problem with a Shiny Controls package
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out the sections below so we can reproduce and fix the issue quickly.
+
+        > 💡 Before submitting, please search [existing issues](https://github.com/shinyorg/controls/issues) to avoid duplicates.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      description: Which package does this affect?
+      options:
+        - Shiny.Maui.Controls
+        - Shiny.Maui.Controls.Barcodes
+        - Shiny.Maui.Controls.Camera
+        - Shiny.Maui.Controls.Camera.Barcode
+        - Shiny.Maui.Controls.Camera.Documents
+        - Shiny.Maui.Controls.Camera.Face
+        - Shiny.Maui.Controls.Camera.Motion
+        - Shiny.Maui.Controls.Camera.Ocr
+        - Shiny.Maui.Controls.Desktop
+        - Shiny.Maui.Controls.Markdown
+        - Shiny.Maui.Controls.MermaidDiagrams
+        - Shiny.Maui.Controls.SpeechAddins
+        - Shiny.Maui.Controls.Themes.Material
+        - Shiny.Maui.Controls.Themes.Ocean
+        - Shiny.Blazor.Controls
+        - Shiny.Blazor.Controls.Barcodes
+        - Shiny.Blazor.Controls.Camera
+        - Shiny.Blazor.Controls.Kiosk
+        - Shiny.Blazor.Controls.Markdown
+        - Shiny.Blazor.Controls.MermaidDiagrams
+        - Shiny.Blazor.Controls.SpeechAddins
+        - Shiny.Blazor.Controls.Themes.Material
+        - Shiny.Blazor.Controls.Themes.Ocean
+        - Not sure / multiple
+    validations:
+      required: true
+  - type: input
+    id: control
+    attributes:
+      label: Control / Feature
+      description: Which control or feature is involved? (e.g. TableView, ChatView, FloatingPanel, CameraView)
+      placeholder: e.g. ChatView
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Package Version
+      description: Which NuGet version are you running?
+      placeholder: e.g. 1.2.3
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Affected Platform(s)
+      description: Where does this reproduce? (select the closest match)
+      multiple: true
+      options:
+        - iOS
+        - Android
+        - Mac Catalyst
+        - macOS (AppKit)
+        - Windows
+        - Linux (GTK)
+        - Blazor WebAssembly
+        - Blazor Server / Hybrid
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce the behavior?
+      placeholder: |
+        1. Add a '...' control
+        2. Set property '...'
+        3. Run on '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal reproduction (code / XAML / Razor)
+      description: Paste the smallest snippet that reproduces the problem. A link to a repro repo is even better.
+      render: xml
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Stack trace / logs
+      description: Any relevant exception, stack trace, or console output.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: dotnet
+    attributes:
+      label: .NET / MAUI version
+      description: Output of `dotnet --version` and your target framework(s).
+      placeholder: e.g. .NET 10.0.100, net10.0-ios
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, device/OS details, or anything else that might help.
+    validations:
+      required: false

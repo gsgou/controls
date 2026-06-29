@@ -249,8 +249,16 @@
     </Shell.FlyoutFooter>
 
     <!-- ============================================================ -->
-    <!--  HOME -->
+    <!--  GET STARTED -->
     <!-- ============================================================ -->
+    <MenuItem Text="GET STARTED"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
     <FlyoutItem Title="Home">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2302;" Size="20"
@@ -268,36 +276,9 @@
     </FlyoutItem>
 
     <!-- ============================================================ -->
-    <!--  CAMERA -->
+    <!--  LAYOUT &amp; COLLECTIONS -->
     <!-- ============================================================ -->
-    <MenuItem Text="CAMERA"
-              StyleClass="SectionHeader"
-              IsEnabled="False">
-        <MenuItem.IconImageSource>
-            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
-        </MenuItem.IconImageSource>
-    </MenuItem>
-
-    <FlyoutItem Title="Camera">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25C9;" Size="20"
-                             Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate camera:CameraPage}" Route="camera" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Scanned Documents">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2637;" Size="20"
-                             Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate camera:DocumentSessionPage}" Route="documentsession" />
-    </FlyoutItem>
-
-    <!-- ============================================================ -->
-    <!--  COLLECTIONS -->
-    <!-- ============================================================ -->
-    <MenuItem Text="COLLECTIONS"
+    <MenuItem Text="LAYOUT &amp; COLLECTIONS"
               StyleClass="SectionHeader"
               IsEnabled="False">
         <MenuItem.IconImageSource>
@@ -345,10 +326,26 @@
         <ShellContent ContentTemplate="{DataTemplate treeview:TreeViewPage}" Route="treeview" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Data Grid">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A6;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Docking">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A8;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate docking:DockingPage}" Route="docking" />
+    </FlyoutItem>
+
     <!-- ============================================================ -->
-    <!--  FLOATING PANELS -->
+    <!--  TABLE VIEW -->
     <!-- ============================================================ -->
-    <MenuItem Text="FLOATING PANELS"
+    <MenuItem Text="TABLE VIEW"
               StyleClass="SectionHeader"
               IsEnabled="False">
         <MenuItem.IconImageSource>
@@ -357,6 +354,57 @@
     </MenuItem>
 
     <FlyoutItem Title="Basic">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2630;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tv:BasicSettingsPage}" Route="basic" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Dynamic">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2637;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tv:DynamicSectionsPage}" Route="dynamic" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Drag &amp; Sort">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2195;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tv:DragSortPage}" Route="dragsort" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Picker">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25BE;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tv:PickerDemoPage}" Route="picker" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Styling">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2726;" Size="20"
+                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tv:StylingPage}" Route="styling" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  PANELS &amp; OVERLAYS -->
+    <!-- ============================================================ -->
+    <MenuItem Text="PANELS &amp; OVERLAYS"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="Floating Panel">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x25A3;" Size="20"
                              Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
@@ -404,18 +452,26 @@
         <ShellContent ContentTemplate="{DataTemplate fp:DualPanelPage}" Route="dualpanel" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Signature Pad">
+    <FlyoutItem Title="Overlay">
         <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x270D;" Size="20"
+            <FontImageSource Glyph="&#x25A6;" Size="20"
                              Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
         </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />
+        <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Frosted Glass">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25C7;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate glass:FrostedGlassPage}" Route="frostedglass" />
     </FlyoutItem>
 
     <!-- ============================================================ -->
-    <!--  CONTROLS -->
+    <!--  INPUT -->
     <!-- ============================================================ -->
-    <MenuItem Text="CONTROLS"
+    <MenuItem Text="INPUT"
               StyleClass="SectionHeader"
               IsEnabled="False">
         <MenuItem.IconImageSource>
@@ -423,36 +479,12 @@
         </MenuItem.IconImageSource>
     </MenuItem>
 
-    <FlyoutItem Title="Pills">
+    <FlyoutItem Title="Text Entry">
         <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25CF;" Size="20"
+            <FontImageSource Glyph="&#x270F;" Size="20"
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Security Pin">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2731;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate securitypin:SecurityPinPage}" Route="securitypin" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="FAB &amp; FabMenu">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2795;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate fab:FabPage}" Route="fab" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Color Picker">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25C9;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate colorpicker:ColorPickerPage}" Route="colorpicker" />
+        <ShellContent ContentTemplate="{DataTemplate textentry:TextEntryPage}" Route="textentry" />
     </FlyoutItem>
 
     <FlyoutItem Title="AutoComplete">
@@ -463,159 +495,20 @@
         <ShellContent ContentTemplate="{DataTemplate autocomplete:AutoCompletePage}" Route="autocomplete" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Color Picker">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25C9;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate colorpicker:ColorPickerPage}" Route="colorpicker" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Country &amp; Address">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2691;" Size="20"
                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate countryaddress:CountryAddressPage}" Route="countryaddress" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Feedback">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2606;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate feedback:FeedbackPage}" Route="feedback" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Toast">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25AC;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Dialogs">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2755;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate dialogs:DialogsPage}" Route="dialogs" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Data Grid">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A6;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Text Entry">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x270F;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate textentry:TextEntryPage}" Route="textentry" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Overlay">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A8;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Skeleton">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2630;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Badge">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25CF;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Docking">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A6;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate docking:DockingPage}" Route="docking" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="System Tray">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A3;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="On-Screen Keyboard">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2328;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Progress Bar">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A3;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate progressbar:ProgressBarPage}" Route="progressbar" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Slider">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2501;" Size="20"
-                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate slider:SliderPage}" Route="slider" />
-    </FlyoutItem>
-
-    <!-- ============================================================ -->
-    <!--  TABLE VIEW -->
-    <!-- ============================================================ -->
-    <MenuItem Text="TABLE VIEW"
-              StyleClass="SectionHeader"
-              IsEnabled="False">
-        <MenuItem.IconImageSource>
-            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
-        </MenuItem.IconImageSource>
-    </MenuItem>
-
-    <FlyoutItem Title="Basic">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2630;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate tv:BasicSettingsPage}" Route="basic" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Dynamic">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2637;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate tv:DynamicSectionsPage}" Route="dynamic" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Drag &amp; Sort">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2195;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate tv:DragSortPage}" Route="dragsort" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Picker">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25BE;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate tv:PickerDemoPage}" Route="picker" />
     </FlyoutItem>
 
     <FlyoutItem Title="Duration Picker">
@@ -626,12 +519,173 @@
         <ShellContent ContentTemplate="{DataTemplate pickers:DurationPickerPage}" Route="durationpicker" />
     </FlyoutItem>
 
-    <FlyoutItem Title="Styling">
+    <FlyoutItem Title="Slider">
         <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2726;" Size="20"
-                             Color="{AppThemeBinding Light=#D97706, Dark=#FBBF24}" />
+            <FontImageSource Glyph="&#x2501;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
         </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate tv:StylingPage}" Route="styling" />
+        <ShellContent ContentTemplate="{DataTemplate slider:SliderPage}" Route="slider" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Security Pin">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2731;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate securitypin:SecurityPinPage}" Route="securitypin" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Signature Pad">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x270D;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="On-Screen Keyboard">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2328;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  ACTIONS &amp; NAVIGATION -->
+    <!-- ============================================================ -->
+    <MenuItem Text="ACTIONS &amp; NAVIGATION"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="FAB &amp; FabMenu">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2795;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate fab:FabPage}" Route="fab" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  STATUS &amp; FEEDBACK -->
+    <!-- ============================================================ -->
+    <MenuItem Text="STATUS &amp; FEEDBACK"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="Pills">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25CF;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Badge">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25CF;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Toast">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25AC;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Dialogs">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2755;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate dialogs:DialogsPage}" Route="dialogs" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Feedback">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2606;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate feedback:FeedbackPage}" Route="feedback" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Progress Bar">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A3;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate progressbar:ProgressBarPage}" Route="progressbar" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Skeleton">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2630;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  MEDIA -->
+    <!-- ============================================================ -->
+    <MenuItem Text="MEDIA"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="Camera">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25C9;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate camera:CameraPage}" Route="camera" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Scanned Documents">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2637;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate camera:DocumentSessionPage}" Route="documentsession" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Image Viewer">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A3;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageViewerPage}" Route="imageviewer" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Image Gallery">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2B1A;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageGalleryPage}" Route="imagegallery" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Image Editor">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x270E;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate imgeditor:ImageEditorPage}" Route="imageeditor" />
     </FlyoutItem>
 
     <!-- ============================================================ -->
@@ -678,41 +732,6 @@
     </FlyoutItem>
 
     <!-- ============================================================ -->
-    <!--  MEDIA -->
-    <!-- ============================================================ -->
-    <MenuItem Text="MEDIA"
-              StyleClass="SectionHeader"
-              IsEnabled="False">
-        <MenuItem.IconImageSource>
-            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
-        </MenuItem.IconImageSource>
-    </MenuItem>
-
-    <FlyoutItem Title="Image Viewer">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25A3;" Size="20"
-                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageViewerPage}" Route="imageviewer" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Image Gallery">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x2B1A;" Size="20"
-                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageGalleryPage}" Route="imagegallery" />
-    </FlyoutItem>
-
-    <FlyoutItem Title="Image Editor">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x270E;" Size="20"
-                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate imgeditor:ImageEditorPage}" Route="imageeditor" />
-    </FlyoutItem>
-
-    <!-- ============================================================ -->
     <!--  COMMUNICATION -->
     <!-- ============================================================ -->
     <MenuItem Text="COMMUNICATION"
@@ -736,19 +755,11 @@
     <FlyoutItem Title="Chat Templates" Shell.TabBarIsVisible="False">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2709;" Size="20"
-                             Color="{AppThemeBinding Light=#6D28D9, Dark=#A78BFA}" />
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#38BDF8}" />
         </FlyoutItem.FlyoutIcon>
         <Tab>
             <ShellContent ContentTemplate="{DataTemplate chat:ChatTemplatePage}" Route="chattemplates" />
         </Tab>
-    </FlyoutItem>
-
-    <FlyoutItem Title="Frosted Glass">
-        <FlyoutItem.FlyoutIcon>
-            <FontImageSource Glyph="&#x25C7;" Size="20"
-                             Color="{AppThemeBinding Light=#0EA5E9, Dark=#7DD3FC}" />
-        </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate glass:FrostedGlassPage}" Route="frostedglass" />
     </FlyoutItem>
 
     <!-- ============================================================ -->
@@ -854,6 +865,25 @@
                              Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate barcodes:BarcodeGalleryPage}" Route="barcodegallery" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  DESKTOP -->
+    <!-- ============================================================ -->
+    <MenuItem Text="DESKTOP"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="System Tray">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A3;" Size="20"
+                             Color="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
     </FlyoutItem>
 
     <!-- Spacer so footer doesn't overlap last items -->

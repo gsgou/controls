@@ -190,14 +190,19 @@ public partial class Carousel<TItem> : IAsyncDisposable
         var sig = OptionSignature();
         if (!initialized)
         {
-            await module.InvokeVoidAsync("init", viewportRef, containerRef, selfRef, BuildOptions());
+            // Mark initialized *before* awaiting init. The JS engine's init invokes
+            // OnEngineInit, which calls StateHasChanged and synchronously re-enters
+            // OnAfterRenderAsync. If the guard were only set after the await, that
+            // re-entry would still see initialized == false and call init again —
+            // an unbounded init/render/engine-init loop that pins the WASM thread.
             initialized = true;
             lastOptionSig = sig;
+            await module.InvokeVoidAsync("init", viewportRef, containerRef, selfRef, BuildOptions());
         }
         else if (sig != lastOptionSig)
         {
-            await module.InvokeVoidAsync("reInit", viewportRef, containerRef, BuildOptions());
             lastOptionSig = sig;
+            await module.InvokeVoidAsync("reInit", viewportRef, containerRef, BuildOptions());
         }
     }
 
@@ -288,10 +293,18 @@ public partial class Carousel<TItem> : IAsyncDisposable
     [JSInvokable]
     public Task OnEngineInit(int snapCount, int selectedIndex)
     {
-        SnapCount = Math.Max(1, snapCount);
+        var snaps = Math.Max(1, snapCount);
+        var changed = snaps != SnapCount;
+        SnapCount = snaps;
         if (CurrentPosition != selectedIndex)
+        {
             CurrentPosition = selectedIndex;
-        StateHasChanged();
+            changed = true;
+        }
+        // Only re-render when something actually changed — an unconditional
+        // StateHasChanged here re-enters the render pipeline needlessly.
+        if (changed)
+            StateHasChanged();
         return Task.CompletedTask;
     }
 

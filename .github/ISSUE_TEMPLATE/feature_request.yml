@@ -1,0 +1,77 @@
+name: ✨ Feature Request
+description: Suggest a new control, feature, or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please describe what you'd like to see and why.
+
+        > 💡 Search [existing issues](https://github.com/shinyorg/controls/issues) first — someone may have already requested it.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Target Package
+      description: Which package would this affect? (or propose a new one)
+      options:
+        - Shiny.Maui.Controls
+        - Shiny.Blazor.Controls
+        - Camera (Shiny.*.Controls.Camera / analyzers)
+        - Barcodes
+        - Markdown
+        - MermaidDiagrams
+        - Desktop (MAUI)
+        - Kiosk (Blazor)
+        - SpeechAddins
+        - Themes (Material / Ocean)
+        - New package / control
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Relevant Platform(s)
+      description: Which platforms should this target?
+      multiple: true
+      options:
+        - iOS
+        - Android
+        - Mac Catalyst
+        - macOS (AppKit)
+        - Windows
+        - Linux (GTK)
+        - Blazor WebAssembly
+        - Blazor Server / Hybrid
+        - All platforms
+    validations:
+      required: false
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem are you trying to solve? Is your request related to a frustration? "I'm always frustrated when..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to happen. Include an API sketch (properties, events, methods) if you have one in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds you've tried or considered.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mockups, links to similar controls in other libraries, or any other context.
+    validations:
+      required: false

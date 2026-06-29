@@ -1994,6 +1994,8 @@ A scrollable list with a hero header that translates at a configurable fraction 
 
 Both hosts fire a `Scrolled` event with `ParallaxScrollEventArgs(verticalOffset, headerTranslation, headerVisibleHeight)` so you can drive sticky titles, fading nav chrome, etc.
 
+When no `HeaderTemplate`/`HeroTemplate` is set, the header reserves **no** space (so you never get a blank band above the list). MAUI also exposes `ScrollTo(...)` and a `ScrollToTop(bool animate = true)` method that returns the list to the very top including the header.
+
 ### VirtualizedGrid
 
 A full-featured grouped grid with sticky section headers, virtualization, orientation-aware column counts, load-more, and cell padding. Uses native grid layouts on MAUI (Android `GridLayoutManager` with `StickyHeaderDecoration`, iOS `UICollectionViewCompositionalLayout` with pinned headers, Windows `ItemsRepeater` with `UniformGridLayout`) and CSS Grid with Blazor `Virtualize<T>` on Blazor (items are chunked into rows of `ColumnCount` cells and the rows are virtualized, so virtualization works correctly at any column count).
