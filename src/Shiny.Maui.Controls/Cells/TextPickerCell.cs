@@ -9,6 +9,7 @@ public class TextPickerCell : CellBase
 {
     Label valueLabel = default!;
     Picker hiddenPicker = default!;
+    bool syncingPicker;
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IList), typeof(TextPickerCell), null,
@@ -100,15 +101,21 @@ public class TextPickerCell : CellBase
         };
         hiddenPicker.SelectedIndexChanged += (s, e) =>
         {
+            // Ignore events we raised ourselves while programmatically re-syncing the picker
+            // (RestoreSelection / OnSelectedIndexChanged). Reacting to those would let our own
+            // write bounce back through here.
+            if (syncingPicker)
+                return;
+
             // The native control raises a spurious SelectedIndex = -1 when its items are
             // repopulated (e.g. a TableView rebuild re-attaches the cell and re-maps ItemsSource).
-            // Writing that back would clobber a valid bound SelectedIndex and blank the label, so
-            // re-apply the current selection instead of propagating the reset.
-            if (hiddenPicker.SelectedIndex < 0 && (ItemsSource?.Count ?? 0) > 0 && SelectedIndex >= 0)
-            {
-                RestoreSelection();
+            // Just ignore it: do NOT write a value back to the picker from inside its own change
+            // handler. During repopulation the native control re-snaps to -1 and re-raises, so
+            // fighting it here causes an infinite ping-pong that freezes the UI thread. The
+            // deferred RestoreSelection (UpdatePickerItems / OnSelectedItemChanged) re-syncs once
+            // the items are stable.
+            if (hiddenPicker.SelectedIndex < 0)
                 return;
-            }
 
             SelectedIndex = hiddenPicker.SelectedIndex;
             SelectedItem = hiddenPicker.SelectedItem;
@@ -159,7 +166,7 @@ public class TextPickerCell : CellBase
     void OnSelectedIndexChanged()
     {
         if (hiddenPicker != null && SelectedIndex >= 0 && hiddenPicker.SelectedIndex != SelectedIndex)
-            hiddenPicker.SelectedIndex = SelectedIndex;
+            SetPickerIndex(SelectedIndex);
         UpdateDisplayText();
     }
 
@@ -185,9 +192,23 @@ public class TextPickerCell : CellBase
             index = SelectedIndex;
 
         if (index >= 0 && hiddenPicker.SelectedIndex != index)
-            hiddenPicker.SelectedIndex = index;
+            SetPickerIndex(index);
 
         UpdateDisplayText();
+    }
+
+    // Write the native picker selection without re-entering our own SelectedIndexChanged handler.
+    void SetPickerIndex(int index)
+    {
+        syncingPicker = true;
+        try
+        {
+            hiddenPicker.SelectedIndex = index;
+        }
+        finally
+        {
+            syncingPicker = false;
+        }
     }
 
     void UpdateDisplayText()
