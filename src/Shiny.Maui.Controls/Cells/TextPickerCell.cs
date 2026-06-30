@@ -100,6 +100,16 @@ public class TextPickerCell : CellBase
         };
         hiddenPicker.SelectedIndexChanged += (s, e) =>
         {
+            // The native control raises a spurious SelectedIndex = -1 when its items are
+            // repopulated (e.g. a TableView rebuild re-attaches the cell and re-maps ItemsSource).
+            // Writing that back would clobber a valid bound SelectedIndex and blank the label, so
+            // re-apply the current selection instead of propagating the reset.
+            if (hiddenPicker.SelectedIndex < 0 && (ItemsSource?.Count ?? 0) > 0 && SelectedIndex >= 0)
+            {
+                RestoreSelection();
+                return;
+            }
+
             SelectedIndex = hiddenPicker.SelectedIndex;
             SelectedItem = hiddenPicker.SelectedItem;
             UpdateDisplayText();
@@ -136,13 +146,19 @@ public class TextPickerCell : CellBase
         if (!string.IsNullOrEmpty(DisplayMember))
             hiddenPicker.ItemDisplayBinding = new Binding(DisplayMember);
 
-        // items may have arrived after SelectedItem was set (e.g. an async-loaded list) — re-sync
-        OnSelectedItemChanged();
+        // Reassigning a Picker's ItemsSource resets its native selection to -1, and the items may
+        // also have arrived after the selection was set (e.g. an async-loaded list, or a TableView
+        // rebuild recreating the cell). Re-sync from whichever selection the consumer bound -
+        // SelectedItem OR SelectedIndex - so a SelectedIndex-only binding doesn't lose its display.
+        RestoreSelection();
     }
 
+    // Sync directly from SelectedIndex. This must NOT consult SelectedItem: the picker's own
+    // SelectedIndexChanged handler sets SelectedIndex before SelectedItem, so SelectedItem still
+    // holds the previous value here and would otherwise revert the user's fresh selection.
     void OnSelectedIndexChanged()
     {
-        if (hiddenPicker != null && hiddenPicker.SelectedIndex != SelectedIndex)
+        if (hiddenPicker != null && SelectedIndex >= 0 && hiddenPicker.SelectedIndex != SelectedIndex)
             hiddenPicker.SelectedIndex = SelectedIndex;
         UpdateDisplayText();
     }
@@ -151,11 +167,26 @@ public class TextPickerCell : CellBase
     // selection events drive the reverse direction).
     void OnSelectedItemChanged()
     {
+        RestoreSelection();
+    }
+
+    void RestoreSelection()
+    {
         if (hiddenPicker == null) return;
 
-        var index = ItemsSource == null || SelectedItem == null ? -1 : ItemsSource.IndexOf(SelectedItem);
+        // Prefer SelectedItem when set, otherwise fall back to SelectedIndex. This keeps the native
+        // picker (and the value label, which reads hiddenPicker.SelectedItem) in sync regardless of
+        // which property the consumer bound.
+        var index = -1;
+        if (SelectedItem != null && ItemsSource != null)
+            index = ItemsSource.IndexOf(SelectedItem);
+
+        if (index < 0 && ItemsSource != null && SelectedIndex >= 0 && SelectedIndex < ItemsSource.Count)
+            index = SelectedIndex;
+
         if (index >= 0 && hiddenPicker.SelectedIndex != index)
             hiddenPicker.SelectedIndex = index;
+
         UpdateDisplayText();
     }
 
