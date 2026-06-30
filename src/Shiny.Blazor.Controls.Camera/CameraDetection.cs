@@ -31,6 +31,16 @@ public class CameraOverlayBox
 }
 
 
+/// <summary>
+/// The JPEG of a detected document plus its normalized bounds, returned from
+/// <see cref="CameraView.RequestDocumentImageAsync"/>. The bytes are the (padded) document crop, ready to send
+/// to a vision model.
+/// </summary>
+/// <param name="Jpeg">The cropped document image as JPEG bytes.</param>
+/// <param name="Bounds">The document's normalized bounds (0..1) in upright video space.</param>
+public record CameraDocumentImage(byte[] Jpeg, RectF Bounds);
+
+
 /// <summary>Flat DTO for the typed barcode callback marshaled from the JS <c>BarcodeDetector</c>.</summary>
 public class CameraBarcode
 {

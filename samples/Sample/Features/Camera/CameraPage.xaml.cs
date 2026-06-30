@@ -5,6 +5,7 @@ using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Camera;
+using Shiny.Maui.Controls.Camera.Ai;
 using Shiny.Maui.Controls.Camera.Barcode;
 using Shiny.Maui.Controls.Camera.Documents;
 using Shiny.Maui.Controls.Camera.Face;
@@ -198,6 +199,10 @@ public partial class CameraPage : ShinyContentPage
             ["Driver's License"] = new DriversLicenseAnalyzer { OnDetected = this.OnLicense },
             ["Credit Card"] = new CreditCardAnalyzer { OnDetected = this.OnCreditCard },
             ["Passport"] = new PassportAnalyzer { OnDetected = this.OnPassport },
+            // detects a document is present (cheap), then ships that one frame to an IChatClient (MEAI) to parse
+            ["AI Document"] = new AiDocumentAnalyzer(
+                IPlatformApplication.Current!.Services.GetRequiredService<Microsoft.Extensions.AI.IChatClient>())
+                { OnDetected = this.OnAiDocument },
         };
         this.Detectors = ["None", .. this.analyzers.Keys];
 
@@ -243,6 +248,15 @@ public partial class CameraPage : ShinyContentPage
     {
         this.ShowStatus(summary);
         this.session.Add(kind, summary, detail);
+    }
+
+    // AI document detector: the model returns a free-form AiDocument (type + summary + label/value fields).
+    Task<bool> OnAiDocument(DocumentDetectedEventArgs<AiDocument> e)
+    {
+        var d = e.Document;
+        var summary = d.Summary ?? d.DocumentType ?? "AI document";
+        var detail = Detail([.. (d.Fields ?? []).Select(f => (f.Label, f.Value))]);
+        return this.OnDocument(d.DocumentType ?? "AI Document", summary, detail);
     }
 
     // OnDetected handler shared by every document analyzer: record the document, and when "Capture & stop" is

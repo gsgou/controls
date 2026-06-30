@@ -66,6 +66,10 @@ public static class MauiProgram
         // shared app-session list of documents lifted by the camera's document analyzers
         builder.Services.AddSingleton<Sample.Features.Camera.DocumentSessionStore>();
 
+        // the "AI Document" camera detector ships frames to an IChatClient; the sample registers an offline
+        // stand-in so it runs without keys. Swap in a real vision client (Azure OpenAI / OpenAI / Ollama) here.
+        builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient, Sample.Features.Camera.SampleVisionChatClient>();
+
 #if DEBUG
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
         builder.Logging.AddDebug();

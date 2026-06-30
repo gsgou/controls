@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
 
 namespace Shiny.Blazor.Controls.Camera;
@@ -14,6 +15,7 @@ public partial class CameraView : IAsyncDisposable
     ElementReference overlayEl;
     bool started;
     TaskCompletionSource<CameraBarcode>? pendingScan;
+    TaskCompletionSource<CameraDocumentImage>? pendingDocument;
 
     /// <summary>Which camera to use. <see cref="CameraFacing.Front"/> maps to the browser "user" facing mode.</summary>
     [Parameter] public CameraFacing Facing { get; set; } = CameraFacing.Back;
@@ -182,6 +184,33 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
+    /// <summary>
+    /// Arm the <see cref="DocumentAnalyzer"/> and complete on the <i>next</i> steadily-present document with its
+    /// cropped JPEG, then go quiet — the document equivalent of <see cref="RequestBarcodeAsync"/>. The cheap
+    /// presence detection runs every frame (and draws the outline); this only fires once a document has been held
+    /// in view, so the (paid) AI call you make with the result isn't run on every frame. Call it again to keep
+    /// scanning. Requires the <see cref="Analyzer"/> to be a <see cref="DocumentAnalyzer"/>.
+    /// </summary>
+    public async Task<CameraDocumentImage> RequestDocumentImageAsync(CancellationToken ct = default)
+    {
+        if (this.module == null)
+            throw new InvalidOperationException("CameraView is not started");
+
+        this.pendingDocument?.TrySetCanceled();
+        var tcs = new TaskCompletionSource<CameraDocumentImage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        this.pendingDocument = tcs;
+
+        await using var reg = ct.Register(() =>
+        {
+            if (tcs.TrySetCanceled(ct))
+                _ = this.module.InvokeVoidAsync("disarm", this.videoEl).AsTask();
+        });
+
+        await this.module.InvokeVoidAsync("arm", this.videoEl);
+        return await tcs.Task;
+    }
+
+
     /// <summary>Capture a still frame as JPEG bytes.</summary>
     public async Task<byte[]> CapturePhotoAsync()
     {
@@ -236,6 +265,25 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
+    /// <summary>
+    /// Invoked from JS (only while armed) with the cropped JPEG of a steadily-present document and its bounds.
+    /// Completes any outstanding <see cref="RequestDocumentImageAsync"/>. <paramref name="box"/> is a flat
+    /// [x, y, w, h] in normalized upright video space; <paramref name="jpeg"/> is the cropped image bytes.
+    /// </summary>
+    [JSInvokable]
+    public Task OnDocumentImage(float[] box, byte[] jpeg)
+    {
+        var bounds = box is { Length: 4 }
+            ? new RectF(box[0], box[1], box[2], box[3])
+            : new RectF(0, 0, 1, 1);
+
+        var pending = this.pendingDocument;
+        this.pendingDocument = null;
+        pending?.TrySetResult(new CameraDocumentImage(jpeg, bounds));
+        return Task.CompletedTask;
+    }
+
+
     /// <summary>Invoked from JS when an error occurs after startup.</summary>
     [JSInvokable]
     public Task OnJsError(string message) => this.OnError.InvokeAsync(message);
@@ -244,6 +292,7 @@ public partial class CameraView : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         this.pendingScan?.TrySetCanceled();
+        this.pendingDocument?.TrySetCanceled();
         try
         {
             if (this.module != null)

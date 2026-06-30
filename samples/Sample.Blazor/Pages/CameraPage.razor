@@ -1,6 +1,7 @@
 @page "/camera"
 @using Microsoft.Maui.Graphics
 @using Shiny.Blazor.Controls.Camera
+@using Shiny.Blazor.Controls.Camera.Ai
 @using Shiny.Controls.Camera
 
 <PageTitle>Camera</PageTitle>
@@ -12,8 +13,9 @@
         Live <code>getUserMedia</code> preview with in-browser barcode scanning (native
         <code>BarcodeDetector</code> — Chromium browsers). Boxes draw continuously, but a decoded value is only
         delivered when you tap <strong>Scan</strong> (<code>RequestBarcodeAsync</code>) — await it once, or tick
-        <em>Keep scanning</em> to loop. Face, motion, OCR and document detectors are MAUI-native; the browser
-        exposes only barcode detection.
+        <em>Keep scanning</em> to loop. Switch the detector to <strong>AI Document</strong> to detect a document
+        in-browser (no OCR) and send just that frame to a Microsoft.Extensions.AI <code>IChatClient</code> for
+        structured extraction (this demo uses an offline stand-in client). Face, motion and OCR are MAUI-only.
     </p>
 
     <div style="position:relative;width:100%;max-width:480px;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#000;">
@@ -44,9 +46,10 @@
     <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
         <fieldset style="border:1px solid #E5E7EB;border-radius:8px;padding:8px 14px;">
             <legend style="font-size:12px;color:#6B7280;">Detector</legend>
-            <label style="display:block;"><input type="checkbox" @bind="enableBarcode" @bind:after="RebuildAnalyzer" /> Barcode / QR</label>
-            <label style="display:block;margin-top:6px;"><input type="checkbox" @bind="scanArea" @bind:after="RebuildAnalyzer" disabled="@(!enableBarcode)" /> Restrict scan area</label>
-            <p style="margin:6px 0 0;font-size:12px;color:#9CA3AF;">Face / Motion / OCR / Documents — MAUI only</p>
+            <label style="display:block;"><input type="radio" name="det" checked="@(mode == DetectorMode.Barcode)" @onchange="@(() => SetMode(DetectorMode.Barcode))" /> Barcode / QR</label>
+            <label style="display:block;margin-top:6px;"><input type="checkbox" @bind="scanArea" @bind:after="RebuildAnalyzer" disabled="@(mode != DetectorMode.Barcode)" /> Restrict scan area</label>
+            <label style="display:block;margin-top:6px;"><input type="radio" name="det" checked="@(mode == DetectorMode.Document)" @onchange="@(() => SetMode(DetectorMode.Document))" /> AI Document (MEAI)</label>
+            <p style="margin:6px 0 0;font-size:12px;color:#9CA3AF;">Face / Motion / OCR — MAUI only</p>
         </fieldset>
 
         <fieldset style="border:1px solid #E5E7EB;border-radius:8px;padding:8px 14px;">
@@ -89,6 +92,20 @@
 
     <div class="state" style="margin-top:12px;">Status: <code>@status</code></div>
 
+    @if (lastDoc != null)
+    {
+        <div style="margin-top:12px;border:1px solid #E5E7EB;border-radius:8px;padding:10px 14px;">
+            <strong>@(lastDoc.DocumentType ?? "Document")</strong>
+            <div style="color:#6B7280;font-size:13px;">@lastDoc.Summary</div>
+            <ul style="margin:8px 0 0;">
+                @foreach (var f in lastDoc.Fields)
+                {
+                    <li><strong>@f.Label:</strong> <code>@f.Value</code></li>
+                }
+            </ul>
+        </div>
+    }
+
     @if (barcodes.Count > 0)
     {
         <ul style="margin-top:8px;">
@@ -110,7 +127,8 @@
     CameraFacing facing = CameraFacing.Back;
     string? cameraId;
     CameraFilter filter = CameraFilter.None;
-    bool enableBarcode = true;
+    enum DetectorMode { Barcode, Document }
+    DetectorMode mode = DetectorMode.Barcode;
     bool scanArea;
     CameraAnalyzer? analyzer = new BarcodeAnalyzer();
     bool showBoxes = true;
@@ -119,11 +137,17 @@
     // the scan window enabled by "Restrict scan area" — a center band the barcode analyzer scans
     static readonly RectF ScanBand = new(0.1f, 0.4f, 0.8f, 0.2f);
 
+    // the AI document scanner ships a detected document's frame to an IChatClient (offline stand-in here)
+    readonly AiDocumentScanner scanner = new(new SampleVisionChatClient());
+    AiDocument? lastDoc;
+
+    void SetMode(DetectorMode m) { mode = m; RebuildAnalyzer(); }
+
     // swap in a fresh analyzer instance so the component restarts the stream with the new options
     void RebuildAnalyzer()
-        => analyzer = enableBarcode
-            ? new BarcodeAnalyzer { ScanWindow = scanArea ? ScanBand : null }
-            : null;
+        => analyzer = mode == DetectorMode.Document
+            ? new DocumentAnalyzer()
+            : new BarcodeAnalyzer { ScanWindow = scanArea ? ScanBand : null };
     bool scanning;
     CancellationTokenSource? scanCts;
     readonly List<CameraBarcode> barcodes = [];
@@ -199,15 +223,24 @@
         scanCts = new CancellationTokenSource();
         var ct = scanCts.Token;
         scanning = true;
-        status = "Scanning…";
+        status = mode == DetectorMode.Document ? "Point at a document…" : "Scanning…";
         try
         {
             do
             {
-                var barcode = await camera.RequestBarcodeAsync(ct);
-                if (!barcodes.Any(b => b.Value == barcode.Value && b.Format == barcode.Format))
-                    barcodes.Insert(0, barcode);
-                status = $"{barcode.Format}: {barcode.Value}";
+                if (mode == DetectorMode.Document)
+                {
+                    // waits (cheaply) for a document to be present, then ships that one frame to the model
+                    lastDoc = await scanner.ScanAsync(camera, ct);
+                    status = lastDoc is null ? "No document parsed" : $"Parsed: {lastDoc.Summary ?? lastDoc.DocumentType}";
+                }
+                else
+                {
+                    var barcode = await camera.RequestBarcodeAsync(ct);
+                    if (!barcodes.Any(b => b.Value == barcode.Value && b.Format == barcode.Format))
+                        barcodes.Insert(0, barcode);
+                    status = $"{barcode.Format}: {barcode.Value}";
+                }
                 StateHasChanged();
             }
             while (continuous && !ct.IsCancellationRequested);

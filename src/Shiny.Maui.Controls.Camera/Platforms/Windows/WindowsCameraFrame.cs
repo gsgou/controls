@@ -43,6 +43,9 @@ public sealed class WindowsCameraFrame : CameraFrame
     public override bool IsMirrored { get; }
     public override CameraFrameFormat Format => CameraFrameFormat.Bgra32;
 
+    /// <summary>The raw BGRA pixels (4 bytes/px, row-packed at <see cref="CameraFrame.Width"/>).</summary>
+    public byte[] Bgra => this.bgra;
+
     protected override byte[] MaterializeLuminance()
     {
         int w = this.Width, h = this.Height;

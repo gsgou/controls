@@ -14,6 +14,7 @@
             "src/Shiny.Maui.Controls.Camera.Face/Shiny.Maui.Controls.Camera.Face.csproj",
             "src/Shiny.Maui.Controls.Camera.Ocr/Shiny.Maui.Controls.Camera.Ocr.csproj",
             "src/Shiny.Maui.Controls.Camera.Documents/Shiny.Maui.Controls.Camera.Documents.csproj",
+            "src/Shiny.Maui.Controls.Camera.Ai/Shiny.Maui.Controls.Camera.Ai.csproj",
             "src/Shiny.Maui.Controls.SpeechAddins/Shiny.Maui.Controls.SpeechAddins.csproj",
             "src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj",
             "src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj",
@@ -24,6 +25,7 @@
             "src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj",
             "src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj",
             "src/Shiny.Blazor.Controls.Camera/Shiny.Blazor.Controls.Camera.csproj",
+            "src/Shiny.Blazor.Controls.Camera.Ai/Shiny.Blazor.Controls.Camera.Ai.csproj",
             "src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj",
             "src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj"
         ]

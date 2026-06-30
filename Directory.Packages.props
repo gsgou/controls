@@ -11,6 +11,8 @@
     <PackageVersion Include="Shiny.Speech" Version="2.1.0" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
     <PackageVersion Include="ZXing.Net" Version="0.16.11" />
+    <!-- CameraView AI document scanner: provider-agnostic Microsoft.Extensions.AI (IChatClient + structured output) -->
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.7.0" />
   </ItemGroup>
   <!-- CameraView: Android CameraX + MLKit bindings (android TFM only) -->
   <ItemGroup>

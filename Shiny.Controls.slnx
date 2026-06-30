@@ -32,12 +32,14 @@
     <Project Path="src/Shiny.Maui.Controls.Camera.Face/Shiny.Maui.Controls.Camera.Face.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera.Ocr/Shiny.Maui.Controls.Camera.Ocr.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera.Documents/Shiny.Maui.Controls.Camera.Documents.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Camera.Ai/Shiny.Maui.Controls.Camera.Ai.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.SpeechAddins/Shiny.Blazor.Controls.SpeechAddins.csproj" />
     <Project Path="src/Shiny.Blazor.Controls/Shiny.Blazor.Controls.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Markdown/Shiny.Blazor.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Camera/Shiny.Blazor.Controls.Camera.csproj" />
+    <Project Path="src/Shiny.Blazor.Controls.Camera.Ai/Shiny.Blazor.Controls.Camera.Ai.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Themes.Ocean/Shiny.Blazor.Controls.Themes.Ocean.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Themes.Material/Shiny.Blazor.Controls.Themes.Material.csproj" />

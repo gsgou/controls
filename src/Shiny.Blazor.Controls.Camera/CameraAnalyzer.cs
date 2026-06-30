@@ -46,3 +46,17 @@ public class FaceAnalyzer : CameraAnalyzer
     /// <inheritdoc/>
     public override string Kind => "face";
 }
+
+/// <summary>
+/// Detects when a document is <i>present</i> in the frame (a cheap in-browser luminance/edge heuristic — no
+/// OCR), so the (slow, paid) AI extraction only runs on a real document. Pair it with
+/// <see cref="CameraView.RequestDocumentImageAsync"/> to get the cropped JPEG of the next steadily-present
+/// document, then send that to a Microsoft.Extensions.AI <c>IChatClient</c> — see the
+/// <c>Shiny.Blazor.Controls.Camera.Ai</c> package's <c>AiDocumentScanner</c>. Set
+/// <see cref="CameraAnalyzer.ScanWindow"/> to require the document inside an aim region.
+/// </summary>
+public class DocumentAnalyzer : CameraAnalyzer
+{
+    /// <inheritdoc/>
+    public override string Kind => "document";
+}

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Camera.Ai</RootNamespace>
+        <Description>AI document scanner for the Shiny Blazor CameraView. Detects that a document is present in a frame in-browser (no OCR), then sends just that one cropped frame to a Microsoft.Extensions.AI IChatClient for structured data extraction — so the model only runs on real documents, not every frame. Works with any IChatClient and any strongly-typed payload via MEAI structured output.</Description>
+        <PackageTags>blazor webassembly camera document scanner ai llm chatclient microsoft.extensions.ai structured-output</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+        <PackageReference Include="Microsoft.Extensions.AI" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Camera.Shared\Shiny.Controls.Camera.Shared.csproj" />
+        <ProjectReference Include="..\Shiny.Blazor.Controls.Camera\Shiny.Blazor.Controls.Camera.csproj" />
+    </ItemGroup>
+
+</Project>

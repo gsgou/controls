@@ -31,11 +31,13 @@ export async function start(video, overlay, dotnetRef, facingMode, analyzerKind,
         analyzerKind, showOverlay,
         showBoundingBox: showBoundingBox !== false,
         scanWindow: scanWindow || null,   // [x, y, w, h] normalized, or null for the whole frame
+        filterCss: 'none',
         running: true,
         rafId: null,
         detector: null,
         busy: false,
-        armed: false   // gated: a decoded barcode is only delivered to .NET while armed (see arm())
+        armed: false,  // gated: a result is only delivered to .NET while armed (see arm())
+        docStable: 0   // consecutive frames a document has been present (document mode)
     };
     states.set(video, state);
 
@@ -48,8 +50,8 @@ export async function start(video, overlay, dotnetRef, facingMode, analyzerKind,
         try { await dotnetRef.invokeMethodAsync('OnJsError', 'BarcodeDetector not supported in this browser'); }
         catch { /* ignore */ }
     }
-    else if (analyzerKind) {
-        // only barcode has an in-browser engine today; other kinds are placeholders
+    else if (analyzerKind && analyzerKind !== 'document') {
+        // barcode + document have in-browser engines today; other kinds are placeholders
         try { await dotnetRef.invokeMethodAsync('OnJsError', `Analyzer '${analyzerKind}' is not supported in the browser`); }
         catch { /* ignore */ }
     }
@@ -79,10 +81,51 @@ export async function start(video, overlay, dotnetRef, facingMode, analyzerKind,
             catch { /* transient detect error; keep looping */ }
             finally { state.busy = false; }
         }
+        else if (state.analyzerKind === 'document' && !state.busy) {
+            state.busy = true;
+            try {
+                // cheap presence gate (no OCR): find the document's bounding box from a downscaled frame
+                const box = detectDocument(video);
+                let drawBox = null;
+                if (box) {
+                    if (state.scanWindow && !boxCenterInWindow(box, state.scanWindow)) {
+                        // outside the aim window — treat as absent
+                        state.docStable = 0;
+                    }
+                    else {
+                        state.docStable++;
+                        drawBox = state.showBoundingBox
+                            ? { x: box.x, y: box.y, w: box.w, h: box.h, strokeColor: '#14B8A6', text: null, textColor: '#14B8A6' }
+                            : null;
+                    }
+                }
+                else {
+                    state.docStable = 0;
+                }
+
+                const boxes = drawBox ? [drawBox] : [];
+                if (state.showOverlay) drawOverlay(ctx, overlay, boxes, state.scanWindow);
+                await state.dotnet.invokeMethodAsync('OnOverlays', boxes);
+
+                // ship the image to .NET only when armed and the document has been steadily in view
+                if (state.armed && box && state.docStable >= DOC_STABILITY) {
+                    state.armed = false;
+                    state.docStable = 0;
+                    const jpeg = captureRegion(video, state.filterCss, box, DOC_PADDING);
+                    await state.dotnet.invokeMethodAsync('OnDocumentImage', [box.x, box.y, box.w, box.h], jpeg);
+                }
+            }
+            catch { /* transient frame error; keep looping */ }
+            finally { state.busy = false; }
+        }
         state.rafId = requestAnimationFrame(loop);
     };
     state.rafId = requestAnimationFrame(loop);
 }
+
+// document presence tuning
+const DOC_STABILITY = 6;   // frames a document must persist before it's shipped (debounce blur/motion)
+const DOC_PADDING = 0.04;  // fraction of the document size added as crop margin on each side
 
 
 export function stop(video) {
@@ -114,6 +157,8 @@ export function disarm(video) {
 
 export function setFilter(video, css) {
     video.style.filter = css || 'none';
+    const state = states.get(video);
+    if (state) state.filterCss = css || 'none';
 }
 
 
@@ -167,6 +212,118 @@ export function capture(video, filterCss) {
         ctx.filter = filterCss;   // bake the preview filter into the still
     ctx.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+
+// --- Document presence detection (mirrors the managed/native MAUI edge detector) ----------------
+// Downscale the frame to a small grayscale grid, Otsu-threshold it, take the largest bright connected
+// region and read its bounding box. Cheap enough to run every frame; only answers "is a document-shaped
+// bright region filling much of the frame, and where?" — never reads text. Returns a normalized box or null.
+const docCanvas = document.createElement('canvas');
+const docCtx = docCanvas.getContext('2d', { willReadFrequently: true });
+
+function detectDocument(video) {
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) return null;
+
+    const target = 120;
+    const scale = Math.max(vw, vh) / target;
+    const sw = Math.max(16, Math.round(vw / scale));
+    const sh = Math.max(16, Math.round(vh / scale));
+    docCanvas.width = sw; docCanvas.height = sh;
+    docCtx.drawImage(video, 0, 0, sw, sh);
+
+    const data = docCtx.getImageData(0, 0, sw, sh).data;
+    const n = sw * sh;
+    const lum = new Uint8Array(n);
+    const hist = new Int32Array(256);
+    for (let i = 0; i < n; i++) {
+        const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+        const y = (r * 77 + g * 150 + b * 29) >> 8;
+        lum[i] = y; hist[y]++;
+    }
+
+    // Otsu threshold
+    let sum = 0;
+    for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, maxVar = 0, thresh = 127;
+    for (let t = 0; t < 256; t++) {
+        wB += hist[t];
+        if (wB === 0) continue;
+        const wF = n - wB;
+        if (wF === 0) break;
+        sumB += t * hist[t];
+        const mB = sumB / wB, mF = (sum - sumB) / wF;
+        const between = wB * wF * (mB - mF) * (mB - mF);
+        if (between > maxVar) { maxVar = between; thresh = t; }
+    }
+
+    const fg = new Uint8Array(n);
+    for (let i = 0; i < n; i++) fg[i] = lum[i] > thresh ? 1 : 0;
+
+    // largest bright connected component (iterative flood fill, 4-connectivity) + its bbox
+    const visited = new Uint8Array(n);
+    const stack = [];
+    let bestArea = 0, bbox = null;
+    for (let seed = 0; seed < n; seed++) {
+        if (!fg[seed] || visited[seed]) continue;
+        let area = 0, minX = sw, minY = sh, maxX = 0, maxY = 0;
+        visited[seed] = 1; stack.length = 0; stack.push(seed);
+        while (stack.length) {
+            const p = stack.pop();
+            const px = p % sw, py = (p / sw) | 0;
+            area++;
+            if (px < minX) minX = px; if (px > maxX) maxX = px;
+            if (py < minY) minY = py; if (py > maxY) maxY = py;
+            if (px > 0 && fg[p - 1] && !visited[p - 1]) { visited[p - 1] = 1; stack.push(p - 1); }
+            if (px < sw - 1 && fg[p + 1] && !visited[p + 1]) { visited[p + 1] = 1; stack.push(p + 1); }
+            if (py > 0 && fg[p - sw] && !visited[p - sw]) { visited[p - sw] = 1; stack.push(p - sw); }
+            if (py < sh - 1 && fg[p + sw] && !visited[p + sw]) { visited[p + sw] = 1; stack.push(p + sw); }
+        }
+        if (area > bestArea) { bestArea = area; bbox = { minX, minY, maxX, maxY }; }
+    }
+
+    const frac = bestArea / n;
+    if (!bbox || frac < 0.15 || frac > 0.99) return null;
+
+    const bw = (bbox.maxX - bbox.minX) / sw;
+    const bh = (bbox.maxY - bbox.minY) / sh;
+    if (bw < 0.25 || bh < 0.25) return null; // don't ship a sliver
+
+    return { x: bbox.minX / sw, y: bbox.minY / sh, w: bw, h: bh };
+}
+
+
+function boxCenterInWindow(box, win) {
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    return cx >= win[0] && cx <= win[0] + win[2] && cy >= win[1] && cy <= win[1] + win[3];
+}
+
+
+// Crop the (padded) document region out of the current frame and JPEG-encode it for the AI call.
+function captureRegion(video, filterCss, box, padding) {
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const pad = padding || 0;
+    let x = Math.max(0, box.x - box.w * pad) * vw;
+    let y = Math.max(0, box.y - box.h * pad) * vh;
+    let right = Math.min(1, box.x + box.w * (1 + pad)) * vw;
+    let bottom = Math.min(1, box.y + box.h * (1 + pad)) * vh;
+    const cw = Math.max(1, Math.round(right - x));
+    const ch = Math.max(1, Math.round(bottom - y));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    if (filterCss && filterCss !== 'none') ctx.filter = filterCss;
+    ctx.drawImage(video, Math.round(x), Math.round(y), cw, ch, 0, 0, cw, ch);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     const base64 = dataUrl.split(',')[1];
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
