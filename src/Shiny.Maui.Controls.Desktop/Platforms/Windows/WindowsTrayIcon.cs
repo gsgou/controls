@@ -42,6 +42,10 @@ sealed class WindowsTrayIcon : TrayIconBase
 
     public WindowsTrayIcon()
     {
+        // Register the "ShinyTrayHostWindow" class before CreateWindowEx uses it below —
+        // otherwise the window is never created and construction fails.
+        _ = WindowClass.Value;
+
         this.id = Interlocked.Increment(ref NextId);
         this.hwnd = CreateWindowEx(0, "ShinyTrayHostWindow", null, 0, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, GetModuleHandle(null), IntPtr.Zero);
         if (this.hwnd == IntPtr.Zero)
@@ -124,7 +128,6 @@ sealed class WindowsTrayIcon : TrayIconBase
 
     protected override void OnIconChanged(Func<Stream> factory)
     {
-        _ = WindowClass.Value;
         var oldIcon = this.hIcon;
         this.hIcon = LoadHIconFromStream(factory(), this.Badge);
         var data = this.BuildData(NIF_ICON);
