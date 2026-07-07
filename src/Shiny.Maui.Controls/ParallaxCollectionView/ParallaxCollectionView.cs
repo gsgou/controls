@@ -27,6 +27,9 @@ public class ParallaxCollectionView : ContentView
         };
         collection.Scrolled += OnScrolled;
         collection.SelectionChanged += OnSelectionChanged;
+#if IOS
+        collection.HandlerChanged += (_, _) => ConfigureNativeScrollToTop();
+#endif
 
         heroHost = new ContentView
         {
@@ -229,9 +232,62 @@ public class ParallaxCollectionView : ContentView
     public void ScrollTo(object item, ScrollToPosition position = ScrollToPosition.MakeVisible, bool animate = true)
         => collection.ScrollTo(item, position: position, animate: animate);
 
+    /// <summary>
+    /// Scrolls the list back to the very top, including the parallax header. On iOS this drives
+    /// the underlying scroll view's content offset directly (revealing the header); other
+    /// platforms fall back to scrolling the first item to the top.
+    /// </summary>
+    public void ScrollToTop(bool animate = true)
+    {
+#if IOS
+        var scrollView = FindScrollView(collection.Handler?.PlatformView as UIKit.UIView);
+        if (scrollView is not null)
+        {
+            var top = -scrollView.AdjustedContentInset.Top;
+            scrollView.SetContentOffset(new CoreGraphics.CGPoint(scrollView.ContentOffset.X, top), animate);
+            return;
+        }
+#endif
+        collection.ScrollTo(0, position: ScrollToPosition.Start, animate: animate);
+    }
+
+#if IOS
+    // iOS scrolls the single scrolls-to-top-enabled scroll view to the top when the user taps
+    // the status bar. Re-assert ScrollsToTop on the underlying UICollectionView so the gesture
+    // targets this list even when it is nested inside the parallax wrapper (issue #7).
+    void ConfigureNativeScrollToTop()
+    {
+        var scrollView = FindScrollView(collection.Handler?.PlatformView as UIKit.UIView);
+        if (scrollView is not null)
+            scrollView.ScrollsToTop = true;
+    }
+
+    static UIKit.UIScrollView? FindScrollView(UIKit.UIView? view)
+    {
+        switch (view)
+        {
+            case null:
+                return null;
+            case UIKit.UIScrollView scroll:
+                return scroll;
+            default:
+                foreach (var sub in view.Subviews)
+                {
+                    var found = FindScrollView(sub);
+                    if (found is not null)
+                        return found;
+                }
+                return null;
+        }
+    }
+#endif
+
     void ApplyHeaderHeight()
     {
-        var h = Math.Max(0, HeaderHeight);
+        // With no header template there is nothing to show, so reserve zero space.
+        // Otherwise the empty (transparent) header region renders as a blank band over
+        // the page background — the "gray area at the top" reported in issue #8.
+        var h = HeaderTemplate is null ? 0 : Math.Max(0, HeaderHeight);
         spacerHeader.HeightRequest = h;
         heroHost.HeightRequest = h;
     }
@@ -241,16 +297,20 @@ public class ParallaxCollectionView : ContentView
         if (HeaderTemplate is null)
         {
             heroHost.Content = null;
-            return;
+        }
+        else
+        {
+            var content = HeaderTemplate.CreateContent();
+            var view = content as View ?? (content as ViewCell)?.View;
+            if (view is not null)
+            {
+                view.BindingContext ??= BindingContext;
+                heroHost.Content = view;
+            }
         }
 
-        var content = HeaderTemplate.CreateContent();
-        var view = content as View ?? (content as ViewCell)?.View;
-        if (view is not null)
-        {
-            view.BindingContext ??= BindingContext;
-            heroHost.Content = view;
-        }
+        // Header presence drives the reserved height (see ApplyHeaderHeight / issue #8).
+        ApplyHeaderHeight();
     }
 
     protected override void OnBindingContextChanged()
