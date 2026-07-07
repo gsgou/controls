@@ -1,0 +1,384 @@
+using Microsoft.Maui.Layouts;
+using Shiny.Maui.Controls.Themes;
+
+namespace Shiny.Maui.Controls;
+
+/// <summary>
+/// A two-thumb range slider that selects a lower/upper value pair. Shares the gradient track,
+/// blended thumb border, and floating tooltip styling of <see cref="Slider"/>, and adds
+/// <see cref="MinimumRange"/> / <see cref="MaximumRange"/> gap constraints between the thumbs.
+/// </summary>
+public partial class RangeSlider : ContentView
+{
+    readonly BoxView trackBackground;
+    readonly BoxView trackFill;
+    readonly Frame lowerThumb;
+    readonly Frame upperThumb;
+    readonly Border lowerTooltipBadge;
+    readonly Border upperTooltipBadge;
+    readonly Label lowerTooltipLabel;
+    readonly Label upperTooltipLabel;
+    readonly ContentView lowerTooltipContainer;
+    readonly ContentView upperTooltipContainer;
+    readonly Grid tooltipRow;
+    readonly AbsoluteLayout trackLayout;
+    readonly Grid rootGrid;
+
+    double trackWidth;
+    bool isDragging;
+    bool draggingUpper;
+    double dragStartThumbX;
+
+    public RangeSlider()
+    {
+        lowerTooltipLabel = CreateTooltipLabel();
+        upperTooltipLabel = CreateTooltipLabel();
+
+        lowerTooltipBadge = CreateTooltipBadge(lowerTooltipLabel);
+        upperTooltipBadge = CreateTooltipBadge(upperTooltipLabel);
+
+        lowerTooltipContainer = new ContentView { Content = lowerTooltipBadge, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.End };
+        upperTooltipContainer = new ContentView { Content = upperTooltipBadge, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.End };
+
+        tooltipRow = new Grid { Margin = new Thickness(0, 0, 0, 4) };
+        tooltipRow.Add(lowerTooltipContainer);
+        tooltipRow.Add(upperTooltipContainer);
+
+        // Track background (inactive, neutral)
+        trackBackground = new BoxView
+        {
+            HeightRequest = 8,
+            CornerRadius = 4,
+            VerticalOptions = LayoutOptions.Center
+        };
+        trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
+
+        // Active fill between the two thumbs (gradient)
+        trackFill = new BoxView
+        {
+            HeightRequest = 8,
+            CornerRadius = 4,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        lowerThumb = CreateThumb();
+        upperThumb = CreateThumb();
+
+        trackLayout = new AbsoluteLayout
+        {
+            HeightRequest = 32,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        AbsoluteLayout.SetLayoutBounds(trackBackground, new Rect(0, 0.5, 1, 8));
+        AbsoluteLayout.SetLayoutFlags(trackBackground, AbsoluteLayoutFlags.PositionProportional | AbsoluteLayoutFlags.WidthProportional);
+
+        AbsoluteLayout.SetLayoutBounds(trackFill, new Rect(0, 0.5, 0, 8));
+        AbsoluteLayout.SetLayoutFlags(trackFill, AbsoluteLayoutFlags.YProportional);
+
+        AbsoluteLayout.SetLayoutBounds(lowerThumb, new Rect(0, 0.5, 24, 24));
+        AbsoluteLayout.SetLayoutFlags(lowerThumb, AbsoluteLayoutFlags.YProportional);
+
+        AbsoluteLayout.SetLayoutBounds(upperThumb, new Rect(0, 0.5, 24, 24));
+        AbsoluteLayout.SetLayoutFlags(upperThumb, AbsoluteLayoutFlags.YProportional);
+
+        trackLayout.Children.Add(trackBackground);
+        trackLayout.Children.Add(trackFill);
+        trackLayout.Children.Add(lowerThumb);
+        trackLayout.Children.Add(upperThumb);
+
+        rootGrid = new Grid
+        {
+            RowDefinitions =
+            {
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Auto)
+            },
+            RowSpacing = 0
+        };
+        rootGrid.Add(tooltipRow, 0, 0);
+        rootGrid.Add(trackLayout, 0, 1);
+
+        Content = rootGrid;
+
+        // Per-thumb drag
+        AddThumbPan(lowerThumb, isUpper: false);
+        AddThumbPan(upperThumb, isUpper: true);
+
+        // Tap anywhere on the track moves the nearest thumb
+        var tapGesture = new TapGestureRecognizer();
+        tapGesture.Tapped += OnTrackTapped;
+        trackLayout.GestureRecognizers.Add(tapGesture);
+
+        UpdateVisuals();
+    }
+
+    Label CreateTooltipLabel()
+    {
+        var label = new Label
+        {
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center,
+            FontSize = 12,
+            FontAttributes = FontAttributes.Bold
+        };
+        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        return label;
+    }
+
+    Border CreateTooltipBadge(View content)
+    {
+        var badge = new Border
+        {
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+            Stroke = Colors.Transparent,
+            Padding = new Thickness(10, 4),
+            Content = content,
+            HorizontalOptions = LayoutOptions.Start
+        };
+        badge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
+        return badge;
+    }
+
+    Frame CreateThumb()
+    {
+        var thumb = new Frame
+        {
+            WidthRequest = 24,
+            HeightRequest = 24,
+            CornerRadius = 12,
+            BorderColor = ColdColor,
+            HasShadow = true,
+            Padding = 0,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Center
+        };
+        thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        return thumb;
+    }
+
+    void AddThumbPan(Frame thumb, bool isUpper)
+    {
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += (s, e) => OnThumbPan(e, isUpper);
+        thumb.GestureRecognizers.Add(pan);
+    }
+
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+        if (width > 0)
+        {
+            trackWidth = width;
+            UpdateVisuals();
+        }
+    }
+
+    void OnThumbPan(PanUpdatedEventArgs e, bool isUpper)
+    {
+        if (!IsEnabled) return;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                isDragging = true;
+                draggingUpper = isUpper;
+                dragStartThumbX = AbsoluteLayout.GetLayoutBounds(isUpper ? upperThumb : lowerThumb).X;
+                break;
+
+            case GestureStatus.Running:
+                if (isDragging && trackWidth > 0)
+                {
+                    var currentX = dragStartThumbX + e.TotalX;
+                    var percent = Math.Clamp(currentX / (trackWidth - ThumbSize), 0, 1);
+                    ApplyPercentToThumb(percent, draggingUpper);
+                }
+                break;
+
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                isDragging = false;
+                break;
+        }
+    }
+
+    void OnTrackTapped(object? sender, TappedEventArgs e)
+    {
+        if (!IsEnabled || trackWidth <= 0) return;
+
+        var point = e.GetPosition(trackLayout);
+        if (point is null) return;
+
+        var percent = Math.Clamp(point.Value.X / trackWidth, 0, 1);
+        var tappedValue = PercentToValue(percent);
+
+        // Move whichever thumb is nearer the tap.
+        var toUpper = Math.Abs(tappedValue - UpperValue) < Math.Abs(tappedValue - LowerValue);
+        ApplyPercentToThumb(percent, toUpper);
+    }
+
+    double PercentToValue(double percent)
+    {
+        var raw = Minimum + (percent * (Maximum - Minimum));
+        if (Step > 0)
+            raw = Math.Round(raw / Step) * Step;
+        return Math.Clamp(raw, Minimum, Maximum);
+    }
+
+    void ApplyPercentToThumb(double percent, bool isUpper)
+    {
+        var value = PercentToValue(percent);
+        var lower = LowerValue;
+        var upper = UpperValue;
+
+        if (isUpper)
+        {
+            // Cannot come closer than MinimumRange to the lower thumb.
+            if (MinimumRange > 0)
+                value = Math.Max(value, lower + MinimumRange);
+            value = Math.Clamp(value, Minimum, Maximum);
+            // Enforce MaximumRange by pushing the lower thumb up.
+            if (MaximumRange > 0 && value - lower > MaximumRange)
+                lower = Math.Max(Minimum, value - MaximumRange);
+            upper = value;
+        }
+        else
+        {
+            if (MinimumRange > 0)
+                value = Math.Min(value, upper - MinimumRange);
+            value = Math.Clamp(value, Minimum, Maximum);
+            if (MaximumRange > 0 && upper - value > MaximumRange)
+                upper = Math.Min(Maximum, value + MaximumRange);
+            lower = value;
+        }
+
+        var changed = Math.Abs(lower - LowerValue) > double.Epsilon || Math.Abs(upper - UpperValue) > double.Epsilon;
+        if (!changed) return;
+
+        LowerValue = lower;
+        UpperValue = upper;
+
+        var range = new SliderRange(lower, upper);
+        RangeChangedCommand?.Execute(range);
+        RangeChanged?.Invoke(this, range);
+    }
+
+    void UpdateVisuals()
+    {
+        if (trackWidth <= 0) return;
+
+        var span = Maximum > Minimum ? Maximum - Minimum : 1;
+        var lowerPercent = Math.Clamp((LowerValue - Minimum) / span, 0, 1);
+        var upperPercent = Math.Clamp((UpperValue - Minimum) / span, 0, 1);
+        if (upperPercent < lowerPercent)
+            (lowerPercent, upperPercent) = (upperPercent, lowerPercent);
+
+        var lowerColor = BlendColors(ColdColor, HotColor, lowerPercent);
+        var upperColor = BlendColors(ColdColor, HotColor, upperPercent);
+
+        trackBackground.HeightRequest = TrackHeight;
+        trackBackground.CornerRadius = new CornerRadius(TrackHeight / 2);
+
+        // Active fill spans from the lower thumb center to the upper thumb center.
+        var lowerX = lowerPercent * (trackWidth - ThumbSize) + (ThumbSize / 2);
+        var upperX = upperPercent * (trackWidth - ThumbSize) + (ThumbSize / 2);
+        var fillWidth = Math.Max(0, upperX - lowerX);
+        AbsoluteLayout.SetLayoutBounds(trackFill, new Rect(lowerX, 0.5, fillWidth, TrackHeight));
+        trackFill.HeightRequest = TrackHeight;
+        trackFill.CornerRadius = new CornerRadius(TrackHeight / 2);
+        trackFill.Background = new LinearGradientBrush(
+            new GradientStopCollection
+            {
+                new GradientStop(lowerColor, 0),
+                new GradientStop(upperColor, 1)
+            },
+            new Point(0, 0.5),
+            new Point(1, 0.5));
+
+        // Thumbs
+        PositionThumb(lowerThumb, lowerPercent, lowerColor);
+        PositionThumb(upperThumb, upperPercent, upperColor);
+
+        // Tooltips
+        UpdateTooltips(lowerPercent, upperPercent, lowerColor, upperColor);
+    }
+
+    void PositionThumb(Frame thumb, double percent, Color color)
+    {
+        var thumbX = percent * (trackWidth - ThumbSize);
+        AbsoluteLayout.SetLayoutBounds(thumb, new Rect(thumbX, 0.5, ThumbSize, ThumbSize));
+        thumb.BorderColor = color;
+        thumb.CornerRadius = (float)(ThumbSize / 2);
+        thumb.WidthRequest = ThumbSize;
+        thumb.HeightRequest = ThumbSize;
+    }
+
+    void UpdateTooltips(double lowerPercent, double upperPercent, Color lowerColor, Color upperColor)
+    {
+        tooltipRow.IsVisible = ShowTooltip;
+        if (!ShowTooltip) return;
+
+        UpdateTooltip(lowerTooltipContainer, lowerTooltipBadge, lowerTooltipLabel, LowerValue, lowerPercent);
+        UpdateTooltip(upperTooltipContainer, upperTooltipBadge, upperTooltipLabel, UpperValue, upperPercent);
+    }
+
+    void UpdateTooltip(ContentView container, Border badge, Label label, double value, double percent)
+    {
+        if (TooltipTemplate is not null)
+        {
+            container.Content = CreateTooltipFromTemplate(value);
+        }
+        else
+        {
+            if (container.Content != badge)
+                container.Content = badge;
+
+            label.Text = FormatValue(value);
+            if (TooltipTextColor is Color ttText)
+                label.TextColor = ttText;
+            else
+                label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            label.FontSize = TooltipFontSize;
+            if (TooltipBackgroundColor is Color ttBg)
+                badge.BackgroundColor = ttBg;
+            else
+                badge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
+        }
+
+        var content = container.Content;
+        var tooltipWidth = content is { Width: > 0 } ? content.Width : 50;
+        var thumbCenter = percent * (trackWidth - ThumbSize) + (ThumbSize / 2);
+        var tooltipX = Math.Clamp(thumbCenter - (tooltipWidth / 2), 0, Math.Max(0, trackWidth - tooltipWidth));
+        if (content is View v)
+            v.TranslationX = tooltipX;
+    }
+
+    View? CreateTooltipFromTemplate(double value)
+    {
+        if (TooltipTemplate is null) return null;
+        var content = TooltipTemplate.CreateContent();
+        if (content is View view)
+        {
+            view.BindingContext = value;
+            view.HorizontalOptions = LayoutOptions.Start;
+            return view;
+        }
+        return null;
+    }
+
+    string FormatValue(double val)
+    {
+        if (!string.IsNullOrEmpty(ValueFormat))
+            return val.ToString(ValueFormat);
+        return val % 1 == 0 ? val.ToString("0") : val.ToString("0.#");
+    }
+
+    static Color BlendColors(Color color1, Color color2, double ratio)
+    {
+        ratio = Math.Clamp(ratio, 0, 1);
+        var r = color1.Red + (color2.Red - color1.Red) * (float)ratio;
+        var g = color1.Green + (color2.Green - color1.Green) * (float)ratio;
+        var b = color1.Blue + (color2.Blue - color1.Blue) * (float)ratio;
+        return new Color(r, g, b);
+    }
+}

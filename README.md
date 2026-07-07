@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -659,6 +659,39 @@ A slider control with a two-color gradient track, blended thumb border, tooltip,
 | ShowTooltip | bool | true | Show value tooltip |
 | TooltipTemplate | DataTemplate/RenderFragment | null | Custom tooltip content |
 | ValueFormat | string? | null | Format string for tooltip value |
+
+### RangeSlider
+
+A two-thumb variant of Slider that selects a lower/upper value pair. It reuses the gradient track, blended thumb borders, and floating tooltips, adding `MinimumRange`/`MaximumRange` gap constraints between the thumbs. The dragged thumb hard-stops at `MinimumRange`; dragging past `MaximumRange` pushes the other thumb along.
+
+```xml
+<shiny:RangeSlider LowerValue="{Binding PriceLow}"
+                   UpperValue="{Binding PriceHigh}"
+                   Minimum="0"
+                   Maximum="1000"
+                   Step="10"
+                   MinimumRange="50"
+                   MaximumRange="500"
+                   ValueFormat="C0" />
+```
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| LowerValue | double | 0 | Lower thumb value (TwoWay) |
+| UpperValue | double | 100 | Upper thumb value (TwoWay) |
+| Minimum | double | 0 | Minimum value |
+| Maximum | double | 100 | Maximum value |
+| Step | double | 1 | Snap increment |
+| MinimumRange | double | 0 | Minimum gap between thumbs (hard stop); 0 = off |
+| MaximumRange | double | 0 | Maximum gap between thumbs (pushes the other thumb); 0 = off |
+| ColdColor | Color/string | #3B82F6 | Left gradient color |
+| HotColor | Color/string | #EF4444 | Right gradient color |
+| TrackHeight | double | 8 | Track height |
+| ThumbSize | double | 24 | Thumb diameter |
+| ThumbColor | Color/string | White | Thumb fill color |
+| ShowTooltip | bool | true | Show a value tooltip per thumb |
+| TooltipTemplate | DataTemplate/RenderFragment | null | Custom tooltip content (applied to both thumbs) |
+| ValueFormat | string? | null | Format string for tooltip values |
 
 ### ProgressBar
 

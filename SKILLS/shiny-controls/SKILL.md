@@ -143,6 +143,10 @@ triggers:
   - gradientslider
   - slider
   - range slider
+  - rangeslider
+  - two thumb slider
+  - dual slider
+  - min max slider
   - temperature slider
   - blazor slider
   - blazor gradient slider
@@ -428,6 +432,7 @@ references:
   - dialogs.md
   - textentry.md
   - slider.md
+  - range-slider.md
   - progressbar.md
   - overlay.md
   - skeleton.md
@@ -475,6 +480,7 @@ The library contains:
 - **Dialogs** (MAUI + Blazor): A service-first dialog system that emulates `alert`/`confirm`/`prompt` with owned (non-native), animated, themeable dialogs. Inject `IDialogService` and await `Alert` (Task), `Confirm` (Task<bool>), or `Prompt` (Task<PromptResult>). Queued/modal, backdrop cancel (Escape/Enter on Blazor), theme-token colors. Per-call `configure` sets the `DialogAnimation` (None/Fade/SlideTop/SlideBottom/SlideLeft/SlideRight/Zoom/Pop) and styling; customize globally via `ConfigureDialogs` (MAUI) / `AddShinyDialogs(o => ...)` (Blazor) or fully replace the card with a `ContentTemplate` (MAUI `DataTemplate`) / `<DialogHost Template>` (Blazor `RenderFragment<DialogContext>`). MAUI auto-attaches (just `UseShinyControls()`); Blazor needs `AddShinyDialogs()` + a single `<DialogHost>`
 - **TextEntry**: A Material Design-inspired text entry control with animated floating placeholder, customizable border, left/right tool slots, hint text for validation, character count, read-only/password modes, and reusable tools (ClearButtonTool, TextEntrySpeechToTextTool)
 - **Slider**: A slider control with a two-color gradient track, blended thumb border that samples the gradient at the current position, tooltip with custom templates, and full drag/tap interaction
+- **RangeSlider**: A two-thumb variant of Slider selecting a lower/upper value pair (`LowerValue`/`UpperValue`). Reuses the gradient (shown across the active segment between thumbs), blended thumb borders, and per-thumb tooltips, and adds `MinimumRange` (hard-stop gap) and `MaximumRange` (pushes the other thumb) constraints. See range-slider.md
 - **ProgressBar**: A progress bar with gradient fill and a Vista-style shimmer pulse that sweeps left-to-right. Configurable `PulseLength` (width of sheen) and `PulseSpeed` (sweep duration). Triggers on value change or timed interval. Supports indeterminate mode and text overlay
 - **Overlay & LoadingOverlay**: Full-screen overlay with configurable backdrop color and opacity, fade animation, and custom content via `DataTemplate` (MAUI) or `RenderFragment` (Blazor). `LoadingOverlay` extends it with built-in spinner (indeterminate) or progress bar (determinate) plus optional message text
 - **SkeletonView**: A content-wrapping control (similar to `RefreshView`) that shows animated shimmer placeholders while `IsBusy` is true, then reveals the real content when loading finishes. Built-in line placeholders (configurable `ItemCount`/`ItemHeight`/`ItemSpacing`/`CornerRadius`/`BaseColor`/`ShimmerColor`) or a custom placeholder layout via `SkeletonTemplate` (MAUI) / `SkeletonContent` (Blazor). Shimmer is a sweeping `LinearGradientBrush` band on MAUI and an animated CSS gradient (honoring `prefers-reduced-motion`) on Blazor. Use it for inline content regions; use `LoadingOverlay` for whole-page loading

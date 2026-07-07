@@ -1,0 +1,77 @@
+@page "/rangeslider"
+
+<PageTitle>Range Slider</PageTitle>
+
+<h1>Range Slider</h1>
+
+<div class="demo-section">
+    <h2>Price Range</h2>
+    <RangeSlider @bind-LowerValue="priceLower"
+                 @bind-UpperValue="priceUpper"
+                 Minimum="0"
+                 Maximum="1000"
+                 Step="10"
+                 ValueFormat="C0" />
+    <div class="state">Between <code>@priceLower.ToString("C0")</code> and <code>@priceUpper.ToString("C0")</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Comfort Band (min 2°, max 8° apart)</h2>
+    <RangeSlider @bind-LowerValue="tempLower"
+                 @bind-UpperValue="tempUpper"
+                 Minimum="10"
+                 Maximum="30"
+                 Step="0.5"
+                 MinimumRange="2"
+                 MaximumRange="8"
+                 ColdColor="#3B82F6"
+                 HotColor="#EF4444"
+                 ValueFormat="0.#°" />
+    <div class="state">From <code>@tempLower.ToString("0.#")°</code> to <code>@tempUpper.ToString("0.#")°</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Stay Length (nights, large thumbs)</h2>
+    <RangeSlider @bind-LowerValue="bookingLower"
+                 @bind-UpperValue="bookingUpper"
+                 Minimum="1"
+                 Maximum="14"
+                 Step="1"
+                 MinimumRange="1"
+                 TrackHeight="12"
+                 ThumbSize="32"
+                 ColdColor="#10B981"
+                 HotColor="#6366F1"
+                 ValueFormat="0" />
+    <div class="state"><code>@bookingLower.ToString("0")</code> – <code>@bookingUpper.ToString("0")</code> nights</div>
+</div>
+
+<div class="demo-section">
+    <h2>Age Range (no tooltip)</h2>
+    <RangeSlider @bind-LowerValue="ageLower"
+                 @bind-UpperValue="ageUpper"
+                 Minimum="0"
+                 Maximum="100"
+                 Step="1"
+                 ShowTooltip="false"
+                 ColdColor="#06B6D4"
+                 HotColor="#F97316"
+                 ValueFormat="0" />
+    <div class="state"><code>@ageLower.ToString("0")</code> – <code>@ageUpper.ToString("0")</code> yrs</div>
+</div>
+
+<div class="demo-section">
+    <h2>Disabled</h2>
+    <RangeSlider LowerValue="30" UpperValue="70" IsEnabled="false" />
+</div>
+
+@code {
+    double priceLower = 250;
+    double priceUpper = 750;
+    double tempLower = 18;
+    double tempUpper = 24;
+    double bookingLower = 2;
+    double bookingUpper = 5;
+    double ageLower = 21;
+    double ageUpper = 65;
+}

@@ -1,0 +1,50 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="shiny-rs @CssClass"
+     style="@RootStyle"
+     @attributes="AdditionalAttributes">
+
+    @if (ShowTooltip)
+    {
+        <div class="shiny-rs-tooltip" style="left: clamp(0%, @(LowerPercentage)% , 100%); @TooltipTransform(LowerPercentage)">
+            @if (TooltipTemplate is not null)
+            {
+                @TooltipTemplate(LowerValue)
+            }
+            else
+            {
+                <div class="shiny-rs-tooltip-badge" style="@TooltipBadgeStyle">
+                    <span class="shiny-rs-tooltip-text">@FormatValue(LowerValue)</span>
+                    <div class="shiny-rs-tooltip-pointer" style="@TooltipPointerStyle"></div>
+                </div>
+            }
+        </div>
+        <div class="shiny-rs-tooltip" style="left: clamp(0%, @(UpperPercentage)% , 100%); @TooltipTransform(UpperPercentage)">
+            @if (TooltipTemplate is not null)
+            {
+                @TooltipTemplate(UpperValue)
+            }
+            else
+            {
+                <div class="shiny-rs-tooltip-badge" style="@TooltipBadgeStyle">
+                    <span class="shiny-rs-tooltip-text">@FormatValue(UpperValue)</span>
+                    <div class="shiny-rs-tooltip-pointer" style="@TooltipPointerStyle"></div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="shiny-rs-track" style="@TrackStyle" @onclick="OnTrackClick" @ref="trackRef">
+        <div class="shiny-rs-track-fill" style="@TrackFillStyle"></div>
+        <div class="shiny-rs-thumb"
+             data-thumb="lower"
+             style="@ThumbStyle(LowerPercentage, LowerColor)"
+             @onpointerdown:stopPropagation>
+        </div>
+        <div class="shiny-rs-thumb"
+             data-thumb="upper"
+             style="@ThumbStyle(UpperPercentage, UpperColor)"
+             @onpointerdown:stopPropagation>
+        </div>
+    </div>
+</div>
