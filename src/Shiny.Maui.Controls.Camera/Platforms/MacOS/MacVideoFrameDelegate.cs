@@ -22,6 +22,9 @@ sealed class MacVideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegat
     public Action<AppleCameraFrame>? OnFrame;
     public volatile bool Mirrored;
 
+    /// <summary>When set, each frame is composited with the overlay and appended to the burn-in recording.</summary>
+    public volatile AppleVideoOverlayRecorder? Recorder;
+
     public override void DidOutputSampleBuffer(AVCaptureOutput captureOutput, CMSampleBuffer sampleBuffer, AVCaptureConnection connection)
     {
         try
@@ -36,6 +39,9 @@ sealed class MacVideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegat
 
             if (this.OnFrame != null && this.WantFrames?.Invoke() == true)
                 this.OnFrame(new AppleCameraFrame(pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+
+            // composite + encode LAST so analyzers/preview see the clean frame and only the file gets the overlay
+            this.Recorder?.AppendVideo(sampleBuffer);
         }
         finally
         {

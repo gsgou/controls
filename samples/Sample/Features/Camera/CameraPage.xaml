@@ -108,6 +108,9 @@
                         <shiny:SwitchCell x:Name="CaptureStopSwitch"
                                           Title="Capture &amp; stop on detect"
                                           Description="Grab a still and freeze the preview when a document is recognized (tap the thumbnail to resume)" />
+                        <shiny:SwitchCell x:Name="OverlayVideoSwitch"
+                                          Title="Burn overlay into video"
+                                          Description="Composite a live timestamp + watermark into the recorded file (not just the preview)" />
                         <shiny:TextPickerCell Title="Filter"
                                               PickerTitle="Filter"
                                               ItemsSource="{Binding Filters}"

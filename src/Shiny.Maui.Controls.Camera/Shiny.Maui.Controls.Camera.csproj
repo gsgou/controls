@@ -68,6 +68,7 @@
         <PackageReference Include="Xamarin.AndroidX.Camera.Lifecycle" />
         <PackageReference Include="Xamarin.AndroidX.Camera.View" />
         <PackageReference Include="Xamarin.AndroidX.Camera.Video" />
+        <PackageReference Include="Xamarin.AndroidX.Camera.Effects" />
     </ItemGroup>
 
     <!--

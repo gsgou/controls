@@ -18,6 +18,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
     AVCapturePhotoOutput? photoOutput;
     AVCaptureMovieFileOutput? movieOutput;
     AVCaptureVideoDataOutput? dataOutput;
+    AVCaptureAudioDataOutput? audioDataOutput;
+    AppleAudioDelegate? audioDelegate;
+    AppleVideoOverlayRecorder? overlayRecorder;
     AVCaptureVideoPreviewLayer? previewLayer;
     AVCaptureDevice? device;
     MacVideoFrameDelegate? frameDelegate;
@@ -111,13 +114,29 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
     public Task StartVideoRecordingAsync(VideoRecordingOptions options, CancellationToken ct = default)
     {
-        if (this.movieOutput == null)
+        if (this.session is not { Running: true } || this.frameDelegate == null)
             throw new InvalidOperationException("Camera is not running");
 
+        var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mov");
+
+        // Overlay set -> owned AVAssetWriter path; overlay null -> fast native AVCaptureMovieFileOutput path.
+        if (options.Overlay != null)
+        {
+            var recorder = new AppleVideoOverlayRecorder(path, options.IncludeAudio, this.VirtualView.Facing, options.Overlay);
+            if (options.IncludeAudio)
+            {
+                this.EnsureAudioInput();
+                this.EnsureAudioDataOutput(recorder);
+            }
+            this.overlayRecorder = recorder;
+            this.frameDelegate.Recorder = recorder;
+            return Task.CompletedTask;
+        }
+
+        if (this.movieOutput == null)
+            throw new InvalidOperationException("Camera is not running");
         if (options.IncludeAudio)
             this.EnsureAudioInput();
-
-        var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mov");
         this.recordingDelegate = new MovieRecordingDelegate();
         this.movieOutput.StartRecordingToOutputFile(NSUrl.FromFilename(path), this.recordingDelegate);
         return Task.CompletedTask;
@@ -126,11 +145,45 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
     public Task<CameraVideo> StopVideoRecordingAsync(CancellationToken ct = default)
     {
+        if (this.overlayRecorder is { } recorder)
+        {
+            if (this.frameDelegate != null)
+                this.frameDelegate.Recorder = null;
+            if (this.audioDelegate != null)
+                this.audioDelegate.Recorder = null;
+            this.overlayRecorder = null;
+            return recorder.FinishAsync();
+        }
+
         if (this.movieOutput is not { Recording: true } || this.recordingDelegate == null)
             throw new InvalidOperationException("Not recording");
 
         this.movieOutput.StopRecording();
         return this.recordingDelegate.Task;
+    }
+
+
+    // Add an AVCaptureAudioDataOutput feeding the overlay recorder's AVAssetWriter (burn-in path only).
+    void EnsureAudioDataOutput(AppleVideoOverlayRecorder recorder)
+    {
+        if (this.session == null)
+            return;
+
+        this.audioDelegate ??= new AppleAudioDelegate();
+        this.audioDelegate.Recorder = recorder;
+
+        if (this.audioDataOutput == null)
+        {
+            var output = new AVCaptureAudioDataOutput();
+            this.session.BeginConfiguration();
+            if (this.session.CanAddOutput(output))
+            {
+                this.session.AddOutput(output);
+                this.audioDataOutput = output;
+            }
+            this.session.CommitConfiguration();
+            this.audioDataOutput?.SetSampleBufferDelegate(this.audioDelegate, this.videoQueue);
+        }
     }
 
 
@@ -368,6 +421,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
             this.photoOutput = null;
             this.movieOutput = null;
             this.dataOutput = null;
+            this.audioDataOutput?.Dispose();
+            this.audioDataOutput = null;
+            this.overlayRecorder = null;
             this.device = null;
         });
     }

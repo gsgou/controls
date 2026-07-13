@@ -200,6 +200,17 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
         if (this.capture == null)
             throw new InvalidOperationException("Camera is not running");
 
+        // Burn-in overlays aren't wired on Windows yet: LowLagMediaRecording records straight from the capture
+        // device and never sees our composited MediaFrameReader frames, so the overlay would not reach the file.
+        // The plan's owned-encode path (IBasicVideoEffect or a MediaStreamSource + Win2D encode) is gated on a
+        // Windows-host spike (see the risk register); until then we fail fast rather than silently drop the
+        // overlay. The raw-feed recording path (Overlay == null) is fully supported.
+        // TODO: implement Windows burn-in recording (Win2D compositing over MediaFrameReader frames).
+        if (options.Overlay != null)
+            throw new PlatformNotSupportedException(
+                "Burn-in video overlays are not yet supported on Windows. Record without VideoRecordingOptions.Overlay, " +
+                "or use the on-preview CameraOverlayView.");
+
         var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mp4");
         var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(Path.GetDirectoryName(path));
         var storageFile = await folder.CreateFileAsync(Path.GetFileName(path), Windows.Storage.CreationCollisionOption.ReplaceExisting);

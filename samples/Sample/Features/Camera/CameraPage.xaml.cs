@@ -353,9 +353,33 @@ public partial class CameraPage : ShinyContentPage
         {
             if (!this.Camera.IsRecording)
             {
-                await this.Camera.StartVideoRecordingAsync();
+                // Burn-in overlay demo: composite a running timestamp + watermark into every recorded frame.
+                // DrawOverlay runs off the UI thread once per encoded frame — draw in the frame's pixel space.
+                var options = new VideoRecordingOptions();
+                if (this.OverlayVideoSwitch.On)
+                    options.Overlay = new DelegateVideoOverlay((canvas, frame, ctx) =>
+                    {
+                        var pad = frame.Width * 0.03f;
+                        canvas.FontColor = Colors.White;
+                        canvas.FontSize = Math.Max(24, frame.Height * 0.04f);
+
+                        // top-left running timer
+                        canvas.DrawString(
+                            ctx.Elapsed.ToString(@"mm\:ss\.f"),
+                            pad, pad, frame.Width, 60,
+                            HorizontalAlignment.Left, VerticalAlignment.Top);
+
+                        // bottom-right watermark
+                        canvas.FontColor = Color.FromRgba(255, 255, 255, 180);
+                        canvas.DrawString(
+                            "SHINY CAMERA",
+                            0, frame.Height - pad - 40, frame.Width - pad, 40,
+                            HorizontalAlignment.Right, VerticalAlignment.Top);
+                    });
+
+                await this.Camera.StartVideoRecordingAsync(options);
                 this.RecordButton.Text = "Stop";
-                this.ShowStatus("Recording…");
+                this.ShowStatus(this.OverlayVideoSwitch.On ? "Recording with overlay…" : "Recording…");
             }
             else
             {

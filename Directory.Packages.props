@@ -21,6 +21,8 @@
     <PackageVersion Include="Xamarin.AndroidX.Camera.Lifecycle" Version="1.6.1" />
     <PackageVersion Include="Xamarin.AndroidX.Camera.View" Version="1.6.1" />
     <PackageVersion Include="Xamarin.AndroidX.Camera.Video" Version="1.6.1" />
+    <!-- OverlayEffect (burn overlays into recorded video); version-aligned with the CameraX bindings above -->
+    <PackageVersion Include="Xamarin.AndroidX.Camera.Effects" Version="1.6.1" />
     <PackageVersion Include="Xamarin.Google.MLKit.BarcodeScanning" Version="117.3.0.7" />
     <PackageVersion Include="Xamarin.Google.MLKit.FaceDetection" Version="116.1.7.7" />
     <PackageVersion Include="Xamarin.Google.MLKit.TextRecognition" Version="116.0.1.7" />

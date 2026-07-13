@@ -26,6 +26,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     VideoRecordListener? recordListener;
     Java.Util.Concurrent.IExecutorService? analysisExecutor;
     ICamera? camera;
+    // Burn-in video overlay: when set, BindUseCases attaches an OverlayEffect to the VideoCapture use case so
+    // the renderer is composited into the recorded file. Only active while recording (no analyzer bound).
+    IVideoOverlayRenderer? recordingOverlay;
+    AndroidX.Camera.Effects.OverlayEffect? overlayEffect;
+    Android.OS.HandlerThread? overlayThread;
     // CameraX's ~3-use-case budget makes ImageAnalysis and VideoCapture mutually exclusive, so the bound set
     // is decided up-front from whether any analyzer is enabled. Tracks which mode is currently bound so an
     // analyzer toggle that flips it (the enabled set crossing zero) triggers a rebind.
@@ -65,10 +70,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         {
             this.imageAnalysis?.ClearAnalyzer();
             this.cameraProvider?.UnbindAll();
+            this.DisposeOverlayEffect();
+            this.overlayThread?.QuitSafely();
             this.lifecycleOwner?.Destroy();
             this.analysisExecutor?.Shutdown();
         }
         catch { /* tearing down */ }
+        this.recordingOverlay = null;
+        this.overlayThread = null;
         this.analysisExecutor = null;
         this.camera = null;
         this.imageCapture = null;
@@ -178,8 +187,22 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     public async Task StartVideoRecordingAsync(VideoRecordingOptions options, CancellationToken ct = default)
     {
-        if (this.recorder == null)
+        if (this.Pipeline.HasAnalyzer)
             throw new InvalidOperationException("Video recording is unavailable while a frame analyzer is active (Android binds ImageAnalysis instead of VideoCapture). Clear CameraView.Analyzer to record.");
+
+        // Overlay set -> rebind with an OverlayEffect on VideoCapture so it's burned into the file. Overlay
+        // null -> existing Recorder path unchanged (raw feed, no perf/behavior change).
+        if (options.Overlay != null)
+        {
+            this.recordingOverlay = options.Overlay;
+            await MainThread.InvokeOnMainThreadAsync(this.BindUseCases).ConfigureAwait(false);
+        }
+
+        if (this.recorder == null)
+        {
+            this.recordingOverlay = null;
+            throw new InvalidOperationException("Camera is not running");
+        }
 
         var withAudio = options.IncludeAudio;
         if (withAudio)
@@ -209,13 +232,47 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.activeRecording.Stop();
         var task = this.recordListener.Task;
         this.activeRecording = null;
+        var hadOverlay = this.recordingOverlay != null;
+        this.recordingOverlay = null;
 
-        // analyzers enabled while recording couldn't be bound (VideoCapture held the slot); now the recording
-        // is finalizing, re-evaluate so they take effect
+        // once the recording finalizes, rebind: detach the overlay effect (if any) and re-evaluate analyzers
+        // that couldn't be bound while VideoCapture held the slot.
         _ = task.ContinueWith(
-            _ => MainThread.BeginInvokeOnMainThread(this.RebindIfModeChanged),
+            _ => MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (hadOverlay)
+                    this.BindUseCases(); // rebind without the overlay effect
+                this.RebindIfModeChanged();
+            }),
             TaskScheduler.Default);
         return task;
+    }
+
+
+    AndroidX.Camera.Effects.OverlayEffect CreateOverlayEffect(IVideoOverlayRenderer overlay)
+    {
+        if (this.overlayThread == null)
+        {
+            this.overlayThread = new Android.OS.HandlerThread("shiny.camera.overlay");
+            this.overlayThread.Start();
+        }
+        var handler = new Android.OS.Handler(this.overlayThread.Looper!);
+        var effect = new AndroidX.Camera.Effects.OverlayEffect(
+            AndroidX.Camera.Core.CameraEffect.VideoCapture,
+            3, // queue depth: frames buffered before dropping
+            handler,
+            new OverlayErrorConsumer(msg => this.VirtualView?.OnCameraError("Video overlay failed: " + msg)));
+        effect.SetOnDrawListener(new OverlayDrawListener(this.Context, this.VirtualView.Facing, overlay));
+        this.overlayEffect = effect;
+        return effect;
+    }
+
+    void DisposeOverlayEffect()
+    {
+        try { this.overlayEffect?.Close(); }
+        catch { /* already closed / detached */ }
+        this.overlayEffect?.Dispose();
+        this.overlayEffect = null;
     }
 
 
@@ -337,7 +394,23 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         }
 
         this.cameraProvider.UnbindAll();
-        this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, useCases.ToArray());
+        this.DisposeOverlayEffect();
+
+        // Burn-in overlay: attach an OverlayEffect to the VideoCapture target via a UseCaseGroup. It's an
+        // effect (SurfaceProcessor), not a use case, so it doesn't consume the ~3-use-case budget.
+        if (this.recordingOverlay is { } overlay && this.videoCapture != null)
+        {
+            var effect = this.CreateOverlayEffect(overlay);
+            var groupBuilder = new UseCaseGroup.Builder();
+            foreach (var uc in useCases)
+                groupBuilder.AddUseCase(uc);
+            groupBuilder.AddEffect(effect);
+            this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, groupBuilder.Build());
+        }
+        else
+        {
+            this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, useCases.ToArray());
+        }
         this.boundAnalysisMode = this.Pipeline.HasAnalyzer;
 
         this.ApplyFilter(this.VirtualView.Filter);

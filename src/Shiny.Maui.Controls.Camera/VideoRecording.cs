@@ -11,6 +11,14 @@ public class VideoRecordingOptions
     /// <c>.mov</c> on Apple, <c>.mp4</c> on Android/Windows).
     /// </summary>
     public string? FilePath { get; set; }
+
+    /// <summary>
+    /// Optional overlay composited into <b>every recorded frame</b> (watermark, timestamp, telemetry, reticles).
+    /// When null, the raw sensor feed is written via the platform's native recorder (fast path — no perf or
+    /// behavior change). When set, an owned/composited encode path is used and <see cref="IVideoOverlayRenderer.DrawOverlay"/>
+    /// is invoked per frame off the UI thread — see the interface docs for threading and coordinate rules.
+    /// </summary>
+    public IVideoOverlayRenderer? Overlay { get; set; }
 }
 
 
