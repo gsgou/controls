@@ -15,6 +15,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="Shiny.Maui.Controls.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="buildTransitive/Shiny.Maui.Controls.targets" Pack="true" PackagePath="buildTransitive/Shiny.Maui.Controls.targets" />
 	</ItemGroup>
 </Project>

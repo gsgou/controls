@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:local="clr-namespace:Sample.Features.Media"
+             x:Class="Sample.Features.Media.MediaPickerPage"
+             x:DataType="local:MediaPickerViewModel"
+             Title="Media Picker">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Label Text="MediaPickerButton"
+                   FontSize="20"
+                   FontAttributes="Bold" />
+            <Label Text="Add photos from the gallery or camera, compressed to your chosen format/quality."
+                   FontSize="13"
+                   Opacity="0.7" />
+
+            <shiny:MediaPickerButton x:Name="Picker"
+                                     Photos="{Binding Photos}"
+                                     AllowGallery="{Binding AllowGallery}"
+                                     AllowCamera="{Binding AllowCamera}"
+                                     AllowPhotoEdit="{Binding AllowPhotoEdit}"
+                                     ShowAsCarouselInView="{Binding ShowAsCarousel}"
+                                     MaxPhotos="{Binding MaxPhotos}"
+                                     CompressionQuality="{Binding CompressionQualityPercent}"
+                                     OutputFormat="{Binding OutputFormat}"
+                                     PermissionDeniedText="Photo access was denied — enable it in Settings." />
+
+            <Label Text="{Binding Photos.Count, StringFormat='Photos added: {0}'}"
+                   FontAttributes="Bold" />
+
+            <BoxView HeightRequest="1" Color="#33888888" />
+
+            <Grid ColumnDefinitions="*,Auto" RowSpacing="8">
+                <Label Text="Allow gallery" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding AllowGallery}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="Allow camera" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding AllowCamera}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="Allow photo edit" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding AllowPhotoEdit}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="Show as carousel in view" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding ShowAsCarousel}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="PNG output (off = JPEG)" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding UsePng}" />
+            </Grid>
+
+            <Label Text="{Binding MaxPhotos, StringFormat='Max photos: {0}'}" />
+            <Stepper Minimum="1" Maximum="10" Increment="1" Value="{Binding MaxPhotos}" />
+
+            <Label Text="{Binding CompressionQualityPercent, StringFormat='Compression quality: {0}%'}" />
+            <Slider Minimum="10" Maximum="100" Value="{Binding CompressionQuality}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

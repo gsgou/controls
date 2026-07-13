@@ -11,6 +11,7 @@
                   xmlns:diagrams="clr-namespace:Sample.Features.Diagrams"
                   xmlns:imgviewer="clr-namespace:Sample.Features.ImageViewer"
                   xmlns:imgeditor="clr-namespace:Sample.Features.ImageEditor"
+                  xmlns:mediapicker="clr-namespace:Sample.Features.Media"
                   xmlns:chat="clr-namespace:Sample.Features.Chat"
                   xmlns:kitchensink="clr-namespace:Sample.Features.KitchenSink"
                   xmlns:markdown="clr-namespace:Sample.Features.Markdown"
@@ -694,6 +695,14 @@
                              Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate imgeditor:ImageEditorPage}" Route="imageeditor" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Media Picker">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4F7;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate mediapicker:MediaPickerPage}" Route="mediapicker" />
     </FlyoutItem>
 
     <!-- ============================================================ -->

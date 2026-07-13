@@ -1,0 +1,100 @@
+@namespace Shiny.Blazor.Controls
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="shiny-mediapicker" @ref="rootEl">
+    @if (items.Count == 0)
+    {
+        @if (NoImagesTemplate != null)
+        {
+            @NoImagesTemplate
+        }
+        else
+        {
+            <div class="shiny-mediapicker-empty">No photos yet</div>
+        }
+    }
+    else if (ShowAsCarouselInView)
+    {
+        <div class="shiny-mediapicker-strip">
+            @for (var i = 0; i < items.Count; i++)
+            {
+                var index = i;
+                var item = items[index];
+                <div class="shiny-mediapicker-thumb" @onclick="() => OpenViewer(index)">
+                    <img src="@item.DataUri" alt="" />
+                    <button type="button" class="shiny-mediapicker-remove"
+                            @onclick="() => RemoveAt(index)" @onclick:stopPropagation="true">&#10005;</button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="shiny-mediapicker-compact" @onclick="() => OpenViewer(0)">
+            <img src="@items[0].DataUri" alt="" />
+            @if (items.Count > 1)
+            {
+                <span class="shiny-mediapicker-badge">+@(items.Count - 1)</span>
+            }
+        </div>
+    }
+
+    @if (items.Count < MaxPhotos)
+    {
+        <button type="button" class="shiny-mediapicker-add" @onclick="OnAddClickAsync">@AddButtonText</button>
+    }
+
+    @if (permissionDenied)
+    {
+        <div class="shiny-mediapicker-denied">@PermissionDeniedText</div>
+    }
+
+    @if (showChooser)
+    {
+        <div class="shiny-mediapicker-sheet-backdrop" @onclick="() => showChooser = false">
+            <div class="shiny-mediapicker-sheet" @onclick:stopPropagation="true">
+                <button type="button" @onclick="PickFromGalleryAsync">@GalleryActionText</button>
+                <button type="button" @onclick="CaptureFromCameraAsync">@CameraActionText</button>
+                <button type="button" class="shiny-mediapicker-sheet-cancel" @onclick="() => showChooser = false">Cancel</button>
+            </div>
+        </div>
+    }
+
+    <input type="file" accept="image/*" class="shiny-mediapicker-input" @ref="galleryInputEl" />
+    <input type="file" accept="image/*" capture="environment" class="shiny-mediapicker-input" @ref="cameraInputEl" />
+</div>
+
+<ImageViewer @bind-IsOpen="viewerOpen" Source="@viewerSource">
+    <HeaderTemplate>
+        @if (items.Count > 1)
+        {
+            <div class="shiny-mediapicker-nav">
+                <button type="button" @onclick="() => Page(-1)">&#8249;</button>
+                <span>@(currentIndex + 1) / @items.Count</span>
+                <button type="button" @onclick="() => Page(1)">&#8250;</button>
+            </div>
+        }
+    </HeaderTemplate>
+    <FooterTemplate>
+        @if (AllowPhotoEdit)
+        {
+            <button type="button" class="shiny-mediapicker-editbtn" @onclick="StartEdit">&#9998; Edit</button>
+        }
+    </FooterTemplate>
+</ImageViewer>
+
+@if (editing)
+{
+    <div class="shiny-mediapicker-editor">
+        <ImageEditor @ref="editor"
+                     ImageData="@items[currentIndex].Data"
+                     AllowCrop="true" AllowRotate="true" AllowDraw="true"
+                     AllowTextAnnotation="true" AllowLine="true" AllowArrow="true" />
+        <div class="shiny-mediapicker-editor-actions">
+            <button type="button" class="shiny-mediapicker-editor-save" @onclick="SaveEditAsync">&#10003; Save</button>
+            <button type="button" class="shiny-mediapicker-editor-cancel" @onclick="() => editing = false">&#10005; Cancel</button>
+        </div>
+    </div>
+}

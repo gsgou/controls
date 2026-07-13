@@ -25,4 +25,12 @@ public partial class Overlay
         nameof(OverlayContentTemplate), typeof(DataTemplate), typeof(Overlay),
         propertyChanged: (b, _, _) => ((Overlay)b).UpdateOverlayContent());
     public DataTemplate? OverlayContentTemplate { get => (DataTemplate?)GetValue(OverlayContentTemplateProperty); set => SetValue(OverlayContentTemplateProperty, value); }
+
+    public static readonly BindableProperty CloseOnBackdropTapProperty = BindableProperty.Create(
+        nameof(CloseOnBackdropTap), typeof(bool), typeof(Overlay), true);
+    /// <summary>
+    /// When true (the default), tapping the dimmed backdrop hides the overlay (sets <see cref="IsShown"/> to false).
+    /// Set false for overlays that must remain until dismissed programmatically — e.g. a loading overlay.
+    /// </summary>
+    public bool CloseOnBackdropTap { get => (bool)GetValue(CloseOnBackdropTapProperty); set => SetValue(CloseOnBackdropTapProperty, value); }
 }

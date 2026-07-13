@@ -6,7 +6,10 @@
                         x:Class="Sample.Features.Overlay.OverlayPage"
                         x:DataType="local:OverlayViewModel"
                         Title="Overlay"
-                        AutomationId="OverlayPage">
+                        AutomationId="OverlayPage"
+                        IsLoading="{Binding IsPageLoading}"
+                        LoadingMessage="Working on it…"
+                        LoadingBlurRadius="8"><!-- built-in page loading overlay -->
 
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="24">
@@ -28,6 +31,12 @@
             <Label Text="Shows a progress bar that fills to 100%." />
             <Button AutomationId="ShowProgressButton" Text="Show Loading (Progress Bar)"
                     Command="{Binding ShowDeterminateCommand}" />
+
+            <!-- Built-in page-level loading overlay (ShinyContentPage.IsLoading) -->
+            <Label Text="Built-in Page Loading" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Every ShinyContentPage has a LoadingOverlay for free — just bind IsLoading." />
+            <Button AutomationId="ShowPageLoadingButton" Text="Show Page Loading"
+                    Command="{Binding ShowPageLoadingCommand}" />
 
         </VerticalStackLayout>
     </ScrollView>

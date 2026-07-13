@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -279,6 +279,35 @@ A floating panel overlay system for MAUI. Panels slide in from the bottom or top
 | BackdropColor | Color | Forwarded to internal OverlayHost |
 | BackdropMaxOpacity | double | Forwarded to internal OverlayHost |
 
+Every `ShinyContentPage` also has a **built-in `LoadingOverlay`** — no need to add one to `Panels`. Just bind `IsLoading`; it's brought to the front when shown and never dismisses on a backdrop tap. Customize it with the `Loading*` passthroughs (including a `LoadingContentTemplate` to fully replace the spinner content):
+
+```xml
+<shiny:ShinyContentPage IsLoading="{Binding IsBusy}"
+                        LoadingMessage="Working on it…"
+                        LoadingBlurRadius="8">
+    ...
+    <!-- optional: fully custom loading content -->
+    <shiny:ShinyContentPage.LoadingContentTemplate>
+        <DataTemplate>
+            <Label Text="Please wait…" TextColor="White" />
+        </DataTemplate>
+    </shiny:ShinyContentPage.LoadingContentTemplate>
+</shiny:ShinyContentPage>
+```
+
+| Built-in loading property | Type | Description |
+|---|---|---|
+| IsLoading | bool | Show/hide the built-in loading overlay (TwoWay) |
+| LoadingMessage | string? | Message under the spinner/progress bar |
+| LoadingIsIndeterminate | bool | Spinner (true, default) vs determinate progress bar |
+| LoadingProgress | double | Progress 0–100 when determinate (TwoWay) |
+| LoadingSpinnerColor | Color? | Accent color override |
+| LoadingBlurRadius | double | Frosted-glass blur for the loading backdrop |
+| LoadingContentTemplate | DataTemplate? | Replaces the default spinner/progress content |
+| LoadingOverlay | LoadingOverlay | The underlying overlay instance for advanced use |
+
+`Overlay` also gained `CloseOnBackdropTap` (default `true`) — set `false` to keep an overlay up until dismissed in code.
+
 ### DurationPicker
 
 A standalone duration picker control that opens a FloatingPanel for selection with hour/minute pickers and "hr"/"min" labels. Requires `ShinyContentPage` (or an `OverlayHost` in the visual tree).
@@ -411,6 +440,42 @@ An inline image editor with cropping, rotation, freehand drawing, line and arrow
 **Commands:** `UndoCommand`, `RedoCommand`, `RotateCommand`, `ResetCommand`, `CropCommand`, `DrawCommand`, `TextCommand`, `LineCommand`, `SaveCommand`
 
 **Methods:** `Undo()`, `Redo()`, `Rotate(float)`, `Reset()`, `ApplyCrop()`, `GetEditedImage()`
+
+### MediaPickerButton
+
+A button that adds photos from the gallery and/or camera, compresses/re-encodes each to PNG or JPEG at a chosen quality (with optional max-dimension downscale), caps the count with `MaxPhotos` (added one at a time), and shows the collected photos inline as a tappable carousel (opening the **ImageViewer**, with an optional **Edit** button that reuses the **ImageEditor**) or a compact pinch/zoom overlay. Ships in the base packages (no extra package). MAUI uses the built-in `MediaPicker`; Blazor uses a hidden `<input type="file">` (with `capture` for the camera) and compresses on an offscreen canvas.
+
+<!-- TODO: capture screenshots for media-picker-button -->
+
+```xml
+<shiny:MediaPickerButton Photos="{Binding Photos}"
+                         AllowGallery="True"
+                         AllowCamera="True"
+                         AllowPhotoEdit="True"
+                         ShowAsCarouselInView="True"
+                         MaxPhotos="5"
+                         CompressionQuality="85"
+                         OutputFormat="Jpeg"
+                         PermissionDeniedText="Photo access was denied — enable it in Settings." />
+```
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| AllowGallery | bool | true | Offer "choose from gallery" |
+| AllowCamera | bool | true | Offer "take photo" (chooser shown when both are enabled) |
+| AllowPhotoEdit | bool | false | Show an Edit button that opens the ImageEditor |
+| PermissionDeniedText | string | "Permission denied…" | Shown when camera/gallery access is denied |
+| NoImagesTemplate | DataTemplate? | null | Shown when there are no photos yet |
+| ShowAsCarouselInView | bool | true | Inline carousel (true) vs compact preview + pinch/zoom overlay (false) |
+| MaxPhotos | int | 1 | Maximum photos (added one at a time) |
+| CompressionQuality | int | 92 | Encoder quality percentage (1–100) |
+| MaxImageDimension | int | 0 | If > 0, longest edge is downscaled to this many pixels |
+| OutputFormat | ImageExportFormat | Jpeg | Output encoding (Png or Jpeg) |
+| Photos | IList\<MediaPickerItem\> | empty | Collected photos (TwoWay) |
+
+**Events:** `PhotoAdded`, `PhotoRemoved`, `PhotosChanged` (+ `PhotosChangedCommand`), `PermissionDenied`
+
+On Blazor the equivalent `Shiny.Blazor.Controls.MediaPickerButton` mirrors these as `[Parameter]`s (`OutputFormat` is `"jpeg"`/`"png"`), with `@bind-Photos` over `MediaPickerItem` (each exposing a `DataUri` for `<img src>`).
 
 ### ChatView
 

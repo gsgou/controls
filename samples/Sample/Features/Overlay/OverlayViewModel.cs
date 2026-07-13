@@ -14,6 +14,17 @@ public partial class OverlayViewModel : ObservableObject
     [ObservableProperty] double progress;
     [ObservableProperty] string? loadingMessage;
 
+    // Built-in page-level loading overlay (ShinyContentPage.IsLoading)
+    [ObservableProperty] bool isPageLoading;
+
+    [RelayCommand]
+    async Task ShowPageLoading()
+    {
+        IsPageLoading = true;
+        await Task.Delay(2500);
+        IsPageLoading = false;
+    }
+
     [RelayCommand]
     void ShowCustomOverlay() => IsCustomOverlayShown = true;
 

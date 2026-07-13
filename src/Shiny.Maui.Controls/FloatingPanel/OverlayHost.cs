@@ -83,7 +83,8 @@ public class OverlayHost : Grid
             }
             else if (client is Overlay overlay)
             {
-                overlay.IsShown = false;
+                if (overlay.CloseOnBackdropTap)
+                    overlay.IsShown = false;
             }
         }
     }

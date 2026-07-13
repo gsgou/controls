@@ -12,10 +12,18 @@ public class ShinyContentPage : ContentPage
 {
     readonly Grid rootGrid;
     readonly OverlayHost overlayHost;
+    readonly LoadingOverlay loadingOverlay;
 
     public ShinyContentPage()
     {
         overlayHost = new OverlayHost();
+
+        // A built-in loading overlay every page gets for free — driven by IsLoading and
+        // customizable via the Loading* passthrough properties below. It never dismisses on a
+        // backdrop tap (loading state is code-controlled) and is brought to the front when shown.
+        loadingOverlay = new LoadingOverlay { CloseOnBackdropTap = false };
+        overlayHost.Children.Add(loadingOverlay);
+
         rootGrid = new Grid
         {
             Children = { overlayHost }
@@ -72,6 +80,108 @@ public class ShinyContentPage : ContentPage
     /// Collection of FloatingPanels to display in the overlay layer.
     /// </summary>
     public IList<IView> Panels => overlayHost.Children;
+
+    #region Built-in loading overlay
+
+    /// <summary>
+    /// The page's built-in <see cref="Shiny.Maui.Controls.LoadingOverlay"/>. Prefer the
+    /// <c>Loading*</c> passthrough properties; use this for anything they don't cover.
+    /// </summary>
+    public LoadingOverlay LoadingOverlay => loadingOverlay;
+
+    /// <summary>Show/hide the built-in loading overlay. Bind this to your busy flag.</summary>
+    public static readonly BindableProperty IsLoadingProperty = BindableProperty.Create(
+        nameof(IsLoading), typeof(bool), typeof(ShinyContentPage), false,
+        BindingMode.TwoWay,
+        propertyChanged: (b, _, n) =>
+        {
+            var page = (ShinyContentPage)b;
+            if ((bool)n)
+                page.BringLoadingOverlayToFront();
+            page.loadingOverlay.IsShown = (bool)n;
+        });
+    public bool IsLoading
+    {
+        get => (bool)GetValue(IsLoadingProperty);
+        set => SetValue(IsLoadingProperty, value);
+    }
+
+    /// <summary>Optional message shown beneath the spinner/progress bar.</summary>
+    public static readonly BindableProperty LoadingMessageProperty = BindableProperty.Create(
+        nameof(LoadingMessage), typeof(string), typeof(ShinyContentPage), null,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.Message = (string?)n);
+    public string? LoadingMessage
+    {
+        get => (string?)GetValue(LoadingMessageProperty);
+        set => SetValue(LoadingMessageProperty, value);
+    }
+
+    /// <summary>When true (default) shows a spinner; when false shows a determinate progress bar.</summary>
+    public static readonly BindableProperty LoadingIsIndeterminateProperty = BindableProperty.Create(
+        nameof(LoadingIsIndeterminate), typeof(bool), typeof(ShinyContentPage), true,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.IsIndeterminate = (bool)n);
+    public bool LoadingIsIndeterminate
+    {
+        get => (bool)GetValue(LoadingIsIndeterminateProperty);
+        set => SetValue(LoadingIsIndeterminateProperty, value);
+    }
+
+    /// <summary>Progress value (0–100) used when <see cref="LoadingIsIndeterminate"/> is false.</summary>
+    public static readonly BindableProperty LoadingProgressProperty = BindableProperty.Create(
+        nameof(LoadingProgress), typeof(double), typeof(ShinyContentPage), 0.0,
+        BindingMode.TwoWay,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.Progress = (double)n);
+    public double LoadingProgress
+    {
+        get => (double)GetValue(LoadingProgressProperty);
+        set => SetValue(LoadingProgressProperty, value);
+    }
+
+    /// <summary>Overrides the spinner/progress accent color.</summary>
+    public static readonly BindableProperty LoadingSpinnerColorProperty = BindableProperty.Create(
+        nameof(LoadingSpinnerColor), typeof(Color), typeof(ShinyContentPage), null,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.SpinnerColor = (Color?)n);
+    public Color? LoadingSpinnerColor
+    {
+        get => (Color?)GetValue(LoadingSpinnerColorProperty);
+        set => SetValue(LoadingSpinnerColorProperty, value);
+    }
+
+    /// <summary>Frosted-glass blur radius for the loading backdrop (0 = plain dim).</summary>
+    public static readonly BindableProperty LoadingBlurRadiusProperty = BindableProperty.Create(
+        nameof(LoadingBlurRadius), typeof(double), typeof(ShinyContentPage), 0.0,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.BlurRadius = (double)n);
+    public double LoadingBlurRadius
+    {
+        get => (double)GetValue(LoadingBlurRadiusProperty);
+        set => SetValue(LoadingBlurRadiusProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces the default spinner/progress/message content with your own template (passed through to
+    /// <see cref="Overlay.OverlayContentTemplate"/>). The <c>IsLoading</c> show/hide + backdrop still apply.
+    /// </summary>
+    public static readonly BindableProperty LoadingContentTemplateProperty = BindableProperty.Create(
+        nameof(LoadingContentTemplate), typeof(DataTemplate), typeof(ShinyContentPage), null,
+        propertyChanged: (b, _, n) => ((ShinyContentPage)b).loadingOverlay.OverlayContentTemplate = (DataTemplate?)n);
+    public DataTemplate? LoadingContentTemplate
+    {
+        get => (DataTemplate?)GetValue(LoadingContentTemplateProperty);
+        set => SetValue(LoadingContentTemplateProperty, value);
+    }
+
+    void BringLoadingOverlayToFront()
+    {
+        // Keep the loading overlay above any FloatingPanels/Overlays added after it in the host.
+        if (overlayHost.Children.Contains(loadingOverlay) &&
+            overlayHost.Children.IndexOf(loadingOverlay) != overlayHost.Children.Count - 1)
+        {
+            overlayHost.Children.Remove(loadingOverlay);
+            overlayHost.Children.Add(loadingOverlay);
+        }
+    }
+
+    #endregion
 
     /// <summary>
     /// Hides the base Content property — use <see cref="PageContent"/> instead.

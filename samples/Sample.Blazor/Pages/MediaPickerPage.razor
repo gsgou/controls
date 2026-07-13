@@ -1,0 +1,45 @@
+@page "/mediapicker"
+
+<PageTitle>Media Picker</PageTitle>
+
+<h1>Media Picker</h1>
+<p style="color:#888;max-width:640px;">
+    Add photos from the gallery (or camera on mobile browsers), compressed to your chosen
+    format/quality, shown inline as a carousel with tap-to-view and optional editing.
+</p>
+
+<div class="demo-controls" style="display:flex;gap:16px;align-items:center;margin:12px 0;flex-wrap:wrap;">
+    <label><input type="checkbox" @bind="allowGallery" /> Allow gallery</label>
+    <label><input type="checkbox" @bind="allowCamera" /> Allow camera</label>
+    <label><input type="checkbox" @bind="allowEdit" /> Allow edit</label>
+    <label><input type="checkbox" @bind="showCarousel" /> Carousel in view</label>
+    <label><input type="checkbox" @bind="usePng" /> PNG output</label>
+    <label>Max: <input type="number" min="1" max="10" @bind="maxPhotos" style="width:56px;" /></label>
+    <label>Quality: <input type="range" min="10" max="100" @bind="quality" style="width:120px;vertical-align:middle;" /> @quality%</label>
+</div>
+
+<div style="max-width:640px;">
+    <MediaPickerButton @bind-Photos="photos"
+                       AllowGallery="allowGallery"
+                       AllowCamera="allowCamera"
+                       AllowPhotoEdit="allowEdit"
+                       ShowAsCarouselInView="showCarousel"
+                       MaxPhotos="maxPhotos"
+                       CompressionQuality="quality"
+                       OutputFormat="@(usePng ? "png" : "jpeg")"
+                       PermissionDeniedText="Photo access was denied." />
+</div>
+
+<p style="margin-top:12px;font-weight:600;">Photos added: @photos.Count</p>
+
+@code {
+    IReadOnlyList<Shiny.Blazor.Controls.MediaPickerItem> photos = [];
+
+    bool allowGallery = true;
+    bool allowCamera = true;
+    bool allowEdit = true;
+    bool showCarousel = true;
+    bool usePng;
+    int maxPhotos = 5;
+    int quality = 85;
+}
