@@ -14,7 +14,7 @@ sealed class FrameAnalyzerBridge(CameraViewHandler handler) : Java.Lang.Object, 
             return;
         }
 
-        var mirrored = handler.VirtualView?.Facing == CameraFacing.Front;
+        var mirrored = handler.MaybeVirtualView?.Facing == CameraFacing.Front;
         handler.Pipeline.Process(new AndroidCameraFrame(image, mirrored), default);
     }
 }

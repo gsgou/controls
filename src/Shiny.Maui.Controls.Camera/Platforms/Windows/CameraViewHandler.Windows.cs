@@ -100,7 +100,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
                 .FirstOrDefault(s => s.Info.SourceKind == MediaFrameSourceKind.Color);
             if (source == null)
             {
-                this.VirtualView?.OnCameraError("No color camera source found");
+                this.MaybeVirtualView?.OnCameraError("No color camera source found");
                 return;
             }
 
@@ -110,7 +110,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
         }
         catch (Exception ex)
         {
-            this.VirtualView?.OnCameraError("Failed to start camera", ex);
+            this.MaybeVirtualView?.OnCameraError("Failed to start camera", ex);
         }
     }
 
@@ -267,7 +267,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
         {
             var clamped = Math.Clamp((float)view.Zoom, zoom.Min, zoom.Max);
             zoom.Value = clamped;
-            handler.VirtualView?.OnZoomRangeChanged(zoom.Min, zoom.Max);
+            handler.MaybeVirtualView?.OnZoomRangeChanged(zoom.Min, zoom.Max);
         }
     }
 

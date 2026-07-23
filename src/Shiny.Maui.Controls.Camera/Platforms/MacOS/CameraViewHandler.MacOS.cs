@@ -65,7 +65,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
     {
         if (!await this.RequestPermissionAsync(ct).ConfigureAwait(false))
         {
-            this.VirtualView?.OnCameraError("Camera permission denied");
+            this.MaybeVirtualView?.OnCameraError("Camera permission denied");
             return;
         }
 
@@ -79,7 +79,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
             }
             catch (Exception ex)
             {
-                this.MainThread(() => this.VirtualView?.OnCameraError("Failed to start camera", ex));
+                this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Failed to start camera", ex));
             }
         });
     }
@@ -332,14 +332,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
         this.device = this.SelectDevice();
         if (this.device == null)
         {
-            this.MainThread(() => this.VirtualView?.OnCameraError("No camera device found"));
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("No camera device found"));
             return;
         }
 
         var input = AVCaptureDeviceInput.FromDevice(this.device, out var error);
         if (error != null || input == null)
         {
-            this.MainThread(() => this.VirtualView?.OnCameraError("Cannot open camera: " + error?.LocalizedDescription));
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Cannot open camera: " + error?.LocalizedDescription));
             return;
         }
 

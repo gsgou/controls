@@ -1,4 +1,5 @@
 #if ANDROID || IOS || MACCATALYST || WINDOWS || MACOS
+using Microsoft.Maui;
 using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls.Camera.Internal;
 
@@ -8,19 +9,34 @@ public partial class CameraViewHandler
 {
     internal readonly CameraPipeline Pipeline = new();
 
+    /// <summary>
+    /// The bound <see cref="CameraView"/>, or <c>null</c> once the handler has been disconnected.
+    /// </summary>
+    /// <remarks>
+    /// <b>Use this, not <c>VirtualView?.</c>, from anything that can outlive the handler.</b>
+    /// <c>ViewHandler&lt;TVirtualView, TPlatformView&gt;.VirtualView</c> <i>throws</i>
+    /// <c>InvalidOperationException("VirtualView cannot be null here")</c> when disconnected — it does not
+    /// return null — so the null-conditional in <c>VirtualView?.X</c> never gets a chance: the exception
+    /// comes out of the property getter first. In a callback dispatched to the UI thread that surfaces as an
+    /// unhandled exception and the app aborts (SIGABRT on iOS). Reported by a consumer navigating away from
+    /// a page while the camera was still delivering frames.
+    /// </remarks>
+    internal CameraView? MaybeVirtualView => ((IElementHandler)this).VirtualView as CameraView;
+
     // Wire overlay delivery (marshaled to the UI thread) and bind the active analyzer to the control's
     // single Analyzer property. Call from each platform's ConnectHandler.
     private protected void InitPipeline()
     {
         this.Pipeline.OnOverlays = (boxes, window, w, h) =>
-            this.VirtualView?.Dispatcher.Dispatch(() => this.VirtualView?.OnOverlaysChanged(boxes, window, w, h));
+            this.MaybeVirtualView?.Dispatcher.Dispatch(
+                () => this.MaybeVirtualView?.OnOverlaysChanged(boxes, window, w, h));
 
         // the active analyzer changed (assignment or an IsEnabled toggle); platforms that bind use cases
         // up-front (Android) re-evaluate, others no-op
         this.Pipeline.OnActiveChanged = () => this.OnAnalyzersSynced();
 
         // the analyzer raises its typed events on the UI thread via this dispatcher
-        this.Pipeline.SetDispatcher(a => this.VirtualView?.Dispatcher.Dispatch(a));
+        this.Pipeline.SetDispatcher(a => this.MaybeVirtualView?.Dispatcher.Dispatch(a));
 
         this.SyncAnalyzer();
     }
@@ -30,7 +46,7 @@ public partial class CameraViewHandler
         this.Pipeline.SetAnalyzer(null);
     }
 
-    void SyncAnalyzer() => this.Pipeline.SetAnalyzer(this.VirtualView?.Analyzer);
+    void SyncAnalyzer() => this.Pipeline.SetAnalyzer(this.MaybeVirtualView?.Analyzer);
 
     public static IPropertyMapper<CameraView, CameraViewHandler> Mapper =
         new PropertyMapper<CameraView, CameraViewHandler>(ViewHandler.ViewMapper)

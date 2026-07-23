@@ -137,7 +137,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     {
         if (!await this.RequestPermissionAsync(ct).ConfigureAwait(false))
         {
-            this.VirtualView?.OnCameraError("Camera permission denied");
+            this.MaybeVirtualView?.OnCameraError("Camera permission denied");
             return;
         }
 
@@ -153,7 +153,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
             }
             catch (System.Exception ex)
             {
-                this.VirtualView?.OnCameraError("Failed to start camera", ex);
+                this.MaybeVirtualView?.OnCameraError("Failed to start camera", ex);
             }
         }), ContextCompat.GetMainExecutor(ctx));
     }
@@ -261,7 +261,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
             AndroidX.Camera.Core.CameraEffect.VideoCapture,
             3, // queue depth: frames buffered before dropping
             handler,
-            new OverlayErrorConsumer(msg => this.VirtualView?.OnCameraError("Video overlay failed: " + msg)));
+            new OverlayErrorConsumer(msg => this.MaybeVirtualView?.OnCameraError("Video overlay failed: " + msg)));
         effect.SetOnDrawListener(new OverlayDrawListener(this.Context, this.VirtualView.Facing, overlay));
         this.overlayEffect = effect;
         return effect;
@@ -425,6 +425,6 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     {
         var zoomState = this.camera?.CameraInfo.ZoomState?.Value as IZoomState;
         if (zoomState != null)
-            this.VirtualView?.OnZoomRangeChanged(zoomState.MinZoomRatio, zoomState.MaxZoomRatio);
+            this.MaybeVirtualView?.OnZoomRangeChanged(zoomState.MinZoomRatio, zoomState.MaxZoomRatio);
     }
 }

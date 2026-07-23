@@ -60,7 +60,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     {
         if (!await this.RequestPermissionAsync(ct).ConfigureAwait(false))
         {
-            this.VirtualView?.OnCameraError("Camera permission denied");
+            this.MaybeVirtualView?.OnCameraError("Camera permission denied");
             return;
         }
 
@@ -74,7 +74,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             }
             catch (Exception ex)
             {
-                this.MainThread(() => this.VirtualView?.OnCameraError("Failed to start camera", ex));
+                this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Failed to start camera", ex));
             }
         });
     }
@@ -276,7 +276,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             }
             catch (Exception ex)
             {
-                this.VirtualView?.OnCameraError("Camera preview setup failed", ex);
+                this.MaybeVirtualView?.OnCameraError("Camera preview setup failed", ex);
             }
         });
     }
@@ -343,7 +343,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     {
         // surface only the first frame-processing failure, on the UI thread
         if (Interlocked.Exchange(ref this.frameErrorReported, 1) == 0)
-            this.MainThread(() => this.VirtualView?.OnCameraError("Frame processing failed", ex));
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Frame processing failed", ex));
     }
 
 
@@ -426,14 +426,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         this.device = this.SelectDevice();
         if (this.device == null)
         {
-            this.MainThread(() => this.VirtualView?.OnCameraError("No camera device found"));
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("No camera device found"));
             return;
         }
 
         var input = AVCaptureDeviceInput.FromDevice(this.device, out var error);
         if (error != null || input == null)
         {
-            this.MainThread(() => this.VirtualView?.OnCameraError("Cannot open camera: " + error?.LocalizedDescription));
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Cannot open camera: " + error?.LocalizedDescription));
             return;
         }
 
@@ -512,7 +512,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         }
         catch (Exception ex)
         {
-            this.VirtualView?.OnCameraError("Focus configuration failed", ex);
+            this.MaybeVirtualView?.OnCameraError("Focus configuration failed", ex);
         }
     }
 
@@ -533,7 +533,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         }
         catch (Exception ex)
         {
-            this.VirtualView?.OnCameraError("Zoom failed", ex);
+            this.MaybeVirtualView?.OnCameraError("Zoom failed", ex);
         }
     }
 
@@ -553,7 +553,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         }
         catch (Exception ex)
         {
-            this.VirtualView?.OnCameraError("Torch failed", ex);
+            this.MaybeVirtualView?.OnCameraError("Torch failed", ex);
         }
     }
 
@@ -564,7 +564,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             return;
         var min = (double)this.device.MinAvailableVideoZoomFactor;
         var max = (double)this.device.ActiveFormat.VideoMaxZoomFactor;
-        this.VirtualView?.OnZoomRangeChanged(min, Math.Min(max, 10d));
+        this.MaybeVirtualView?.OnZoomRangeChanged(min, Math.Min(max, 10d));
     }
 
 
