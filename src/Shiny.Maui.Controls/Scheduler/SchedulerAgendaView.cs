@@ -24,26 +24,41 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerAgendaView),
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).OnProviderChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).OnProviderChanged();
+            }));
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerAgendaView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).OnSelectedDateChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).OnSelectedDateChanged();
+            }));
 
     public static readonly BindableProperty DaysToShowProperty = BindableProperty.Create(
         nameof(DaysToShow), typeof(int), typeof(SchedulerAgendaView), 1,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
 
     public static readonly BindableProperty ShowCarouselDatePickerProperty = BindableProperty.Create(
         nameof(ShowCarouselDatePicker), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, n) => ((SchedulerAgendaView)b).UpdateDatePickerVisibility());
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).UpdateDatePickerVisibility();
+            }));
 
     public static readonly BindableProperty DatePickerModeProperty = BindableProperty.Create(
         nameof(DatePickerMode), typeof(AgendaDatePickerMode), typeof(SchedulerAgendaView),
         AgendaDatePickerMode.Carousel,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).UpdateDatePickerVisibility());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).UpdateDatePickerVisibility();
+            }));
 
     public static readonly BindableProperty ShowCurrentTimeMarkerProperty = BindableProperty.Create(
         nameof(ShowCurrentTimeMarker), typeof(bool), typeof(SchedulerAgendaView), true);
@@ -53,15 +68,21 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty DayPickerItemTemplateProperty = BindableProperty.Create(
         nameof(DayPickerItemTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView),
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).datePicker.ItemTemplate =
-            ((SchedulerAgendaView)b).DayPickerItemTemplate);
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).datePicker.ItemTemplate =
+            ((SchedulerAgendaView)b).DayPickerItemTemplate;
+            }));
 
     public static readonly BindableProperty LoaderTemplateProperty = BindableProperty.Create(
         nameof(LoaderTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView));
 
     public static readonly BindableProperty CurrentTimeMarkerColorProperty = BindableProperty.Create(
         nameof(CurrentTimeMarkerColor), typeof(Color), typeof(SchedulerAgendaView), Colors.Red,
-        propertyChanged: (b, _, n) => ((SchedulerAgendaView)b).timeIndicator.MarkerColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).timeIndicator.MarkerColor = (Color)n;
+            }));
 
     public static readonly BindableProperty TimezoneColorProperty = BindableProperty.Create(
         nameof(TimezoneColor), typeof(Color), typeof(SchedulerAgendaView), Colors.Gray);
@@ -71,7 +92,10 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty TimeSlotHeightProperty = BindableProperty.Create(
         nameof(TimeSlotHeight), typeof(double), typeof(SchedulerAgendaView), 60.0,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
 
     public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
         nameof(MinDate), typeof(DateOnly?), typeof(SchedulerAgendaView));
@@ -81,25 +105,40 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, n) => ((SchedulerAgendaView)b).scrollView.Orientation =
-            (bool)n ? ScrollOrientation.Vertical : ScrollOrientation.Neither);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).scrollView.Orientation =
+            (bool)n ? ScrollOrientation.Vertical : ScrollOrientation.Neither;
+            }));
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerAgendaView), false,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).UpdateZoomGesture());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).UpdateZoomGesture();
+            }));
 
     public static readonly BindableProperty Use24HourTimeProperty = BindableProperty.Create(
         nameof(Use24HourTime), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
 
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
         nameof(SeparatorColor), typeof(Color), typeof(SchedulerAgendaView),
         Color.FromRgba(220, 220, 220, 120),
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
 
     public static readonly BindableProperty ShowAdditionalTimezonesProperty = BindableProperty.Create(
         nameof(ShowAdditionalTimezones), typeof(bool), typeof(SchedulerAgendaView), false,
-        propertyChanged: (b, _, _) => ((SchedulerAgendaView)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
 
     public ISchedulerEventProvider? Provider
     {
@@ -296,6 +335,18 @@ public class SchedulerAgendaView : ContentView
         VerticalOptions = LayoutOptions.Fill;
         Content = rootGrid;
         Rebuild();
+    
+
+
+        // Last line: replays any styled property that was applied before the
+
+
+        // children existed. See StyleGuard.
+
+
+        StyleGuard.MarkReady(this, typeof(SchedulerAgendaView));
+
+
     }
 
     protected override void OnHandlerChanged()

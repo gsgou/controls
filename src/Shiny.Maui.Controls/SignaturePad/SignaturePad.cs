@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.FloatingPanel;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.SignaturePad;
 
@@ -150,6 +151,10 @@ public partial class SignaturePad : ContentView
         };
 
         Content = floatingPanel;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(SignaturePad));
     }
 
     void OnStartInteraction(object? sender, TouchEventArgs e)

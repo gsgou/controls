@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using Shiny.Maui.Controls.Tree.Internal;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Tree;
 
@@ -44,6 +45,10 @@ public partial class TreeView : ContentView
 
         root = new Grid { Children = { scrollView, rootLoadingIndicator, rootErrorLabel } };
         Content = root;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TreeView));
     }
 
     // ------------- Source management -------------

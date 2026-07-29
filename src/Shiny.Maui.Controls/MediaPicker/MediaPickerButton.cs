@@ -94,6 +94,10 @@ public class MediaPickerButton : ContentView
 
         this.Photos = new ObservableCollection<MediaPickerItem>();
         UpdateView();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(MediaPickerButton));
     }
 
     #region Bindable Properties
@@ -133,7 +137,10 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty NoImagesTemplateProperty = BindableProperty.Create(
         nameof(NoImagesTemplate), typeof(DataTemplate), typeof(MediaPickerButton), null,
-        propertyChanged: (b, _, _) => ((MediaPickerButton)b).ApplyNoImagesTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).ApplyNoImagesTemplate();
+            }));
     public DataTemplate? NoImagesTemplate
     {
         get => (DataTemplate?)GetValue(NoImagesTemplateProperty);
@@ -142,7 +149,10 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty ShowAsCarouselInViewProperty = BindableProperty.Create(
         nameof(ShowAsCarouselInView), typeof(bool), typeof(MediaPickerButton), true,
-        propertyChanged: (b, _, _) => ((MediaPickerButton)b).UpdateView());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).UpdateView();
+            }));
     public bool ShowAsCarouselInView
     {
         get => (bool)GetValue(ShowAsCarouselInViewProperty);
@@ -152,7 +162,10 @@ public class MediaPickerButton : ContentView
     public static readonly BindableProperty MaxPhotosProperty = BindableProperty.Create(
         nameof(MaxPhotos), typeof(int), typeof(MediaPickerButton), 1,
         validateValue: (_, v) => (int)v >= 1,
-        propertyChanged: (b, _, _) => ((MediaPickerButton)b).UpdateView());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).UpdateView();
+            }));
     public int MaxPhotos
     {
         get => (int)GetValue(MaxPhotosProperty);
@@ -189,7 +202,10 @@ public class MediaPickerButton : ContentView
     public static readonly BindableProperty PhotosProperty = BindableProperty.Create(
         nameof(Photos), typeof(IList<MediaPickerItem>), typeof(MediaPickerButton), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((MediaPickerButton)b).OnPhotosChanged(o as IList<MediaPickerItem>, n as IList<MediaPickerItem>));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).OnPhotosChanged(o as IList<MediaPickerItem>, n as IList<MediaPickerItem>);
+            }));
     public IList<MediaPickerItem> Photos
     {
         get => (IList<MediaPickerItem>)GetValue(PhotosProperty);
@@ -199,7 +215,10 @@ public class MediaPickerButton : ContentView
     /// <summary>Custom thumbnail template for the inline carousel (item = <see cref="MediaPickerItem"/>).</summary>
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(MediaPickerButton), null,
-        propertyChanged: (b, _, _) => ((MediaPickerButton)b).ApplyItemTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).ApplyItemTemplate();
+            }));
     public DataTemplate? ItemTemplate
     {
         get => (DataTemplate?)GetValue(ItemTemplateProperty);
@@ -208,7 +227,10 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty AddButtonTextProperty = BindableProperty.Create(
         nameof(AddButtonText), typeof(string), typeof(MediaPickerButton), "➕  Add Photo",
-        propertyChanged: (b, _, n) => ((MediaPickerButton)b).addTriggerLabel.Text = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((MediaPickerButton)b).addTriggerLabel.Text = (string)n;
+            }));
     public string AddButtonText
     {
         get => (string)GetValue(AddButtonTextProperty);

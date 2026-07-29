@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.FloatingPanel;
 
@@ -10,7 +11,7 @@ public partial class FloatingPanel
         typeof(FloatingPanel),
         false,
         BindingMode.TwoWay,
-        propertyChanged: OnIsOpenChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnIsOpenChanged(b, o, n)));
 
     public bool IsOpen
     {
@@ -23,7 +24,10 @@ public partial class FloatingPanel
         typeof(FloatingPanelPosition),
         typeof(FloatingPanel),
         FloatingPanelPosition.Bottom,
-        propertyChanged: (b, _, _) => ((FloatingPanel)b).UpdateLayoutForPosition());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).UpdateLayoutForPosition();
+            }));
 
     public FloatingPanelPosition Position
     {
@@ -36,7 +40,7 @@ public partial class FloatingPanel
         typeof(View),
         typeof(FloatingPanel),
         null,
-        propertyChanged: OnPanelContentChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnPanelContentChanged(b, o, n)));
 
     public View? PanelContent
     {
@@ -49,7 +53,7 @@ public partial class FloatingPanel
         typeof(View),
         typeof(FloatingPanel),
         null,
-        propertyChanged: OnHeaderTemplateChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnHeaderTemplateChanged(b, o, n)));
 
     public View? HeaderTemplate
     {
@@ -62,7 +66,10 @@ public partial class FloatingPanel
         typeof(bool),
         typeof(FloatingPanel),
         false,
-        propertyChanged: (b, _, _) => ((FloatingPanel)b).UpdateClosedState());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).UpdateClosedState();
+            }));
 
     public bool ShowHeaderWhenClosed
     {
@@ -87,7 +94,10 @@ public partial class FloatingPanel
         typeof(Color),
         typeof(FloatingPanel),
         Colors.White,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).sheetContainer.BackgroundColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).sheetContainer.BackgroundColor = (Color)n;
+            }));
 
     public Color PanelBackgroundColor
     {
@@ -100,7 +110,10 @@ public partial class FloatingPanel
         typeof(Color),
         typeof(FloatingPanel),
         Colors.Grey,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).dragHandle.Color = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).dragHandle.Color = (Color)n;
+            }));
 
     public Color HandleColor
     {
@@ -113,15 +126,15 @@ public partial class FloatingPanel
         typeof(Color),
         typeof(FloatingPanel),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var panel = (FloatingPanel)b;
             var color = n as Color;
             panel.dragHandleContainer.BackgroundColor = color ?? Colors.Transparent;
             panel.headerHost.BackgroundColor = color ?? Colors.Transparent;
             if (panel.safeAreaFill.IsVisible)
                 panel.safeAreaFill.Color = color ?? panel.PanelBackgroundColor;
-        });
+        }));
 
     public Color? HeaderBackgroundColor
     {
@@ -134,7 +147,10 @@ public partial class FloatingPanel
         typeof(double),
         typeof(FloatingPanel),
         16.0,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).UpdateCornerRadius((double)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).UpdateCornerRadius((double)n);
+            }));
 
     public double PanelCornerRadius
     {
@@ -183,7 +199,10 @@ public partial class FloatingPanel
         typeof(bool),
         typeof(FloatingPanel),
         false,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).OnIsLockedChanged((bool)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).OnIsLockedChanged((bool)n);
+            }));
 
     public bool IsLocked
     {
@@ -220,7 +239,10 @@ public partial class FloatingPanel
         typeof(bool),
         typeof(FloatingPanel),
         true,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).dragHandleContainer.IsVisible = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).dragHandleContainer.IsVisible = (bool)n;
+            }));
 
     public bool ShowHandle
     {
@@ -245,7 +267,10 @@ public partial class FloatingPanel
         typeof(bool),
         typeof(FloatingPanel),
         true,
-        propertyChanged: (b, _, n) => ((FloatingPanel)b).UpdateScrollEnabled((bool)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FloatingPanel)b).UpdateScrollEnabled((bool)n);
+            }));
 
     public bool IsContentScrollEnabled
     {

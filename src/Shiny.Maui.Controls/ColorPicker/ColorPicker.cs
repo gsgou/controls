@@ -1,5 +1,6 @@
 using Shiny.Maui.Controls.ColorPicker.Internal;
 using MauiSlider = Microsoft.Maui.Controls.Slider;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.ColorPicker;
 
@@ -125,6 +126,10 @@ public partial class ColorPicker : ContentView
         Content = rootGrid;
 
         UpdateFromColor(SelectedColor);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ColorPicker));
     }
 
     void OnSpectrumColorPicked(float saturation, float brightness)

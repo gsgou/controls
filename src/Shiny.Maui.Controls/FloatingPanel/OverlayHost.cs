@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls.FloatingPanel;
 
 public class OverlayHost : Grid
@@ -23,6 +24,10 @@ public class OverlayHost : Grid
         tap.Tapped += OnBackdropTapped;
         backdrop.GestureRecognizers.Add(tap);
         Children.Add(backdrop);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(OverlayHost));
     }
 
     public static readonly BindableProperty BackdropColorProperty = BindableProperty.Create(
@@ -30,7 +35,10 @@ public class OverlayHost : Grid
         typeof(Color),
         typeof(OverlayHost),
         Colors.Black,
-        propertyChanged: (b, _, n) => ((OverlayHost)b).backdrop.Color = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((OverlayHost)b).backdrop.Color = (Color)n;
+            }));
 
     public Color BackdropColor
     {

@@ -1,31 +1,55 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class LabelCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public LabelCell() => StyleGuard.MarkReady(this, typeof(LabelCell));
+
     Label valueLabel = default!;
 
     public static readonly BindableProperty ValueTextProperty = BindableProperty.Create(
         nameof(ValueText), typeof(string), typeof(LabelCell), string.Empty,
-        propertyChanged: (b, o, n) => ((LabelCell)b).valueLabel.Text = (string)n);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LabelCell)b).valueLabel.Text = (string)n;
+            }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => ((LabelCell)b).UpdateValueTextColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LabelCell)b).UpdateValueTextColor();
+            }));
 
     public static readonly BindableProperty ValueTextFontSizeProperty = BindableProperty.Create(
         nameof(ValueTextFontSize), typeof(double), typeof(LabelCell), -1d,
-        propertyChanged: (b, o, n) => ((LabelCell)b).UpdateValueTextFontSize());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LabelCell)b).UpdateValueTextFontSize();
+            }));
 
     public static readonly BindableProperty ValueTextFontFamilyProperty = BindableProperty.Create(
         nameof(ValueTextFontFamily), typeof(string), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => ((LabelCell)b).UpdateValueTextFontFamily());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LabelCell)b).UpdateValueTextFontFamily();
+            }));
 
     public static readonly BindableProperty ValueTextFontAttributesProperty = BindableProperty.Create(
         nameof(ValueTextFontAttributes), typeof(FontAttributes?), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => ((LabelCell)b).UpdateValueTextFontAttributes());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LabelCell)b).UpdateValueTextFontAttributes();
+            }));
 
     public string ValueText
     {

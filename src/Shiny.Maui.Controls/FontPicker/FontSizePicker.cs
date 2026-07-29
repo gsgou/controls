@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Globalization;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -17,6 +18,10 @@ public class FontSizePicker : ContentView
             VerticalScrollBarVisibility = ScrollBarVisibility.Default
         };
         Content = scrollView;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FontSizePicker));
     }
 
     public static readonly BindableProperty AvailableFontSizesProperty = BindableProperty.Create(
@@ -24,7 +29,10 @@ public class FontSizePicker : ContentView
         typeof(IList<double>),
         typeof(FontSizePicker),
         null,
-        propertyChanged: (b, o, n) => ((FontSizePicker)b).OnAvailableFontSizesChanged(o as IList<double>, n as IList<double>));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePicker)b).OnAvailableFontSizesChanged(o as IList<double>, n as IList<double>);
+            }));
 
     public IList<double>? AvailableFontSizes
     {
@@ -38,7 +46,10 @@ public class FontSizePicker : ContentView
         typeof(FontSizePicker),
         16.0,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((FontSizePicker)b).OnSelectedFontSizeChanged((double)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePicker)b).OnSelectedFontSizeChanged((double)n);
+            }));
 
     public double SelectedFontSize
     {
@@ -51,7 +62,10 @@ public class FontSizePicker : ContentView
         typeof(string),
         typeof(FontSizePicker),
         "Aa",
-        propertyChanged: (b, _, _) => ((FontSizePicker)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePicker)b).Rebuild();
+            }));
 
     public string PreviewText
     {

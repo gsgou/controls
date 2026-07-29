@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -20,6 +21,10 @@ public class FontPicker : ContentView
         };
 
         Content = scrollView;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FontPicker));
     }
 
     public static readonly BindableProperty AvailableFontsProperty = BindableProperty.Create(
@@ -27,7 +32,10 @@ public class FontPicker : ContentView
         typeof(IList<string>),
         typeof(FontPicker),
         null,
-        propertyChanged: (b, o, n) => ((FontPicker)b).OnAvailableFontsChanged(o as IList<string>, n as IList<string>));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPicker)b).OnAvailableFontsChanged(o as IList<string>, n as IList<string>);
+            }));
 
     public IList<string>? AvailableFonts
     {
@@ -41,7 +49,10 @@ public class FontPicker : ContentView
         typeof(FontPicker),
         null,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((FontPicker)b).OnSelectedFontChanged(n as string));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPicker)b).OnSelectedFontChanged(n as string);
+            }));
 
     public string? SelectedFont
     {
@@ -54,7 +65,10 @@ public class FontPicker : ContentView
         typeof(string),
         typeof(FontPicker),
         "The quick brown fox",
-        propertyChanged: (b, _, _) => ((FontPicker)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPicker)b).Rebuild();
+            }));
 
     public string PreviewText
     {
@@ -67,7 +81,10 @@ public class FontPicker : ContentView
         typeof(double),
         typeof(FontPicker),
         18.0,
-        propertyChanged: (b, _, _) => ((FontPicker)b).Rebuild());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPicker)b).Rebuild();
+            }));
 
     public double PreviewFontSize
     {

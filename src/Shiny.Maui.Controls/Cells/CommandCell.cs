@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -16,7 +17,10 @@ public class CommandCell : LabelCell
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(CommandCell), true,
-        propertyChanged: (b, o, n) => ((CommandCell)b).arrowLabel.IsVisible = (bool)n);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CommandCell)b).arrowLabel.IsVisible = (bool)n;
+            }));
 
     public static readonly BindableProperty KeepSelectedUntilBackProperty = BindableProperty.Create(
         nameof(KeepSelectedUntilBack), typeof(bool), typeof(CommandCell), false);
@@ -98,6 +102,10 @@ public class CommandCell : LabelCell
             Grid.SetRowSpan(tapOverlay, 2);
             grid.Children.Add(tapOverlay);
         }
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(CommandCell));
     }
 
     protected override bool ShouldKeepSelection() => KeepSelectedUntilBack;

@@ -1,36 +1,60 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class DatePickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public DatePickerCell() => StyleGuard.MarkReady(this, typeof(DatePickerCell));
+
     Label valueLabel = default!;
     DatePicker hiddenPicker = default!;
 
     public static readonly BindableProperty DateProperty = BindableProperty.Create(
         nameof(Date), typeof(DateTime?), typeof(DatePickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((DatePickerCell)b).OnDateChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DatePickerCell)b).OnDateChanged();
+            }));
 
     public static readonly BindableProperty InitialDateProperty = BindableProperty.Create(
         nameof(InitialDate), typeof(DateTime), typeof(DatePickerCell), new DateTime(2000, 1, 1));
 
     public static readonly BindableProperty MinimumDateProperty = BindableProperty.Create(
         nameof(MinimumDate), typeof(DateTime), typeof(DatePickerCell), new DateTime(1900, 1, 1),
-        propertyChanged: (b, o, n) => ((DatePickerCell)b).SyncPickerRange());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DatePickerCell)b).SyncPickerRange();
+            }));
 
     public static readonly BindableProperty MaximumDateProperty = BindableProperty.Create(
         nameof(MaximumDate), typeof(DateTime), typeof(DatePickerCell), new DateTime(2100, 12, 31),
-        propertyChanged: (b, o, n) => ((DatePickerCell)b).SyncPickerRange());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DatePickerCell)b).SyncPickerRange();
+            }));
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DatePickerCell), "d",
-        propertyChanged: (b, o, n) => ((DatePickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DatePickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(DatePickerCell), null,
-        propertyChanged: (b, o, n) => ((DatePickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DatePickerCell)b).UpdateValueColor();
+            }));
 
     public DateTime? Date
     {

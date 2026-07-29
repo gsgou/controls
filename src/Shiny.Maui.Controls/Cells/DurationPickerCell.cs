@@ -3,18 +3,30 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Pickers;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class DurationPickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public DurationPickerCell() => StyleGuard.MarkReady(this, typeof(DurationPickerCell));
+
     Label valueLabel = default!;
     FloatingPanel.FloatingPanel? panel;
 
     public static readonly BindableProperty DurationProperty = BindableProperty.Create(
         nameof(Duration), typeof(TimeSpan?), typeof(DurationPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((DurationPickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty MinDurationProperty = BindableProperty.Create(
         nameof(MinDuration), typeof(TimeSpan), typeof(DurationPickerCell), TimeSpan.Zero);
@@ -24,7 +36,10 @@ public class DurationPickerCell : CellBase
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DurationPickerCell), @"h\:mm",
-        propertyChanged: (b, o, n) => ((DurationPickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty PickerTitleProperty = BindableProperty.Create(
         nameof(PickerTitle), typeof(string), typeof(DurationPickerCell), "Select Duration");
@@ -34,7 +49,10 @@ public class DurationPickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(DurationPickerCell), null,
-        propertyChanged: (b, o, n) => ((DurationPickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPickerCell)b).UpdateValueColor();
+            }));
 
     public static readonly BindableProperty MinuteIntervalProperty = BindableProperty.Create(
         nameof(MinuteInterval), typeof(int), typeof(DurationPickerCell), 5);

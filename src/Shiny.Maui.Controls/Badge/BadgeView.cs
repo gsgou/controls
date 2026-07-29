@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -50,6 +51,10 @@ public partial class BadgeView : Grid, IDisposable
         this.Children.Add(this.badgeBorder);
 
         this.ApplyBadgeVisual(animate: false);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(BadgeView));
     }
 
     void OnContentChanged() => this.contentHost.Content = this.Content;

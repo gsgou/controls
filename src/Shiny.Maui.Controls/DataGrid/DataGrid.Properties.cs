@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.DataGrid;
 
@@ -7,38 +8,62 @@ public partial class DataGrid
 {
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(DataGrid), null,
-        propertyChanged: (b, _, _) => ((DataGrid)b).OnItemsSourceChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).OnItemsSourceChanged();
+            }));
 
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(
         nameof(SelectionMode), typeof(DataGridSelectionMode), typeof(DataGrid), DataGridSelectionMode.None,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(DataGrid), null, BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((DataGrid)b).OnSelectedItemChanged(n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).OnSelectedItemChanged(n);
+            }));
 
     public static readonly BindableProperty SelectedItemsProperty = BindableProperty.Create(
         nameof(SelectedItems), typeof(IList), typeof(DataGrid), null, BindingMode.TwoWay);
 
     public static readonly BindableProperty DenseProperty = BindableProperty.Create(
         nameof(Dense), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty StripedProperty = BindableProperty.Create(
         nameof(Striped), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildRows());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildRows();
+            }));
 
     public static readonly BindableProperty BorderedProperty = BindableProperty.Create(
         nameof(Bordered), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty ShowColumnHeadersProperty = BindableProperty.Create(
         nameof(ShowColumnHeaders), typeof(bool), typeof(DataGrid), true,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty IsLoadingProperty = BindableProperty.Create(
         nameof(IsLoading), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).UpdateLoading());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).UpdateLoading();
+            }));
 
     public static readonly BindableProperty EmptyTextProperty = BindableProperty.Create(
         nameof(EmptyText), typeof(string), typeof(DataGrid), "No records");
@@ -51,15 +76,24 @@ public partial class DataGrid
 
     public static readonly BindableProperty FilterModeProperty = BindableProperty.Create(
         nameof(FilterMode), typeof(DataGridFilterMode), typeof(DataGrid), DataGridFilterMode.Menu,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty GroupableProperty = BindableProperty.Create(
         nameof(Groupable), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildAll());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
 
     public static readonly BindableProperty PageSizeProperty = BindableProperty.Create(
         nameof(PageSize), typeof(int), typeof(DataGrid), 0,
-        propertyChanged: (b, _, _) => ((DataGrid)b).OnPagingChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).OnPagingChanged();
+            }));
 
     public static readonly BindableProperty EditModeProperty = BindableProperty.Create(
         nameof(EditMode), typeof(DataGridEditMode), typeof(DataGrid), DataGridEditMode.None);
@@ -72,11 +106,17 @@ public partial class DataGrid
 
     public static readonly BindableProperty AllowColumnResizeProperty = BindableProperty.Create(
         nameof(AllowColumnResize), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildHeader());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildHeader();
+            }));
 
     public static readonly BindableProperty AllowColumnReorderProperty = BindableProperty.Create(
         nameof(AllowColumnReorder), typeof(bool), typeof(DataGrid), false,
-        propertyChanged: (b, _, _) => ((DataGrid)b).RebuildHeader());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DataGrid)b).RebuildHeader();
+            }));
 
     public static readonly BindableProperty SelectionChangedCommandProperty = BindableProperty.Create(
         nameof(SelectionChangedCommand), typeof(ICommand), typeof(DataGrid), null);

@@ -25,19 +25,28 @@ public class SchedulerCalendarView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).OnProviderChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).OnProviderChanged();
+            }));
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).OnSelectedDateChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).OnSelectedDateChanged();
+            }));
 
     public static readonly BindableProperty DisplayMonthProperty = BindableProperty.Create(
         nameof(DisplayMonth), typeof(DateOnly), typeof(SchedulerCalendarView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).OnDisplayMonthChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).OnDisplayMonthChanged();
+            }));
 
     public static readonly BindableProperty ShowCalendarCellEventCountOnlyProperty = BindableProperty.Create(
         nameof(ShowCalendarCellEventCountOnly), typeof(bool), typeof(SchedulerCalendarView), false);
@@ -65,23 +74,38 @@ public class SchedulerCalendarView : ContentView
 
     public static readonly BindableProperty FirstDayOfWeekProperty = BindableProperty.Create(
         nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(SchedulerCalendarView), DayOfWeek.Sunday,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).RebuildCalendar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).RebuildCalendar();
+            }));
 
     public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
         nameof(MinDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateNavigationBounds());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).UpdateNavigationBounds();
+            }));
 
     public static readonly BindableProperty MaxDateProperty = BindableProperty.Create(
         nameof(MaxDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateNavigationBounds());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).UpdateNavigationBounds();
+            }));
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarView), true,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateGestures());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).UpdateGestures();
+            }));
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerCalendarView), false,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarView)b).UpdateGestures());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarView)b).UpdateGestures();
+            }));
 
     public ISchedulerEventProvider? Provider
     {
@@ -289,6 +313,10 @@ public class SchedulerCalendarView : ContentView
         Content = rootGrid;
         UpdateGestures();
         RebuildCalendar();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(SchedulerCalendarView));
     }
 
     void UpdateGestures()

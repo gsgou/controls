@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -9,8 +10,8 @@ public partial class TextEntry
     public static readonly BindableProperty TextProperty = BindableProperty.Create(
         nameof(Text), typeof(string), typeof(TextEntry), string.Empty,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (te.suppressTextChanged) return;
 
@@ -32,24 +33,27 @@ public partial class TextEntry
             }
 
             te.InternalTextChanged?.Invoke(te, EventArgs.Empty);
-        });
+        }));
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
 
     // Placeholder
     public static readonly BindableProperty PlaceholderProperty = BindableProperty.Create(
         nameof(Placeholder), typeof(string), typeof(TextEntry), string.Empty,
-        propertyChanged: (b, _, n) => ((TextEntry)b).ApplyPlaceholder((string)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).ApplyPlaceholder((string)n);
+            }));
     public string Placeholder { get => (string)GetValue(PlaceholderProperty); set => SetValue(PlaceholderProperty, value); }
 
     // PlaceholderColor — muted placeholder/text → on-surface-variant token (was #6C757D)
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) =>
-        {
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (!te.isPlaceholderUp)
                 te.ApplyPlaceholderRestColor();
-        });
+        }));
     public Color? PlaceholderColor { get => (Color?)GetValue(PlaceholderColorProperty); set => SetValue(PlaceholderColorProperty, value); }
 
     // FocusedPlaceholderColor — accent → primary token (was #0D6EFD)
@@ -60,18 +64,21 @@ public partial class TextEntry
     // Variant — picks Classic (.form-control) or Floating (.form-floating)
     public static readonly BindableProperty VariantProperty = BindableProperty.Create(
         nameof(Variant), typeof(TextEntryVariant), typeof(TextEntry), TextEntryVariant.Classic,
-        propertyChanged: (b, _, _) => ((TextEntry)b).ApplyVariant());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).ApplyVariant();
+            }));
     public TextEntryVariant Variant { get => (TextEntryVariant)GetValue(VariantProperty); set => SetValue(VariantProperty, value); }
 
     // Border — resting/valid border → outline token (was #CED4DA)
     public static readonly BindableProperty BorderColorProperty = BindableProperty.Create(
         nameof(BorderColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) =>
-        {
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (!te.entry.IsFocused && !te.HasError)
                 te.ApplyBorderState();
-        });
+        }));
     public Color? BorderColor { get => (Color?)GetValue(BorderColorProperty); set => SetValue(BorderColorProperty, value); }
 
     // Focused border → primary token (was #86B7FE)
@@ -81,12 +88,12 @@ public partial class TextEntry
 
     public static readonly BindableProperty BorderThicknessProperty = BindableProperty.Create(
         nameof(BorderThickness), typeof(double), typeof(TextEntry), 1.0,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (!te.entry.IsFocused)
                 te.outerBorder.StrokeThickness = (double)n;
-        });
+        }));
     public double BorderThickness { get => (double)GetValue(BorderThicknessProperty); set => SetValue(BorderThicknessProperty, value); }
 
     public static readonly BindableProperty FocusedBorderThicknessProperty = BindableProperty.Create(
@@ -96,141 +103,183 @@ public partial class TextEntry
     // Bootstrap radius is .375rem = 6px
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(CornerRadius), typeof(TextEntry), new CornerRadius(6),
-        propertyChanged: (b, _, n) => ((TextEntry)b).borderShape.CornerRadius = (CornerRadius)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).borderShape.CornerRadius = (CornerRadius)n;
+            }));
     public CornerRadius CornerRadius { get => (CornerRadius)GetValue(CornerRadiusProperty); set => SetValue(CornerRadiusProperty, value); }
 
     // Entry surface — defaults to the surface token (was white)
     public static readonly BindableProperty EntryBackgroundColorProperty = BindableProperty.Create(
         nameof(EntryBackgroundColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (n is Color c)
                 te.outerBorder.BackgroundColor = c;
             else
                 te.outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-        });
+        }));
     public Color? EntryBackgroundColor { get => (Color?)GetValue(EntryBackgroundColorProperty); set => SetValue(EntryBackgroundColorProperty, value); }
 
     // Font — Bootstrap base 1rem = 16
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(TextEntry), 16.0,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             var s = (double)n;
             te.entry.FontSize = s;
             te.placeholderLabel.FontSize = s;
-        });
+        }));
     public double FontSize { get => (double)GetValue(FontSizeProperty); set => SetValue(FontSizeProperty, value); }
 
     public static readonly BindableProperty FontFamilyProperty = BindableProperty.Create(
         nameof(FontFamily), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             te.entry.FontFamily = n as string;
             te.placeholderLabel.FontFamily = n as string;
-        });
+        }));
     public string? FontFamily { get => (string?)GetValue(FontFamilyProperty); set => SetValue(FontFamilyProperty, value); }
 
     public static readonly BindableProperty FontAttributesProperty = BindableProperty.Create(
         nameof(FontAttributes), typeof(FontAttributes), typeof(TextEntry), FontAttributes.None,
-        propertyChanged: (b, _, n) => ((TextEntry)b).entry.FontAttributes = (FontAttributes)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).entry.FontAttributes = (FontAttributes)n;
+            }));
     public FontAttributes FontAttributes { get => (FontAttributes)GetValue(FontAttributesProperty); set => SetValue(FontAttributesProperty, value); }
 
     // TextColor — entry body text → on-surface token (was #212529)
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
         nameof(TextColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var te = (TextEntry)b;
             if (n is Color c)
                 te.entry.TextColor = c;
             else
                 te.entry.SetDynamicResource(Entry.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
-        });
+        }));
     public Color? TextColor { get => (Color?)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
 
     // Entry behavior
     public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
         nameof(IsReadOnly), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, n) => ((TextEntry)b).entry.IsReadOnly = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).entry.IsReadOnly = (bool)n;
+            }));
     public bool IsReadOnly { get => (bool)GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
 
     public static readonly BindableProperty IsPasswordProperty = BindableProperty.Create(
         nameof(IsPassword), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, n) => ((TextEntry)b).entry.IsPassword = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).entry.IsPassword = (bool)n;
+            }));
     public bool IsPassword { get => (bool)GetValue(IsPasswordProperty); set => SetValue(IsPasswordProperty, value); }
 
     public static readonly BindableProperty ReturnTypeProperty = BindableProperty.Create(
         nameof(ReturnType), typeof(ReturnType), typeof(TextEntry), ReturnType.Default,
-        propertyChanged: (b, _, n) => ((TextEntry)b).entry.ReturnType = (ReturnType)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).entry.ReturnType = (ReturnType)n;
+            }));
     public ReturnType ReturnType { get => (ReturnType)GetValue(ReturnTypeProperty); set => SetValue(ReturnTypeProperty, value); }
 
     public static readonly BindableProperty KeyboardProperty = BindableProperty.Create(
         nameof(Keyboard), typeof(Keyboard), typeof(TextEntry), Keyboard.Default,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             if (n is Keyboard k)
                 ((TextEntry)b).entry.Keyboard = k;
-        });
+        }));
     public Keyboard Keyboard { get => (Keyboard)GetValue(KeyboardProperty); set => SetValue(KeyboardProperty, value); }
 
     public static readonly BindableProperty MaxLengthProperty = BindableProperty.Create(
         nameof(MaxLength), typeof(int), typeof(TextEntry), int.MaxValue,
-        propertyChanged: (b, _, n) => ((TextEntry)b).entry.MaxLength = (int)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).entry.MaxLength = (int)n;
+            }));
     public int MaxLength { get => (int)GetValue(MaxLengthProperty); set => SetValue(MaxLengthProperty, value); }
 
     // Hint / Validation
     public static readonly BindableProperty HintTextProperty = BindableProperty.Create(
         nameof(HintText), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).SyncHint();
+            }));
     public string? HintText { get => (string?)GetValue(HintTextProperty); set => SetValue(HintTextProperty, value); }
 
     // Hint/helper text → on-surface-variant token (was Grey)
     public static readonly BindableProperty HintColorProperty = BindableProperty.Create(
         nameof(HintColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).SyncHint();
+            }));
     public Color? HintColor { get => (Color?)GetValue(HintColorProperty); set => SetValue(HintColorProperty, value); }
 
     public static readonly BindableProperty HasErrorProperty = BindableProperty.Create(
         nameof(HasError), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).SyncHint();
+            }));
     public bool HasError { get => (bool)GetValue(HasErrorProperty); set => SetValue(HasErrorProperty, value); }
 
     // Error/validation → error token (was #DC3545)
     public static readonly BindableProperty ErrorColorProperty = BindableProperty.Create(
         nameof(ErrorColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).SyncHint();
+            }));
     public Color? ErrorColor { get => (Color?)GetValue(ErrorColorProperty); set => SetValue(ErrorColorProperty, value); }
 
     public static readonly BindableProperty ShowCharacterCountProperty = BindableProperty.Create(
         nameof(ShowCharacterCount), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, _) => ((TextEntry)b).SyncHint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).SyncHint();
+            }));
     public bool ShowCharacterCount { get => (bool)GetValue(ShowCharacterCountProperty); set => SetValue(ShowCharacterCountProperty, value); }
 
     // Tools
     public static readonly BindableProperty LeftToolsProperty = BindableProperty.Create(
         nameof(LeftTools), typeof(IList<TextEntryTool>), typeof(TextEntry), null,
-        propertyChanged: (b, o, n) => ((TextEntry)b).OnToolsChanged(
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).OnToolsChanged(
             o as IList<TextEntryTool>,
             n as IList<TextEntryTool>,
-            ((TextEntry)b).leftToolsLayout));
+            ((TextEntry)b).leftToolsLayout);
+            }));
     public IList<TextEntryTool>? LeftTools { get => (IList<TextEntryTool>?)GetValue(LeftToolsProperty); set => SetValue(LeftToolsProperty, value); }
 
     public static readonly BindableProperty RightToolsProperty = BindableProperty.Create(
         nameof(RightTools), typeof(IList<TextEntryTool>), typeof(TextEntry), null,
-        propertyChanged: (b, o, n) => ((TextEntry)b).OnToolsChanged(
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).OnToolsChanged(
             o as IList<TextEntryTool>,
             n as IList<TextEntryTool>,
-            ((TextEntry)b).rightToolsLayout));
+            ((TextEntry)b).rightToolsLayout);
+            }));
     public IList<TextEntryTool>? RightTools { get => (IList<TextEntryTool>?)GetValue(RightToolsProperty); set => SetValue(RightToolsProperty, value); }
 
     // Mask
     public static readonly BindableProperty MaskProperty = BindableProperty.Create(
         nameof(Mask), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => ((TextEntry)b).OnMaskChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntry)b).OnMaskChanged();
+            }));
     public string? Mask { get => (string?)GetValue(MaskProperty); set => SetValue(MaskProperty, value); }
 
     public static readonly BindableProperty FormattedTextProperty = BindableProperty.Create(

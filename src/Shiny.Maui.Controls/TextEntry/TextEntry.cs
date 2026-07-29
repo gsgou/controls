@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -160,6 +161,10 @@ public partial class TextEntry : ContentView
         // Seed resting border/separator + placeholder colors (explicit-or-theme-token).
         ApplyBorderState();
         ApplyPlaceholderRestColor();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TextEntry));
     }
 
     // ---- Theme token defaults for each logical color (used when no explicit Color is set) ----

@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 /// <summary>
@@ -14,35 +15,50 @@ public class FrostedGlassView : ContentView
         typeof(View),
         typeof(FrostedGlassView),
         null,
-        propertyChanged: (b, _, _) => ((FrostedGlassView)b).BuildLayout());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FrostedGlassView)b).BuildLayout();
+            }));
 
     public static readonly BindableProperty BlurRadiusProperty = BindableProperty.Create(
         nameof(BlurRadius),
         typeof(double),
         typeof(FrostedGlassView),
         20d,
-        propertyChanged: (b, _, _) => ((FrostedGlassView)b).UpdateEffect());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FrostedGlassView)b).UpdateEffect();
+            }));
 
     public static readonly BindableProperty TintColorProperty = BindableProperty.Create(
         nameof(TintColor),
         typeof(Color),
         typeof(FrostedGlassView),
         Color.FromRgba(255, 255, 255, 128),
-        propertyChanged: (b, _, _) => ((FrostedGlassView)b).UpdateTint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FrostedGlassView)b).UpdateTint();
+            }));
 
     public static readonly BindableProperty TintOpacityProperty = BindableProperty.Create(
         nameof(TintOpacity),
         typeof(double),
         typeof(FrostedGlassView),
         0.6,
-        propertyChanged: (b, _, _) => ((FrostedGlassView)b).UpdateTint());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FrostedGlassView)b).UpdateTint();
+            }));
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius),
         typeof(double),
         typeof(FrostedGlassView),
         0d,
-        propertyChanged: (b, _, _) => ((FrostedGlassView)b).UpdateCornerRadius());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FrostedGlassView)b).UpdateCornerRadius();
+            }));
 
     public View? GlassContent
     {
@@ -106,6 +122,10 @@ public class FrostedGlassView : ContentView
         BackgroundColor = Colors.Transparent;
         rootGrid.BackgroundColor = Colors.Transparent;
         Content = clipBorder;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FrostedGlassView));
     }
 
     void BuildLayout()

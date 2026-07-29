@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -9,11 +10,14 @@ public class CustomCell : CellBase
 {
     public static readonly BindableProperty CustomContentProperty = BindableProperty.Create(
         nameof(CustomContent), typeof(View), typeof(CustomCell), null,
-        propertyChanged: OnCustomContentChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnCustomContentChanged(b, o, n)));
 
     public static readonly BindableProperty UseFullSizeProperty = BindableProperty.Create(
         nameof(UseFullSize), typeof(bool), typeof(CustomCell), false,
-        propertyChanged: (b, o, n) => ((CustomCell)b).UpdateLayout());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CustomCell)b).UpdateLayout();
+            }));
 
     public static readonly BindableProperty CommandProperty = BindableProperty.Create(
         nameof(Command), typeof(ICommand), typeof(CustomCell), null);
@@ -29,7 +33,10 @@ public class CustomCell : CellBase
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(CustomCell), false,
-        propertyChanged: (b, o, n) => ((CustomCell)b).UpdateArrowVisibility());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CustomCell)b).UpdateArrowVisibility();
+            }));
 
     public static readonly BindableProperty KeepSelectedUntilBackProperty = BindableProperty.Create(
         nameof(KeepSelectedUntilBack), typeof(bool), typeof(CustomCell), false);
@@ -90,6 +97,10 @@ public class CustomCell : CellBase
         var longPress = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
         longPress.Tapped += OnLongPressed;
         GestureRecognizers.Add(longPress);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(CustomCell));
     }
 
     static void OnCustomContentChanged(BindableObject bindable, object oldValue, object newValue)

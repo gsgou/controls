@@ -96,6 +96,10 @@ public class ImageViewer : ContentView
             CascadeInputTransparent = false,
             Children = { backdrop, overlayImage, closeView }
         };
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ImageViewer));
     }
 
     #region Bindable Properties
@@ -105,15 +109,15 @@ public class ImageViewer : ContentView
         typeof(ImageSource),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var viewer = (ImageViewer)b;
             var source = (ImageSource?)n;
             viewer.thumbnailImage.Source = source;
             viewer.overlayImage.Source = source;
             // Only intercept touches when there's an image to show
             viewer.InputTransparent = source == null;
-        });
+        }));
 
     public ImageSource? Source
     {
@@ -126,7 +130,10 @@ public class ImageViewer : ContentView
         typeof(Aspect),
         typeof(ImageViewer),
         Aspect.AspectFit,
-        propertyChanged: (b, _, n) => ((ImageViewer)b).thumbnailImage.Aspect = (Aspect)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageViewer)b).thumbnailImage.Aspect = (Aspect)n;
+            }));
 
     public Aspect Aspect
     {
@@ -139,7 +146,10 @@ public class ImageViewer : ContentView
         typeof(Aspect),
         typeof(ImageViewer),
         Aspect.AspectFit,
-        propertyChanged: (b, _, n) => ((ImageViewer)b).overlayImage.Aspect = (Aspect)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageViewer)b).overlayImage.Aspect = (Aspect)n;
+            }));
 
     public Aspect OverlayAspect
     {
@@ -165,14 +175,14 @@ public class ImageViewer : ContentView
         typeof(ImageViewer),
         false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) =>
-        {
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
             var viewer = (ImageViewer)b;
             if ((bool)n)
                 _ = viewer.OpenAsync();
             else
                 _ = viewer.CloseAsync();
-        });
+        }));
 
     public bool IsOpen
     {
@@ -185,7 +195,10 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => ((ImageViewer)b).ApplyCloseButtonTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageViewer)b).ApplyCloseButtonTemplate();
+            }));
 
     public DataTemplate? CloseButtonTemplate
     {
@@ -198,7 +211,10 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => ((ImageViewer)b).ApplyHeaderTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageViewer)b).ApplyHeaderTemplate();
+            }));
 
     public DataTemplate? HeaderTemplate
     {
@@ -211,7 +227,10 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => ((ImageViewer)b).ApplyFooterTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageViewer)b).ApplyFooterTemplate();
+            }));
 
     public DataTemplate? FooterTemplate
     {

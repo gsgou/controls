@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 public class CountryPicker : ContentView
@@ -74,6 +75,10 @@ public class CountryPicker : ContentView
         rootGrid.Add(autoComplete, 1, 0);
 
         Content = rootGrid;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(CountryPicker));
     }
 
     public static readonly BindableProperty SelectedCountryProperty = BindableProperty.Create(
@@ -82,7 +87,10 @@ public class CountryPicker : ContentView
         typeof(CountryPicker),
         null,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).OnSelectedCountryChanged(n as Country));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).OnSelectedCountryChanged(n as Country);
+            }));
     public Country? SelectedCountry
     {
         get => (Country?)GetValue(SelectedCountryProperty);
@@ -94,7 +102,10 @@ public class CountryPicker : ContentView
         typeof(string),
         typeof(CountryPicker),
         "Search countries...",
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.Placeholder = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.Placeholder = (string)n;
+            }));
     public string Placeholder
     {
         get => (string)GetValue(PlaceholderProperty);
@@ -106,7 +117,10 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.TextColor = n as Color);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.TextColor = n as Color;
+            }));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -118,7 +132,10 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.PlaceholderColor = n as Color);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.PlaceholderColor = n as Color;
+            }));
     public Color? PlaceholderColor
     {
         get => (Color?)GetValue(PlaceholderColorProperty);
@@ -130,7 +147,8 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBackgroundColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBackgroundColor = c; }));
     public Color? DropDownBackgroundColor
     {
         get => (Color?)GetValue(DropDownBackgroundColorProperty);
@@ -142,7 +160,8 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBorderColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBorderColor = c; }));
     public Color? DropDownBorderColor
     {
         get => (Color?)GetValue(DropDownBorderColorProperty);
@@ -154,7 +173,8 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((CountryPicker)b).autoComplete.SpinnerColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((CountryPicker)b).autoComplete.SpinnerColor = c; }));
     public Color? SpinnerColor
     {
         get => (Color?)GetValue(SpinnerColorProperty);
@@ -166,7 +186,10 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         200d,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.MaxDropDownHeight = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.MaxDropDownHeight = (double)n;
+            }));
     public double MaxDropDownHeight
     {
         get => (double)GetValue(MaxDropDownHeightProperty);
@@ -178,7 +201,10 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         14d,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.FontSize = (double)n;
+            }));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -190,7 +216,10 @@ public class CountryPicker : ContentView
         typeof(string),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.FontFamily = n as string);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.FontFamily = n as string;
+            }));
     public string? FontFamily
     {
         get => (string?)GetValue(FontFamilyProperty);
@@ -202,7 +231,10 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         4d,
-        propertyChanged: (b, _, n) => ((CountryPicker)b).autoComplete.CornerRadius = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CountryPicker)b).autoComplete.CornerRadius = (double)n;
+            }));
     public double CornerRadius
     {
         get => (double)GetValue(CornerRadiusProperty);

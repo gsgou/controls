@@ -101,6 +101,10 @@ public class FabMenuItem : ContentView
 
         Content = rootLayout;
         HorizontalOptions = LayoutOptions.End;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FabMenuItem));
     }
 
 
@@ -109,12 +113,12 @@ public class FabMenuItem : ContentView
         typeof(ImageSource),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             item.iconImage.Source = n as ImageSource;
             item.iconImage.IsVisible = n is not null;
-        });
+        }));
     public ImageSource? Icon
     {
         get => (ImageSource?)GetValue(IconProperty);
@@ -126,12 +130,12 @@ public class FabMenuItem : ContentView
         typeof(string),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             item.label.Text = n as string ?? string.Empty;
             item.labelBorder.IsVisible = !string.IsNullOrEmpty(item.label.Text);
-        });
+        }));
     public string? Text
     {
         get => (string?)GetValue(TextProperty);
@@ -165,14 +169,14 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             if (n is Color c)
                 item.iconBorder.BackgroundColor = c;
             else
                 item.iconBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-        });
+        }));
     public Color? FabBackgroundColor
     {
         get => (Color?)GetValue(FabBackgroundColorProperty);
@@ -184,11 +188,11 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             if (n is Color c)
                 ((FabMenuItem)b).iconBorder.Stroke = c;
-        });
+        }));
     public Color? BorderColor
     {
         get => (Color?)GetValue(BorderColorProperty);
@@ -200,7 +204,10 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         0.0,
-        propertyChanged: (b, _, n) => ((FabMenuItem)b).iconBorder.StrokeThickness = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FabMenuItem)b).iconBorder.StrokeThickness = (double)n;
+            }));
     public double BorderThickness
     {
         get => (double)GetValue(BorderThicknessProperty);
@@ -212,14 +219,14 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             if (n is Color c)
                 item.label.TextColor = c;
             else
                 item.label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
-        });
+        }));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -231,14 +238,14 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             if (n is Color c)
                 item.labelBorder.BackgroundColor = c;
             else
                 item.labelBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-        });
+        }));
     public Color? LabelBackgroundColor
     {
         get => (Color?)GetValue(LabelBackgroundColorProperty);
@@ -250,7 +257,10 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => ((FabMenuItem)b).label.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FabMenuItem)b).label.FontSize = (double)n;
+            }));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -262,8 +272,8 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultSize,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             var s = (double)n;
             item.iconBorder.WidthRequest = s;
@@ -272,7 +282,7 @@ public class FabMenuItem : ContentView
             {
                 CornerRadius = new CornerRadius(s / 2)
             };
-        });
+        }));
     public double Size
     {
         get => (double)GetValue(SizeProperty);
@@ -284,13 +294,13 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultIconSize,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var item = (FabMenuItem)b;
             var s = (double)n;
             item.iconImage.WidthRequest = s;
             item.iconImage.HeightRequest = s;
-        });
+        }));
     public double IconSize
     {
         get => (double)GetValue(IconSizeProperty);

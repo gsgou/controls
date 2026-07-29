@@ -2,11 +2,20 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using TvTableView = Shiny.Maui.Controls.TableView;
 using TvTableSection = Shiny.Maui.Controls.Sections.TableSection;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class RadioCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public RadioCell() => StyleGuard.MarkReady(this, typeof(RadioCell));
+
     RadioButton radioButton = default!;
 
     public static readonly BindableProperty ValueProperty = BindableProperty.Create(
@@ -14,13 +23,16 @@ public class RadioCell : CellBase
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
         nameof(AccentColor), typeof(Color), typeof(RadioCell), null,
-        propertyChanged: (b, o, n) => ((RadioCell)b).UpdateAccentColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((RadioCell)b).UpdateAccentColor();
+            }));
 
     // Attached property for section-level or tableview-level selected value
     public static readonly BindableProperty SelectedValueProperty = BindableProperty.CreateAttached(
         "SelectedValue", typeof(object), typeof(RadioCell), null,
         BindingMode.TwoWay,
-        propertyChanged: OnSelectedValueChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnSelectedValueChanged(b, o, n)));
 
     public object? Value
     {

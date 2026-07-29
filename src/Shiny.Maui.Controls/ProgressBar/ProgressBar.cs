@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -80,6 +81,10 @@ public partial class ProgressBar : ContentView, IDisposable
         trackGrid.Children.Add(progressLabel);
 
         Content = trackGrid;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ProgressBar));
     }
 
     protected override void OnSizeAllocated(double width, double height)

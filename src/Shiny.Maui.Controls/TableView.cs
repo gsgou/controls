@@ -31,6 +31,10 @@ public partial class TableView : ContentView
         rootLayout = new VerticalStackLayout();
         scrollView.Content = rootLayout;
         Content = scrollView;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TableView));
     }
 
 
@@ -56,66 +60,86 @@ public partial class TableView : ContentView
 
     public static readonly BindableProperty ShowSectionSeparatorProperty = BindableProperty.Create(
         nameof(ShowSectionSeparator), typeof(bool), typeof(TableView), true,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty SectionSeparatorHeightProperty = BindableProperty.Create(
         nameof(SectionSeparatorHeight), typeof(double), typeof(TableView), 8d,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty SectionSeparatorColorProperty = BindableProperty.Create(
         nameof(SectionSeparatorColor), typeof(Color), typeof(TableView), null,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
         nameof(SeparatorColor), typeof(Color), typeof(TableView), null,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty SeparatorHeightProperty = BindableProperty.Create(
         nameof(SeparatorHeight), typeof(double), typeof(TableView), -1d,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty SeparatorPaddingProperty = BindableProperty.Create(
         nameof(SeparatorPadding), typeof(double), typeof(TableView), -1d,
-        propertyChanged: (b, o, n) => ((TableView)b).RenderSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
 
     public static readonly BindableProperty ItemDroppedCommandProperty = BindableProperty.Create(
         nameof(ItemDroppedCommand), typeof(ICommand), typeof(TableView), null);
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(TableView), null,
-        propertyChanged: OnViewItemsSourceChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnViewItemsSourceChanged(b, o, n)));
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(TableView), null,
-        propertyChanged: (b, o, n) => ((TableView)b).RegenerateTemplatedSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RegenerateTemplatedSections();
+            }));
 
     public static readonly BindableProperty TemplateStartIndexProperty = BindableProperty.Create(
         nameof(TemplateStartIndex), typeof(int), typeof(TableView), 0,
-        propertyChanged: (b, o, n) => ((TableView)b).RegenerateTemplatedSections());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableView)b).RegenerateTemplatedSections();
+            }));
 
     public static readonly BindableProperty ScrollToTopProperty = BindableProperty.Create(
         nameof(ScrollToTop), typeof(bool), typeof(TableView), false,
-        propertyChanged: async (b, o, n) =>
+        // Deliberately not an async lambda: that compiles to async void, so a fault here
+        // becomes an unobserved task exception rather than something a caller can handle.
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
         {
             if ((bool)n)
-            {
-                var tv = (TableView)b;
-                await tv.ScrollToTopAsync();
-                tv.ScrollToTop = false;
-            }
-        });
+                _ = ((TableView)b).ScrollToTopAndResetAsync();
+        }));
 
     public static readonly BindableProperty ScrollToBottomProperty = BindableProperty.Create(
         nameof(ScrollToBottom), typeof(bool), typeof(TableView), false,
-        propertyChanged: async (b, o, n) =>
+        // Deliberately not an async lambda: that compiles to async void, so a fault here
+        // becomes an unobserved task exception rather than something a caller can handle.
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
         {
             if ((bool)n)
-            {
-                var tv = (TableView)b;
-                await tv.ScrollToBottomAsync();
-                tv.ScrollToBottom = false;
-            }
-        });
+                _ = ((TableView)b).ScrollToBottomAndResetAsync();
+        }));
 
 
 
@@ -364,6 +388,20 @@ public partial class TableView : ContentView
         CellPropertyChanged?.Invoke(this, new CellPropertyChangedEventArgs(section, cell, propertyName));
     }
 
+
+
+    async Task ScrollToTopAndResetAsync()
+    {
+        await this.ScrollToTopAsync();
+        this.ScrollToTop = false;
+    }
+
+
+    async Task ScrollToBottomAndResetAsync()
+    {
+        await this.ScrollToBottomAsync();
+        this.ScrollToBottom = false;
+    }
 
 
     public Task ScrollToTopAsync(bool animated = true)

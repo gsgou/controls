@@ -2,47 +2,68 @@ using System.Collections;
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class TextPickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public TextPickerCell() => StyleGuard.MarkReady(this, typeof(TextPickerCell));
+
     Label valueLabel = default!;
     Picker hiddenPicker = default!;
     bool syncingPicker;
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IList), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) => ((TextPickerCell)b).UpdatePickerItems());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextPickerCell)b).UpdatePickerItems();
+            }));
 
     public static readonly BindableProperty SelectedIndexProperty = BindableProperty.Create(
         nameof(SelectedIndex), typeof(int), typeof(TextPickerCell), -1,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((TextPickerCell)b).OnSelectedIndexChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextPickerCell)b).OnSelectedIndexChanged();
+            }));
 
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(TextPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((TextPickerCell)b).OnSelectedItemChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextPickerCell)b).OnSelectedItemChanged();
+            }));
 
     public static readonly BindableProperty DisplayMemberProperty = BindableProperty.Create(
         nameof(DisplayMember), typeof(string), typeof(TextPickerCell), null);
 
     public static readonly BindableProperty PickerTitleProperty = BindableProperty.Create(
         nameof(PickerTitle), typeof(string), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) =>
-        {
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
             var cell = (TextPickerCell)b;
             if (cell.hiddenPicker != null)
                 cell.hiddenPicker.Title = (string?)n;
-        });
+        }));
 
     public static readonly BindableProperty SelectedCommandProperty = BindableProperty.Create(
         nameof(SelectedCommand), typeof(ICommand), typeof(TextPickerCell), null);
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) => ((TextPickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextPickerCell)b).UpdateValueColor();
+            }));
 
     public IList? ItemsSource
     {

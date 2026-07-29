@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -49,44 +50,54 @@ public class LoadingOverlay : Overlay
         };
 
         OverlayContentTemplate = new DataTemplate(() => contentLayout);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(LoadingOverlay));
     }
 
     // IsIndeterminate
     public static readonly BindableProperty IsIndeterminateProperty = BindableProperty.Create(
         nameof(IsIndeterminate), typeof(bool), typeof(LoadingOverlay), true,
-        propertyChanged: (b, _, n) => ((LoadingOverlay)b).OnModeChanged());
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LoadingOverlay)b).OnModeChanged();
+            }));
     public bool IsIndeterminate { get => (bool)GetValue(IsIndeterminateProperty); set => SetValue(IsIndeterminateProperty, value); }
 
     // Progress (0-100)
     public static readonly BindableProperty ProgressProperty = BindableProperty.Create(
         nameof(Progress), typeof(double), typeof(LoadingOverlay), 0.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((LoadingOverlay)b).progressBar.Value = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((LoadingOverlay)b).progressBar.Value = (double)n;
+            }));
     public double Progress { get => (double)GetValue(ProgressProperty); set => SetValue(ProgressProperty, value); }
 
     // Message
     public static readonly BindableProperty MessageProperty = BindableProperty.Create(
         nameof(Message), typeof(string), typeof(LoadingOverlay), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var lo = (LoadingOverlay)b;
             var text = (string?)n;
             lo.messageLabel.Text = text;
             lo.messageLabel.IsVisible = !string.IsNullOrWhiteSpace(text);
-        });
+        }));
     public string? Message { get => (string?)GetValue(MessageProperty); set => SetValue(MessageProperty, value); }
 
     // SpinnerColor
     public static readonly BindableProperty SpinnerColorProperty = BindableProperty.Create(
         nameof(SpinnerColor), typeof(Color), typeof(LoadingOverlay), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var lo = (LoadingOverlay)b;
             if (n is Color c)
                 lo.spinner.Color = c;
             else
                 lo.spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
-        });
+        }));
     public Color? SpinnerColor { get => (Color?)GetValue(SpinnerColorProperty); set => SetValue(SpinnerColorProperty, value); }
 
     void OnModeChanged()

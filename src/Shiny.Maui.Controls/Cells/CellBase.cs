@@ -23,84 +23,140 @@ public abstract class CellBase : ContentView
         var tapGesture = new TapGestureRecognizer();
         tapGesture.Tapped += OnCellTapped;
         GestureRecognizers.Add(tapGesture);
+
     }
 
 
     public static readonly BindableProperty IconSourceProperty = BindableProperty.Create(
         nameof(IconSource), typeof(ImageSource), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateIconVisibility());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateIconVisibility();
+            }));
 
     public static readonly BindableProperty IconSizeProperty = BindableProperty.Create(
         nameof(IconSize), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => { ((CellBase)b).UpdateIconSize(); ((CellBase)b).UpdateIconRadius(); });
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            { ((CellBase)b).UpdateIconSize(); ((CellBase)b).UpdateIconRadius(); }));
 
     public static readonly BindableProperty IconRadiusProperty = BindableProperty.Create(
         nameof(IconRadius), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateIconRadius());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateIconRadius();
+            }));
 
     public static readonly BindableProperty TitleProperty = BindableProperty.Create(
         nameof(Title), typeof(string), typeof(CellBase), string.Empty,
-        propertyChanged: (b, o, n) => ((CellBase)b).titleLabel.Text = (string)n);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).titleLabel.Text = (string)n;
+            }));
 
     public static readonly BindableProperty TitleColorProperty = BindableProperty.Create(
         nameof(TitleColor), typeof(Color), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateTitleColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateTitleColor();
+            }));
 
     public static readonly BindableProperty TitleFontSizeProperty = BindableProperty.Create(
         nameof(TitleFontSize), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateTitleFontSize());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateTitleFontSize();
+            }));
 
     public static readonly BindableProperty TitleFontFamilyProperty = BindableProperty.Create(
         nameof(TitleFontFamily), typeof(string), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateTitleFontFamily());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateTitleFontFamily();
+            }));
 
     public static readonly BindableProperty TitleFontAttributesProperty = BindableProperty.Create(
         nameof(TitleFontAttributes), typeof(FontAttributes?), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateTitleFontAttributes());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateTitleFontAttributes();
+            }));
 
     public static readonly BindableProperty DescriptionProperty = BindableProperty.Create(
         nameof(Description), typeof(string), typeof(CellBase), string.Empty,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateDescription());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateDescription();
+            }));
 
     public static readonly BindableProperty DescriptionColorProperty = BindableProperty.Create(
         nameof(DescriptionColor), typeof(Color), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateDescriptionColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateDescriptionColor();
+            }));
 
     public static readonly BindableProperty DescriptionFontSizeProperty = BindableProperty.Create(
         nameof(DescriptionFontSize), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateDescriptionFontSize());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateDescriptionFontSize();
+            }));
 
     public static readonly BindableProperty DescriptionFontFamilyProperty = BindableProperty.Create(
         nameof(DescriptionFontFamily), typeof(string), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateDescriptionFontFamily());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateDescriptionFontFamily();
+            }));
 
     public static readonly BindableProperty DescriptionFontAttributesProperty = BindableProperty.Create(
         nameof(DescriptionFontAttributes), typeof(FontAttributes?), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateDescriptionFontAttributes());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateDescriptionFontAttributes();
+            }));
 
     public static readonly BindableProperty HintTextProperty = BindableProperty.Create(
         nameof(HintText), typeof(string), typeof(CellBase), string.Empty,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateHintText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateHintText();
+            }));
 
     public static readonly BindableProperty HintTextColorProperty = BindableProperty.Create(
         nameof(HintTextColor), typeof(Color), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateHintTextColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateHintTextColor();
+            }));
 
     public static readonly BindableProperty HintTextFontSizeProperty = BindableProperty.Create(
         nameof(HintTextFontSize), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateHintTextFontSize());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateHintTextFontSize();
+            }));
 
     public static readonly BindableProperty HintFontFamilyProperty = BindableProperty.Create(
         nameof(HintFontFamily), typeof(string), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateHintFontFamily());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateHintFontFamily();
+            }));
 
     public static readonly BindableProperty HintFontAttributesProperty = BindableProperty.Create(
         nameof(HintFontAttributes), typeof(FontAttributes?), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateHintFontAttributes());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateHintFontAttributes();
+            }));
 
     public static readonly BindableProperty CellBackgroundColorProperty = BindableProperty.Create(
         nameof(CellBackgroundColor), typeof(Color), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateCellBackground());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateCellBackground();
+            }));
 
     public static readonly BindableProperty SelectedColorProperty = BindableProperty.Create(
         nameof(SelectedColor), typeof(Color), typeof(CellBase), null);
@@ -110,23 +166,32 @@ public abstract class CellBase : ContentView
 
     public static readonly BindableProperty CellHeightProperty = BindableProperty.Create(
         nameof(CellHeight), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) =>
-        {
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
             var cell = (CellBase)b;
             cell.HeightRequest = (double)n >= 0 ? (double)n : -1;
-        });
+        }));
 
     public static readonly BindableProperty BorderColorProperty = BindableProperty.Create(
         nameof(BorderColor), typeof(Color), typeof(CellBase), null,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateBorder());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateBorder();
+            }));
 
     public static readonly BindableProperty BorderWidthProperty = BindableProperty.Create(
         nameof(BorderWidth), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateBorder());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateBorder();
+            }));
 
     public static readonly BindableProperty BorderRadiusProperty = BindableProperty.Create(
         nameof(BorderRadius), typeof(double), typeof(CellBase), -1d,
-        propertyChanged: (b, o, n) => ((CellBase)b).UpdateBorder());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CellBase)b).UpdateBorder();
+            }));
 
     public static readonly BindableProperty UseFeedbackProperty = BindableProperty.Create(
         nameof(UseFeedback), typeof(bool), typeof(CellBase), true);

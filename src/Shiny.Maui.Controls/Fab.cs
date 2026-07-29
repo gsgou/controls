@@ -86,6 +86,10 @@ public class Fab : ContentView
 
         UpdateTextVisibility();
         ApplyCircularShape();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(Fab));
     }
 
 
@@ -94,12 +98,12 @@ public class Fab : ContentView
         typeof(ImageSource),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             fab.iconImage.Source = n as ImageSource;
             fab.iconImage.IsVisible = n is not null;
-        });
+        }));
     public ImageSource? Icon
     {
         get => (ImageSource?)GetValue(IconProperty);
@@ -111,13 +115,13 @@ public class Fab : ContentView
         typeof(string),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             fab.textLabel.Text = n as string ?? string.Empty;
             fab.UpdateTextVisibility();
             fab.ApplyCircularShape();
-        });
+        }));
     public string? Text
     {
         get => (string?)GetValue(TextProperty);
@@ -151,14 +155,14 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             if (n is Color c)
                 fab.border.BackgroundColor = c;
             else
                 fab.border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-        });
+        }));
     public Color? FabBackgroundColor
     {
         get => (Color?)GetValue(FabBackgroundColorProperty);
@@ -170,12 +174,12 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             if (n is Color c)
                 fab.border.Stroke = c;
-        });
+        }));
     public Color? BorderColor
     {
         get => (Color?)GetValue(BorderColorProperty);
@@ -187,7 +191,10 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         0.0,
-        propertyChanged: (b, _, n) => ((Fab)b).border.StrokeThickness = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((Fab)b).border.StrokeThickness = (double)n;
+            }));
     public double BorderThickness
     {
         get => (double)GetValue(BorderThicknessProperty);
@@ -199,14 +206,14 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             if (n is Color c)
                 fab.textLabel.TextColor = c;
             else
                 fab.textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
-        });
+        }));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -218,7 +225,10 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => ((Fab)b).textLabel.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((Fab)b).textLabel.FontSize = (double)n;
+            }));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -230,7 +240,10 @@ public class Fab : ContentView
         typeof(FontAttributes),
         typeof(Fab),
         Microsoft.Maui.Controls.FontAttributes.None,
-        propertyChanged: (b, _, n) => ((Fab)b).textLabel.FontAttributes = (FontAttributes)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((Fab)b).textLabel.FontAttributes = (FontAttributes)n;
+            }));
     public FontAttributes FontAttributes
     {
         get => (FontAttributes)GetValue(FontAttributesProperty);
@@ -242,13 +255,13 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultSize,
-        propertyChanged: (b, _, _) =>
-        {
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             fab.border.HeightRequest = fab.Size;
             fab.border.MinimumWidthRequest = fab.Size;
             fab.ApplyCircularShape();
-        });
+        }));
     public double Size
     {
         get => (double)GetValue(SizeProperty);
@@ -260,13 +273,13 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultIconSize,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             var s = (double)n;
             fab.iconImage.WidthRequest = s;
             fab.iconImage.HeightRequest = s;
-        });
+        }));
     public double IconSize
     {
         get => (double)GetValue(IconSizeProperty);
@@ -278,13 +291,13 @@ public class Fab : ContentView
         typeof(bool),
         typeof(Fab),
         true,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var fab = (Fab)b;
             fab.border.Shadow = (bool)n
                 ? new Shadow { Brush = Brush.Black, Opacity = 0.25f, Radius = 8, Offset = new Point(0, 4) }
                 : null!;
-        });
+        }));
     public bool HasShadow
     {
         get => (bool)GetValue(HasShadowProperty);

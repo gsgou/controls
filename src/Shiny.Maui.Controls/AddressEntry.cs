@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -109,6 +110,10 @@ public class AddressEntry : ContentView
         autoComplete.ItemSelected += OnItemSelected;
 
         Content = autoComplete;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(AddressEntry));
     }
 
     public Command<string> InternalSearchCommand => new(async searchText => await SearchAsync(searchText));
@@ -119,7 +124,10 @@ public class AddressEntry : ContentView
         typeof(AddressEntry),
         null,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).OnSelectedAddressChanged(n as Address));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).OnSelectedAddressChanged(n as Address);
+            }));
     public Address? SelectedAddress
     {
         get => (Address?)GetValue(SelectedAddressProperty);
@@ -153,7 +161,10 @@ public class AddressEntry : ContentView
         typeof(string),
         typeof(AddressEntry),
         "Search address...",
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.Placeholder = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.Placeholder = (string)n;
+            }));
     public string Placeholder
     {
         get => (string)GetValue(PlaceholderProperty);
@@ -165,7 +176,10 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.TextColor = n as Color);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.TextColor = n as Color;
+            }));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -177,7 +191,10 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.PlaceholderColor = n as Color);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.PlaceholderColor = n as Color;
+            }));
     public Color? PlaceholderColor
     {
         get => (Color?)GetValue(PlaceholderColorProperty);
@@ -189,7 +206,8 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBackgroundColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBackgroundColor = c; }));
     public Color? DropDownBackgroundColor
     {
         get => (Color?)GetValue(DropDownBackgroundColorProperty);
@@ -201,7 +219,8 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBorderColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBorderColor = c; }));
     public Color? DropDownBorderColor
     {
         get => (Color?)GetValue(DropDownBorderColorProperty);
@@ -213,7 +232,8 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AddressEntry)b).autoComplete.SpinnerColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            { if (n is Color c) ((AddressEntry)b).autoComplete.SpinnerColor = c; }));
     public Color? SpinnerColor
     {
         get => (Color?)GetValue(SpinnerColorProperty);
@@ -225,7 +245,10 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         250d,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.MaxDropDownHeight = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.MaxDropDownHeight = (double)n;
+            }));
     public double MaxDropDownHeight
     {
         get => (double)GetValue(MaxDropDownHeightProperty);
@@ -237,7 +260,10 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         14d,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.FontSize = (double)n;
+            }));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -249,7 +275,10 @@ public class AddressEntry : ContentView
         typeof(string),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.FontFamily = n as string);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.FontFamily = n as string;
+            }));
     public string? FontFamily
     {
         get => (string?)GetValue(FontFamilyProperty);
@@ -261,7 +290,10 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         4d,
-        propertyChanged: (b, _, n) => ((AddressEntry)b).autoComplete.CornerRadius = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((AddressEntry)b).autoComplete.CornerRadius = (double)n;
+            }));
     public double CornerRadius
     {
         get => (double)GetValue(CornerRadiusProperty);

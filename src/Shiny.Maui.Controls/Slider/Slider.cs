@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -130,6 +131,10 @@ public partial class Slider : ContentView
         trackLayout.GestureRecognizers.Add(tapGesture);
 
         UpdateVisuals();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(Slider));
     }
 
     protected override void OnSizeAllocated(double width, double height)

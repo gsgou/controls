@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
@@ -23,6 +24,24 @@ public class AutoCompleteEntry : ContentView
     bool suppressTextChanged;
     IList? currentFilteredItems;
 
+    /// <remarks>
+    /// An implicit Style targeting this type is applied by MAUI *before this constructor body
+    /// runs at all* - StyleableElement's own constructor creates a MergedStyle, whose ctor
+    /// calls RegisterImplicitStyles(), which resolves the style out of
+    /// Application.Current.Resources and applies it there and then:
+    ///
+    ///     at Microsoft.Maui.Controls.Setter.Apply(...)
+    ///     at Microsoft.Maui.Controls.MergedStyle.set_ImplicitStyle(...)
+    ///     at Microsoft.Maui.Controls.MergedStyle.RegisterImplicitStyles()
+    ///     at Microsoft.Maui.Controls.MergedStyle..ctor(...)
+    ///     at Microsoft.Maui.Controls.StyleableElement..ctor()
+    ///
+    /// So the setters run the propertyChanged callbacks below while every field here is still
+    /// null, and the page dies on inflation with a NullReferenceException. Reordering this
+    /// constructor cannot help - nothing in it has run yet. See
+    /// <see cref="Infrastructure.StyleGuard"/>: the callbacks below queue through it, and the
+    /// MarkReady call at the end of this constructor replays them.
+    /// </remarks>
     public AutoCompleteEntry()
     {
         entry = new BorderlessEntry
@@ -48,8 +67,6 @@ public class AutoCompleteEntry : ContentView
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.End
         };
-        // Theme default — overridden if the consumer sets SpinnerColor explicitly.
-        spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var entryGrid = new Grid
         {
@@ -95,11 +112,6 @@ public class AutoCompleteEntry : ContentView
                 Offset = new Point(0, 3)
             }
         };
-        // Theme defaults — overridden if the consumer sets DropDownBackgroundColor / DropDownBorderColor explicitly.
-        dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-        var dropDownStrokeBrush = new SolidColorBrush();
-        dropDownStrokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
-        dropDownBorder.Stroke = dropDownStrokeBrush;
 
         rootGrid = new Grid
         {
@@ -113,7 +125,54 @@ public class AutoCompleteEntry : ContentView
         rootGrid.Add(dropDownBorder, 0, 1);
 
         Content = rootGrid;
+
+        // Theme defaults for anything the consumer left unset.
+        ApplySpinnerColor();
+        ApplyDropDownBackground();
+        ApplyDropDownStroke();
+
+        // Last line: replays any callback that fired before the children existed.
+        StyleGuard.MarkReady(this, typeof(AutoCompleteEntry));
     }
+
+
+
+
+    // Each of these takes the explicit colour when one is set, and otherwise falls back to the
+    // theme resource. Shared by the constructor and the propertyChanged callbacks so the
+    // "unset means theme default" behaviour is defined in exactly one place.
+
+    void ApplySpinnerColor()
+    {
+        if (this.SpinnerColor is Color c)
+            spinner.Color = c;
+        else
+            spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+    }
+
+    void ApplyDropDownBackground()
+    {
+        if (this.DropDownBackgroundColor is Color c)
+            dropDownBorder.BackgroundColor = c;
+        else
+            dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+    }
+
+    void ApplyDropDownStroke()
+    {
+        if (this.DropDownBorderColor is Color c)
+        {
+            dropDownBorder.Stroke = c;
+        }
+        else
+        {
+            var brush = new SolidColorBrush();
+            brush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
+            dropDownBorder.Stroke = brush;
+        }
+    }
+
+
 
 
     // --- Bindable Properties ---
@@ -124,16 +183,15 @@ public class AutoCompleteEntry : ContentView
         typeof(AutoCompleteEntry),
         string.Empty,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl =>
         {
-            var ctrl = (AutoCompleteEntry)b;
             if (ctrl.entry.Text != (string)n)
             {
                 ctrl.suppressTextChanged = true;
                 ctrl.entry.Text = (string)n;
                 ctrl.suppressTextChanged = false;
             }
-        });
+        }));
     public string Text
     {
         get => (string)GetValue(TextProperty);
@@ -145,7 +203,7 @@ public class AutoCompleteEntry : ContentView
         typeof(string),
         typeof(AutoCompleteEntry),
         string.Empty,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).entry.Placeholder = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.entry.Placeholder = (string)n));
     public string Placeholder
     {
         get => (string)GetValue(PlaceholderProperty);
@@ -157,7 +215,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AutoCompleteEntry)b).entry.PlaceholderColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => { if (n is Color c) ctrl.entry.PlaceholderColor = c; }));
     public Color? PlaceholderColor
     {
         get => (Color?)GetValue(PlaceholderColorProperty);
@@ -204,13 +262,12 @@ public class AutoCompleteEntry : ContentView
         typeof(AutoCompleteEntry),
         false,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl =>
         {
-            var ctrl = (AutoCompleteEntry)b;
             var busy = (bool)n;
             ctrl.spinner.IsRunning = busy;
             ctrl.spinner.IsVisible = busy;
-        });
+        }));
     public bool IsBusy
     {
         get => (bool)GetValue(IsBusyProperty);
@@ -222,13 +279,12 @@ public class AutoCompleteEntry : ContentView
         typeof(DataTemplate),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl =>
         {
-            var ctrl = (AutoCompleteEntry)b;
             // Re-render if items are already showing
             if (ctrl.currentFilteredItems != null)
                 ctrl.RenderDropDownItems(ctrl.currentFilteredItems);
-        });
+        }));
     public DataTemplate? ItemTemplate
     {
         get => (DataTemplate?)GetValue(ItemTemplateProperty);
@@ -273,7 +329,7 @@ public class AutoCompleteEntry : ContentView
         typeof(double),
         typeof(AutoCompleteEntry),
         DefaultMaxDropDownHeight,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).dropDownBorder.MaximumHeightRequest = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.dropDownBorder.MaximumHeightRequest = (double)n));
     public double MaxDropDownHeight
     {
         get => (double)GetValue(MaxDropDownHeightProperty);
@@ -285,7 +341,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) => { if (n is Color c) ((AutoCompleteEntry)b).entry.TextColor = c; });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => { if (n is Color c) ctrl.entry.TextColor = c; }));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -297,14 +353,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            var ctrl = (AutoCompleteEntry)b;
-            if (n is Color c)
-                ctrl.dropDownBorder.BackgroundColor = c;
-            else
-                ctrl.dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-        });
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.ApplyDropDownBackground()));
     public Color? DropDownBackgroundColor
     {
         get => (Color?)GetValue(DropDownBackgroundColorProperty);
@@ -316,20 +365,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            var ctrl = (AutoCompleteEntry)b;
-            if (n is Color c)
-            {
-                ctrl.dropDownBorder.Stroke = c;
-            }
-            else
-            {
-                var brush = new SolidColorBrush();
-                brush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
-                ctrl.dropDownBorder.Stroke = brush;
-            }
-        });
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.ApplyDropDownStroke()));
     public Color? DropDownBorderColor
     {
         get => (Color?)GetValue(DropDownBorderColorProperty);
@@ -341,14 +377,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            var ctrl = (AutoCompleteEntry)b;
-            if (n is Color c)
-                ctrl.spinner.Color = c;
-            else
-                ctrl.spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        });
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.ApplySpinnerColor()));
     public Color? SpinnerColor
     {
         get => (Color?)GetValue(SpinnerColorProperty);
@@ -360,7 +389,7 @@ public class AutoCompleteEntry : ContentView
         typeof(double),
         typeof(AutoCompleteEntry),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).entry.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.entry.FontSize = (double)n));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -372,7 +401,7 @@ public class AutoCompleteEntry : ContentView
         typeof(string),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).entry.FontFamily = n as string);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.entry.FontFamily = n as string));
     public string? FontFamily
     {
         get => (string?)GetValue(FontFamilyProperty);
@@ -384,7 +413,7 @@ public class AutoCompleteEntry : ContentView
         typeof(FontAttributes),
         typeof(AutoCompleteEntry),
         Microsoft.Maui.Controls.FontAttributes.None,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).entry.FontAttributes = (FontAttributes)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.entry.FontAttributes = (FontAttributes)n));
     public FontAttributes FontAttributes
     {
         get => (FontAttributes)GetValue(FontAttributesProperty);
@@ -407,7 +436,7 @@ public class AutoCompleteEntry : ContentView
         typeof(double),
         typeof(AutoCompleteEntry),
         DefaultCornerRadius,
-        propertyChanged: (b, _, n) => ((AutoCompleteEntry)b).dropDownShape.CornerRadius = new CornerRadius((double)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.dropDownShape.CornerRadius = new CornerRadius((double)n)));
     public double CornerRadius
     {
         get => (double)GetValue(CornerRadiusProperty);

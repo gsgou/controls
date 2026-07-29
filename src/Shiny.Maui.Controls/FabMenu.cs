@@ -22,6 +22,7 @@ public class FabMenu : ContentView
 
     bool isAnimating;
 
+
     public FabMenu()
     {
         backdrop = new BoxView
@@ -29,8 +30,6 @@ public class FabMenu : ContentView
             Opacity = 0,
             IsVisible = false
         };
-        // Theme default — overridden if the consumer sets BackdropColor explicitly.
-        backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
         backdropTap = new TapGestureRecognizer();
         backdropTap.Tapped += OnBackdropTapped;
         backdrop.GestureRecognizers.Add(backdropTap);
@@ -65,7 +64,27 @@ public class FabMenu : ContentView
         // Assign Items last — the ItemsProperty change handler calls RebuildItemsLayout(),
         // which requires itemsLayout to already be constructed.
         Items = new ObservableCollection<FabMenuItem>();
+
+        ApplyBackdropColor();
+        ApplyMenuAlignment();
+
+        // Last line: replays any callback that fired before the children existed.
+        StyleGuard.MarkReady(this, typeof(FabMenu));
     }
+
+
+
+
+    /// <summary>Explicit backdrop colour when set, otherwise the theme scrim.</summary>
+    void ApplyBackdropColor()
+    {
+        if (this.BackdropColor is Color c)
+            backdrop.Color = c;
+        else
+            backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
+    }
+
+
 
 
     // ------- Items / ItemsSource -------
@@ -77,12 +96,15 @@ public class FabMenu : ContentView
         null,
         propertyChanged: (b, o, n) =>
         {
+            // The collection subscription has to happen whenever the property changes -
+            // it touches no children, so it is not gated. Only the rebuild is.
             var menu = (FabMenu)b;
             if (o is INotifyCollectionChanged oldNotify)
                 oldNotify.CollectionChanged -= menu.OnItemsCollectionChanged;
             if (n is INotifyCollectionChanged newNotify)
                 newNotify.CollectionChanged += menu.OnItemsCollectionChanged;
-            menu.RebuildItemsLayout();
+
+            StyleGuard.WhenReady<FabMenu>(b, m => m.RebuildItemsLayout());
         });
     public IList<FabMenuItem> Items
     {
@@ -99,7 +121,7 @@ public class FabMenu : ContentView
         typeof(FabMenu),
         false,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => _ = ((FabMenu)b).AnimateToStateAsync((bool)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => _ = menu.AnimateToStateAsync((bool)n)));
     public bool IsOpen
     {
         get => (bool)GetValue(IsOpenProperty);
@@ -114,7 +136,7 @@ public class FabMenu : ContentView
         typeof(ImageSource),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) => ((FabMenu)b).mainFab.Icon = n as ImageSource);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.Icon = n as ImageSource));
     public ImageSource? Icon
     {
         get => (ImageSource?)GetValue(IconProperty);
@@ -126,7 +148,7 @@ public class FabMenu : ContentView
         typeof(string),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) => ((FabMenu)b).mainFab.Text = n as string);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.Text = n as string));
     public string? Text
     {
         get => (string?)GetValue(TextProperty);
@@ -138,11 +160,8 @@ public class FabMenu : ContentView
         typeof(Color),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            // Forward to the inner Fab; null lets the Fab fall back to its own theme default (Primary).
-            ((FabMenu)b).mainFab.FabBackgroundColor = n as Color;
-        });
+        // Forward to the inner Fab; null lets the Fab fall back to its own theme default (Primary).
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.FabBackgroundColor = n as Color));
     public Color? FabBackgroundColor
     {
         get => (Color?)GetValue(FabBackgroundColorProperty);
@@ -154,11 +173,7 @@ public class FabMenu : ContentView
         typeof(Color),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            if (n is Color c)
-                ((FabMenu)b).mainFab.BorderColor = c;
-        });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => { if (n is Color c) menu.mainFab.BorderColor = c; }));
     public Color? BorderColor
     {
         get => (Color?)GetValue(BorderColorProperty);
@@ -170,7 +185,7 @@ public class FabMenu : ContentView
         typeof(double),
         typeof(FabMenu),
         0.0,
-        propertyChanged: (b, _, n) => ((FabMenu)b).mainFab.BorderThickness = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.BorderThickness = (double)n));
     public double BorderThickness
     {
         get => (double)GetValue(BorderThicknessProperty);
@@ -182,11 +197,8 @@ public class FabMenu : ContentView
         typeof(Color),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            // Forward to the inner Fab; null lets the Fab fall back to its own theme default (OnPrimary).
-            ((FabMenu)b).mainFab.TextColor = n as Color;
-        });
+        // Forward to the inner Fab; null lets the Fab fall back to its own theme default (OnPrimary).
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.TextColor = n as Color));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);
@@ -234,14 +246,7 @@ public class FabMenu : ContentView
         typeof(Color),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) =>
-        {
-            var menu = (FabMenu)b;
-            if (n is Color c)
-                menu.backdrop.Color = c;
-            else
-                menu.backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
-        });
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.ApplyBackdropColor()));
     public Color? BackdropColor
     {
         get => (Color?)GetValue(BackdropColorProperty);
@@ -290,7 +295,7 @@ public class FabMenu : ContentView
         typeof(double),
         typeof(FabMenu),
         56.0,
-        propertyChanged: (b, _, n) => ((FabMenu)b).mainFab.Size = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.Size = (double)n));
     public double FabSize
     {
         get => (double)GetValue(FabSizeProperty);
@@ -302,7 +307,7 @@ public class FabMenu : ContentView
         typeof(bool),
         typeof(FabMenu),
         true,
-        propertyChanged: (b, _, n) => ((FabMenu)b).mainFab.HasShadow = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.HasShadow = (bool)n));
     public bool HasShadow
     {
         get => (bool)GetValue(HasShadowProperty);
@@ -314,7 +319,7 @@ public class FabMenu : ContentView
         typeof(LayoutOptions),
         typeof(FabMenu),
         LayoutOptions.End,
-        propertyChanged: (b, _, _) => ((FabMenu)b).ApplyMenuAlignment());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.ApplyMenuAlignment()));
     public LayoutOptions MenuAlignment
     {
         get => (LayoutOptions)GetValue(MenuAlignmentProperty);

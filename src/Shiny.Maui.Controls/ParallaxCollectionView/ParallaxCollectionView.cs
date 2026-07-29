@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.ParallaxCollectionView;
 
@@ -44,6 +45,10 @@ public class ParallaxCollectionView : ContentView
 
         Content = root;
         ApplyHeaderHeight();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ParallaxCollectionView));
     }
 
     #region Bindable Properties
@@ -52,7 +57,10 @@ public class ParallaxCollectionView : ContentView
         nameof(ItemsSource),
         typeof(IEnumerable),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.ItemsSource = (IEnumerable?)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.ItemsSource = (IEnumerable?)n;
+            }));
 
     public IEnumerable? ItemsSource
     {
@@ -64,7 +72,10 @@ public class ParallaxCollectionView : ContentView
         nameof(ItemTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.ItemTemplate = (DataTemplate?)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.ItemTemplate = (DataTemplate?)n;
+            }));
 
     public DataTemplate? ItemTemplate
     {
@@ -77,8 +88,11 @@ public class ParallaxCollectionView : ContentView
         typeof(IItemsLayout),
         typeof(ParallaxCollectionView),
         LinearItemsLayout.Vertical,
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.ItemsLayout =
-            (IItemsLayout?)n ?? LinearItemsLayout.Vertical);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.ItemsLayout =
+            (IItemsLayout?)n ?? LinearItemsLayout.Vertical;
+            }));
 
     public IItemsLayout ItemsLayout
     {
@@ -90,7 +104,10 @@ public class ParallaxCollectionView : ContentView
         nameof(HeaderTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, _) => ((ParallaxCollectionView)b).ApplyHeaderTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).ApplyHeaderTemplate();
+            }));
 
     public DataTemplate? HeaderTemplate
     {
@@ -103,7 +120,10 @@ public class ParallaxCollectionView : ContentView
         typeof(double),
         typeof(ParallaxCollectionView),
         240.0,
-        propertyChanged: (b, _, _) => ((ParallaxCollectionView)b).ApplyHeaderHeight());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).ApplyHeaderHeight();
+            }));
 
     public double HeaderHeight
     {
@@ -164,7 +184,10 @@ public class ParallaxCollectionView : ContentView
         nameof(EmptyView),
         typeof(object),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.EmptyView = n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.EmptyView = n;
+            }));
 
     public object? EmptyView
     {
@@ -176,7 +199,10 @@ public class ParallaxCollectionView : ContentView
         nameof(EmptyViewTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.EmptyViewTemplate = (DataTemplate?)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.EmptyViewTemplate = (DataTemplate?)n;
+            }));
 
     public DataTemplate? EmptyViewTemplate
     {
@@ -189,7 +215,10 @@ public class ParallaxCollectionView : ContentView
         typeof(SelectionMode),
         typeof(ParallaxCollectionView),
         SelectionMode.None,
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.SelectionMode = (SelectionMode)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.SelectionMode = (SelectionMode)n;
+            }));
 
     public SelectionMode SelectionMode
     {
@@ -202,7 +231,10 @@ public class ParallaxCollectionView : ContentView
         typeof(object),
         typeof(ParallaxCollectionView),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((ParallaxCollectionView)b).collection.SelectedItem = n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ParallaxCollectionView)b).collection.SelectedItem = n;
+            }));
 
     public object? SelectedItem
     {

@@ -1,33 +1,57 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class TimePickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public TimePickerCell() => StyleGuard.MarkReady(this, typeof(TimePickerCell));
+
     Label valueLabel = default!;
     TimePicker hiddenPicker = default!;
 
     public static readonly BindableProperty TimeProperty = BindableProperty.Create(
         nameof(Time), typeof(TimeSpan), typeof(TimePickerCell), TimeSpan.Zero,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((TimePickerCell)b).OnTimeChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TimePickerCell)b).OnTimeChanged();
+            }));
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(TimePickerCell), "t",
-        propertyChanged: (b, o, n) => ((TimePickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TimePickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty MinuteIntervalProperty = BindableProperty.Create(
         nameof(MinuteInterval), typeof(int), typeof(TimePickerCell), 1,
-        propertyChanged: (b, o, n) => ((TimePickerCell)b).SyncMinuteInterval());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TimePickerCell)b).SyncMinuteInterval();
+            }));
 
     public static readonly BindableProperty Use24HourProperty = BindableProperty.Create(
         nameof(Use24Hour), typeof(bool), typeof(TimePickerCell), false,
-        propertyChanged: (b, o, n) => ((TimePickerCell)b).SyncUse24Hour());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TimePickerCell)b).SyncUse24Hour();
+            }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(TimePickerCell), null,
-        propertyChanged: (b, o, n) => ((TimePickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TimePickerCell)b).UpdateValueColor();
+            }));
 
     public TimeSpan Time
     {

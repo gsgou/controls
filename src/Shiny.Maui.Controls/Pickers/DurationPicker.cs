@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.FloatingPanel;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Pickers;
 
@@ -11,7 +12,10 @@ public class DurationPicker : ContentView
     public static readonly BindableProperty DurationProperty = BindableProperty.Create(
         nameof(Duration), typeof(TimeSpan?), typeof(DurationPicker), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((DurationPicker)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPicker)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty MinDurationProperty = BindableProperty.Create(
         nameof(MinDuration), typeof(TimeSpan), typeof(DurationPicker), TimeSpan.Zero);
@@ -21,22 +25,34 @@ public class DurationPicker : ContentView
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DurationPicker), @"h\:mm",
-        propertyChanged: (b, o, n) => ((DurationPicker)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPicker)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty PlaceholderProperty = BindableProperty.Create(
         nameof(Placeholder), typeof(string), typeof(DurationPicker), "Select duration",
-        propertyChanged: (b, o, n) => ((DurationPicker)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPicker)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(DurationPicker), Colors.Gray);
 
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
         nameof(TextColor), typeof(Color), typeof(DurationPicker), null,
-        propertyChanged: (b, o, n) => ((DurationPicker)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPicker)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(DurationPicker), 16d,
-        propertyChanged: (b, o, n) => ((DurationPicker)b).valueLabel.FontSize = (double)n);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((DurationPicker)b).valueLabel.FontSize = (double)n;
+            }));
 
     public static readonly BindableProperty MinuteIntervalProperty = BindableProperty.Create(
         nameof(MinuteInterval), typeof(int), typeof(DurationPicker), 5);
@@ -137,6 +153,10 @@ public class DurationPicker : ContentView
 
         Content = tapArea;
         UpdateDisplayText();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(DurationPicker));
     }
 
     void UpdateDisplayText()

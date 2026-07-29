@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.FloatingPanel;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -26,6 +27,11 @@ public partial class Overlay : ContentView
         };
 
         Content = overlayContainer;
+
+        // Last line: replays any styled property that was applied before the children
+        // existed. Only fires for a plain Overlay - LoadingOverlay and friends mark
+        // themselves, since a base constructor always runs first. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(Overlay));
     }
 
     OverlayHost? GetOverlayHost()

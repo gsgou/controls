@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -106,6 +107,10 @@ public class FontPickerButton : ContentView
         Content = buttonBorder;
 
         UpdateButtonLabel(SelectedFont);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FontPickerButton));
     }
 
     public static readonly BindableProperty AvailableFontsProperty = BindableProperty.Create(
@@ -113,7 +118,10 @@ public class FontPickerButton : ContentView
         typeof(IList<string>),
         typeof(FontPickerButton),
         null,
-        propertyChanged: (b, _, n) => ((FontPickerButton)b).picker.AvailableFonts = n as IList<string>);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPickerButton)b).picker.AvailableFonts = n as IList<string>;
+            }));
 
     public IList<string>? AvailableFonts
     {
@@ -127,7 +135,10 @@ public class FontPickerButton : ContentView
         typeof(FontPickerButton),
         null,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((FontPickerButton)b).OnSelectedFontChanged(n as string));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPickerButton)b).OnSelectedFontChanged(n as string);
+            }));
 
     public string? SelectedFont
     {
@@ -140,7 +151,10 @@ public class FontPickerButton : ContentView
         typeof(string),
         typeof(FontPickerButton),
         "Font",
-        propertyChanged: (b, _, _) => ((FontPickerButton)b).UpdateButtonLabel(((FontPickerButton)b).SelectedFont));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPickerButton)b).UpdateButtonLabel(((FontPickerButton)b).SelectedFont);
+            }));
 
     public string Placeholder
     {
@@ -153,9 +167,11 @@ public class FontPickerButton : ContentView
         typeof(int),
         typeof(FontPickerButton),
         8,
-        propertyChanged: (b, _, n) =>
-            ((FontPickerButton)b).buttonBorder.StrokeShape =
-                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontPickerButton)b).buttonBorder.StrokeShape =
+                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n };
+            }));
 
     public int CornerRadius
     {

@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 public interface ITextEntryAwareTool
@@ -47,35 +48,39 @@ public class TextEntryTool : ContentView
         Content = layout;
         Padding = new Thickness(12, 0);
         VerticalOptions = LayoutOptions.Fill;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TextEntryTool));
     }
 
     public static readonly BindableProperty IconProperty = BindableProperty.Create(
         nameof(Icon), typeof(ImageSource), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var t = (TextEntryTool)b;
             t.iconImage.Source = n as ImageSource;
             t.iconImage.IsVisible = n is not null;
-        });
+        }));
     public ImageSource? Icon { get => (ImageSource?)GetValue(IconProperty); set => SetValue(IconProperty, value); }
 
     public static readonly BindableProperty TextProperty = BindableProperty.Create(
         nameof(Text), typeof(string), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var t = (TextEntryTool)b;
             t.textLabel.Text = n as string;
             t.textLabel.IsVisible = !string.IsNullOrEmpty(n as string);
-        });
+        }));
     public string? Text { get => (string?)GetValue(TextProperty); set => SetValue(TextProperty, value); }
 
     public static readonly BindableProperty ToolColorProperty = BindableProperty.Create(
         nameof(ToolColor), typeof(Color), typeof(TextEntryTool), Colors.Grey,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             if (n is Color c)
                 ((TextEntryTool)b).textLabel.TextColor = c;
-        });
+        }));
     public Color ToolColor { get => (Color)GetValue(ToolColorProperty); set => SetValue(ToolColorProperty, value); }
 
     public static readonly BindableProperty CommandProperty = BindableProperty.Create(

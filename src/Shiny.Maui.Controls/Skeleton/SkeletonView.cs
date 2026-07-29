@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -43,6 +44,10 @@ public partial class SkeletonView : Grid, IDisposable
         // Both layers occupy the single (0,0) cell so the skeleton overlays the same area.
         this.Children.Add(this.realContentHost);
         this.Children.Add(this.skeletonHost);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(SkeletonView));
     }
 
     protected override void OnSizeAllocated(double width, double height)

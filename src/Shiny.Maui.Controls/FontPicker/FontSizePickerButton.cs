@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -105,6 +106,10 @@ public class FontSizePickerButton : ContentView
 
         Content = buttonBorder;
         UpdateButtonLabel(SelectedFontSize);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FontSizePickerButton));
     }
 
     public static readonly BindableProperty AvailableFontSizesProperty = BindableProperty.Create(
@@ -112,7 +117,10 @@ public class FontSizePickerButton : ContentView
         typeof(IList<double>),
         typeof(FontSizePickerButton),
         null,
-        propertyChanged: (b, _, n) => ((FontSizePickerButton)b).picker.AvailableFontSizes = n as IList<double>);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePickerButton)b).picker.AvailableFontSizes = n as IList<double>;
+            }));
 
     public IList<double>? AvailableFontSizes
     {
@@ -126,7 +134,10 @@ public class FontSizePickerButton : ContentView
         typeof(FontSizePickerButton),
         16.0,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((FontSizePickerButton)b).OnSelectedFontSizeChanged((double)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePickerButton)b).OnSelectedFontSizeChanged((double)n);
+            }));
 
     public double SelectedFontSize
     {
@@ -139,9 +150,11 @@ public class FontSizePickerButton : ContentView
         typeof(int),
         typeof(FontSizePickerButton),
         8,
-        propertyChanged: (b, _, n) =>
-            ((FontSizePickerButton)b).buttonBorder.StrokeShape =
-                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((FontSizePickerButton)b).buttonBorder.StrokeShape =
+                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n };
+            }));
 
     public int CornerRadius
     {

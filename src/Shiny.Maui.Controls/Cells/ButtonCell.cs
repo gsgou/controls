@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -16,11 +17,17 @@ public class ButtonCell : CellBase
 
     public static readonly BindableProperty ButtonTextColorProperty = BindableProperty.Create(
         nameof(ButtonTextColor), typeof(Color), typeof(ButtonCell), null,
-        propertyChanged: (b, o, n) => ((ButtonCell)b).UpdateButtonColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ButtonCell)b).UpdateButtonColor();
+            }));
 
     public static readonly BindableProperty TitleAlignmentProperty = BindableProperty.Create(
         nameof(TitleAlignment), typeof(TextAlignment), typeof(ButtonCell), TextAlignment.Center,
-        propertyChanged: (b, o, n) => ((ButtonCell)b).UpdateTitleAlignment());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ButtonCell)b).UpdateTitleAlignment();
+            }));
 
     public ICommand? Command
     {
@@ -49,6 +56,10 @@ public class ButtonCell : CellBase
     public ButtonCell()
     {
         BuildButtonLayout();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ButtonCell));
     }
 
     void BuildButtonLayout()

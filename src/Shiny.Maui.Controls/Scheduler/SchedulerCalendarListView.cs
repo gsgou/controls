@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Scheduler;
 
@@ -21,25 +22,40 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).OnProviderChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).OnProviderChanged();
+            }));
 
     public static readonly BindableProperty SelectedDateProperty = BindableProperty.Create(
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarListView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).LoadInitial());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).LoadInitial();
+            }));
 
     public static readonly BindableProperty EventItemTemplateProperty = BindableProperty.Create(
         nameof(EventItemTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).ApplyTemplates());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).ApplyTemplates();
+            }));
 
     public static readonly BindableProperty DayHeaderTemplateProperty = BindableProperty.Create(
         nameof(DayHeaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).ApplyTemplates());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).ApplyTemplates();
+            }));
 
     public static readonly BindableProperty StickyDayHeadersProperty = BindableProperty.Create(
         nameof(StickyDayHeaders), typeof(bool), typeof(SchedulerCalendarListView), true,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).UpdateStickyHeader());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).UpdateStickyHeader();
+            }));
 
     public static readonly BindableProperty LoaderTemplateProperty = BindableProperty.Create(
         nameof(LoaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView));
@@ -64,12 +80,18 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarListView), true,
-        propertyChanged: (b, _, n) => ((SchedulerCalendarListView)b).collectionView.VerticalScrollBarVisibility =
-            (bool)n ? ScrollBarVisibility.Default : ScrollBarVisibility.Never);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).collectionView.VerticalScrollBarVisibility =
+            (bool)n ? ScrollBarVisibility.Default : ScrollBarVisibility.Never;
+            }));
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerCalendarListView), false,
-        propertyChanged: (b, _, _) => ((SchedulerCalendarListView)b).UpdateZoomGesture());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((SchedulerCalendarListView)b).UpdateZoomGesture();
+            }));
 
     public ISchedulerEventProvider? Provider
     {
@@ -205,6 +227,10 @@ public class SchedulerCalendarListView : ContentView
         VerticalOptions = LayoutOptions.Fill;
         Content = rootGrid;
         ApplyTemplates();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(SchedulerCalendarListView));
     }
 
     void ApplyTemplates()

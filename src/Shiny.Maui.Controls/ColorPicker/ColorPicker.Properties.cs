@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.ColorPicker;
 
@@ -10,7 +11,10 @@ public partial class ColorPicker
         typeof(ColorPicker),
         Colors.Red,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((ColorPicker)b).OnSelectedColorChanged((Color)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPicker)b).OnSelectedColorChanged((Color)n);
+            }));
 
     public Color SelectedColor
     {
@@ -23,7 +27,10 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) => ((ColorPicker)b).OnShowOpacityChanged((bool)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPicker)b).OnShowOpacityChanged((bool)n);
+            }));
 
     public bool ShowOpacity
     {
@@ -36,11 +43,11 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var cp = (ColorPicker)b;
             cp.hexEntry.IsVisible = (bool)n;
-        });
+        }));
 
     public bool ShowHexInput
     {
@@ -53,11 +60,11 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var cp = (ColorPicker)b;
             cp.previewSwatch.IsVisible = (bool)n;
-        });
+        }));
 
     public bool ShowPreview
     {

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.Chat.Internal;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Chat;
 
@@ -199,6 +200,10 @@ public partial class ChatView : ContentView
 
         this.Loaded += (_, _) => this.OnLoaded();
         this.Unloaded += (_, _) => this.OnUnloaded();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ChatView));
     }
 
     // ------- public entry helpers -------

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Collections;
 
@@ -13,7 +14,10 @@ public abstract class CollectionControlBase : View
         typeof(IEnumerable),
         typeof(CollectionControlBase),
         null,
-        propertyChanged: (b, o, n) => ((CollectionControlBase)b).OnItemsSourceChanged((IEnumerable?)o, (IEnumerable?)n));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((CollectionControlBase)b).OnItemsSourceChanged((IEnumerable?)o, (IEnumerable?)n);
+            }));
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate),

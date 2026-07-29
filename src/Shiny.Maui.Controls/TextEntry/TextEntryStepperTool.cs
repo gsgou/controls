@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 /// <summary>
@@ -12,12 +13,19 @@ public class TextEntryStepperTool : TextEntryTool, ITextEntryAwareTool
     public TextEntryStepperTool()
     {
         Clicked += OnClicked;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TextEntryStepperTool));
     }
 
     // Step
     public static readonly BindableProperty StepProperty = BindableProperty.Create(
         nameof(Step), typeof(double), typeof(TextEntryStepperTool), 1.0,
-        propertyChanged: (b, _, _) => ((TextEntryStepperTool)b).UpdateDisplayText());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TextEntryStepperTool)b).UpdateDisplayText();
+            }));
     public double Step { get => (double)GetValue(StepProperty); set => SetValue(StepProperty, value); }
 
     protected override void OnPropertyChanged(string? propertyName = null)

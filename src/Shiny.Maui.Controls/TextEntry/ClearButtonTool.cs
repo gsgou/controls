@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 public class ClearButtonTool : TextEntryTool, ITextEntryAwareTool
@@ -10,6 +11,10 @@ public class ClearButtonTool : TextEntryTool, ITextEntryAwareTool
         ToolColor = Colors.Grey;
         IsVisible = false;
         Clicked += OnClicked;
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ClearButtonTool));
     }
 
     void ITextEntryAwareTool.Attach(TextEntry e)

@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.ColorPicker;
 
@@ -95,6 +96,10 @@ public class ColorPickerButton : ContentView
 
         Content = buttonBorder;
         UpdateButtonColor(SelectedColor);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ColorPickerButton));
     }
 
     // Properties
@@ -105,7 +110,10 @@ public class ColorPickerButton : ContentView
         typeof(ColorPickerButton),
         Colors.Red,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((ColorPickerButton)b).OnSelectedColorChanged((Color)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPickerButton)b).OnSelectedColorChanged((Color)n);
+            }));
 
     public Color SelectedColor
     {
@@ -118,7 +126,10 @@ public class ColorPickerButton : ContentView
         typeof(string),
         typeof(ColorPickerButton),
         null,
-        propertyChanged: (b, _, n) => ((ColorPickerButton)b).buttonLabel.Text = (string?)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPickerButton)b).buttonLabel.Text = (string?)n;
+            }));
 
     public string? Text
     {
@@ -131,7 +142,10 @@ public class ColorPickerButton : ContentView
         typeof(bool),
         typeof(ColorPickerButton),
         false,
-        propertyChanged: (b, _, n) => ((ColorPickerButton)b).picker.ShowOpacity = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPickerButton)b).picker.ShowOpacity = (bool)n;
+            }));
 
     public bool ShowOpacity
     {
@@ -144,9 +158,11 @@ public class ColorPickerButton : ContentView
         typeof(int),
         typeof(ColorPickerButton),
         8,
-        propertyChanged: (b, _, n) =>
-            ((ColorPickerButton)b).buttonBorder.StrokeShape =
-                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n });
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ColorPickerButton)b).buttonBorder.StrokeShape =
+                new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n };
+            }));
 
     public int CornerRadius
     {

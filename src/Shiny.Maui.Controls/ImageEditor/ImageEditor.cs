@@ -52,6 +52,10 @@ public partial class ImageEditor : ContentView
 
         // Invalidate once layout is ready so images set during binding actually render
         graphicsView.SizeChanged += (_, _) => Invalidate();
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(ImageEditor));
     }
 
     #region Bindable Properties
@@ -61,7 +65,10 @@ public partial class ImageEditor : ContentView
         typeof(ImageSource),
         typeof(ImageEditor),
         null,
-        propertyChanged: (b, _, _) => _ = ((ImageEditor)b).OnSourceChangedAsync());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                _ = ((ImageEditor)b).OnSourceChangedAsync();
+            }));
 
     public ImageSource? Source
     {
@@ -75,7 +82,10 @@ public partial class ImageEditor : ContentView
         typeof(ImageEditor),
         ImageEditorToolMode.Move,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => ((ImageEditor)b).OnToolModeChanged((ImageEditorToolMode)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).OnToolModeChanged((ImageEditorToolMode)n);
+            }));
 
     public ImageEditorToolMode CurrentToolMode
     {
@@ -85,7 +95,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowCropProperty = BindableProperty.Create(
         nameof(AllowCrop), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowCrop
     {
@@ -95,7 +108,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowRotateProperty = BindableProperty.Create(
         nameof(AllowRotate), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowRotate
     {
@@ -105,7 +121,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowDrawProperty = BindableProperty.Create(
         nameof(AllowDraw), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowDraw
     {
@@ -115,7 +134,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowTextAnnotationProperty = BindableProperty.Create(
         nameof(AllowTextAnnotation), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowTextAnnotation
     {
@@ -125,7 +147,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowLineProperty = BindableProperty.Create(
         nameof(AllowLine), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowLine
     {
@@ -135,7 +160,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowArrowProperty = BindableProperty.Create(
         nameof(AllowArrow), typeof(bool), typeof(ImageEditor), true,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowArrow
     {
@@ -145,7 +173,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowFontSelectionProperty = BindableProperty.Create(
         nameof(AllowFontSelection), typeof(bool), typeof(ImageEditor), false,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowFontSelection
     {
@@ -155,7 +186,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AllowFontSizeSelectionProperty = BindableProperty.Create(
         nameof(AllowFontSizeSelection), typeof(bool), typeof(ImageEditor), false,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public bool AllowFontSizeSelection
     {
@@ -193,13 +227,13 @@ public partial class ImageEditor : ContentView
     public static readonly BindableProperty DrawStrokeColorProperty = BindableProperty.Create(
         nameof(DrawStrokeColor), typeof(Color), typeof(ImageEditor), Colors.White,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var editor = (ImageEditor)b;
             editor.drawable.ActiveStrokeColor = (Color)n;
             if (editor.drawColorButton != null)
                 editor.drawColorButton.SelectedColor = (Color)n;
-        });
+        }));
 
     public Color DrawStrokeColor
     {
@@ -209,7 +243,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty DrawStrokeWidthProperty = BindableProperty.Create(
         nameof(DrawStrokeWidth), typeof(double), typeof(ImageEditor), 3.0,
-        propertyChanged: (b, _, n) => ((ImageEditor)b).drawable.ActiveStrokeWidth = (float)(double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).drawable.ActiveStrokeWidth = (float)(double)n;
+            }));
 
     public double DrawStrokeWidth
     {
@@ -220,14 +257,14 @@ public partial class ImageEditor : ContentView
     public static readonly BindableProperty TextFontSizeProperty = BindableProperty.Create(
         nameof(TextFontSize), typeof(double), typeof(ImageEditor), 16.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var editor = (ImageEditor)b;
             if (editor.activeTextEntry != null)
                 editor.activeTextEntry.FontSize = (double)n;
             if (editor.fontSizePickerButton != null)
                 editor.fontSizePickerButton.SelectedFontSize = (double)n;
-        });
+        }));
 
     public double TextFontSize
     {
@@ -237,7 +274,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AvailableFontSizesProperty = BindableProperty.Create(
         nameof(AvailableFontSizes), typeof(IList<double>), typeof(ImageEditor), null,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public IList<double>? AvailableFontSizes
     {
@@ -257,14 +297,14 @@ public partial class ImageEditor : ContentView
     public static readonly BindableProperty TextFontFamilyProperty = BindableProperty.Create(
         nameof(TextFontFamily), typeof(string), typeof(ImageEditor), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var editor = (ImageEditor)b;
             if (editor.activeTextEntry != null)
                 editor.activeTextEntry.FontFamily = n as string;
             if (editor.fontPickerButton != null)
                 editor.fontPickerButton.SelectedFont = n as string;
-        });
+        }));
 
     public string? TextFontFamily
     {
@@ -274,7 +314,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty AvailableFontsProperty = BindableProperty.Create(
         nameof(AvailableFonts), typeof(IList<string>), typeof(ImageEditor), null,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public IList<string>? AvailableFonts
     {
@@ -284,7 +327,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty ToolbarTemplateProperty = BindableProperty.Create(
         nameof(ToolbarTemplate), typeof(DataTemplate), typeof(ImageEditor), null,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).ApplyToolbarTemplate());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).ApplyToolbarTemplate();
+            }));
 
     public DataTemplate? ToolbarTemplate
     {
@@ -294,7 +340,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty ToolbarPositionProperty = BindableProperty.Create(
         nameof(ToolbarPosition), typeof(ToolbarPosition), typeof(ImageEditor), ToolbarPosition.Bottom,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).UpdateToolbarPosition());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).UpdateToolbarPosition();
+            }));
 
     public ToolbarPosition ToolbarPosition
     {
@@ -313,7 +362,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty CropApplyTextProperty = BindableProperty.Create(
         nameof(CropApplyText), typeof(string), typeof(ImageEditor), "\u2714",
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public string CropApplyText
     {
@@ -323,7 +375,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty CropCancelTextProperty = BindableProperty.Create(
         nameof(CropCancelText), typeof(string), typeof(ImageEditor), "\u2716",
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public string CropCancelText
     {
@@ -333,7 +388,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty SaveCommandProperty = BindableProperty.Create(
         nameof(SaveCommand), typeof(System.Windows.Input.ICommand), typeof(ImageEditor), null,
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public System.Windows.Input.ICommand? SaveCommand
     {
@@ -343,7 +401,10 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty SaveTextProperty = BindableProperty.Create(
         nameof(SaveText), typeof(string), typeof(ImageEditor), "\u2713 Save",
-        propertyChanged: (b, _, _) => ((ImageEditor)b).BuildDefaultToolbar());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
 
     public string SaveText
     {

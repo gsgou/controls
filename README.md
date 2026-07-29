@@ -152,6 +152,20 @@ No DI registration is required — drop the components into any `.razor` page.
 
 ## Controls
 
+> **Styling (MAUI)** — every control can be targeted by an implicit or explicit `Style`, so
+> app-wide theming is set once rather than repeated at each usage site:
+>
+> ```xml
+> <!-- App.xaml -->
+> <Style TargetType="shiny:PillView">
+>     <Setter Property="CornerRadius" Value="10" />
+>     <Setter Property="FontSize" Value="12" />
+> </Style>
+> ```
+>
+> Leave a colour property unset to inherit the active Shiny theme; setting one explicitly
+> overrides the theme default for that instance.
+
 ### Scheduler
 
 Calendar and agenda views for displaying events and appointments, powered by `ISchedulerEventProvider`.

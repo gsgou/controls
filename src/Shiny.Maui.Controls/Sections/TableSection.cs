@@ -5,6 +5,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Cells;
 using TvTableView = Shiny.Maui.Controls.TableView;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Sections;
 
@@ -18,6 +19,11 @@ public class TableSection : BindableObject
     public TableSection()
     {
         cells.CollectionChanged += OnCellsCollectionChanged;
+    
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(TableSection));
     }
 
     public TableSection(string title) : this()
@@ -28,27 +34,45 @@ public class TableSection : BindableObject
 
     public static readonly BindableProperty TitleProperty = BindableProperty.Create(
         nameof(Title), typeof(string), typeof(TableSection), string.Empty,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty FooterTextProperty = BindableProperty.Create(
         nameof(FooterText), typeof(string), typeof(TableSection), string.Empty,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty HeaderViewProperty = BindableProperty.Create(
         nameof(HeaderView), typeof(View), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty FooterViewProperty = BindableProperty.Create(
         nameof(FooterView), typeof(View), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty IsVisibleProperty = BindableProperty.Create(
         nameof(IsVisible), typeof(bool), typeof(TableSection), true,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty FooterVisibleProperty = BindableProperty.Create(
         nameof(FooterVisible), typeof(bool), typeof(TableSection), true,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
     public static readonly BindableProperty HeaderBackgroundColorProperty = BindableProperty.Create(
         nameof(HeaderBackgroundColor), typeof(Color), typeof(TableSection), null);
@@ -85,19 +109,28 @@ public class TableSection : BindableObject
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(TableSection), null,
-        propertyChanged: OnItemsSourceChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnItemsSourceChanged(b, o, n)));
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => ((TableSection)b).RegenerateTemplatedCells());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RegenerateTemplatedCells();
+            }));
 
     public static readonly BindableProperty TemplateStartIndexProperty = BindableProperty.Create(
         nameof(TemplateStartIndex), typeof(int), typeof(TableSection), 0,
-        propertyChanged: (b, o, n) => ((TableSection)b).RegenerateTemplatedCells());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RegenerateTemplatedCells();
+            }));
 
     public static readonly BindableProperty UseDragSortProperty = BindableProperty.Create(
         nameof(UseDragSort), typeof(bool), typeof(TableSection), false,
-        propertyChanged: (b, o, n) => ((TableSection)b).RaiseSectionChanged());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((TableSection)b).RaiseSectionChanged();
+            }));
 
 
 

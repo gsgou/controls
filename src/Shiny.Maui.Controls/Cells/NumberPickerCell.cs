@@ -1,17 +1,29 @@
 using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
 public class NumberPickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public NumberPickerCell() => StyleGuard.MarkReady(this, typeof(NumberPickerCell));
+
     Label valueLabel = default!;
 
     public static readonly BindableProperty NumberProperty = BindableProperty.Create(
         nameof(Number), typeof(int?), typeof(NumberPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((NumberPickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((NumberPickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty MinProperty = BindableProperty.Create(
         nameof(Min), typeof(int), typeof(NumberPickerCell), 0);
@@ -21,7 +33,10 @@ public class NumberPickerCell : CellBase
 
     public static readonly BindableProperty UnitProperty = BindableProperty.Create(
         nameof(Unit), typeof(string), typeof(NumberPickerCell), string.Empty,
-        propertyChanged: (b, o, n) => ((NumberPickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((NumberPickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty PickerTitleProperty = BindableProperty.Create(
         nameof(PickerTitle), typeof(string), typeof(NumberPickerCell), "Enter a number");
@@ -31,7 +46,10 @@ public class NumberPickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(NumberPickerCell), null,
-        propertyChanged: (b, o, n) => ((NumberPickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((NumberPickerCell)b).UpdateValueColor();
+            }));
 
     public int? Number
     {

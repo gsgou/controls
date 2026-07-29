@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls;
 
@@ -43,6 +44,10 @@ public class PillView : ContentView
 
         // Apply default (None) styling
         ApplyPillType(PillType.None);
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(PillView));
     }
 
     static readonly Dictionary<PillType, string> StyleKeys = new()
@@ -72,7 +77,10 @@ public class PillView : ContentView
         typeof(string),
         typeof(PillView),
         string.Empty,
-        propertyChanged: (b, _, n) => ((PillView)b).label.Text = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PillView)b).label.Text = (string)n;
+            }));
 
     public string Text
     {
@@ -87,7 +95,7 @@ public class PillView : ContentView
         typeof(PillType),
         typeof(PillView),
         PillType.None,
-        propertyChanged: OnPillTypeChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnPillTypeChanged(b, o, n)));
 
     public PillType Type
     {
@@ -100,7 +108,7 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: OnPillColorChanged);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnPillColorChanged(b, o, n)));
 
     public Color? PillColor
     {
@@ -113,12 +121,12 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var pill = (PillView)b;
             if (n is Color c)
                 pill.label.TextColor = c;
-        });
+        }));
 
     public Color? PillTextColor
     {
@@ -131,12 +139,12 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var pill = (PillView)b;
             if (n is Color c)
                 pill.border.Stroke = c;
-        });
+        }));
 
     public Color? PillBorderColor
     {
@@ -149,7 +157,10 @@ public class PillView : ContentView
         typeof(double),
         typeof(PillView),
         12.0,
-        propertyChanged: (b, _, n) => ((PillView)b).label.FontSize = (double)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PillView)b).label.FontSize = (double)n;
+            }));
 
     public double FontSize
     {
@@ -162,15 +173,15 @@ public class PillView : ContentView
         typeof(double),
         typeof(PillView),
         12.0,
-        propertyChanged: (b, _, n) =>
-        {
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
             var pill = (PillView)b;
             var r = (double)n;
             pill.border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
             {
                 CornerRadius = new CornerRadius(r)
             };
-        });
+        }));
 
     public double CornerRadius
     {
@@ -183,7 +194,10 @@ public class PillView : ContentView
         typeof(FontAttributes),
         typeof(PillView),
         Microsoft.Maui.Controls.FontAttributes.None,
-        propertyChanged: (b, _, n) => ((PillView)b).label.FontAttributes = (FontAttributes)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PillView)b).label.FontAttributes = (FontAttributes)n;
+            }));
 
     public FontAttributes FontAttributes
     {

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.DataGrid;
 
@@ -123,6 +124,10 @@ public partial class DataGrid : ContentView
             if (this.ServerData is not null)
                 this.LoadServerDataAsync();
         };
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(DataGrid));
     }
 
     /// <summary>The column definitions. Add <see cref="DataGridColumn"/> / <see cref="DataGridTemplateColumn"/>.</summary>

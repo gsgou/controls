@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls.Chat;
 
 public partial class ChatView
@@ -9,7 +10,10 @@ public partial class ChatView
         typeof(IChatSessionProvider),
         typeof(ChatView),
         null,
-        propertyChanged: (b, _, _) => ((ChatView)b).OnProviderOrSessionChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).OnProviderOrSessionChanged();
+            }));
 
     public IChatSessionProvider? Provider
     {
@@ -22,7 +26,10 @@ public partial class ChatView
         typeof(string),
         typeof(ChatView),
         null,
-        propertyChanged: (b, _, _) => ((ChatView)b).OnProviderOrSessionChanged());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).OnProviderOrSessionChanged();
+            }));
 
     public string? SessionId
     {
@@ -59,7 +66,10 @@ public partial class ChatView
         typeof(IList<ChatInputAction>),
         typeof(ChatView),
         null,
-        propertyChanged: (b, _, _) => ((ChatView)b).SyncInputActionsVisibility());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).SyncInputActionsVisibility();
+            }));
 
     /// <summary>Consumer-supplied input-bar actions surfaced via the overflow button.</summary>
     public IList<ChatInputAction>? InputActions
@@ -85,7 +95,10 @@ public partial class ChatView
 
     public static readonly BindableProperty MyBubbleColorProperty = BindableProperty.Create(
         nameof(MyBubbleColor), typeof(Color), typeof(ChatView), Color.FromArgb("#DCF8C6"),
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public Color MyBubbleColor
     {
@@ -95,7 +108,10 @@ public partial class ChatView
 
     public static readonly BindableProperty MyTextColorProperty = BindableProperty.Create(
         nameof(MyTextColor), typeof(Color), typeof(ChatView), Colors.Black,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public Color MyTextColor
     {
@@ -105,7 +121,10 @@ public partial class ChatView
 
     public static readonly BindableProperty OtherBubbleColorProperty = BindableProperty.Create(
         nameof(OtherBubbleColor), typeof(Color), typeof(ChatView), Colors.White,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public Color OtherBubbleColor
     {
@@ -115,7 +134,10 @@ public partial class ChatView
 
     public static readonly BindableProperty OtherTextColorProperty = BindableProperty.Create(
         nameof(OtherTextColor), typeof(Color), typeof(ChatView), Colors.Black,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public Color OtherTextColor
     {
@@ -125,7 +147,10 @@ public partial class ChatView
 
     public static readonly BindableProperty ChatBackgroundColorProperty = BindableProperty.Create(
         nameof(ChatBackgroundColor), typeof(Color), typeof(ChatView), null,
-        propertyChanged: (b, _, n) => ((ChatView)b).messageArea.BackgroundColor = n as Color);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).messageArea.BackgroundColor = n as Color;
+            }));
 
     public Color? ChatBackgroundColor
     {
@@ -137,7 +162,10 @@ public partial class ChatView
 
     public static readonly BindableProperty PlaceholderTextProperty = BindableProperty.Create(
         nameof(PlaceholderText), typeof(string), typeof(ChatView), "Type a message...",
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.PlaceholderText = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.PlaceholderText = (string)n;
+            }));
 
     public string PlaceholderText
     {
@@ -147,7 +175,10 @@ public partial class ChatView
 
     public static readonly BindableProperty SendButtonTextProperty = BindableProperty.Create(
         nameof(SendButtonText), typeof(string), typeof(ChatView), "Send",
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonText = (string)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.SendButtonText = (string)n;
+            }));
 
     public string SendButtonText
     {
@@ -157,7 +188,10 @@ public partial class ChatView
 
     public static readonly BindableProperty SendButtonBackgroundColorProperty = BindableProperty.Create(
         nameof(SendButtonBackgroundColor), typeof(Color), typeof(ChatView), Color.FromArgb("#007AFF"),
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonBackgroundColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.SendButtonBackgroundColor = (Color)n;
+            }));
 
     public Color SendButtonBackgroundColor
     {
@@ -167,7 +201,10 @@ public partial class ChatView
 
     public static readonly BindableProperty SendButtonTextColorProperty = BindableProperty.Create(
         nameof(SendButtonTextColor), typeof(Color), typeof(ChatView), Colors.White,
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.SendButtonTextColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.SendButtonTextColor = (Color)n;
+            }));
 
     public Color SendButtonTextColor
     {
@@ -177,7 +214,10 @@ public partial class ChatView
 
     public static readonly BindableProperty InputBarBackgroundColorProperty = BindableProperty.Create(
         nameof(InputBarBackgroundColor), typeof(Color), typeof(ChatView), Color.FromArgb("#F5F5F5"),
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.BarBackgroundColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.BarBackgroundColor = (Color)n;
+            }));
 
     public Color InputBarBackgroundColor
     {
@@ -187,7 +227,10 @@ public partial class ChatView
 
     public static readonly BindableProperty InputBarBorderColorProperty = BindableProperty.Create(
         nameof(InputBarBorderColor), typeof(Color), typeof(ChatView), Color.FromArgb("#E0E0E0"),
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.BarBorderColor = (Color)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.BarBorderColor = (Color)n;
+            }));
 
     public Color InputBarBorderColor
     {
@@ -197,7 +240,10 @@ public partial class ChatView
 
     public static readonly BindableProperty IsInputBarVisibleProperty = BindableProperty.Create(
         nameof(IsInputBarVisible), typeof(bool), typeof(ChatView), true,
-        propertyChanged: (b, _, n) => ((ChatView)b).inputBar.IsVisible = (bool)n);
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).inputBar.IsVisible = (bool)n;
+            }));
 
     public bool IsInputBarVisible
     {
@@ -209,7 +255,10 @@ public partial class ChatView
 
     public static readonly BindableProperty ShowTypingIndicatorProperty = BindableProperty.Create(
         nameof(ShowTypingIndicator), typeof(bool), typeof(ChatView), true,
-        propertyChanged: (b, _, _) => ((ChatView)b).SyncTypingBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).SyncTypingBubbles();
+            }));
 
     public bool ShowTypingIndicator
     {
@@ -221,7 +270,10 @@ public partial class ChatView
 
     public static readonly BindableProperty MessageTemplateProperty = BindableProperty.Create(
         nameof(MessageTemplate), typeof(DataTemplate), typeof(ChatView), null,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public DataTemplate? MessageTemplate
     {
@@ -231,7 +283,10 @@ public partial class ChatView
 
     public static readonly BindableProperty MessageTemplateSelectorProperty = BindableProperty.Create(
         nameof(MessageTemplateSelector), typeof(DataTemplateSelector), typeof(ChatView), null,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public DataTemplateSelector? MessageTemplateSelector
     {
@@ -243,7 +298,10 @@ public partial class ChatView
 
     public static readonly BindableProperty BubbleFontSizeProperty = BindableProperty.Create(
         nameof(BubbleFontSize), typeof(double), typeof(ChatView), 15.0,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public double BubbleFontSize
     {
@@ -253,7 +311,10 @@ public partial class ChatView
 
     public static readonly BindableProperty BubbleFontFamilyProperty = BindableProperty.Create(
         nameof(BubbleFontFamily), typeof(string), typeof(ChatView), null,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public string? BubbleFontFamily
     {
@@ -263,7 +324,10 @@ public partial class ChatView
 
     public static readonly BindableProperty TimestampFontSizeProperty = BindableProperty.Create(
         nameof(TimestampFontSize), typeof(double), typeof(ChatView), 11.0,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public double TimestampFontSize
     {
@@ -273,7 +337,10 @@ public partial class ChatView
 
     public static readonly BindableProperty BubbleCornerRadiusProperty = BindableProperty.Create(
         nameof(BubbleCornerRadius), typeof(double), typeof(ChatView), 18.0,
-        propertyChanged: (b, _, _) => ((ChatView)b).RefreshBubbles());
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+            {
+                ((ChatView)b).RefreshBubbles();
+            }));
 
     public double BubbleCornerRadius
     {

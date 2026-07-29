@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Pages;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -15,6 +16,14 @@ public enum SelectionMode
 
 public class PickerCell : CellBase
 {
+    /// <summary>
+    /// Children are built by CellBase's constructor (BuildLayout -> the virtual
+    /// CreateAccessoryView override above), so by the time this body runs they exist.
+    /// Marking ready here replays any property an implicit Style applied before
+    /// construction - see StyleGuard.
+    /// </summary>
+    public PickerCell() => StyleGuard.MarkReady(this, typeof(PickerCell));
+
     Label valueLabel = default!;
     Label arrowLabel = default!;
 
@@ -24,12 +33,18 @@ public class PickerCell : CellBase
     public static readonly BindableProperty SelectedItemsProperty = BindableProperty.Create(
         nameof(SelectedItems), typeof(IList), typeof(PickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((PickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(PickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => ((PickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(
         nameof(SelectionMode), typeof(SelectionMode), typeof(PickerCell), SelectionMode.Single);
@@ -42,7 +57,10 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty UseAutoValueTextProperty = BindableProperty.Create(
         nameof(UseAutoValueText), typeof(bool), typeof(PickerCell), true,
-        propertyChanged: (b, o, n) => ((PickerCell)b).UpdateDisplayText());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PickerCell)b).UpdateDisplayText();
+            }));
 
     public static readonly BindableProperty DisplayMemberProperty = BindableProperty.Create(
         nameof(DisplayMember), typeof(string), typeof(PickerCell), null);
@@ -58,7 +76,10 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(PickerCell), null,
-        propertyChanged: (b, o, n) => ((PickerCell)b).UpdateValueColor());
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PickerCell)b).UpdateValueColor();
+            }));
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
         nameof(AccentColor), typeof(Color), typeof(PickerCell), null);
@@ -68,7 +89,10 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(PickerCell), true,
-        propertyChanged: (b, o, n) => ((PickerCell)b).arrowLabel.IsVisible = (bool)n);
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+            {
+                ((PickerCell)b).arrowLabel.IsVisible = (bool)n;
+            }));
 
     public IEnumerable? ItemsSource
     {

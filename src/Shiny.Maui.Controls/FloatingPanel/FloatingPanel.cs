@@ -158,6 +158,10 @@ public partial class FloatingPanel : ContentView
             DetentValue.Half,
             DetentValue.Full
         };
+
+        // Last line: replays any styled property that was applied before the
+        // children existed. See StyleGuard.
+        StyleGuard.MarkReady(this, typeof(FloatingPanel));
     }
 
     View ContentRowView => IsContentScrollEnabled ? scrollView : contentHost;
