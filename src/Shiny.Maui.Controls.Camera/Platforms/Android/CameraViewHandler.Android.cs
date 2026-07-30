@@ -260,6 +260,31 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     }
 
 
+    // Force ImageAnalysis and VideoCapture onto the same field of view.
+    //
+    // CameraX sizes each use case independently — ImageAnalysis lands on a 4:3 buffer by default while the
+    // Recorder is 16:9 — so the two see *different crops of the sensor*. That is invisible until something
+    // maps a detection from one into the other: an analyzer's normalized bounding box drawn into the recorded
+    // frame (the mapping IVideoOverlayRenderer documents) would sit visibly off the thing it is boxing, and
+    // vertically off by the full 4:3-vs-16:9 letterbox. A ViewPort is CameraX's mechanism for giving every use
+    // case in the group one shared crop rect, which makes that mapping correct by construction.
+    //
+    // Applied ONLY when analysis and recording are bound together — the case that could not exist at all
+    // before — so no existing single-use-case configuration has its recorded field of view moved underneath it.
+    ViewPort? BuildSharedViewPort(Preview preview)
+    {
+        // The PreviewView's own ViewPort matches what the user is looking at, which is the most useful thing
+        // to align to. It is null until the view has been laid out, so fall back to the Recorder's 16:9.
+        var fromPreview = this.previewView?.ViewPort;
+        if (fromPreview != null)
+            return fromPreview;
+
+        return new ViewPort.Builder(new Android.Util.Rational(16, 9), preview.TargetRotation)
+            .SetScaleType(ViewPort.FillCenter)
+            .Build();
+    }
+
+
     AndroidX.Camera.Effects.OverlayEffect CreateOverlayEffect(IVideoOverlayRenderer overlay)
     {
         if (this.overlayThread == null)
@@ -427,15 +452,22 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.cameraProvider.UnbindAll();
         this.DisposeOverlayEffect();
 
-        // Burn-in overlay: attach an OverlayEffect to the VideoCapture target via a UseCaseGroup. It's an
-        // effect (SurfaceProcessor), not a use case, so it doesn't consume the ~3-use-case budget.
-        if (this.recordingOverlay is { } overlay && this.videoCapture != null)
+        // A UseCaseGroup is needed for the burn-in overlay effect, and also whenever analysis and recording
+        // run together so they can share a ViewPort (see BuildSharedViewPort).
+        var overlayEffect = this.recordingOverlay is { } overlay && this.videoCapture != null
+            ? this.CreateOverlayEffect(overlay)
+            : null;
+        var sharedViewPort = analyzing && video ? this.BuildSharedViewPort(preview) : null;
+
+        if (overlayEffect != null || sharedViewPort != null)
         {
-            var effect = this.CreateOverlayEffect(overlay);
             var groupBuilder = new UseCaseGroup.Builder();
             foreach (var uc in useCases)
                 groupBuilder.AddUseCase(uc);
-            groupBuilder.AddEffect(effect);
+            if (overlayEffect != null)
+                groupBuilder.AddEffect(overlayEffect);
+            if (sharedViewPort != null)
+                groupBuilder.SetViewPort(sharedViewPort);
             this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, groupBuilder.Build());
         }
         else
