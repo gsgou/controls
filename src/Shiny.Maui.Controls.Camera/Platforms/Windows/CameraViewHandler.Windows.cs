@@ -21,6 +21,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
     WImagingSource? previewSource;
     SoftwareBitmap? latest;
     LowLagMediaRecording? recording;
+    bool starting;
     readonly object latestGate = new();
 
     protected override WGrid CreatePlatformView()
@@ -82,11 +83,19 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
 
     public async Task StartAsync(CancellationToken ct = default)
     {
-        if (this.capture != null)
+        if (this.capture != null || this.starting)
             return;
+
+        this.starting = true;
+        // Built locally and only published to the field once it is fully initialized. MediaCapture throws
+        // 0xC00D36B6 ("needs to be initialized") from VideoDeviceController until InitializeAsync completes,
+        // and the property mappers below run synchronously while this is still in flight - publishing early
+        // means MapTorch/MapZoom can hit that window. On Windows a throw there escapes Shell's page-creation
+        // path and wedges Shell navigation for the rest of the session.
+        MediaCapture? pending = null;
         try
         {
-            this.capture = new MediaCapture();
+            pending = new MediaCapture();
             var settings = new MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = StreamingCaptureMode.Video,
@@ -94,23 +103,36 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
             };
             if (!string.IsNullOrEmpty(this.VirtualView.CameraId))
                 settings.VideoDeviceId = this.VirtualView.CameraId;
-            await this.capture.InitializeAsync(settings);
+            await pending.InitializeAsync(settings);
 
-            var source = this.capture.FrameSources.Values
+            var source = pending.FrameSources.Values
                 .FirstOrDefault(s => s.Info.SourceKind == MediaFrameSourceKind.Color);
             if (source == null)
             {
+                pending.Dispose();
                 this.MaybeVirtualView?.OnCameraError("No color camera source found");
                 return;
             }
 
-            this.reader = await this.capture.CreateFrameReaderAsync(source, MediaEncodingSubtypes.Bgra8);
+            this.reader = await pending.CreateFrameReaderAsync(source, MediaEncodingSubtypes.Bgra8);
             this.reader.FrameArrived += this.OnFrameArrived;
             await this.reader.StartAsync();
+
+            this.capture = pending;
+            pending = null;
+
+            // the mappers that need a device controller were no-ops while we were starting up; apply them now
+            MapTorch(this, this.VirtualView);
+            MapZoom(this, this.VirtualView);
         }
         catch (Exception ex)
         {
+            pending?.Dispose();
             this.MaybeVirtualView?.OnCameraError("Failed to start camera", ex);
+        }
+        finally
+        {
+            this.starting = false;
         }
     }
 
@@ -251,24 +273,47 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
             _ = handler.StopAsync();
     }
 
+    // The device controller is only reachable on a started camera, and it throws rather than returning null once
+    // the device goes away. A mapper that throws escapes Shell's page-creation path and leaves Shell navigation
+    // dead for the session, so swallow it and let the camera stay at its current setting.
+    static Windows.Media.Devices.VideoDeviceController? DeviceController(CameraViewHandler handler)
+    {
+        if (handler.capture == null)
+            return null;
+        try
+        {
+            return handler.capture.VideoDeviceController;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     static partial void MapTorch(CameraViewHandler handler, CameraView view)
     {
-        var controller = handler.capture?.VideoDeviceController;
-        if (controller?.TorchControl is { Supported: true } torch)
-            torch.Enabled = view.IsTorchOn;
+        try
+        {
+            if (DeviceController(handler)?.TorchControl is { Supported: true } torch)
+                torch.Enabled = view.IsTorchOn;
+        }
+        catch { /* device dropped or does not support torch */ }
     }
 
     static partial void MapFlashMode(CameraViewHandler handler, CameraView view) { }
 
     static partial void MapZoom(CameraViewHandler handler, CameraView view)
     {
-        var zoom = handler.capture?.VideoDeviceController?.ZoomControl;
-        if (zoom is { Supported: true })
+        try
         {
-            var clamped = Math.Clamp((float)view.Zoom, zoom.Min, zoom.Max);
-            zoom.Value = clamped;
-            handler.MaybeVirtualView?.OnZoomRangeChanged(zoom.Min, zoom.Max);
+            if (DeviceController(handler)?.ZoomControl is { Supported: true } zoom)
+            {
+                var clamped = Math.Clamp((float)view.Zoom, zoom.Min, zoom.Max);
+                zoom.Value = clamped;
+                handler.MaybeVirtualView?.OnZoomRangeChanged(zoom.Min, zoom.Max);
+            }
         }
+        catch { /* device dropped or does not support zoom */ }
     }
 
     static partial void MapScaleMode(CameraViewHandler handler, CameraView view)
