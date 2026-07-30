@@ -14,6 +14,10 @@ public partial class TextEntry : ContentView
     const double PlaceholderScaledSize = 0.85;
     const uint AnimationDuration = 150;
 
+    // Focus glow
+    const float FocusGlowRadius = 8f;
+    const float FocusGlowOpacity = 0.35f;
+
     // Bootstrap form-control sizing
     const double ClassicMinHeight = 38;
     const double FloatingMinHeight = 58;
@@ -34,6 +38,7 @@ public partial class TextEntry : ContentView
     readonly BorderlessEntry entry;
     readonly Label hintLabel;
     readonly Grid rootGrid;
+    readonly Shadow focusGlow;
 
     bool suppressTextChanged;
     bool isPlaceholderUp;
@@ -121,13 +126,21 @@ public partial class TextEntry : ContentView
         contentGrid.Add(rightToolsLayout, 4, 0);
 
         borderShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 };
+        focusGlow = new Shadow
+        {
+            Brush = new SolidColorBrush(Colors.Transparent),
+            Offset = Point.Zero,
+            Radius = FocusGlowRadius,
+            Opacity = 0f
+        };
         outerBorder = new Border
         {
             StrokeShape = borderShape,
             StrokeThickness = 1,
             Padding = 0,
             Content = contentGrid,
-            MinimumHeightRequest = ClassicMinHeight
+            MinimumHeightRequest = ClassicMinHeight,
+            Shadow = focusGlow
         };
         outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
@@ -285,25 +298,22 @@ public partial class TextEntry : ContentView
             entry.Placeholder = text;
     }
 
-    Shadow BuildFocusGlow(Color? color, string token)
+    // The glow is a single Shadow instance created with the control and never swapped out.
+    // Assigning Border.Shadow re-applies the platform shadow, and on Android that tears the
+    // border's view down far enough to clear focus from the entry inside it - so a tap would
+    // focus the entry and lose it again in the same frame, making the control impossible to
+    // type into. Only the brush and opacity are touched from here on.
+    void ShowGlow(Color? color, string token)
     {
-        SolidColorBrush brush;
         if (color is Color c)
-        {
-            brush = new SolidColorBrush(c);
-        }
+            focusGlow.Brush = new SolidColorBrush(c);
         else
-        {
-            brush = ThemeBrush.FromToken(token);
-        }
-        return new Shadow
-        {
-            Brush = brush,
-            Offset = Point.Zero,
-            Radius = 8,
-            Opacity = 0.35f
-        };
+            focusGlow.Brush = ThemeBrush.FromToken(token);
+
+        focusGlow.Opacity = FocusGlowOpacity;
     }
+
+    void HideGlow() => focusGlow.Opacity = 0f;
 
     void OnEntryTextChanged(object? sender, TextChangedEventArgs e)
     {
@@ -353,9 +363,10 @@ public partial class TextEntry : ContentView
             ApplyStroke(FocusedBorderColor, FocusedBorderColorToken);
 
         outerBorder.StrokeThickness = FocusedBorderThickness;
-        outerBorder.Shadow = HasError
-            ? BuildFocusGlow(ErrorColor, ErrorColorToken)
-            : BuildFocusGlow(FocusedBorderColor, FocusedBorderColorToken);
+        if (HasError)
+            ShowGlow(ErrorColor, ErrorColorToken);
+        else
+            ShowGlow(FocusedBorderColor, FocusedBorderColorToken);
     }
 
     void OnEntryUnfocused(object? sender, FocusEventArgs e)
@@ -369,7 +380,10 @@ public partial class TextEntry : ContentView
             ApplyStroke(BorderColor, BorderColorToken);
 
         outerBorder.StrokeThickness = BorderThickness;
-        outerBorder.Shadow = HasError ? BuildFocusGlow(ErrorColor, ErrorColorToken) : null!;
+        if (HasError)
+            ShowGlow(ErrorColor, ErrorColorToken);
+        else
+            HideGlow();
     }
 
     void OnEntryCompleted(object? sender, EventArgs e)
@@ -448,11 +462,11 @@ public partial class TextEntry : ContentView
             ApplyStroke(BorderColor, BorderColorToken);
 
         if (HasError)
-            outerBorder.Shadow = BuildFocusGlow(ErrorColor, ErrorColorToken);
+            ShowGlow(ErrorColor, ErrorColorToken);
         else if (entry.IsFocused)
-            outerBorder.Shadow = BuildFocusGlow(FocusedBorderColor, FocusedBorderColorToken);
+            ShowGlow(FocusedBorderColor, FocusedBorderColorToken);
         else
-            outerBorder.Shadow = null!;
+            HideGlow();
     }
 
     // Tool collection management
