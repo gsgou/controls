@@ -187,9 +187,7 @@ public partial class TextEntry : ContentView
         }
         else
         {
-            var brush = new SolidColorBrush();
-            brush.SetDynamicResource(SolidColorBrush.ColorProperty, token);
-            outerBorder.Stroke = brush;
+            outerBorder.Stroke = ThemeBrush.FromToken(token);
             leftSeparator.SetDynamicResource(BoxView.ColorProperty, token);
             rightSeparator.SetDynamicResource(BoxView.ColorProperty, token);
         }
@@ -296,8 +294,7 @@ public partial class TextEntry : ContentView
         }
         else
         {
-            brush = new SolidColorBrush();
-            brush.SetDynamicResource(SolidColorBrush.ColorProperty, token);
+            brush = ThemeBrush.FromToken(token);
         }
         return new Shadow
         {

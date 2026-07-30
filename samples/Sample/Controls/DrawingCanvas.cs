@@ -123,7 +123,8 @@ public class DrawingCanvas : GraphicsView, IDrawable
         var scaleX = width / strokeWidth;
         var scaleY = height / strokeHeight;
 
-        using var context = new PlatformBitmapExportContext(width, height, 1f);
+        // Windows has no PlatformBitmapExportContext type - go through the service, which every platform provides.
+        using var context = new PlatformBitmapExportService().CreateContext(width, height, 1f);
         var exportCanvas = context.Canvas;
         exportCanvas.FillColor = Colors.White;
         exportCanvas.FillRectangle(0, 0, width, height);

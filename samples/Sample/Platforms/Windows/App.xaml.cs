@@ -17,6 +17,20 @@ public partial class App : MauiWinUIApplication
 	public App()
 	{
 		this.InitializeComponent();
+		this.UnhandledException += (_, e) => Dump("UnhandledException", e.Exception);
+		AppDomain.CurrentDomain.UnhandledException += (_, e) => Dump("AppDomain", e.ExceptionObject as Exception);
+	}
+
+	static void Dump(string source, Exception? ex)
+	{
+		try
+		{
+			System.IO.File.AppendAllText(
+				System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sample-crash.log"),
+				$"=== {source} @ {DateTime.Now:O} ==={Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}"
+			);
+		}
+		catch { }
 	}
 
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

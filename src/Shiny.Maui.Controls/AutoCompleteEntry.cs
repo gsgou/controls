@@ -166,9 +166,7 @@ public class AutoCompleteEntry : ContentView
         }
         else
         {
-            var brush = new SolidColorBrush();
-            brush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Outline);
-            dropDownBorder.Stroke = brush;
+            dropDownBorder.Stroke = ThemeBrush.FromToken(ShinyThemeKeys.Color.Outline);
         }
     }
 

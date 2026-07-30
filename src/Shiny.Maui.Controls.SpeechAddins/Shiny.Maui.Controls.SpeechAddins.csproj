@@ -2,6 +2,9 @@
 
     <PropertyGroup>
         <TargetFrameworks>$(BaseTargetFramework)-ios;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-android</TargetFrameworks>
+        <!-- Windows packaging (MakePri) only runs on Windows; add the Windows TFM only there so the solution still builds on macOS/Linux. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <UseMaui>true</UseMaui>
         <IsAotCompatible>true</IsAotCompatible>
         <SingleProject>true</SingleProject>

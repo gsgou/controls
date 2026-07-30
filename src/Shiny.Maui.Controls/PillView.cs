@@ -250,9 +250,7 @@ public class PillView : ContentView
         else
         {
             // Stroke is a Brush; drive its Color from the token so theme swaps propagate.
-            var strokeBrush = new SolidColorBrush();
-            strokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, borderKey);
-            border.Stroke = strokeBrush;
+            border.Stroke = ThemeBrush.FromToken(borderKey);
         }
 
         if (PillTextColor is Color textColor)

@@ -155,7 +155,110 @@ public partial class TextRecognizer
         return Math.Sqrt(dx * dx + dy * dy);
     }
 
-    private async partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct)
+    static RectF Clamp(RectF r)
+    {
+        var x = Math.Clamp(r.X, 0f, 1f);
+        var y = Math.Clamp(r.Y, 0f, 1f);
+        return new RectF(x, y, Math.Clamp(r.Width, 0.001f, 1f - x), Math.Clamp(r.Height, 0.001f, 1f - y));
+    }
+
+    // Crop the region (given in upright space) out of the raw sensor plane, bring it upright, and upscale it to
+    // MinimumInputHeight. Windows.Media.Ocr has no minimum-text-height knob, so upscaling is the only lever for
+    // small text — TextRecognitionOptions.MinimumTextHeight is documented as ignored here.
+    async Task<List<RecognizedText>> RecognizeRegionAsync(CameraFrame frame, RectF roi, TextRecognitionOptions options)
+    {
+        int w = frame.Width, h = frame.Height;
+        var lum = frame.GetLuminance().ToArray();
+
+        var clamped = Clamp(roi);
+        var sensor = CoordinateTransform.InvertOrientation(clamped, frame.Rotation, frame.IsMirrored);
+
+        var x = Math.Clamp((int)MathF.Floor(sensor.X * w), 0, w - 1);
+        var y = Math.Clamp((int)MathF.Floor(sensor.Y * h), 0, h - 1);
+        var cw = Math.Clamp((int)MathF.Ceiling(sensor.Width * w), 1, w - x);
+        var ch = Math.Clamp((int)MathF.Ceiling(sensor.Height * h), 1, h - y);
+
+        using var gray = new OpenCvSharp.Mat(h, w, OpenCvSharp.MatType.CV_8UC1);
+        System.Runtime.InteropServices.Marshal.Copy(lum, 0, gray.Data, lum.Length);
+
+        using var crop = new OpenCvSharp.Mat(gray, new OpenCvSharp.Rect(x, y, cw, ch));
+        using var upright = new OpenCvSharp.Mat();
+
+        // sensor -> upright is rotate-then-mirror, the same order CoordinateTransform.ApplyOrientation uses
+        switch (frame.Rotation)
+        {
+            case 90:
+                OpenCvSharp.Cv2.Rotate(crop, upright, OpenCvSharp.RotateFlags.Rotate90Clockwise);
+                break;
+            case 180:
+                OpenCvSharp.Cv2.Rotate(crop, upright, OpenCvSharp.RotateFlags.Rotate180);
+                break;
+            case 270:
+                OpenCvSharp.Cv2.Rotate(crop, upright, OpenCvSharp.RotateFlags.Rotate90Counterclockwise);
+                break;
+            default:
+                crop.CopyTo(upright);
+                break;
+        }
+
+        if (frame.IsMirrored)
+            OpenCvSharp.Cv2.Flip(upright, upright, OpenCvSharp.FlipMode.Y);
+
+        using var input = new OpenCvSharp.Mat();
+        if (options.MinimumInputHeight > 0 && upright.Rows < options.MinimumInputHeight)
+        {
+            var scale = (double)options.MinimumInputHeight / upright.Rows;
+            OpenCvSharp.Cv2.Resize(upright, input, default, scale, scale, OpenCvSharp.InterpolationFlags.Cubic);
+        }
+        else
+        {
+            upright.CopyTo(input);
+        }
+
+        int iw = input.Cols, ih = input.Rows;
+        var bytes = new byte[iw * ih];
+        System.Runtime.InteropServices.Marshal.Copy(input.Data, bytes, 0, bytes.Length);
+
+        var buffer = CryptographicBuffer.CreateFromByteArray(bytes);
+        using var bitmap = SoftwareBitmap.CreateCopyFromBuffer(buffer, BitmapPixelFormat.Gray8, iw, ih);
+        var result = await this.engine!.RecognizeAsync(bitmap);
+
+        var blocks = new List<RecognizedText>();
+        foreach (var line in result.Lines)
+        {
+            if (!TryLineBounds(line, out var minX, out var minY, out var maxX, out var maxY))
+                continue;
+
+            // the crop is already upright, so its own space maps linearly onto the upright ROI
+            blocks.Add(new RecognizedText(line.Text ?? string.Empty, new RectF(
+                clamped.X + (float)(minX / iw) * clamped.Width,
+                clamped.Y + (float)(minY / ih) * clamped.Height,
+                (float)((maxX - minX) / iw) * clamped.Width,
+                (float)((maxY - minY) / ih) * clamped.Height)));
+        }
+        return blocks;
+    }
+
+    // Union of a line's word rects, in the recognized image's pixel space. False when the line has no usable words.
+    static bool TryLineBounds(OcrLine line, out double minX, out double minY, out double maxX, out double maxY)
+    {
+        minX = double.MaxValue;
+        minY = double.MaxValue;
+        maxX = 0;
+        maxY = 0;
+
+        foreach (var word in line.Words)
+        {
+            var r = word.BoundingRect;
+            minX = Math.Min(minX, r.X);
+            minY = Math.Min(minY, r.Y);
+            maxX = Math.Max(maxX, r.X + r.Width);
+            maxY = Math.Max(maxY, r.Y + r.Height);
+        }
+        return maxX > minX;
+    }
+
+    private async partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, TextRecognitionOptions options, CancellationToken ct)
     {
         if (frame is not WindowsCameraFrame)
             return [];
@@ -163,6 +266,9 @@ public partial class TextRecognizer
         this.engine ??= OcrEngine.TryCreateFromUserProfileLanguages();
         if (this.engine == null)
             return [];
+
+        if (options.RegionOfInterest is { } roi)
+            return await this.RecognizeRegionAsync(frame, roi, options).ConfigureAwait(false);
 
         var lum = frame.GetLuminance().ToArray();
         var buffer = CryptographicBuffer.CreateFromByteArray(lum);
@@ -173,16 +279,7 @@ public partial class TextRecognizer
         var blocks = new List<RecognizedText>();
         foreach (var line in result.Lines)
         {
-            double minX = double.MaxValue, minY = double.MaxValue, maxX = 0, maxY = 0;
-            foreach (var word in line.Words)
-            {
-                var r = word.BoundingRect;
-                minX = Math.Min(minX, r.X);
-                minY = Math.Min(minY, r.Y);
-                maxX = Math.Max(maxX, r.X + r.Width);
-                maxY = Math.Max(maxY, r.Y + r.Height);
-            }
-            if (maxX <= minX)
+            if (!TryLineBounds(line, out var minX, out var minY, out var maxX, out var maxY))
                 continue;
 
             var raw = new RectF((float)(minX / frame.Width), (float)(minY / frame.Height),

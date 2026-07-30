@@ -84,9 +84,7 @@ public partial class BadgeView : Grid, IDisposable
         else
         {
             // Stroke is a Brush; drive its Color from the token so theme swaps propagate.
-            var strokeBrush = new SolidColorBrush();
-            strokeBrush.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.Surface);
-            this.badgeBorder.Stroke = strokeBrush;
+            this.badgeBorder.Stroke = ThemeBrush.FromToken(ShinyThemeKeys.Color.Surface);
         }
         this.badgeBorder.StrokeThickness = this.BadgeBorderThickness;
         this.badgeBorder.StrokeShape = new RoundRectangle { CornerRadius = this.CornerRadius };
