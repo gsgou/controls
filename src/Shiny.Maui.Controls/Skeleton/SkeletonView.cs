@@ -14,7 +14,7 @@ public partial class SkeletonView : Grid, IDisposable
     readonly ContentView realContentHost;
     readonly Grid skeletonHost;
     readonly ContentView placeholderHost;
-    readonly Grid shimmerBand;
+    readonly Border shimmerBand;
 
     bool isAnimating;
     double containerWidth;
@@ -24,16 +24,23 @@ public partial class SkeletonView : Grid, IDisposable
         this.realContentHost = new ContentView();
         this.placeholderHost = new ContentView();
 
-        // The band is drawn entirely by its gradient Background, so it must not be a BoxView: a
-        // BoxView with no Color of its own picks up whatever the host app's implicit
+        // The band is drawn entirely by its gradient Background, which constrains what it can be.
+        // Not a BoxView: one with no Color of its own picks up whatever the host app's implicit
         // Style TargetType="BoxView" says, and an opaque fill over the gradient shows up as a solid
-        // bar sweeping across the placeholders. A layout has no such fill to hijack.
-        this.shimmerBand = new Grid
+        // bar sweeping across the placeholders. Not a bare layout either: a Grid maps to WinUI's
+        // LayoutPanel, which only paints a solid BackgroundColor - a gradient Background on it is
+        // silently dropped and the shimmer is invisible on Windows. Border is drawn on every
+        // platform; the stroke properties are set explicitly so an implicit Border style cannot
+        // outline the band.
+        this.shimmerBand = new Border
         {
             IsVisible = false,
             InputTransparent = true,
             HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Fill
+            VerticalOptions = LayoutOptions.Fill,
+            Stroke = Brush.Transparent,
+            StrokeThickness = 0,
+            Padding = 0
         };
 
         this.skeletonHost = new Grid
@@ -61,7 +68,10 @@ public partial class SkeletonView : Grid, IDisposable
         {
             this.containerWidth = width;
             if (this.isAnimating)
+            {
                 this.ConfigureShimmerBand();
+                this.UpdateShimmerMask();
+            }
         }
     }
 
@@ -91,9 +101,14 @@ public partial class SkeletonView : Grid, IDisposable
     }
 
     void RebuildSkeleton()
-        => this.placeholderHost.Content = this.SkeletonTemplate != null
+    {
+        // Drop the mask first: it describes the shapes being replaced, and since it clips the host it
+        // would hide the new ones until the next sweep recomputes it.
+        this.skeletonHost.Clip = null;
+        this.placeholderHost.Content = this.SkeletonTemplate != null
             ? this.SkeletonTemplate.CreateContent() as View
             : this.BuildDefaultSkeleton();
+    }
 
     View BuildDefaultSkeleton()
     {
@@ -136,6 +151,59 @@ public partial class SkeletonView : Grid, IDisposable
         grid.Children.Add(bar);
         return grid;
     }
+
+    /// <summary>
+    /// Masks the sweeping band to the placeholder shapes, so the highlight lights up the shapes
+    /// themselves instead of painting a rectangle across the gaps between them. The clip goes on the
+    /// host rather than the band because the band translates - a clip set on it would travel with it.
+    /// Clipping the host is free for the placeholders (the geometry is their own bounds) and is what
+    /// confines the band. Custom <see cref="SkeletonTemplate"/> content is measured the same way, so
+    /// templates are masked without being modified.
+    /// </summary>
+    void UpdateShimmerMask()
+    {
+        var group = new Microsoft.Maui.Controls.Shapes.GeometryGroup();
+        CollectShapes(this.placeholderHost, this.placeholderHost.X, this.placeholderHost.Y, group);
+
+        // Before the first layout pass nothing has bounds yet. Leaving the clip off shows an unmasked
+        // band for one sweep, which beats clipping everything away; the loop re-runs this each sweep.
+        this.skeletonHost.Clip = group.Children.Count > 0 ? group : null;
+    }
+
+    static void CollectShapes(Element element, double offsetX, double offsetY, Microsoft.Maui.Controls.Shapes.GeometryGroup group)
+    {
+        foreach (var child in VisualChildren(element))
+        {
+            if (child is not VisualElement { IsVisible: true } ve)
+                continue;
+
+            var x = offsetX + ve.X;
+            var y = offsetY + ve.Y;
+
+            if (VisualChildren(ve).Any())
+            {
+                CollectShapes(ve, x, y, group);
+            }
+            else if (ve.Width > 0 && ve.Height > 0)
+            {
+                group.Children.Add(new Microsoft.Maui.Controls.Shapes.RoundRectangleGeometry(
+                    CornerRadiusFor(ve),
+                    new Rect(x, y, ve.Width, ve.Height)));
+            }
+        }
+    }
+
+    static IEnumerable<Element> VisualChildren(Element element)
+        => element is IVisualTreeElement v
+            ? v.GetVisualChildren().OfType<Element>()
+            : [];
+
+    static CornerRadius CornerRadiusFor(VisualElement ve) => ve switch
+    {
+        BoxView box => box.CornerRadius,
+        Border { StrokeShape: Microsoft.Maui.Controls.Shapes.RoundRectangle rr } => rr.CornerRadius,
+        _ => new CornerRadius(0)
+    };
 
     void ConfigureShimmerBand()
     {
@@ -187,6 +255,10 @@ public partial class SkeletonView : Grid, IDisposable
                 continue;
             }
 
+            // Re-measured every sweep: the placeholders may not have been laid out when the loop
+            // started, and a template can reflow (text wrapping, rotation) between sweeps.
+            this.UpdateShimmerMask();
+
             var bandWidth = this.shimmerBand.WidthRequest;
             this.shimmerBand.TranslationX = -bandWidth;
             try
@@ -211,6 +283,8 @@ public partial class SkeletonView : Grid, IDisposable
         Microsoft.Maui.Controls.ViewExtensions.CancelAnimations(this.shimmerBand);
         this.shimmerBand.IsVisible = false;
         this.shimmerBand.TranslationX = 0;
+        // Nothing left to mask, and a stale clip would hide placeholders shown without shimmer.
+        this.skeletonHost.Clip = null;
     }
 
     void OnShimmerEnabledChanged()
