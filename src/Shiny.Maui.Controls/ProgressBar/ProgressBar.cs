@@ -26,7 +26,10 @@ public partial class ProgressBar : ContentView, IDisposable
             VerticalOptions = LayoutOptions.Center
         };
         // Theme default — overridden if the consumer sets TrackColor explicitly.
+        // Color is bound alongside BackgroundColor because the macOS/AppKit BoxView handler paints
+        // from Color only and ignores the background brush, which left the track invisible there.
         trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+        trackBackground.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
 
         trackFill = new BoxView
         {
@@ -133,30 +136,11 @@ public partial class ProgressBar : ContentView, IDisposable
         trackFill.CornerRadius = new CornerRadius(CornerRadius);
         trackFill.HorizontalOptions = LayoutOptions.Fill;
 
-        if (UseGradient)
-        {
-            trackFill.Background = new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0.5),
-                EndPoint = new Point(1, 0.5),
-                GradientStops =
-                {
-                    new GradientStop(GradientStartColor, 0),
-                    new GradientStop(GradientEndColor, 1)
-                }
-            };
-        }
-        else
-        {
-            trackFill.Background = null;
-            if (BarColor is Color barColor)
-                trackFill.BackgroundColor = barColor;
-            else
-                trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-        }
+        ApplyFillPaint();
 
         // Pulse sheen sizing
         UpdatePulseOverlaySize();
+
 
         // Text
         progressLabel.IsVisible = ShowText;
@@ -274,8 +258,26 @@ public partial class ProgressBar : ContentView, IDisposable
         trackFill.CornerRadius = new CornerRadius(CornerRadius);
         trackFill.HorizontalOptions = LayoutOptions.Start;
 
+        ApplyFillPaint();
+
+        progressLabel.IsVisible = false;
+        RunIndeterminateLoop();
+    }
+
+    /// <summary>
+    /// Paints the fill bar for the current gradient/solid mode.
+    /// </summary>
+    /// <remarks>
+    /// A gradient can only be expressed as a <c>Background</c> brush, but a solid fill must also
+    /// drive <see cref="BoxView.Color"/>: the macOS/AppKit BoxView handler paints from Color alone
+    /// and ignores the background brush, so a BackgroundColor-only bar was invisible there. Color is
+    /// cleared in gradient mode so it cannot paint over the gradient on platforms that honour both.
+    /// </remarks>
+    void ApplyFillPaint()
+    {
         if (UseGradient)
         {
+            trackFill.ClearValue(BoxView.ColorProperty);
             trackFill.Background = new LinearGradientBrush
             {
                 StartPoint = new Point(0, 0.5),
@@ -286,18 +288,20 @@ public partial class ProgressBar : ContentView, IDisposable
                     new GradientStop(GradientEndColor, 1)
                 }
             };
+            return;
+        }
+
+        trackFill.Background = null;
+        if (BarColor is Color barColor)
+        {
+            trackFill.BackgroundColor = barColor;
+            trackFill.Color = barColor;
         }
         else
         {
-            trackFill.Background = null;
-            if (BarColor is Color barColor)
-                trackFill.BackgroundColor = barColor;
-            else
-                trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+            trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+            trackFill.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
         }
-
-        progressLabel.IsVisible = false;
-        RunIndeterminateLoop();
     }
 
     async void RunIndeterminateLoop()

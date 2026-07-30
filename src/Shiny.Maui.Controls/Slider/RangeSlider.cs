@@ -13,8 +13,8 @@ public partial class RangeSlider : ContentView
 {
     readonly BoxView trackBackground;
     readonly BoxView trackFill;
-    readonly Frame lowerThumb;
-    readonly Frame upperThumb;
+    readonly Border lowerThumb;
+    readonly Border upperThumb;
     readonly Border lowerTooltipBadge;
     readonly Border upperTooltipBadge;
     readonly Label lowerTooltipLabel;
@@ -53,6 +53,9 @@ public partial class RangeSlider : ContentView
             VerticalOptions = LayoutOptions.Center
         };
         trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
+        // Color is bound alongside BackgroundColor because the macOS/AppKit BoxView handler paints
+        // from Color only and ignores the background brush, which left the track invisible there.
+        trackBackground.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
 
         // Active fill between the two thumbs (gradient)
         trackFill = new BoxView
@@ -145,15 +148,16 @@ public partial class RangeSlider : ContentView
         return badge;
     }
 
-    Frame CreateThumb()
+    Border CreateThumb()
     {
-        var thumb = new Frame
+        var thumb = new Border
         {
             WidthRequest = 24,
             HeightRequest = 24,
-            CornerRadius = 12,
-            BorderColor = ColdColor,
-            HasShadow = true,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            Stroke = ColdColor,
+            StrokeThickness = 1,
+            Shadow = Slider.CreateThumbShadow(),
             Padding = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center
@@ -162,7 +166,7 @@ public partial class RangeSlider : ContentView
         return thumb;
     }
 
-    void AddThumbPan(Frame thumb, bool isUpper)
+    void AddThumbPan(Border thumb, bool isUpper)
     {
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += (s, e) => OnThumbPan(e, isUpper);
@@ -308,12 +312,13 @@ public partial class RangeSlider : ContentView
         UpdateTooltips(lowerPercent, upperPercent, lowerColor, upperColor);
     }
 
-    void PositionThumb(Frame thumb, double percent, Color color)
+    void PositionThumb(Border thumb, double percent, Color color)
     {
         var thumbX = percent * (trackWidth - ThumbSize);
         AbsoluteLayout.SetLayoutBounds(thumb, new Rect(thumbX, 0.5, ThumbSize, ThumbSize));
-        thumb.BorderColor = color;
-        thumb.CornerRadius = (float)(ThumbSize / 2);
+        thumb.Stroke = color;
+        if (thumb.StrokeShape is Microsoft.Maui.Controls.Shapes.RoundRectangle shape)
+            shape.CornerRadius = ThumbSize / 2;
         thumb.WidthRequest = ThumbSize;
         thumb.HeightRequest = ThumbSize;
     }

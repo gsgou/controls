@@ -80,6 +80,14 @@ public static class StyleGuard
         ArgumentNullException.ThrowIfNull(control);
         ArgumentNullException.ThrowIfNull(declaringType);
 
+        // A Shiny control finishing construction is the one signal every platform shares, so it
+        // doubles as the fallback that guarantees the theme dictionary is merged. UseShinyControls
+        // normally applies it from the Application/Page handler mappers, but alternative app heads
+        // (macOS AppKit and GTK ship their own handler types) never run those mappings, which left
+        // every token-bound brush unresolved there. Token bindings are DynamicResource, so merging
+        // at this point still restyles the control. EnsureApplied is idempotent and cheap.
+        Themes.ShinyThemeManager.EnsureApplied();
+
         Flush(control, declaringType);
     }
 

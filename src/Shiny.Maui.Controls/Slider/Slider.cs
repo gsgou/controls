@@ -1,3 +1,4 @@
+using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Infrastructure;
 
@@ -7,7 +8,8 @@ public partial class Slider : ContentView
 {
     readonly BoxView trackBackground;
     readonly BoxView trackFill;
-    readonly Frame thumb;
+    readonly Border thumb;
+    readonly RoundRectangle thumbShape;
     readonly Border tooltipBadge;
     readonly Label tooltipLabel;
     readonly ContentView tooltipContainer;
@@ -69,13 +71,15 @@ public partial class Slider : ContentView
         };
 
         // Thumb
-        thumb = new Frame
+        thumbShape = new RoundRectangle { CornerRadius = 12 };
+        thumb = new Border
         {
             WidthRequest = 24,
             HeightRequest = 24,
-            CornerRadius = 12,
-            BorderColor = ColdColor,
-            HasShadow = true,
+            StrokeShape = thumbShape,
+            Stroke = ColdColor,
+            StrokeThickness = 1,
+            Shadow = CreateThumbShadow(),
             Padding = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center
@@ -102,6 +106,7 @@ public partial class Slider : ContentView
         trackLayout.Children.Add(trackBackground);
         trackLayout.Children.Add(trackFill);
         trackLayout.Children.Add(thumb);
+
 
         rootGrid = new Grid
         {
@@ -136,6 +141,19 @@ public partial class Slider : ContentView
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(Slider));
     }
+
+    /// <summary>
+    /// The subtle drop shadow the thumb used to get from <c>Frame.HasShadow</c>. Border has no
+    /// equivalent flag, so it is recreated explicitly (and per-thumb — a Shadow instance cannot
+    /// be shared across elements).
+    /// </summary>
+    internal static Shadow CreateThumbShadow() => new()
+    {
+        Brush = Brush.Black,
+        Opacity = 0.24f,
+        Radius = 3,
+        Offset = new Point(0, 1)
+    };
 
     protected override void OnSizeAllocated(double width, double height)
     {
@@ -212,8 +230,11 @@ public partial class Slider : ContentView
 
         var blended = BlendColors(ColdColor, HotColor, percent);
 
-        // Update track background - solid blended color
+        // Update track background - solid blended color.
+        // Color is set alongside Background because the macOS/AppKit BoxView handler paints from
+        // Color only and ignores the Background brush, which left the track invisible there.
         trackBackground.Background = new SolidColorBrush(blended);
+        trackBackground.Color = blended;
         trackBackground.HeightRequest = TrackHeight;
         trackBackground.CornerRadius = new CornerRadius(TrackHeight / 2);
 
@@ -223,8 +244,8 @@ public partial class Slider : ContentView
         // Update thumb position and color
         var thumbX = percent * (trackWidth - ThumbSize);
         AbsoluteLayout.SetLayoutBounds(thumb, new Rect(thumbX, 0.5, ThumbSize, ThumbSize));
-        thumb.BorderColor = blended;
-        thumb.CornerRadius = (float)(ThumbSize / 2);
+        thumb.Stroke = blended;
+        thumbShape.CornerRadius = ThumbSize / 2;
         thumb.WidthRequest = ThumbSize;
         thumb.HeightRequest = ThumbSize;
 
