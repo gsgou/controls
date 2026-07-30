@@ -4,6 +4,7 @@ using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Pickers;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -23,7 +24,7 @@ public class DurationPickerCell : CellBase
     public static readonly BindableProperty DurationProperty = BindableProperty.Create(
         nameof(Duration), typeof(TimeSpan?), typeof(DurationPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPickerCell), () =>
             {
                 ((DurationPickerCell)b).UpdateDisplayText();
             }));
@@ -36,7 +37,7 @@ public class DurationPickerCell : CellBase
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DurationPickerCell), @"h\:mm",
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPickerCell), () =>
             {
                 ((DurationPickerCell)b).UpdateDisplayText();
             }));
@@ -49,7 +50,7 @@ public class DurationPickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(DurationPickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPickerCell), () =>
             {
                 ((DurationPickerCell)b).UpdateValueColor();
             }));
@@ -183,9 +184,13 @@ public class DurationPickerCell : CellBase
             HorizontalOptions = LayoutOptions.Fill
         };
         pickerGrid.Add(hourPicker, 0);
-        pickerGrid.Add(new Label { Text = "hr", VerticalOptions = LayoutOptions.Center, TextColor = Colors.Gray }, 1);
+        var hourUnit = new Label { Text = "hr", VerticalOptions = LayoutOptions.Center };
+        hourUnit.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        pickerGrid.Add(hourUnit, 1);
         pickerGrid.Add(minutePicker, 2);
-        pickerGrid.Add(new Label { Text = "min", VerticalOptions = LayoutOptions.Center, TextColor = Colors.Gray }, 3);
+        var minuteUnit = new Label { Text = "min", VerticalOptions = LayoutOptions.Center };
+        minuteUnit.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        pickerGrid.Add(minuteUnit, 3);
 
         var doneButton = new Button { Text = "Done", HorizontalOptions = LayoutOptions.Fill };
         doneButton.Clicked += (_, _) =>
@@ -208,10 +213,10 @@ public class DurationPickerCell : CellBase
         var cancelButton = new Button
         {
             Text = "Cancel",
-            BackgroundColor = Colors.Gray,
-            TextColor = Colors.White,
             HorizontalOptions = LayoutOptions.Fill
         };
+        cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
+        cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         cancelButton.Clicked += (_, _) => panel!.IsOpen = false;
 
         var buttonGrid = new Grid

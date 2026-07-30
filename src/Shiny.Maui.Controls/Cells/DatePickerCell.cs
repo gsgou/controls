@@ -20,7 +20,7 @@ public class DatePickerCell : CellBase
     public static readonly BindableProperty DateProperty = BindableProperty.Create(
         nameof(Date), typeof(DateTime?), typeof(DatePickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DatePickerCell), () =>
             {
                 ((DatePickerCell)b).OnDateChanged();
             }));
@@ -30,28 +30,28 @@ public class DatePickerCell : CellBase
 
     public static readonly BindableProperty MinimumDateProperty = BindableProperty.Create(
         nameof(MinimumDate), typeof(DateTime), typeof(DatePickerCell), new DateTime(1900, 1, 1),
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DatePickerCell), () =>
             {
                 ((DatePickerCell)b).SyncPickerRange();
             }));
 
     public static readonly BindableProperty MaximumDateProperty = BindableProperty.Create(
         nameof(MaximumDate), typeof(DateTime), typeof(DatePickerCell), new DateTime(2100, 12, 31),
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DatePickerCell), () =>
             {
                 ((DatePickerCell)b).SyncPickerRange();
             }));
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DatePickerCell), "d",
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DatePickerCell), () =>
             {
                 ((DatePickerCell)b).UpdateDisplayText();
             }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(DatePickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DatePickerCell), () =>
             {
                 ((DatePickerCell)b).UpdateValueColor();
             }));

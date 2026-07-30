@@ -22,7 +22,7 @@ public class TextPickerCell : CellBase
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IList), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextPickerCell), () =>
             {
                 ((TextPickerCell)b).UpdatePickerItems();
             }));
@@ -30,7 +30,7 @@ public class TextPickerCell : CellBase
     public static readonly BindableProperty SelectedIndexProperty = BindableProperty.Create(
         nameof(SelectedIndex), typeof(int), typeof(TextPickerCell), -1,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextPickerCell), () =>
             {
                 ((TextPickerCell)b).OnSelectedIndexChanged();
             }));
@@ -38,7 +38,7 @@ public class TextPickerCell : CellBase
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(TextPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextPickerCell), () =>
             {
                 ((TextPickerCell)b).OnSelectedItemChanged();
             }));
@@ -48,7 +48,7 @@ public class TextPickerCell : CellBase
 
     public static readonly BindableProperty PickerTitleProperty = BindableProperty.Create(
         nameof(PickerTitle), typeof(string), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextPickerCell), () =>
             {
             var cell = (TextPickerCell)b;
             if (cell.hiddenPicker != null)
@@ -60,7 +60,7 @@ public class TextPickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(TextPickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextPickerCell), () =>
             {
                 ((TextPickerCell)b).UpdateValueColor();
             }));

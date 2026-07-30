@@ -98,7 +98,7 @@ public class Fab : ContentView
         typeof(ImageSource),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             fab.iconImage.Source = n as ImageSource;
@@ -115,7 +115,7 @@ public class Fab : ContentView
         typeof(string),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             fab.textLabel.Text = n as string ?? string.Empty;
@@ -155,7 +155,7 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             if (n is Color c)
@@ -174,7 +174,7 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             if (n is Color c)
@@ -191,7 +191,7 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         0.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
                 ((Fab)b).border.StrokeThickness = (double)n;
             }));
@@ -206,7 +206,7 @@ public class Fab : ContentView
         typeof(Color),
         typeof(Fab),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             if (n is Color c)
@@ -225,7 +225,7 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
                 ((Fab)b).textLabel.FontSize = (double)n;
             }));
@@ -240,7 +240,7 @@ public class Fab : ContentView
         typeof(FontAttributes),
         typeof(Fab),
         Microsoft.Maui.Controls.FontAttributes.None,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
                 ((Fab)b).textLabel.FontAttributes = (FontAttributes)n;
             }));
@@ -255,7 +255,7 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultSize,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             fab.border.HeightRequest = fab.Size;
@@ -273,7 +273,7 @@ public class Fab : ContentView
         typeof(double),
         typeof(Fab),
         DefaultIconSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             var s = (double)n;
@@ -291,7 +291,7 @@ public class Fab : ContentView
         typeof(bool),
         typeof(Fab),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
             fab.border.Shadow = (bool)n

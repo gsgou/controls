@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Specialized;
 using Shiny.Maui.Controls.Tree.Internal;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Tree;
 
@@ -39,9 +40,9 @@ public partial class TreeView : ContentView
             IsVisible = false,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            TextColor = Colors.Gray,
             Padding = 16
         };
+        rootErrorLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         root = new Grid { Children = { scrollView, rootLoadingIndicator, rootErrorLabel } };
         Content = root;

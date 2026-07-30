@@ -1,4 +1,5 @@
 using Microsoft.Maui.Layouts;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
@@ -6,23 +7,53 @@ class AgendaTimelinePanel : ContentView
 {
     readonly AbsoluteLayout eventsLayer;
     readonly Grid timelineGrid;
+    readonly Grid outerGrid;
     double timeSlotHeight = 60;
-    Color timezoneColor = Colors.Gray;
-    Color defaultEventColor = Colors.CornflowerBlue;
+    // null => follow the active theme pack. A consumer-supplied colour wins.
+    Color? timezoneColor;
+    Color? defaultEventColor;
     DataTemplate? eventTemplate;
     bool use24HourTime = true;
-    Color separatorColor = Color.FromRgba(220, 220, 220, 120);
+    Color? separatorColor;
     IReadOnlyList<TimeZoneInfo>? additionalTimezones;
     bool showTimeLabels = true;
+    TapGestureRecognizer? backgroundTap;
+    DateOnly buildDate;
 
     public Action<SchedulerEvent>? EventTapped { get; set; }
     public Action<DateTimeOffset>? TimeSlotTapped { get; set; }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
+    }
 
     public AgendaTimelinePanel()
     {
         timelineGrid = new Grid();
         eventsLayer = new AbsoluteLayout();
-        Content = timelineGrid;
+
+        // eventsLayer is parented ONCE, here, and never removed. Build() previously cleared the
+        // timeline grid and re-added it on every rebuild; re-parenting a layout hands it a fresh
+        // handler, whose SetVirtualView re-adds each child's platform view - and any child still
+        // attached to the previous LayoutViewGroup makes Android throw "The specified child already
+        // has a parent". The hour labels and separators live in timelineGrid, which is disposable and
+        // can be cleared freely; the events overlay sits beside it in this outer grid so it is never
+        // torn down. Both share the same column definitions, so they stay aligned.
+        outerGrid = new Grid();
+        outerGrid.Add(timelineGrid);
+        outerGrid.Add(eventsLayer);
+
+        Content = outerGrid;
     }
 
     public double TimeSlotHeight
@@ -31,13 +62,13 @@ class AgendaTimelinePanel : ContentView
         set { timeSlotHeight = value; }
     }
 
-    public Color TimezoneColor
+    public Color? TimezoneColor
     {
         get => timezoneColor;
         set { timezoneColor = value; }
     }
 
-    public Color DefaultEventColor
+    public Color? DefaultEventColor
     {
         get => defaultEventColor;
         set { defaultEventColor = value; }
@@ -55,7 +86,7 @@ class AgendaTimelinePanel : ContentView
         set { use24HourTime = value; }
     }
 
-    public Color SeparatorColor
+    public Color? SeparatorColor
     {
         get => separatorColor;
         set { separatorColor = value; }
@@ -97,6 +128,17 @@ class AgendaTimelinePanel : ContentView
         for (var hour = 0; hour < 24; hour++)
             timelineGrid.RowDefinitions.Add(new RowDefinition(new GridLength(timeSlotHeight)));
 
+        // Same columns on the outer grid so the (never-reparented) events overlay lines up with the
+        // events column of the timeline. Redefining columns does not touch child parenting.
+        outerGrid.ColumnDefinitions.Clear();
+        foreach (var col in timelineGrid.ColumnDefinitions)
+            outerGrid.ColumnDefinitions.Add(new ColumnDefinition(col.Width));
+
+        Grid.SetColumn(timelineGrid, 0);
+        Grid.SetColumnSpan(timelineGrid, outerGrid.ColumnDefinitions.Count);
+        Grid.SetColumn(eventsLayer, eventsColumnIndex);
+        Grid.SetColumnSpan(eventsLayer, 1);
+
         var timeFormat = use24HourTime ? "HH:mm" : "h tt";
         var localDate = date.ToDateTime(TimeOnly.MinValue);
 
@@ -109,7 +151,6 @@ class AgendaTimelinePanel : ContentView
                 {
                     Text = new TimeOnly(hour, 0).ToString(timeFormat),
                     FontSize = 11,
-                    TextColor = timezoneColor,
                     VerticalTextAlignment = TextAlignment.Center,
                     HorizontalTextAlignment = TextAlignment.End,
                     Padding = new Thickness(0, 0, 8, 0),
@@ -117,6 +158,7 @@ class AgendaTimelinePanel : ContentView
                     VerticalOptions = LayoutOptions.Start,
                     HeightRequest = 16
                 };
+                Tint(lbl, Label.TextColorProperty, timezoneColor, ShinyThemeKeys.Color.OnSurfaceVariant);
                 timelineGrid.Add(lbl, 0, hour);
 
                 // additional timezone labels
@@ -129,7 +171,6 @@ class AgendaTimelinePanel : ContentView
                     {
                         Text = converted.ToString(timeFormat),
                         FontSize = 10,
-                        TextColor = Colors.SlateGray,
                         VerticalTextAlignment = TextAlignment.Center,
                         HorizontalTextAlignment = TextAlignment.End,
                         Padding = new Thickness(0, 0, 8, 0),
@@ -137,20 +178,21 @@ class AgendaTimelinePanel : ContentView
                         VerticalOptions = LayoutOptions.Start,
                         HeightRequest = 16
                     };
+                    Tint(tzLbl, Label.TextColorProperty, timezoneColor, ShinyThemeKeys.Color.OnSurfaceVariant);
                     timelineGrid.Add(tzLbl, 1 + t, hour);
                 }
             }
 
             var separator = new BoxView
             {
-                Color = separatorColor,
                 HeightRequest = 0.5,
                 VerticalOptions = LayoutOptions.Start
             };
+            Tint(separator, BoxView.ColorProperty, separatorColor, ShinyThemeKeys.Color.OutlineVariant);
             timelineGrid.Add(separator, eventsColumnIndex, hour);
         }
 
-        // events overlay in the events column
+        // events overlay content (the layer itself is parented once, in the constructor)
         eventsLayer.Children.Clear();
         eventsLayer.HeightRequest = totalHeight;
 
@@ -204,67 +246,86 @@ class AgendaTimelinePanel : ContentView
             AbsoluteLayout.SetLayoutBounds(timeIndicator, new Rect(0, markerY, 1, 16));
             AbsoluteLayout.SetLayoutFlags(timeIndicator, AbsoluteLayoutFlags.WidthProportional);
 
+            // The indicator is a single instance owned by SchedulerAgendaView, but BuildColumns()
+            // discards its panels and creates new ones - so the *previous* panel's layer usually
+            // still has it parented. Adopt it explicitly; adding a view that already has a parent is
+            // what threw "The specified child already has a parent" on Android.
+            if (timeIndicator.Parent is Layout previousParent && !ReferenceEquals(previousParent, eventsLayer))
+                previousParent.Remove(timeIndicator);
+
             if (!eventsLayer.Children.Contains(timeIndicator))
                 eventsLayer.Children.Add(timeIndicator);
         }
 
-        // tappable background
-        var bgTap = new TapGestureRecognizer();
-        bgTap.Tapped += (_, e) =>
+        // Tappable background. Attached once - eventsLayer is reused across Builds, so adding a
+        // recognizer here every time stacked up a new one per rebuild and fired TimeSlotTapped
+        // once per accumulated recognizer.
+        this.buildDate = date;
+        if (this.backgroundTap is null)
         {
-            if (TimeSlotTapped == null) return;
-            var pos = e.GetPosition(eventsLayer);
-            if (pos.HasValue)
+            this.backgroundTap = new TapGestureRecognizer();
+            this.backgroundTap.Tapped += (_, e) =>
             {
-                var minutes = pos.Value.Y / timeSlotHeight * 60.0;
-                var rounded = Math.Floor(minutes / 30.0) * 30.0;
-                var ts = TimeSpan.FromMinutes(rounded);
-                var dt = date.ToDateTime(new TimeOnly(ts.Hours, ts.Minutes));
-                TimeSlotTapped(new DateTimeOffset(dt));
-            }
-        };
-        eventsLayer.GestureRecognizers.Add(bgTap);
+                if (TimeSlotTapped == null) return;
+                var pos = e.GetPosition(eventsLayer);
+                if (pos.HasValue)
+                {
+                    var minutes = pos.Value.Y / timeSlotHeight * 60.0;
+                    var rounded = Math.Floor(minutes / 30.0) * 30.0;
+                    var ts = TimeSpan.FromMinutes(rounded);
+                    var dt = this.buildDate.ToDateTime(new TimeOnly(ts.Hours, ts.Minutes));
+                    TimeSlotTapped(new DateTimeOffset(dt));
+                }
+            };
+            eventsLayer.GestureRecognizers.Add(this.backgroundTap);
+        }
 
-        timelineGrid.Add(eventsLayer, eventsColumnIndex);
-        Grid.SetRowSpan(eventsLayer, 24);
     }
 
     View CreateDefaultEventView(SchedulerEvent evt)
     {
-        var color = evt.Color ?? defaultEventColor;
         var border = new Border
         {
-            BackgroundColor = color,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
             Stroke = Colors.Transparent,
             Padding = new Thickness(6, 4),
             Margin = new Thickness(1)
         };
 
-        var stack = new VerticalStackLayout
+        var title = new Label
         {
-            Children =
-            {
-                new Label
-                {
-                    Text = evt.Title,
-                    TextColor = Colors.White,
-                    FontSize = 12,
-                    FontAttributes = FontAttributes.Bold,
-                    LineBreakMode = LineBreakMode.TailTruncation
-                },
-                new Label
-                {
-                    Text = use24HourTime
-                        ? $"{evt.Start.LocalDateTime:HH:mm} - {evt.End.LocalDateTime:HH:mm}"
-                        : $"{evt.Start.LocalDateTime:h:mm tt} - {evt.End.LocalDateTime:h:mm tt}",
-                    TextColor = Color.FromRgba(255, 255, 255, 200),
-                    FontSize = 10
-                }
-            }
+            Text = evt.Title,
+            FontSize = 12,
+            FontAttributes = FontAttributes.Bold,
+            LineBreakMode = LineBreakMode.TailTruncation
         };
 
-        border.Content = stack;
+        var when = new Label
+        {
+            Text = use24HourTime
+                ? $"{evt.Start.LocalDateTime:HH:mm} - {evt.End.LocalDateTime:HH:mm}"
+                : $"{evt.Start.LocalDateTime:h:mm tt} - {evt.End.LocalDateTime:h:mm tt}",
+            FontSize = 10
+        };
+
+        // The event's own colour wins; otherwise the block follows the theme accent. Text sits on
+        // that fill, so it tracks whichever background actually got used.
+        var fill = evt.Color ?? defaultEventColor;
+        if (fill is null)
+        {
+            border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+            title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            when.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            when.Opacity = 0.8;
+        }
+        else
+        {
+            border.BackgroundColor = fill;
+            title.TextColor = Colors.White;
+            when.TextColor = Color.FromRgba(255, 255, 255, 200);
+        }
+
+        border.Content = new VerticalStackLayout { Children = { title, when } };
         return border;
     }
 

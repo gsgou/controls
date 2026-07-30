@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
 class CalendarSheetPicker : ContentView
@@ -87,26 +89,26 @@ class CalendarSheetPicker : ContentView
         {
             Text = "<",
             FontSize = 16,
-            TextColor = Colors.DodgerBlue,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 40,
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
         };
+        prevButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
         nextButton = new Button
         {
             Text = ">",
             FontSize = 16,
-            TextColor = Colors.DodgerBlue,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 40,
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
         };
+        nextButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         nextButton.Clicked += (_, _) => NavigateMonth(1);
 
         headerGrid = new Grid
@@ -156,12 +158,12 @@ class CalendarSheetPicker : ContentView
                 WidthRequest = 4,
                 HeightRequest = 4,
                 CornerRadius = 2,
-                Color = Colors.DodgerBlue,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.End,
                 IsVisible = false,
                 Margin = new Thickness(0, 0, 0, 2)
             };
+            todayDot.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
             todayIndicators[i] = todayDot;
 
             var cellContent = new Grid
@@ -196,10 +198,10 @@ class CalendarSheetPicker : ContentView
             WidthRequest = 36,
             HeightRequest = 4,
             CornerRadius = 2,
-            Color = Colors.LightGray,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
         };
+        handleBar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
         var handleContainer = new ContentView
         {
             Content = handleBar,
@@ -292,14 +294,15 @@ class CalendarSheetPicker : ContentView
         for (var i = 0; i < 7; i++)
         {
             var idx = (first + i) % 7;
-            dayHeaderGrid.Add(new Label
+            var header = new Label
             {
                 Text = names[idx].ToUpperInvariant()[..2],
                 FontSize = 11,
-                TextColor = Colors.Gray,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center
-            }, i);
+            };
+            header.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            dayHeaderGrid.Add(header, i);
         }
     }
 
@@ -338,23 +341,24 @@ class CalendarSheetPicker : ContentView
 
             if (isSelected)
             {
-                cellBorders[i].BackgroundColor = Colors.DodgerBlue;
-                dayLabels[i].TextColor = Colors.White;
+                cellBorders[i].SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+                dayLabels[i].SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
                 dayLabels[i].FontAttributes = FontAttributes.Bold;
                 todayIndicators[i].IsVisible = false;
             }
             else if (isToday)
             {
-                cellBorders[i].BackgroundColor = Colors.Transparent;
-                dayLabels[i].TextColor = Colors.DodgerBlue;
+                ClearFill(cellBorders[i]);
+                dayLabels[i].SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Primary);
                 dayLabels[i].FontAttributes = FontAttributes.Bold;
                 todayIndicators[i].IsVisible = true;
-                todayIndicators[i].Color = Colors.DodgerBlue;
+                todayIndicators[i].SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
             }
             else
             {
-                cellBorders[i].BackgroundColor = Colors.Transparent;
-                dayLabels[i].TextColor = isCurrentMonth ? Colors.Black : Colors.LightGray;
+                ClearFill(cellBorders[i]);
+                dayLabels[i].SetDynamicResource(Label.TextColorProperty,
+                    isCurrentMonth ? ShinyThemeKeys.Color.OnSurface : ShinyThemeKeys.Color.OutlineVariant);
                 dayLabels[i].FontAttributes = FontAttributes.None;
                 todayIndicators[i].IsVisible = false;
             }
@@ -437,6 +441,13 @@ class CalendarSheetPicker : ContentView
             ApplyExpandedLayout(true);
         else
             ApplyCollapsedLayout(true);
+    }
+
+    /// <summary>Drops any themed fill so the cell goes back to transparent.</summary>
+    static void ClearFill(Border border)
+    {
+        border.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+        border.BackgroundColor = Colors.Transparent;
     }
 
     void OnCellTapped(int index)

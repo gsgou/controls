@@ -1,6 +1,7 @@
 using Shiny.Maui.Controls.ColorPicker.Internal;
 using MauiSlider = Microsoft.Maui.Controls.Slider;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.ColorPicker;
 
@@ -76,11 +77,13 @@ public partial class ColorPicker : ContentView
             WidthRequest = 44,
             HeightRequest = 44,
             StrokeThickness = 2,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             BackgroundColor = Colors.Black,
             VerticalOptions = LayoutOptions.Center
         };
+
+        // Only the swatch's frame is themed - its fill is the colour being picked.
+        previewSwatch.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
 
         hexEntry = new Entry
         {

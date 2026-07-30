@@ -23,7 +23,7 @@ public class RadioCell : CellBase
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
         nameof(AccentColor), typeof(Color), typeof(RadioCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(RadioCell), () =>
             {
                 ((RadioCell)b).UpdateAccentColor();
             }));
@@ -32,7 +32,17 @@ public class RadioCell : CellBase
     public static readonly BindableProperty SelectedValueProperty = BindableProperty.CreateAttached(
         "SelectedValue", typeof(object), typeof(RadioCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnSelectedValueChanged(b, o, n)));
+        // Attached, so the target is the section or table the radio group lives on, never a
+        // RadioCell - RadioCell's level would never be marked on it. What the handler needs
+        // built is the target's cell collection, so gate on the target's own level. Anything
+        // else carrying the value has no cells to update and needs no gate at all.
+        propertyChanged: (b, o, n) =>
+        {
+            if (b is TvTableView)
+                StyleGuard.WhenReady(b, typeof(TvTableView), () => OnSelectedValueChanged(b, o, n));
+            else if (b is TvTableSection)
+                StyleGuard.WhenReady(b, typeof(TvTableSection), () => OnSelectedValueChanged(b, o, n));
+        });
 
     public object? Value
     {

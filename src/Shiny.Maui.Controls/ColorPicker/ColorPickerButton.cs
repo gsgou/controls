@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.ColorPicker;
 
@@ -25,7 +26,6 @@ public class ColorPickerButton : ContentView
         buttonBorder = new Border
         {
             StrokeThickness = 2,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             Padding = new Thickness(12, 6),
             MinimumWidthRequest = 44,
@@ -34,6 +34,8 @@ public class ColorPickerButton : ContentView
             Content = buttonLabel,
             HorizontalOptions = LayoutOptions.Start
         };
+
+        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnButtonTapped;
@@ -46,21 +48,19 @@ public class ColorPickerButton : ContentView
         {
             Text = "Done",
             FontSize = 14,
-            TextColor = Colors.White,
-            BackgroundColor = Color.FromArgb("#007AFF"),
             CornerRadius = 8,
             HeightRequest = 36,
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
         };
+        doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();
 
         var popupBorder = new Border
         {
             StrokeThickness = 1,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
-            BackgroundColor = Colors.White,
             Padding = 0,
             Content = new VerticalStackLayout
             {
@@ -77,12 +77,15 @@ public class ColorPickerButton : ContentView
             VerticalOptions = LayoutOptions.Center
         };
 
+        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        popupBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
+
         var backdrop = new BoxView
         {
-            Color = Colors.Black,
             Opacity = 0.3,
             InputTransparent = false
         };
+        backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
         var backdropTap = new TapGestureRecognizer();
         backdropTap.Tapped += (_, _) => Close();
         backdrop.GestureRecognizers.Add(backdropTap);
@@ -110,7 +113,7 @@ public class ColorPickerButton : ContentView
         typeof(ColorPickerButton),
         Colors.Red,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPickerButton), () =>
             {
                 ((ColorPickerButton)b).OnSelectedColorChanged((Color)n);
             }));
@@ -126,7 +129,7 @@ public class ColorPickerButton : ContentView
         typeof(string),
         typeof(ColorPickerButton),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPickerButton), () =>
             {
                 ((ColorPickerButton)b).buttonLabel.Text = (string?)n;
             }));
@@ -142,7 +145,7 @@ public class ColorPickerButton : ContentView
         typeof(bool),
         typeof(ColorPickerButton),
         false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPickerButton), () =>
             {
                 ((ColorPickerButton)b).picker.ShowOpacity = (bool)n;
             }));
@@ -158,7 +161,7 @@ public class ColorPickerButton : ContentView
         typeof(int),
         typeof(ColorPickerButton),
         8,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPickerButton), () =>
             {
                 ((ColorPickerButton)b).buttonBorder.StrokeShape =
                 new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n };

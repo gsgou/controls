@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
 class CalendarDayCell : ContentView
@@ -15,9 +17,10 @@ class CalendarDayCell : ContentView
     bool showCountOnly;
     DataTemplate? eventTemplate;
     DataTemplate? overflowTemplate;
-    Color cellColor = Colors.White;
-    Color selectedColor = Colors.LightBlue;
-    Color currentDayColor = Colors.DodgerBlue;
+    // null => follow the active theme pack. A consumer-supplied colour wins.
+    Color? cellColor;
+    Color? selectedColor;
+    Color? currentDayColor;
 
     public CalendarDayCell()
     {
@@ -107,19 +110,19 @@ class CalendarDayCell : ContentView
         set { overflowTemplate = value; RefreshEvents(); }
     }
 
-    public Color CellColor
+    public Color? CellColor
     {
         get => cellColor;
         set { cellColor = value; RefreshAppearance(); }
     }
 
-    public Color SelectedColor
+    public Color? SelectedColor
     {
         get => selectedColor;
         set { selectedColor = value; RefreshAppearance(); }
     }
 
-    public Color CurrentDayColor
+    public Color? CurrentDayColor
     {
         get => currentDayColor;
         set { currentDayColor = value; RefreshAppearance(); }
@@ -140,16 +143,35 @@ class CalendarDayCell : ContentView
 
         if (isToday)
         {
-            dateLabel.TextColor = Colors.White;
-            dateLabel.BackgroundColor = currentDayColor;
+            Apply(dateLabel, Label.TextColorProperty, null, ShinyThemeKeys.Color.OnPrimary);
+            Apply(dateLabel, VisualElement.BackgroundColorProperty, currentDayColor, ShinyThemeKeys.Color.Primary);
         }
         else
         {
-            dateLabel.TextColor = isCurrentMonth ? Colors.Black : Colors.Gray;
+            Apply(dateLabel, Label.TextColorProperty, null,
+                isCurrentMonth ? ShinyThemeKeys.Color.OnSurface : ShinyThemeKeys.Color.OnSurfaceVariant);
+            dateLabel.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
             dateLabel.BackgroundColor = Colors.Transparent;
         }
 
-        BackgroundColor = isSelected ? selectedColor : cellColor;
+        if (isSelected)
+            Apply(this, VisualElement.BackgroundColorProperty, selectedColor, ShinyThemeKeys.Color.SecondaryContainer);
+        else
+            Apply(this, VisualElement.BackgroundColorProperty, cellColor, ShinyThemeKeys.Color.Surface);
+    }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Apply(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
 
     void RefreshEvents()
@@ -161,13 +183,14 @@ class CalendarDayCell : ContentView
 
         if (showCountOnly)
         {
-            eventsStack.Children.Add(new Label
+            var countOnly = new Label
             {
                 Text = events.Count.ToString(),
                 FontSize = 10,
-                HorizontalTextAlignment = TextAlignment.Center,
-                TextColor = Colors.Gray
-            });
+                HorizontalTextAlignment = TextAlignment.Center
+            };
+            countOnly.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            eventsStack.Children.Add(countOnly);
             return;
         }
 
@@ -208,13 +231,14 @@ class CalendarDayCell : ContentView
             }
             else
             {
-                overflowView = new Label
+                var overflowLabel = new Label
                 {
                     Text = $"+{ctx.EventCount} more",
                     FontSize = 10,
-                    TextColor = Colors.Gray,
                     Padding = new Thickness(2, 0)
                 };
+                overflowLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+                overflowView = overflowLabel;
             }
             eventsStack.Children.Add(overflowView);
         }
@@ -233,12 +257,12 @@ class CalendarDayCell : ContentView
             Padding = new Thickness(1)
         };
 
-        grid.Add(new BoxView
-        {
-            Color = evt.Color ?? Colors.CornflowerBlue,
-            CornerRadius = 1,
-            WidthRequest = 3
-        }, 0);
+        var bar = new BoxView { CornerRadius = 1, WidthRequest = 3 };
+        if (evt.Color is { } eventColor)
+            bar.Color = eventColor;
+        else
+            bar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
+        grid.Add(bar, 0);
 
         grid.Add(new Label
         {

@@ -10,7 +10,7 @@ public partial class TextEntry
     public static readonly BindableProperty TextProperty = BindableProperty.Create(
         nameof(Text), typeof(string), typeof(TextEntry), string.Empty,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (te.suppressTextChanged) return;
@@ -39,7 +39,7 @@ public partial class TextEntry
     // Placeholder
     public static readonly BindableProperty PlaceholderProperty = BindableProperty.Create(
         nameof(Placeholder), typeof(string), typeof(TextEntry), string.Empty,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).ApplyPlaceholder((string)n);
             }));
@@ -48,7 +48,7 @@ public partial class TextEntry
     // PlaceholderColor — muted placeholder/text → on-surface-variant token (was #6C757D)
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (!te.isPlaceholderUp)
@@ -64,7 +64,7 @@ public partial class TextEntry
     // Variant — picks Classic (.form-control) or Floating (.form-floating)
     public static readonly BindableProperty VariantProperty = BindableProperty.Create(
         nameof(Variant), typeof(TextEntryVariant), typeof(TextEntry), TextEntryVariant.Classic,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).ApplyVariant();
             }));
@@ -73,7 +73,7 @@ public partial class TextEntry
     // Border — resting/valid border → outline token (was #CED4DA)
     public static readonly BindableProperty BorderColorProperty = BindableProperty.Create(
         nameof(BorderColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (!te.entry.IsFocused && !te.HasError)
@@ -88,7 +88,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty BorderThicknessProperty = BindableProperty.Create(
         nameof(BorderThickness), typeof(double), typeof(TextEntry), 1.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (!te.entry.IsFocused)
@@ -103,7 +103,7 @@ public partial class TextEntry
     // Bootstrap radius is .375rem = 6px
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(CornerRadius), typeof(TextEntry), new CornerRadius(6),
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).borderShape.CornerRadius = (CornerRadius)n;
             }));
@@ -112,7 +112,7 @@ public partial class TextEntry
     // Entry surface — defaults to the surface token (was white)
     public static readonly BindableProperty EntryBackgroundColorProperty = BindableProperty.Create(
         nameof(EntryBackgroundColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (n is Color c)
@@ -125,7 +125,7 @@ public partial class TextEntry
     // Font — Bootstrap base 1rem = 16
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(TextEntry), 16.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             var s = (double)n;
@@ -136,7 +136,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty FontFamilyProperty = BindableProperty.Create(
         nameof(FontFamily), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             te.entry.FontFamily = n as string;
@@ -146,7 +146,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty FontAttributesProperty = BindableProperty.Create(
         nameof(FontAttributes), typeof(FontAttributes), typeof(TextEntry), FontAttributes.None,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).entry.FontAttributes = (FontAttributes)n;
             }));
@@ -155,7 +155,7 @@ public partial class TextEntry
     // TextColor — entry body text → on-surface token (was #212529)
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
         nameof(TextColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
             if (n is Color c)
@@ -168,7 +168,7 @@ public partial class TextEntry
     // Entry behavior
     public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
         nameof(IsReadOnly), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).entry.IsReadOnly = (bool)n;
             }));
@@ -176,7 +176,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty IsPasswordProperty = BindableProperty.Create(
         nameof(IsPassword), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).entry.IsPassword = (bool)n;
             }));
@@ -184,7 +184,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty ReturnTypeProperty = BindableProperty.Create(
         nameof(ReturnType), typeof(ReturnType), typeof(TextEntry), ReturnType.Default,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).entry.ReturnType = (ReturnType)n;
             }));
@@ -192,7 +192,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty KeyboardProperty = BindableProperty.Create(
         nameof(Keyboard), typeof(Keyboard), typeof(TextEntry), Keyboard.Default,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             if (n is Keyboard k)
                 ((TextEntry)b).entry.Keyboard = k;
@@ -201,7 +201,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty MaxLengthProperty = BindableProperty.Create(
         nameof(MaxLength), typeof(int), typeof(TextEntry), int.MaxValue,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).entry.MaxLength = (int)n;
             }));
@@ -210,7 +210,7 @@ public partial class TextEntry
     // Hint / Validation
     public static readonly BindableProperty HintTextProperty = BindableProperty.Create(
         nameof(HintText), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).SyncHint();
             }));
@@ -219,7 +219,7 @@ public partial class TextEntry
     // Hint/helper text → on-surface-variant token (was Grey)
     public static readonly BindableProperty HintColorProperty = BindableProperty.Create(
         nameof(HintColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).SyncHint();
             }));
@@ -227,7 +227,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty HasErrorProperty = BindableProperty.Create(
         nameof(HasError), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).SyncHint();
             }));
@@ -236,7 +236,7 @@ public partial class TextEntry
     // Error/validation → error token (was #DC3545)
     public static readonly BindableProperty ErrorColorProperty = BindableProperty.Create(
         nameof(ErrorColor), typeof(Color), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).SyncHint();
             }));
@@ -244,7 +244,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty ShowCharacterCountProperty = BindableProperty.Create(
         nameof(ShowCharacterCount), typeof(bool), typeof(TextEntry), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).SyncHint();
             }));
@@ -253,7 +253,7 @@ public partial class TextEntry
     // Tools
     public static readonly BindableProperty LeftToolsProperty = BindableProperty.Create(
         nameof(LeftTools), typeof(IList<TextEntryTool>), typeof(TextEntry), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).OnToolsChanged(
             o as IList<TextEntryTool>,
@@ -264,7 +264,7 @@ public partial class TextEntry
 
     public static readonly BindableProperty RightToolsProperty = BindableProperty.Create(
         nameof(RightTools), typeof(IList<TextEntryTool>), typeof(TextEntry), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).OnToolsChanged(
             o as IList<TextEntryTool>,
@@ -276,7 +276,7 @@ public partial class TextEntry
     // Mask
     public static readonly BindableProperty MaskProperty = BindableProperty.Create(
         nameof(Mask), typeof(string), typeof(TextEntry), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
                 ((TextEntry)b).OnMaskChanged();
             }));

@@ -1,6 +1,8 @@
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Scheduler.Internal;
 
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerAgendaView : ContentView
@@ -24,7 +26,7 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerAgendaView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).OnProviderChanged();
             }));
@@ -33,21 +35,21 @@ public class SchedulerAgendaView : ContentView
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerAgendaView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).OnSelectedDateChanged();
             }));
 
     public static readonly BindableProperty DaysToShowProperty = BindableProperty.Create(
         nameof(DaysToShow), typeof(int), typeof(SchedulerAgendaView), 1,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
 
     public static readonly BindableProperty ShowCarouselDatePickerProperty = BindableProperty.Create(
         nameof(ShowCarouselDatePicker), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).UpdateDatePickerVisibility();
             }));
@@ -55,7 +57,7 @@ public class SchedulerAgendaView : ContentView
     public static readonly BindableProperty DatePickerModeProperty = BindableProperty.Create(
         nameof(DatePickerMode), typeof(AgendaDatePickerMode), typeof(SchedulerAgendaView),
         AgendaDatePickerMode.Carousel,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).UpdateDatePickerVisibility();
             }));
@@ -68,7 +70,7 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty DayPickerItemTemplateProperty = BindableProperty.Create(
         nameof(DayPickerItemTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).datePicker.ItemTemplate =
             ((SchedulerAgendaView)b).DayPickerItemTemplate;
@@ -78,21 +80,21 @@ public class SchedulerAgendaView : ContentView
         nameof(LoaderTemplate), typeof(DataTemplate), typeof(SchedulerAgendaView));
 
     public static readonly BindableProperty CurrentTimeMarkerColorProperty = BindableProperty.Create(
-        nameof(CurrentTimeMarkerColor), typeof(Color), typeof(SchedulerAgendaView), Colors.Red,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        nameof(CurrentTimeMarkerColor), typeof(Color), typeof(SchedulerAgendaView), null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
-                ((SchedulerAgendaView)b).timeIndicator.MarkerColor = (Color)n;
+                ((SchedulerAgendaView)b).timeIndicator.MarkerColor = (Color?)n;
             }));
 
     public static readonly BindableProperty TimezoneColorProperty = BindableProperty.Create(
-        nameof(TimezoneColor), typeof(Color), typeof(SchedulerAgendaView), Colors.Gray);
+        nameof(TimezoneColor), typeof(Color), typeof(SchedulerAgendaView), null);
 
     public static readonly BindableProperty DefaultEventColorProperty = BindableProperty.Create(
-        nameof(DefaultEventColor), typeof(Color), typeof(SchedulerAgendaView), Colors.CornflowerBlue);
+        nameof(DefaultEventColor), typeof(Color), typeof(SchedulerAgendaView), null);
 
     public static readonly BindableProperty TimeSlotHeightProperty = BindableProperty.Create(
         nameof(TimeSlotHeight), typeof(double), typeof(SchedulerAgendaView), 60.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
@@ -105,7 +107,7 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).scrollView.Orientation =
             (bool)n ? ScrollOrientation.Vertical : ScrollOrientation.Neither;
@@ -113,29 +115,28 @@ public class SchedulerAgendaView : ContentView
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerAgendaView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).UpdateZoomGesture();
             }));
 
     public static readonly BindableProperty Use24HourTimeProperty = BindableProperty.Create(
         nameof(Use24HourTime), typeof(bool), typeof(SchedulerAgendaView), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
 
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
-        nameof(SeparatorColor), typeof(Color), typeof(SchedulerAgendaView),
-        Color.FromRgba(220, 220, 220, 120),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        nameof(SeparatorColor), typeof(Color), typeof(SchedulerAgendaView), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
 
     public static readonly BindableProperty ShowAdditionalTimezonesProperty = BindableProperty.Create(
         nameof(ShowAdditionalTimezones), typeof(bool), typeof(SchedulerAgendaView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
@@ -303,11 +304,8 @@ public class SchedulerAgendaView : ContentView
             Orientation = ScrollOrientation.Vertical
         };
 
-        loaderOverlay = new ContentView
-        {
-            BackgroundColor = Color.FromRgba(255, 255, 255, 200),
-            IsVisible = false
-        };
+        loaderOverlay = new ContentView { IsVisible = false, Opacity = 0.8 };
+        loaderOverlay.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         rootGrid = new Grid
         {
@@ -439,16 +437,17 @@ public class SchedulerAgendaView : ContentView
         dayHeadersGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
         if (showTz)
         {
-            dayHeadersGrid.Add(new Label
+            var localAbbrLabel = new Label
             {
                 Text = localAbbr,
                 FontSize = 10,
                 FontAttributes = FontAttributes.Bold,
-                TextColor = Colors.Gray,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center,
                 Padding = new Thickness(0, 4)
-            }, 0);
+            };
+            localAbbrLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            dayHeadersGrid.Add(localAbbrLabel, 0);
 
             // Additional tz headers
             for (var t = 0; t < AdditionalTimezones.Count; t++)
@@ -456,16 +455,17 @@ public class SchedulerAgendaView : ContentView
                 dayHeadersGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(56)));
                 var tz = AdditionalTimezones[t];
                 var abbr = GetTimezoneAbbreviation(tz);
-                dayHeadersGrid.Add(new Label
+                var abbrLabel = new Label
                 {
                     Text = abbr,
                     FontSize = 10,
                     FontAttributes = FontAttributes.Bold,
-                    TextColor = Colors.SlateGray,
                     HorizontalTextAlignment = TextAlignment.Center,
                     VerticalTextAlignment = TextAlignment.Center,
                     Padding = new Thickness(0, 4)
-                }, 1 + t);
+                };
+                abbrLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+                dayHeadersGrid.Add(abbrLabel, 1 + t);
             }
         }
 
@@ -541,7 +541,6 @@ public class SchedulerAgendaView : ContentView
                 {
                     Text = converted.ToString(timeFormat),
                     FontSize = 10,
-                    TextColor = Colors.SlateGray,
                     VerticalTextAlignment = TextAlignment.Center,
                     HorizontalTextAlignment = TextAlignment.End,
                     Padding = new Thickness(0, 0, 8, 0),
@@ -549,6 +548,7 @@ public class SchedulerAgendaView : ContentView
                     VerticalOptions = LayoutOptions.Start,
                     HeightRequest = 16
                 };
+                tzLbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
                 columnsGrid.Add(tzLbl, 1 + t, hour);
             }
         }
@@ -633,6 +633,14 @@ public class SchedulerAgendaView : ContentView
             ScrollToCurrentTime();
         }
         catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            // These loaders are `async void`, so anything escaping here is posted to the sync
+            // context and terminates the process - including an exception from the consumer's
+            // ISchedulerEventProvider. Surface it for debugging and leave the view usable rather
+            // than taking the host app down.
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] load failed: {ex}");
+        }
         finally
         {
             if (!token.IsCancellationRequested)

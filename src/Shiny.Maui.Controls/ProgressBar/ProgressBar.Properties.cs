@@ -10,7 +10,7 @@ public partial class ProgressBar
     public static readonly BindableProperty ValueProperty = BindableProperty.Create(
         nameof(Value), typeof(double), typeof(ProgressBar), 0.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
             var pb = (ProgressBar)b;
             pb.OnValueChanged((double)o, (double)n);
@@ -19,7 +19,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty MinimumProperty = BindableProperty.Create(
         nameof(Minimum), typeof(double), typeof(ProgressBar), 0.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -27,7 +27,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty MaximumProperty = BindableProperty.Create(
         nameof(Maximum), typeof(double), typeof(ProgressBar), 100.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -36,7 +36,7 @@ public partial class ProgressBar
     // Appearance
     public static readonly BindableProperty TrackColorProperty = BindableProperty.Create(
         nameof(TrackColor), typeof(Color), typeof(ProgressBar), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
             var pb = (ProgressBar)b;
             if (n is Color c)
@@ -49,7 +49,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty BarColorProperty = BindableProperty.Create(
         nameof(BarColor), typeof(Color), typeof(ProgressBar), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -58,7 +58,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty TrackHeightProperty = BindableProperty.Create(
         nameof(TrackHeight), typeof(double), typeof(ProgressBar), 8.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -66,7 +66,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(double), typeof(ProgressBar), 4.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -75,7 +75,7 @@ public partial class ProgressBar
     // Gradient
     public static readonly BindableProperty UseGradientProperty = BindableProperty.Create(
         nameof(UseGradient), typeof(bool), typeof(ProgressBar), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -83,7 +83,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty GradientStartColorProperty = BindableProperty.Create(
         nameof(GradientStartColor), typeof(Color), typeof(ProgressBar), Color.FromArgb("#3B82F6"),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -91,7 +91,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty GradientEndColorProperty = BindableProperty.Create(
         nameof(GradientEndColor), typeof(Color), typeof(ProgressBar), Color.FromArgb("#8B5CF6"),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -100,7 +100,7 @@ public partial class ProgressBar
     // Pulse (Vista-style shimmer sweep)
     public static readonly BindableProperty PulseEnabledProperty = BindableProperty.Create(
         nameof(PulseEnabled), typeof(bool), typeof(ProgressBar), false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).OnPulseEnabledChanged((bool)n);
             }));
@@ -112,7 +112,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty PulseIntervalProperty = BindableProperty.Create(
         nameof(PulseInterval), typeof(TimeSpan), typeof(ProgressBar), TimeSpan.Zero,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).ConfigurePulseTimer();
             }));
@@ -128,7 +128,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty PulseLengthProperty = BindableProperty.Create(
         nameof(PulseLength), typeof(double), typeof(ProgressBar), 0.4,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdatePulseOverlaySize();
             }));
@@ -141,7 +141,7 @@ public partial class ProgressBar
     // Text
     public static readonly BindableProperty ShowTextProperty = BindableProperty.Create(
         nameof(ShowText), typeof(bool), typeof(ProgressBar), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -149,7 +149,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty TextFormatProperty = BindableProperty.Create(
         nameof(TextFormat), typeof(string), typeof(ProgressBar), "{0:0}%",
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).UpdateVisuals();
             }));
@@ -157,7 +157,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
         nameof(TextColor), typeof(Color), typeof(ProgressBar), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
             var pb = (ProgressBar)b;
             if (n is Color c)
@@ -170,7 +170,7 @@ public partial class ProgressBar
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(ProgressBar), 11.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).progressLabel.FontSize = (double)n;
             }));
@@ -179,7 +179,7 @@ public partial class ProgressBar
     // Indeterminate
     public static readonly BindableProperty IsIndeterminateProperty = BindableProperty.Create(
         nameof(IsIndeterminate), typeof(bool), typeof(ProgressBar), false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
                 ((ProgressBar)b).OnIndeterminateChanged((bool)n);
             }));

@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -19,7 +20,7 @@ public class SimpleCheckCell : CellBase
     public static readonly BindableProperty CheckedProperty = BindableProperty.Create(
         nameof(Checked), typeof(bool), typeof(SimpleCheckCell), false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(SimpleCheckCell), () =>
             {
                 ((SimpleCheckCell)b).UpdateCheckVisibility();
             }));
@@ -29,7 +30,7 @@ public class SimpleCheckCell : CellBase
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
         nameof(AccentColor), typeof(Color), typeof(SimpleCheckCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(SimpleCheckCell), () =>
             {
                 ((SimpleCheckCell)b).UpdateCheckColor();
             }));
@@ -72,11 +73,26 @@ public class SimpleCheckCell : CellBase
 
     void UpdateCheckColor()
     {
-        checkLabel.TextColor = AccentColor ?? ParentTableView?.CellAccentColor ?? Colors.Blue;
+        Tint(checkLabel, Label.TextColorProperty,
+            AccentColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
     }
 
     protected override void OnTapped()
     {
         Checked = !Checked;
+    }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
 }

@@ -10,8 +10,6 @@
 
     <shiny:ChatView Provider="{Binding Provider}"
                     SessionId="{Binding SessionId}"
-                    MyBubbleColor="#DCF8C6"
-                    OtherBubbleColor="White"
                     PlaceholderText="Type a message...">
         <shiny:ChatView.MessageTemplateSelector>
             <local:ChatMessageTemplateSelector>

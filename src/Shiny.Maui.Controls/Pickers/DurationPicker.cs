@@ -1,5 +1,6 @@
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Pickers;
 
@@ -12,7 +13,7 @@ public class DurationPicker : ContentView
     public static readonly BindableProperty DurationProperty = BindableProperty.Create(
         nameof(Duration), typeof(TimeSpan?), typeof(DurationPicker), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPicker), () =>
             {
                 ((DurationPicker)b).UpdateDisplayText();
             }));
@@ -25,31 +26,31 @@ public class DurationPicker : ContentView
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(DurationPicker), @"h\:mm",
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPicker), () =>
             {
                 ((DurationPicker)b).UpdateDisplayText();
             }));
 
     public static readonly BindableProperty PlaceholderProperty = BindableProperty.Create(
         nameof(Placeholder), typeof(string), typeof(DurationPicker), "Select duration",
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPicker), () =>
             {
                 ((DurationPicker)b).UpdateDisplayText();
             }));
 
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
-        nameof(PlaceholderColor), typeof(Color), typeof(DurationPicker), Colors.Gray);
+        nameof(PlaceholderColor), typeof(Color), typeof(DurationPicker), null);
 
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
         nameof(TextColor), typeof(Color), typeof(DurationPicker), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPicker), () =>
             {
                 ((DurationPicker)b).UpdateDisplayText();
             }));
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(DurationPicker), 16d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(DurationPicker), () =>
             {
                 ((DurationPicker)b).valueLabel.FontSize = (double)n;
             }));
@@ -126,10 +127,10 @@ public class DurationPicker : ContentView
         {
             Text = "▼",
             FontSize = 10,
-            TextColor = Colors.Gray,
             VerticalOptions = LayoutOptions.Center,
             Margin = new Thickness(4, 0, 0, 0)
         };
+        chevron.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var layout = new HorizontalStackLayout
         {
@@ -142,10 +143,10 @@ public class DurationPicker : ContentView
             Content = layout,
             Padding = new Thickness(12, 8),
             StrokeThickness = 1,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             BackgroundColor = Colors.Transparent
         };
+        tapArea.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.Outline);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnTapped;
@@ -164,12 +165,12 @@ public class DurationPicker : ContentView
         if (Duration.HasValue)
         {
             valueLabel.Text = Duration.Value.ToString(Format);
-            valueLabel.TextColor = TextColor ?? (Color?)Label.TextColorProperty.DefaultValue ?? Colors.Black;
+            Tint(valueLabel, Label.TextColorProperty, TextColor, ShinyThemeKeys.Color.OnSurface);
         }
         else
         {
             valueLabel.Text = Placeholder;
-            valueLabel.TextColor = PlaceholderColor;
+            Tint(valueLabel, Label.TextColorProperty, PlaceholderColor, ShinyThemeKeys.Color.OnSurfaceVariant);
         }
     }
 
@@ -246,19 +247,21 @@ public class DurationPicker : ContentView
             HorizontalOptions = LayoutOptions.Fill
         };
         pickerGrid.Add(hourPicker, 0);
-        pickerGrid.Add(new Label
+        var hourUnit = new Label
         {
             Text = "hr",
-            VerticalOptions = LayoutOptions.Center,
-            TextColor = Colors.Gray
-        }, 1);
+            VerticalOptions = LayoutOptions.Center
+        };
+        hourUnit.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        pickerGrid.Add(hourUnit, 1);
         pickerGrid.Add(minutePicker, 2);
-        pickerGrid.Add(new Label
+        var minuteUnit = new Label
         {
             Text = "min",
-            VerticalOptions = LayoutOptions.Center,
-            TextColor = Colors.Gray
-        }, 3);
+            VerticalOptions = LayoutOptions.Center
+        };
+        minuteUnit.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        pickerGrid.Add(minuteUnit, 3);
 
         var doneButton = new Button
         {
@@ -283,10 +286,10 @@ public class DurationPicker : ContentView
         var cancelButton = new Button
         {
             Text = "Cancel",
-            BackgroundColor = Colors.Gray,
-            TextColor = Colors.White,
             HorizontalOptions = LayoutOptions.Fill
         };
+        cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
+        cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         cancelButton.Clicked += (_, _) => panel!.IsOpen = false;
 
         var buttonGrid = new Grid
@@ -318,5 +321,19 @@ public class DurationPicker : ContentView
                 buttonGrid
             }
         };
+    }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
 }

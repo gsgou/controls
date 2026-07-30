@@ -22,7 +22,7 @@ public class TextEntryStepperTool : TextEntryTool, ITextEntryAwareTool
     // Step
     public static readonly BindableProperty StepProperty = BindableProperty.Create(
         nameof(Step), typeof(double), typeof(TextEntryStepperTool), 1.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntryStepperTool), () =>
             {
                 ((TextEntryStepperTool)b).UpdateDisplayText();
             }));

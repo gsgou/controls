@@ -11,7 +11,7 @@ public partial class ColorPicker
         typeof(ColorPicker),
         Colors.Red,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPicker), () =>
             {
                 ((ColorPicker)b).OnSelectedColorChanged((Color)n);
             }));
@@ -27,7 +27,7 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPicker), () =>
             {
                 ((ColorPicker)b).OnShowOpacityChanged((bool)n);
             }));
@@ -43,7 +43,7 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPicker), () =>
             {
             var cp = (ColorPicker)b;
             cp.hexEntry.IsVisible = (bool)n;
@@ -60,7 +60,7 @@ public partial class ColorPicker
         typeof(bool),
         typeof(ColorPicker),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ColorPicker), () =>
             {
             var cp = (ColorPicker)b;
             cp.previewSwatch.IsVisible = (bool)n;

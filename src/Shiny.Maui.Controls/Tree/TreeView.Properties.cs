@@ -9,7 +9,7 @@ public partial class TreeView
     // ------------- Data -------------
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).OnItemsSourceChanged();
             }));
@@ -22,7 +22,7 @@ public partial class TreeView
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -35,7 +35,7 @@ public partial class TreeView
 
     public static readonly BindableProperty RootLoaderProperty = BindableProperty.Create(
         nameof(RootLoader), typeof(Func<Task<IEnumerable<object>>>), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).OnRootLoaderChanged();
             }));
@@ -78,7 +78,7 @@ public partial class TreeView
 
     public static readonly BindableProperty HasChildrenSelectorProperty = BindableProperty.Create(
         nameof(HasChildrenSelector), typeof(Func<object, bool>), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -96,7 +96,7 @@ public partial class TreeView
 
     public static readonly BindableProperty CanExpandSelectorProperty = BindableProperty.Create(
         nameof(CanExpandSelector), typeof(Func<object, bool>), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -109,7 +109,7 @@ public partial class TreeView
 
     public static readonly BindableProperty CanSelectSelectorProperty = BindableProperty.Create(
         nameof(CanSelectSelector), typeof(Func<object, bool>), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -123,7 +123,7 @@ public partial class TreeView
     // ------------- Selection -------------
     public static readonly BindableProperty SelectionModeProperty = BindableProperty.Create(
         nameof(SelectionMode), typeof(TreeSelectionMode), typeof(TreeView), TreeSelectionMode.Single,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).OnSelectionModeChanged();
             }));
@@ -137,7 +137,7 @@ public partial class TreeView
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(TreeView), null,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).OnSelectedItemPropertyChanged(n);
             }));
@@ -161,7 +161,7 @@ public partial class TreeView
     // ------------- Icons -------------
     public static readonly BindableProperty ExpandedIconProperty = BindableProperty.Create(
         nameof(ExpandedIcon), typeof(ImageSource), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshChevrons();
             }));
@@ -175,7 +175,7 @@ public partial class TreeView
 
     public static readonly BindableProperty CollapsedIconProperty = BindableProperty.Create(
         nameof(CollapsedIcon), typeof(ImageSource), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshChevrons();
             }));
@@ -189,7 +189,7 @@ public partial class TreeView
 
     public static readonly BindableProperty RetryIconProperty = BindableProperty.Create(
         nameof(RetryIcon), typeof(ImageSource), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshChevrons();
             }));
@@ -203,7 +203,7 @@ public partial class TreeView
 
     public static readonly BindableProperty ChevronColorProperty = BindableProperty.Create(
         nameof(ChevronColor), typeof(Color), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshChevrons();
             }));
@@ -217,7 +217,7 @@ public partial class TreeView
 
     public static readonly BindableProperty ChevronSizeProperty = BindableProperty.Create(
         nameof(ChevronSize), typeof(double), typeof(TreeView), 16d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -231,7 +231,7 @@ public partial class TreeView
     // ------------- Layout -------------
     public static readonly BindableProperty IndentSizeProperty = BindableProperty.Create(
         nameof(IndentSize), typeof(double), typeof(TreeView), 20d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -244,7 +244,7 @@ public partial class TreeView
 
     public static readonly BindableProperty RowSpacingProperty = BindableProperty.Create(
         nameof(RowSpacing), typeof(double), typeof(TreeView), 0d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).rowLayout.Spacing = (double)n;
             }));
@@ -257,7 +257,7 @@ public partial class TreeView
 
     public static readonly BindableProperty RowPaddingProperty = BindableProperty.Create(
         nameof(RowPadding), typeof(Thickness), typeof(TreeView), new Thickness(8, 6),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -271,7 +271,7 @@ public partial class TreeView
     // ------------- Guide lines -------------
     public static readonly BindableProperty ShowGuideLinesProperty = BindableProperty.Create(
         nameof(ShowGuideLines), typeof(bool), typeof(TreeView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -284,7 +284,7 @@ public partial class TreeView
 
     public static readonly BindableProperty GuideLineColorProperty = BindableProperty.Create(
         nameof(GuideLineColor), typeof(Color), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));
@@ -299,7 +299,7 @@ public partial class TreeView
     // ------------- Visuals -------------
     public static readonly BindableProperty SelectedBackgroundColorProperty = BindableProperty.Create(
         nameof(SelectedBackgroundColor), typeof(Color), typeof(TreeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshSelectionVisuals();
             }));
@@ -313,7 +313,7 @@ public partial class TreeView
 
     public static readonly BindableProperty RowBackgroundColorProperty = BindableProperty.Create(
         nameof(RowBackgroundColor), typeof(Color), typeof(TreeView), Colors.Transparent,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).RefreshSelectionVisuals();
             }));
@@ -327,7 +327,7 @@ public partial class TreeView
     // ------------- Drag/drop -------------
     public static readonly BindableProperty EnableDragDropProperty = BindableProperty.Create(
         nameof(EnableDragDrop), typeof(bool), typeof(TreeView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
             {
                 ((TreeView)b).Rebuild();
             }));

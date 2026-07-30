@@ -20,14 +20,14 @@ public class CheckboxCell : CellBase
     public static readonly BindableProperty CheckedProperty = BindableProperty.Create(
         nameof(Checked), typeof(bool), typeof(CheckboxCell), false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CheckboxCell), () =>
             {
                 ((CheckboxCell)b).checkBox.IsChecked = (bool)n;
             }));
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
         nameof(AccentColor), typeof(Color), typeof(CheckboxCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CheckboxCell), () =>
             {
                 ((CheckboxCell)b).UpdateCheckBoxColor();
             }));

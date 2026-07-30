@@ -124,7 +124,7 @@ public class AddressEntry : ContentView
         typeof(AddressEntry),
         null,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).OnSelectedAddressChanged(n as Address);
             }));
@@ -161,7 +161,7 @@ public class AddressEntry : ContentView
         typeof(string),
         typeof(AddressEntry),
         "Search address...",
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.Placeholder = (string)n;
             }));
@@ -176,7 +176,7 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.TextColor = n as Color;
             }));
@@ -191,7 +191,7 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.PlaceholderColor = n as Color;
             }));
@@ -206,7 +206,7 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBackgroundColor = c; }));
     public Color? DropDownBackgroundColor
     {
@@ -219,7 +219,7 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBorderColor = c; }));
     public Color? DropDownBorderColor
     {
@@ -232,7 +232,7 @@ public class AddressEntry : ContentView
         typeof(Color),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             { if (n is Color c) ((AddressEntry)b).autoComplete.SpinnerColor = c; }));
     public Color? SpinnerColor
     {
@@ -245,7 +245,7 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         250d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.MaxDropDownHeight = (double)n;
             }));
@@ -260,7 +260,7 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         14d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.FontSize = (double)n;
             }));
@@ -275,7 +275,7 @@ public class AddressEntry : ContentView
         typeof(string),
         typeof(AddressEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.FontFamily = n as string;
             }));
@@ -290,7 +290,7 @@ public class AddressEntry : ContentView
         typeof(double),
         typeof(AddressEntry),
         4d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
             {
                 ((AddressEntry)b).autoComplete.CornerRadius = (double)n;
             }));

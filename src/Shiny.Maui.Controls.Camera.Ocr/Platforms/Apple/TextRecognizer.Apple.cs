@@ -9,7 +9,7 @@ namespace Shiny.Maui.Controls.Camera.Ocr;
 
 public partial class TextRecognizer
 {
-    private partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct)
+    private partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, TextRecognitionOptions options, CancellationToken ct)
     {
         if (frame is not AppleCameraFrame apple)
             return Task.FromResult(new List<RecognizedText>());
@@ -20,13 +20,88 @@ public partial class TextRecognizer
 
         try
         {
-            // whole-frame OCR: boxes are in sensor space, so apply the frame's orientation
-            return Task.FromResult(RecognizeText(cg, frame));
+            if (options.RegionOfInterest is not { } roi)
+                // whole-frame OCR: boxes are in sensor space, so apply the frame's orientation
+                return Task.FromResult(RecognizeText(cg, frame, options.MinimumTextHeight));
+
+            return Task.FromResult(RecognizeRegion(cg, frame, roi, options));
         }
         catch (Exception ex)
         {
             return Task.FromException<List<RecognizedText>>(ex);
         }
+    }
+
+
+    // Region OCR. The ROI arrives in upright space but the CGImage is the raw sensor buffer, so the crop
+    // rectangle has to be inverted back into sensor coordinates first. Recognizing the crop (rather than
+    // setting Vision's regionOfInterest) is what actually helps small text: minimumTextHeight and Vision's
+    // internal downscale are both relative to the image it is handed, so a crop makes the text a far larger
+    // fraction of it — and upscaling that crop pushes it past the engine's resolution floor.
+    static List<RecognizedText> RecognizeRegion(CGImage full, CameraFrame frame, RectF roi, TextRecognitionOptions options)
+    {
+        var sensor = CoordinateTransform.InvertOrientation(Clamp(roi), frame.Rotation, frame.IsMirrored);
+
+        // integral pixel rect, clamped inside the image and never degenerate
+        var x = (int)MathF.Floor(sensor.X * full.Width);
+        var y = (int)MathF.Floor(sensor.Y * full.Height);
+        var w = (int)MathF.Ceiling(sensor.Width * full.Width);
+        var h = (int)MathF.Ceiling(sensor.Height * full.Height);
+        x = Math.Clamp(x, 0, (int)full.Width - 1);
+        y = Math.Clamp(y, 0, (int)full.Height - 1);
+        w = Math.Clamp(w, 1, (int)full.Width - x);
+        h = Math.Clamp(h, 1, (int)full.Height - y);
+
+        using var crop = full.WithImageInRect(new CGRect(x, y, w, h));
+        if (crop == null)
+            return RecognizeText(full, frame, options.MinimumTextHeight); // crop failed — whole frame is better than nothing
+
+        using var scaled = Upscale(crop, options.MinimumInputHeight);
+        var blocks = RecognizeText(scaled ?? crop, null, options.MinimumTextHeight);
+
+        // crop space -> full sensor space -> upright space
+        var sx = (float)x / full.Width;
+        var sy = (float)y / full.Height;
+        var sw = (float)w / full.Width;
+        var sh = (float)h / full.Height;
+
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            var b = blocks[i].BoundingBox;
+            var inSensor = new RectF(sx + b.X * sw, sy + b.Y * sh, b.Width * sw, b.Height * sh);
+            blocks[i] = blocks[i] with
+            {
+                BoundingBox = CoordinateTransform.ApplyOrientation(inSensor, frame.Rotation, frame.IsMirrored)
+            };
+        }
+        return blocks;
+    }
+
+
+    static RectF Clamp(RectF r)
+    {
+        var x = Math.Clamp(r.X, 0f, 1f);
+        var y = Math.Clamp(r.Y, 0f, 1f);
+        return new RectF(x, y, Math.Clamp(r.Width, 0.001f, 1f - x), Math.Clamp(r.Height, 0.001f, 1f - y));
+    }
+
+
+    // Resample the crop up so it is at least minHeight tall, preserving aspect. Returns null when no upscale
+    // is wanted or needed, so the caller keeps using the original and nothing is allocated.
+    static CGImage? Upscale(CGImage crop, int minHeight)
+    {
+        if (minHeight <= 0 || crop.Height >= minHeight)
+            return null;
+
+        var scale = (float)minHeight / crop.Height;
+        var w = Math.Max(1, (int)(crop.Width * scale));
+        var h = Math.Max(1, (int)(crop.Height * scale));
+
+        using var colorSpace = CGColorSpace.CreateDeviceRGB();
+        using var context = new CGBitmapContext(null, w, h, 8, 0, colorSpace, CGImageAlphaInfo.NoneSkipFirst);
+        context.InterpolationQuality = CGInterpolationQuality.High;
+        context.DrawImage(new CGRect(0, 0, w, h), crop);
+        return context.ToImage();
     }
 
     private partial Task<RecognizedDocument> RecognizeDocumentCoreAsync(CameraFrame frame, CancellationToken ct)
@@ -78,7 +153,7 @@ public partial class TextRecognizer
 
     // Run Vision text recognition over an image. When frameForOrientation is set the image is the raw sensor
     // buffer, so results are mapped into upright space; when null the image is already upright (a deskewed crop).
-    static List<RecognizedText> RecognizeText(CGImage image, CameraFrame? frameForOrientation)
+    static List<RecognizedText> RecognizeText(CGImage image, CameraFrame? frameForOrientation, float minimumTextHeight = 0f)
     {
         var blocks = new List<RecognizedText>();
         var request = new VNRecognizeTextRequest((req, err) =>
@@ -103,6 +178,11 @@ public partial class TextRecognizer
             // totals, dates) by snapping codes to words (0->O, 1->I). Our parsers fuzzy-match raw text.
             UsesLanguageCorrection = false
         };
+
+        // Vision ignores text shorter than this fraction of the image height; the default 1/32 is ~34px in a
+        // 1080p frame, which silently discards anything small (a plate, a distant sign) before we ever see it.
+        if (minimumTextHeight > 0f)
+            request.MinimumTextHeight = minimumTextHeight;
 
         using var handler = new VNImageRequestHandler(image, new NSDictionary());
         handler.Perform([request], out _);

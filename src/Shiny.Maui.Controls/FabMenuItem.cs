@@ -113,7 +113,7 @@ public class FabMenuItem : ContentView
         typeof(ImageSource),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             item.iconImage.Source = n as ImageSource;
@@ -130,7 +130,7 @@ public class FabMenuItem : ContentView
         typeof(string),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             item.label.Text = n as string ?? string.Empty;
@@ -169,7 +169,7 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             if (n is Color c)
@@ -188,7 +188,7 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             if (n is Color c)
                 ((FabMenuItem)b).iconBorder.Stroke = c;
@@ -204,7 +204,7 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         0.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
                 ((FabMenuItem)b).iconBorder.StrokeThickness = (double)n;
             }));
@@ -219,7 +219,7 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             if (n is Color c)
@@ -238,7 +238,7 @@ public class FabMenuItem : ContentView
         typeof(Color),
         typeof(FabMenuItem),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             if (n is Color c)
@@ -257,7 +257,7 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
                 ((FabMenuItem)b).label.FontSize = (double)n;
             }));
@@ -272,7 +272,7 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             var s = (double)n;
@@ -294,7 +294,7 @@ public class FabMenuItem : ContentView
         typeof(double),
         typeof(FabMenuItem),
         DefaultIconSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
             {
             var item = (FabMenuItem)b;
             var s = (double)n;

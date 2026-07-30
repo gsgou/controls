@@ -20,14 +20,14 @@ public class SwitchCell : CellBase
     public static readonly BindableProperty OnProperty = BindableProperty.Create(
         nameof(On), typeof(bool), typeof(SwitchCell), false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(SwitchCell), () =>
             {
                 ((SwitchCell)b).switchControl.IsToggled = (bool)n;
             }));
 
     public static readonly BindableProperty OnColorProperty = BindableProperty.Create(
         nameof(OnColor), typeof(Color), typeof(SwitchCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(SwitchCell), () =>
             {
                 ((SwitchCell)b).UpdateSwitchColor();
             }));

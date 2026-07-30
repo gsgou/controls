@@ -2,6 +2,7 @@ using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -17,14 +18,14 @@ public class ButtonCell : CellBase
 
     public static readonly BindableProperty ButtonTextColorProperty = BindableProperty.Create(
         nameof(ButtonTextColor), typeof(Color), typeof(ButtonCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ButtonCell), () =>
             {
                 ((ButtonCell)b).UpdateButtonColor();
             }));
 
     public static readonly BindableProperty TitleAlignmentProperty = BindableProperty.Create(
         nameof(TitleAlignment), typeof(TextAlignment), typeof(ButtonCell), TextAlignment.Center,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ButtonCell), () =>
             {
                 ((ButtonCell)b).UpdateTitleAlignment();
             }));
@@ -79,7 +80,8 @@ public class ButtonCell : CellBase
 
     void UpdateButtonColor()
     {
-        buttonLabel.TextColor = ButtonTextColor ?? ParentTableView?.CellAccentColor ?? Colors.Blue;
+        Tint(buttonLabel, Label.TextColorProperty,
+            ButtonTextColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
     }
 
     void UpdateTitleAlignment()
@@ -91,5 +93,19 @@ public class ButtonCell : CellBase
     {
         if (Command?.CanExecute(CommandParameter) == true)
             Command.Execute(CommandParameter);
+    }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
 }

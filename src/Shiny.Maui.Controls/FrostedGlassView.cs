@@ -15,7 +15,7 @@ public class FrostedGlassView : ContentView
         typeof(View),
         typeof(FrostedGlassView),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FrostedGlassView), () =>
             {
                 ((FrostedGlassView)b).BuildLayout();
             }));
@@ -25,7 +25,7 @@ public class FrostedGlassView : ContentView
         typeof(double),
         typeof(FrostedGlassView),
         20d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FrostedGlassView), () =>
             {
                 ((FrostedGlassView)b).UpdateEffect();
             }));
@@ -35,7 +35,7 @@ public class FrostedGlassView : ContentView
         typeof(Color),
         typeof(FrostedGlassView),
         Color.FromRgba(255, 255, 255, 128),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FrostedGlassView), () =>
             {
                 ((FrostedGlassView)b).UpdateTint();
             }));
@@ -45,7 +45,7 @@ public class FrostedGlassView : ContentView
         typeof(double),
         typeof(FrostedGlassView),
         0.6,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FrostedGlassView), () =>
             {
                 ((FrostedGlassView)b).UpdateTint();
             }));
@@ -55,7 +55,7 @@ public class FrostedGlassView : ContentView
         typeof(double),
         typeof(FrostedGlassView),
         0d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FrostedGlassView), () =>
             {
                 ((FrostedGlassView)b).UpdateCornerRadius();
             }));

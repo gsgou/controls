@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
 class AllDayEventsSection : ContentView
@@ -32,19 +34,28 @@ class AllDayEventsSection : ContentView
             }
             else
             {
-                view = new Border
+                var chipLabel = new Label { Text = evt.Title, FontSize = 11 };
+                var chip = new Border
                 {
-                    BackgroundColor = evt.Color ?? Colors.CornflowerBlue,
                     StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
                     Stroke = Colors.Transparent,
                     Padding = new Thickness(8, 2),
-                    Content = new Label
-                    {
-                        Text = evt.Title,
-                        TextColor = Colors.White,
-                        FontSize = 11
-                    }
+                    Content = chipLabel
                 };
+
+                // The event's own colour wins; otherwise the chip follows the theme accent.
+                if (evt.Color is { } chipColor)
+                {
+                    chip.BackgroundColor = chipColor;
+                    chipLabel.TextColor = Colors.White;
+                }
+                else
+                {
+                    chip.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+                    chipLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+                }
+
+                view = chip;
             }
 
             if (onTapped != null)

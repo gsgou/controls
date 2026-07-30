@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
 class CurrentTimeIndicator : ContentView
@@ -10,7 +12,6 @@ class CurrentTimeIndicator : ContentView
     {
         dot = new BoxView
         {
-            Color = Colors.Red,
             CornerRadius = 4,
             WidthRequest = 8,
             HeightRequest = 8,
@@ -21,7 +22,6 @@ class CurrentTimeIndicator : ContentView
         {
             FontSize = 9,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.Red,
             VerticalOptions = LayoutOptions.Center,
             VerticalTextAlignment = TextAlignment.Center,
             Margin = new Thickness(2, 0, 0, 0)
@@ -29,10 +29,12 @@ class CurrentTimeIndicator : ContentView
 
         line = new BoxView
         {
-            Color = Colors.Red,
             HeightRequest = 2,
             VerticalOptions = LayoutOptions.Center
         };
+
+        // "now" marker follows the theme's Error role unless the consumer overrides MarkerColor.
+        this.ApplyThemeMarker();
 
         var grid = new Grid
         {
@@ -52,14 +54,31 @@ class CurrentTimeIndicator : ContentView
         Content = grid;
     }
 
-    public Color MarkerColor
+    public Color? MarkerColor
     {
         set
         {
+            if (value is null)
+            {
+                this.ApplyThemeMarker();
+                return;
+            }
+
+            line.RemoveDynamicResource(BoxView.ColorProperty);
+            dot.RemoveDynamicResource(BoxView.ColorProperty);
+            timeLabel.RemoveDynamicResource(Label.TextColorProperty);
+
             line.Color = value;
             dot.Color = value;
             timeLabel.TextColor = value;
         }
+    }
+
+    void ApplyThemeMarker()
+    {
+        line.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Error);
+        dot.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Error);
+        timeLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Error);
     }
 
     public void UpdateTime(bool use24HourTime)

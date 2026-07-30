@@ -10,7 +10,7 @@ public partial class Slider
     public static readonly BindableProperty ValueProperty = BindableProperty.Create(
         nameof(Value), typeof(double), typeof(Slider), 0.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -19,7 +19,7 @@ public partial class Slider
     // Minimum
     public static readonly BindableProperty MinimumProperty = BindableProperty.Create(
         nameof(Minimum), typeof(double), typeof(Slider), 0.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -28,7 +28,7 @@ public partial class Slider
     // Maximum
     public static readonly BindableProperty MaximumProperty = BindableProperty.Create(
         nameof(Maximum), typeof(double), typeof(Slider), 100.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -42,7 +42,7 @@ public partial class Slider
     // ColdColor
     public static readonly BindableProperty ColdColorProperty = BindableProperty.Create(
         nameof(ColdColor), typeof(Color), typeof(Slider), Color.FromArgb("#3B82F6"),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -51,7 +51,7 @@ public partial class Slider
     // HotColor
     public static readonly BindableProperty HotColorProperty = BindableProperty.Create(
         nameof(HotColor), typeof(Color), typeof(Slider), Color.FromArgb("#EF4444"),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -60,7 +60,7 @@ public partial class Slider
     // TrackHeight
     public static readonly BindableProperty TrackHeightProperty = BindableProperty.Create(
         nameof(TrackHeight), typeof(double), typeof(Slider), 8.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -69,7 +69,7 @@ public partial class Slider
     // ThumbSize
     public static readonly BindableProperty ThumbSizeProperty = BindableProperty.Create(
         nameof(ThumbSize), typeof(double), typeof(Slider), 24.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -78,7 +78,7 @@ public partial class Slider
     // ThumbColor
     public static readonly BindableProperty ThumbColorProperty = BindableProperty.Create(
         nameof(ThumbColor), typeof(Color), typeof(Slider), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
             var slider = (Slider)b;
             if (n is Color c)
@@ -93,7 +93,7 @@ public partial class Slider
     // ThumbBorderWidth
     public static readonly BindableProperty ThumbBorderWidthProperty = BindableProperty.Create(
         nameof(ThumbBorderWidth), typeof(double), typeof(Slider), 2.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -102,7 +102,7 @@ public partial class Slider
     // ShowTooltip
     public static readonly BindableProperty ShowTooltipProperty = BindableProperty.Create(
         nameof(ShowTooltip), typeof(bool), typeof(Slider), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -111,7 +111,7 @@ public partial class Slider
     // TooltipBackgroundColor
     public static readonly BindableProperty TooltipBackgroundColorProperty = BindableProperty.Create(
         nameof(TooltipBackgroundColor), typeof(Color), typeof(Slider), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -121,7 +121,7 @@ public partial class Slider
     // TooltipTextColor
     public static readonly BindableProperty TooltipTextColorProperty = BindableProperty.Create(
         nameof(TooltipTextColor), typeof(Color), typeof(Slider), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -131,7 +131,7 @@ public partial class Slider
     // TooltipFontSize
     public static readonly BindableProperty TooltipFontSizeProperty = BindableProperty.Create(
         nameof(TooltipFontSize), typeof(double), typeof(Slider), 12.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));
@@ -145,7 +145,7 @@ public partial class Slider
     // TooltipTemplate
     public static readonly BindableProperty TooltipTemplateProperty = BindableProperty.Create(
         nameof(TooltipTemplate), typeof(DataTemplate), typeof(Slider), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
                 ((Slider)b).UpdateVisuals();
             }));

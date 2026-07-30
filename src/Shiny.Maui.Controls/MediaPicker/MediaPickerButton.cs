@@ -137,7 +137,7 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty NoImagesTemplateProperty = BindableProperty.Create(
         nameof(NoImagesTemplate), typeof(DataTemplate), typeof(MediaPickerButton), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).ApplyNoImagesTemplate();
             }));
@@ -149,7 +149,7 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty ShowAsCarouselInViewProperty = BindableProperty.Create(
         nameof(ShowAsCarouselInView), typeof(bool), typeof(MediaPickerButton), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).UpdateView();
             }));
@@ -162,7 +162,7 @@ public class MediaPickerButton : ContentView
     public static readonly BindableProperty MaxPhotosProperty = BindableProperty.Create(
         nameof(MaxPhotos), typeof(int), typeof(MediaPickerButton), 1,
         validateValue: (_, v) => (int)v >= 1,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).UpdateView();
             }));
@@ -202,7 +202,7 @@ public class MediaPickerButton : ContentView
     public static readonly BindableProperty PhotosProperty = BindableProperty.Create(
         nameof(Photos), typeof(IList<MediaPickerItem>), typeof(MediaPickerButton), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).OnPhotosChanged(o as IList<MediaPickerItem>, n as IList<MediaPickerItem>);
             }));
@@ -215,7 +215,7 @@ public class MediaPickerButton : ContentView
     /// <summary>Custom thumbnail template for the inline carousel (item = <see cref="MediaPickerItem"/>).</summary>
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(MediaPickerButton), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).ApplyItemTemplate();
             }));
@@ -227,7 +227,7 @@ public class MediaPickerButton : ContentView
 
     public static readonly BindableProperty AddButtonTextProperty = BindableProperty.Create(
         nameof(AddButtonText), typeof(string), typeof(MediaPickerButton), "➕  Add Photo",
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(MediaPickerButton), () =>
             {
                 ((MediaPickerButton)b).addTriggerLabel.Text = (string)n;
             }));

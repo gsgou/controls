@@ -94,6 +94,81 @@ public partial class TextRecognizer
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
+    // Region OCR. MLKit has no region-of-interest and no minimum-text-height, so the crop is done here: build
+    // the sensor-space luminance bitmap once, then let Bitmap.CreateBitmap crop, orient and upscale it in a
+    // single filtered pass. Recognizing that crop is what makes small text (a plate, a distant sign) legible —
+    // MLKit downscales its input, so text that is a large fraction of a small image survives where the same
+    // text in a full frame does not.
+    async Task<List<RecognizedText>> RecognizeRegionAsync(CameraFrame frame, RectF roi, TextRecognitionOptions options)
+    {
+        int w = frame.Width, h = frame.Height;
+        var lum = frame.GetLuminance().ToArray();
+
+        // the ROI is in upright space; the luminance plane is raw sensor space
+        var clamped = Clamp(roi);
+        var sensor = CoordinateTransform.InvertOrientation(clamped, frame.Rotation, frame.IsMirrored);
+
+        var x = Math.Clamp((int)MathF.Floor(sensor.X * w), 0, w - 1);
+        var y = Math.Clamp((int)MathF.Floor(sensor.Y * h), 0, h - 1);
+        var cw = Math.Clamp((int)MathF.Ceiling(sensor.Width * w), 1, w - x);
+        var ch = Math.Clamp((int)MathF.Ceiling(sensor.Height * h), 1, h - y);
+
+        using var srcBitmap = LuminanceToBitmap(lum, w, h);
+
+        // sensor -> upright is rotate-then-mirror (the same order CoordinateTransform.ApplyOrientation uses),
+        // then the upscale. CreateBitmap re-normalizes the result's origin, so the crop comes out upright.
+        using var matrix = new Android.Graphics.Matrix();
+        matrix.PostRotate(frame.Rotation);
+        if (frame.IsMirrored)
+            matrix.PostScale(-1f, 1f);
+
+        // upright crop height in pixels, before scaling — that is what MinimumInputHeight is measured against
+        var uprightH = frame.Rotation is 90 or 270 ? cw : ch;
+        if (options.MinimumInputHeight > 0 && uprightH < options.MinimumInputHeight)
+        {
+            var scale = (float)options.MinimumInputHeight / uprightH;
+            matrix.PostScale(scale, scale);
+        }
+
+        using var crop = Android.Graphics.Bitmap.CreateBitmap(srcBitmap, x, y, cw, ch, matrix, true);
+        if (crop == null)
+            return [];
+
+        var input = InputImage.FromBitmap(crop, 0);
+        var result = await GmsTaskAwaiter.AwaitAsync(this.recognizer.Process(input)).ConfigureAwait(false);
+
+        var blocks = new List<RecognizedText>();
+        if (result is Text text)
+        {
+            foreach (var block in text.TextBlocks)
+            {
+                foreach (var line in block.Lines)
+                {
+                    var r = line.BoundingBox;
+                    if (r == null)
+                        continue;
+                    // the crop is already upright, so its own space maps linearly onto the upright ROI
+                    var box = new RectF(
+                        clamped.X + (float)r.Left / crop.Width * clamped.Width,
+                        clamped.Y + (float)r.Top / crop.Height * clamped.Height,
+                        (float)r.Width() / crop.Width * clamped.Width,
+                        (float)r.Height() / crop.Height * clamped.Height);
+                    blocks.Add(new RecognizedText(line.Text ?? string.Empty, box));
+                }
+            }
+        }
+        return blocks;
+    }
+
+
+    static RectF Clamp(RectF r)
+    {
+        var x = Math.Clamp(r.X, 0f, 1f);
+        var y = Math.Clamp(r.Y, 0f, 1f);
+        return new RectF(x, y, Math.Clamp(r.Width, 0.001f, 1f - x), Math.Clamp(r.Height, 0.001f, 1f - y));
+    }
+
+
     static Android.Graphics.Bitmap LuminanceToBitmap(byte[] lum, int w, int h)
     {
         var pixels = new int[w * h];
@@ -105,10 +180,13 @@ public partial class TextRecognizer
         return Android.Graphics.Bitmap.CreateBitmap(pixels, w, h, Android.Graphics.Bitmap.Config.Argb8888!);
     }
 
-    private async partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, CancellationToken ct)
+    private async partial Task<List<RecognizedText>> RecognizeCoreAsync(CameraFrame frame, TextRecognitionOptions options, CancellationToken ct)
     {
         if (frame is not AndroidCameraFrame android)
             return [];
+
+        if (options.RegionOfInterest is { } roi)
+            return await this.RecognizeRegionAsync(frame, roi, options).ConfigureAwait(false);
 
         var mediaImage = android.Proxy.Image;
         if (mediaImage == null)

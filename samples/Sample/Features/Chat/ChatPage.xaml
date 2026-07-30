@@ -13,8 +13,6 @@
                     SessionId="{Binding SessionId}"
                     InputActions="{Binding InputActions}"
                     CustomBubbleActions="{Binding CustomBubbleActions}"
-                    MyBubbleColor="#DCF8C6"
-                    OtherBubbleColor="White"
                     PlaceholderText="Type a message..." />
 
 </ContentPage>

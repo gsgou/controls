@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 namespace Shiny.Maui.Controls.FloatingPanel;
 
 public class OverlayHost : Grid
@@ -15,11 +16,12 @@ public class OverlayHost : Grid
 
         backdrop = new BoxView
         {
-            Color = BackdropColor,
             Opacity = 0,
             IsVisible = false,
             InputTransparent = true
         };
+        FloatingPanel.Tint(backdrop, BoxView.ColorProperty, this.BackdropColor, ShinyThemeKeys.Color.Scrim);
+
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnBackdropTapped;
         backdrop.GestureRecognizers.Add(tap);
@@ -34,15 +36,17 @@ public class OverlayHost : Grid
         nameof(BackdropColor),
         typeof(Color),
         typeof(OverlayHost),
-        Colors.Black,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(OverlayHost), () =>
             {
-                ((OverlayHost)b).backdrop.Color = (Color)n;
+                var host = (OverlayHost)b;
+                FloatingPanel.Tint(host.backdrop, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.Scrim);
             }));
 
-    public Color BackdropColor
+    /// <summary>Leave unset to follow the active theme's scrim.</summary>
+    public Color? BackdropColor
     {
-        get => (Color)GetValue(BackdropColorProperty);
+        get => (Color?)GetValue(BackdropColorProperty);
         set => SetValue(BackdropColorProperty, value);
     }
 

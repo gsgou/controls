@@ -33,7 +33,7 @@ public class PickerCell : CellBase
     public static readonly BindableProperty SelectedItemsProperty = BindableProperty.Create(
         nameof(SelectedItems), typeof(IList), typeof(PickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PickerCell), () =>
             {
                 ((PickerCell)b).UpdateDisplayText();
             }));
@@ -41,7 +41,7 @@ public class PickerCell : CellBase
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
         nameof(SelectedItem), typeof(object), typeof(PickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PickerCell), () =>
             {
                 ((PickerCell)b).UpdateDisplayText();
             }));
@@ -57,7 +57,7 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty UseAutoValueTextProperty = BindableProperty.Create(
         nameof(UseAutoValueText), typeof(bool), typeof(PickerCell), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PickerCell), () =>
             {
                 ((PickerCell)b).UpdateDisplayText();
             }));
@@ -76,7 +76,7 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(PickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PickerCell), () =>
             {
                 ((PickerCell)b).UpdateValueColor();
             }));
@@ -89,7 +89,7 @@ public class PickerCell : CellBase
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(PickerCell), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PickerCell), () =>
             {
                 ((PickerCell)b).arrowLabel.IsVisible = (bool)n;
             }));

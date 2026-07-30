@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Globalization;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -29,7 +30,7 @@ public class FontSizePicker : ContentView
         typeof(IList<double>),
         typeof(FontSizePicker),
         null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(FontSizePicker), () =>
             {
                 ((FontSizePicker)b).OnAvailableFontSizesChanged(o as IList<double>, n as IList<double>);
             }));
@@ -46,7 +47,7 @@ public class FontSizePicker : ContentView
         typeof(FontSizePicker),
         16.0,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FontSizePicker), () =>
             {
                 ((FontSizePicker)b).OnSelectedFontSizeChanged((double)n);
             }));
@@ -62,7 +63,7 @@ public class FontSizePicker : ContentView
         typeof(string),
         typeof(FontSizePicker),
         "Aa",
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FontSizePicker), () =>
             {
                 ((FontSizePicker)b).Rebuild();
             }));
@@ -137,9 +138,15 @@ public class FontSizePicker : ContentView
             if (child is Border b)
             {
                 var isSelected = b.StyleId == selected;
-                b.BackgroundColor = isSelected
-                    ? Color.FromArgb("#1F007AFF")
-                    : Colors.Transparent;
+                if (isSelected)
+                {
+                    b.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
+                }
+                else
+                {
+                    b.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+                    b.BackgroundColor = Colors.Transparent;
+                }
             }
         }
     }

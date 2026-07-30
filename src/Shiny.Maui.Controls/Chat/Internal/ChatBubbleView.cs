@@ -244,12 +244,22 @@ partial class ChatBubbleView : ContentView
             }
         }
 
-        // bubble colors
-        var bubbleColor = this.isMe
-            ? this.chatView.MyBubbleColor
-            : (user?.BubbleColor ?? this.chatView.OtherBubbleColor);
-        var textColor = this.isMe ? this.chatView.MyTextColor : this.chatView.OtherTextColor;
-        this.bubbleBorder.BackgroundColor = bubbleColor;
+        // Bubble colours. When nothing explicit is set anywhere in the chain the bubble binds to the
+        // theme token rather than resolving it once, so switching theme packs repaints live bubbles
+        // instead of waiting for them to be rebuilt.
+        var explicitBubble = this.isMe
+            ? this.chatView.ExplicitMyBubbleColor
+            : (user?.BubbleColor ?? this.chatView.ExplicitOtherBubbleColor);
+        var explicitText = this.isMe
+            ? this.chatView.ExplicitMyTextColor
+            : this.chatView.ExplicitOtherTextColor;
+
+        Tint(this.bubbleBorder, VisualElement.BackgroundColorProperty, explicitBubble,
+            this.isMe ? ShinyThemeKeys.Color.PrimaryContainer : ShinyThemeKeys.Color.SurfaceContainerHigh);
+
+        var bubbleColor = this.bubbleBorder.BackgroundColor;
+        var textColor = explicitText
+            ?? ThemeColor(this.isMe ? ShinyThemeKeys.Color.OnPrimaryContainer : ShinyThemeKeys.Color.OnSurface);
 
         var radius = this.chatView.BubbleCornerRadius;
         var tailRadius = isLast ? 4 : radius;
@@ -287,7 +297,7 @@ partial class ChatBubbleView : ContentView
                 textColor,
                 this.chatView.BubbleFontSize,
                 this.chatView.BubbleFontFamily,
-                Colors.CornflowerBlue);
+                ThemeColor(ShinyThemeKeys.Color.Primary));
             this.bubbleBorder.Padding = new Thickness(12, 8);
         }
 
@@ -358,7 +368,7 @@ partial class ChatBubbleView : ContentView
 
         this.statusLabel.Text = text;
         if (isError)
-            this.statusLabel.TextColor = Colors.Red;
+            this.statusLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Error);
         else
             this.statusLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.statusLabel.IsVisible = true;
@@ -450,4 +460,23 @@ partial class ChatBubbleView : ContentView
         if (this.BindingContext is ChatMessage msg)
             this.chatView.ShowBubbleActions(msg);
     }
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
+    }
+
+    static Color ThemeColor(string key)
+        => Application.Current?.Resources.TryGetValue(key, out var v) == true && v is Color c
+            ? c
+            : Colors.Transparent;
 }

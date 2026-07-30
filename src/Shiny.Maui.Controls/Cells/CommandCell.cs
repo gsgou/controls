@@ -17,7 +17,7 @@ public class CommandCell : LabelCell
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(CommandCell), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CommandCell), () =>
             {
                 ((CommandCell)b).arrowLabel.IsVisible = (bool)n;
             }));

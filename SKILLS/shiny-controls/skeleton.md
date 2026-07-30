@@ -122,6 +122,6 @@ Add the `shiny-skeleton__shape` class to any element in `SkeletonContent` to giv
 ## Notes
 
 - `SkeletonView` swaps between content and placeholders by visibility, so the control's height follows whichever is shown — size your placeholder to roughly match the loaded content to avoid layout jumps.
-- On MAUI the shimmer is a translating `LinearGradientBrush` band (same technique as the `ProgressBar` pulse); on Blazor it is an animated `background-position` gradient.
+- On MAUI the shimmer is a translating `LinearGradientBrush` band (same technique as the `ProgressBar` pulse); on Blazor it is an animated `background-position` gradient. The MAUI band is a plain layout, not a `BoxView` — a `BoxView` with no `Color` of its own inherits the host app's implicit `Style TargetType="BoxView"`, which in the .NET MAUI template sets `BackgroundColor` to near-black and turned the shimmer into a black bar sweeping over the placeholders.
 - For a full-screen "loading the whole page" experience use `LoadingOverlay` instead — `SkeletonView` is for inline content regions.
 - Both hosts mirror the same API: `IsBusy`, custom placeholder slot, item count/height/spacing, base/highlight colors, animation duration, and a shimmer on/off toggle.

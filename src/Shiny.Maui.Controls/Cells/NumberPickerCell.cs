@@ -20,7 +20,7 @@ public class NumberPickerCell : CellBase
     public static readonly BindableProperty NumberProperty = BindableProperty.Create(
         nameof(Number), typeof(int?), typeof(NumberPickerCell), null,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(NumberPickerCell), () =>
             {
                 ((NumberPickerCell)b).UpdateDisplayText();
             }));
@@ -33,7 +33,7 @@ public class NumberPickerCell : CellBase
 
     public static readonly BindableProperty UnitProperty = BindableProperty.Create(
         nameof(Unit), typeof(string), typeof(NumberPickerCell), string.Empty,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(NumberPickerCell), () =>
             {
                 ((NumberPickerCell)b).UpdateDisplayText();
             }));
@@ -46,7 +46,7 @@ public class NumberPickerCell : CellBase
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(NumberPickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(NumberPickerCell), () =>
             {
                 ((NumberPickerCell)b).UpdateValueColor();
             }));

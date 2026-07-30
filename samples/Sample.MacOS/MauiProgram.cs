@@ -2,6 +2,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Platforms.MacOS.Essentials;
 using Microsoft.Maui.Platforms.MacOS.Hosting;
 using Shiny;
+#if DEBUG
+using Microsoft.Maui.DevFlow.Agent;
+#endif
 
 namespace Sample.MacOS;
 
@@ -27,6 +30,7 @@ public static class MauiProgram
 #if DEBUG
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
         builder.Logging.AddDebug();
+        builder.AddMauiDevFlowAgent();
 #endif
 
         return builder.Build();

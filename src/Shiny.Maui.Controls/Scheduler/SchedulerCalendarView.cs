@@ -1,6 +1,8 @@
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Scheduler.Internal;
 
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerCalendarView : ContentView
@@ -25,7 +27,7 @@ public class SchedulerCalendarView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).OnProviderChanged();
             }));
@@ -34,7 +36,7 @@ public class SchedulerCalendarView : ContentView
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).OnSelectedDateChanged();
             }));
@@ -43,7 +45,7 @@ public class SchedulerCalendarView : ContentView
         nameof(DisplayMonth), typeof(DateOnly), typeof(SchedulerCalendarView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).OnDisplayMonthChanged();
             }));
@@ -64,45 +66,45 @@ public class SchedulerCalendarView : ContentView
         nameof(MaxEventsPerCell), typeof(int), typeof(SchedulerCalendarView), 3);
 
     public static readonly BindableProperty CalendarCellColorProperty = BindableProperty.Create(
-        nameof(CalendarCellColor), typeof(Color), typeof(SchedulerCalendarView), Colors.White);
+        nameof(CalendarCellColor), typeof(Color), typeof(SchedulerCalendarView), null);
 
     public static readonly BindableProperty CalendarCellSelectedColorProperty = BindableProperty.Create(
-        nameof(CalendarCellSelectedColor), typeof(Color), typeof(SchedulerCalendarView), Colors.LightBlue);
+        nameof(CalendarCellSelectedColor), typeof(Color), typeof(SchedulerCalendarView), null);
 
     public static readonly BindableProperty CurrentDayColorProperty = BindableProperty.Create(
-        nameof(CurrentDayColor), typeof(Color), typeof(SchedulerCalendarView), Colors.DodgerBlue);
+        nameof(CurrentDayColor), typeof(Color), typeof(SchedulerCalendarView), null);
 
     public static readonly BindableProperty FirstDayOfWeekProperty = BindableProperty.Create(
         nameof(FirstDayOfWeek), typeof(DayOfWeek), typeof(SchedulerCalendarView), DayOfWeek.Sunday,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).RebuildCalendar();
             }));
 
     public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
         nameof(MinDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).UpdateNavigationBounds();
             }));
 
     public static readonly BindableProperty MaxDateProperty = BindableProperty.Create(
         nameof(MaxDate), typeof(DateOnly?), typeof(SchedulerCalendarView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).UpdateNavigationBounds();
             }));
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarView), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).UpdateGestures();
             }));
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerCalendarView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarView), () =>
             {
                 ((SchedulerCalendarView)b).UpdateGestures();
             }));
@@ -155,21 +157,24 @@ public class SchedulerCalendarView : ContentView
         set => SetValue(MaxEventsPerCellProperty, value);
     }
 
-    public Color CalendarCellColor
+    /// <summary>Leave unset to follow the active theme.</summary>
+    public Color? CalendarCellColor
     {
-        get => (Color)GetValue(CalendarCellColorProperty);
+        get => (Color?)GetValue(CalendarCellColorProperty);
         set => SetValue(CalendarCellColorProperty, value);
     }
 
-    public Color CalendarCellSelectedColor
+    /// <summary>Leave unset to follow the active theme.</summary>
+    public Color? CalendarCellSelectedColor
     {
-        get => (Color)GetValue(CalendarCellSelectedColorProperty);
+        get => (Color?)GetValue(CalendarCellSelectedColorProperty);
         set => SetValue(CalendarCellSelectedColorProperty, value);
     }
 
-    public Color CurrentDayColor
+    /// <summary>Leave unset to follow the active theme.</summary>
+    public Color? CurrentDayColor
     {
-        get => (Color)GetValue(CurrentDayColorProperty);
+        get => (Color?)GetValue(CurrentDayColorProperty);
         set => SetValue(CurrentDayColorProperty, value);
     }
 
@@ -228,12 +233,12 @@ public class SchedulerCalendarView : ContentView
             Text = "<",
             FontSize = 18,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.DodgerBlue,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 44,
             BorderWidth = 0,
             Padding = 0
         };
+        prevButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
         nextButton = new Button
@@ -241,12 +246,12 @@ public class SchedulerCalendarView : ContentView
             Text = ">",
             FontSize = 18,
             FontAttributes = FontAttributes.Bold,
-            TextColor = Colors.DodgerBlue,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 44,
             BorderWidth = 0,
             Padding = 0
         };
+        nextButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         nextButton.Clicked += (_, _) => NavigateMonth(1);
 
         headerGrid = new Grid
@@ -282,11 +287,8 @@ public class SchedulerCalendarView : ContentView
             calendarGrid.Add(cell, i % 7, i / 7);
         }
 
-        loaderOverlay = new ContentView
-        {
-            BackgroundColor = Color.FromRgba(255, 255, 255, 200),
-            IsVisible = false
-        };
+        loaderOverlay = new ContentView { IsVisible = false, Opacity = 0.8 };
+        loaderOverlay.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         rootGrid = new Grid
         {
@@ -415,9 +417,9 @@ public class SchedulerCalendarView : ContentView
                 FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
                 HorizontalTextAlignment = TextAlignment.Center,
-                VerticalTextAlignment = TextAlignment.Center,
-                TextColor = Colors.Gray
+                VerticalTextAlignment = TextAlignment.Center
             };
+            lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             dayHeaderGrid.Add(lbl, i);
         }
     }
@@ -504,6 +506,14 @@ public class SchedulerCalendarView : ContentView
             }
         }
         catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            // These loaders are `async void`, so anything escaping here is posted to the sync
+            // context and terminates the process - including an exception from the consumer's
+            // ISchedulerEventProvider. Surface it for debugging and leave the view usable rather
+            // than taking the host app down.
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] load failed: {ex}");
+        }
         finally
         {
             if (!token.IsCancellationRequested)

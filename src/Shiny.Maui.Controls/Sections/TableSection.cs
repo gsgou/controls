@@ -34,42 +34,42 @@ public class TableSection : BindableObject
 
     public static readonly BindableProperty TitleProperty = BindableProperty.Create(
         nameof(Title), typeof(string), typeof(TableSection), string.Empty,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
 
     public static readonly BindableProperty FooterTextProperty = BindableProperty.Create(
         nameof(FooterText), typeof(string), typeof(TableSection), string.Empty,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
 
     public static readonly BindableProperty HeaderViewProperty = BindableProperty.Create(
         nameof(HeaderView), typeof(View), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
 
     public static readonly BindableProperty FooterViewProperty = BindableProperty.Create(
         nameof(FooterView), typeof(View), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
 
     public static readonly BindableProperty IsVisibleProperty = BindableProperty.Create(
         nameof(IsVisible), typeof(bool), typeof(TableSection), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
 
     public static readonly BindableProperty FooterVisibleProperty = BindableProperty.Create(
         nameof(FooterVisible), typeof(bool), typeof(TableSection), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));
@@ -109,25 +109,25 @@ public class TableSection : BindableObject
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnItemsSourceChanged(b, o, n)));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () => OnItemsSourceChanged(b, o, n)));
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(TableSection), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RegenerateTemplatedCells();
             }));
 
     public static readonly BindableProperty TemplateStartIndexProperty = BindableProperty.Create(
         nameof(TemplateStartIndex), typeof(int), typeof(TableSection), 0,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RegenerateTemplatedCells();
             }));
 
     public static readonly BindableProperty UseDragSortProperty = BindableProperty.Create(
         nameof(UseDragSort), typeof(bool), typeof(TableSection), false,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableSection), () =>
             {
                 ((TableSection)b).RaiseSectionChanged();
             }));

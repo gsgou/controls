@@ -101,11 +101,9 @@ internal class TreeNodeView : Grid
         // Drop indicators (always added; opacity toggled during drag)
         dropIndicatorAbove = MakeDropIndicator(LayoutOptions.Start);
         dropIndicatorBelow = MakeDropIndicator(LayoutOptions.End);
-        dropIndicatorInto = new Grid
-        {
-            BackgroundColor = Color.FromArgb("#330078D7"),
-            IsVisible = false
-        };
+        // Drop affordances follow the theme accent rather than a fixed Windows blue.
+        dropIndicatorInto = new Grid { IsVisible = false, Opacity = 0.2 };
+        dropIndicatorInto.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         Add(dropIndicatorInto);
         Add(dropIndicatorAbove);
         Add(dropIndicatorBelow);
@@ -149,15 +147,18 @@ internal class TreeNodeView : Grid
         return host;
     }
 
-    static Grid MakeDropIndicator(LayoutOptions vertical) =>
-        new Grid
+    static Grid MakeDropIndicator(LayoutOptions vertical)
+    {
+        var indicator = new Grid
         {
             HeightRequest = 2,
-            BackgroundColor = Color.FromArgb("#0078D7"),
             VerticalOptions = vertical,
             HorizontalOptions = LayoutOptions.Fill,
             IsVisible = false
         };
+        indicator.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        return indicator;
+    }
 
     public void RefreshChevron()
     {

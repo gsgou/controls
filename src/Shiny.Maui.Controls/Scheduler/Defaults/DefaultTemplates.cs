@@ -1,4 +1,5 @@
 using System.Globalization;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler;
 
@@ -17,7 +18,8 @@ public static class DefaultTemplates
             ColumnSpacing = 4
         };
 
-        var colorBar = new BoxView { CornerRadius = 2, Color = Colors.CornflowerBlue };
+        var colorBar = new BoxView { CornerRadius = 2 };
+        colorBar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
         colorBar.SetBinding(BoxView.ColorProperty, static (SchedulerEvent e) => e.Color);
 
         var titleLabel = new Label
@@ -39,42 +41,39 @@ public static class DefaultTemplates
         var label = new Label
         {
             FontSize = 10,
-            TextColor = Colors.Gray,
             Padding = new Thickness(6, 0)
         };
+        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         label.SetBinding(Label.TextProperty, static (CalendarOverflowContext c) => c.EventCount, stringFormat: "+{0} more");
         return label;
     });
 
     public static DataTemplate CreateLoaderTemplate() => new(() =>
     {
-        var stack = new VerticalStackLayout
+        var spinner = new ActivityIndicator { IsRunning = true };
+        spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.Primary);
+
+        var caption = new Label
+        {
+            Text = "Loading...",
+            FontSize = 12,
+            HorizontalTextAlignment = TextAlignment.Center
+        };
+        caption.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+        return new VerticalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
             Spacing = 8,
-            Children =
-            {
-                new ActivityIndicator { IsRunning = true, Color = Colors.CornflowerBlue },
-                new Label
-                {
-                    Text = "Loading...",
-                    FontSize = 12,
-                    HorizontalTextAlignment = TextAlignment.Center,
-                    TextColor = Colors.Gray
-                }
-            }
+            Children = { spinner, caption }
         };
-        return stack;
     });
 
     public static DataTemplate CreateCalendarListDayHeaderTemplate() => new(() =>
     {
-        var accentBar = new BoxView
-        {
-            WidthRequest = 4,
-            Color = Colors.DodgerBlue
-        };
+        var accentBar = new BoxView { WidthRequest = 4 };
+        accentBar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
         accentBar.SetBinding(VisualElement.IsVisibleProperty, static (CalendarListDayGroup g) => g.IsToday);
 
         var dot = new BoxView
@@ -82,9 +81,9 @@ public static class DefaultTemplates
             WidthRequest = 8,
             HeightRequest = 8,
             CornerRadius = 4,
-            Color = Colors.DodgerBlue,
             VerticalOptions = LayoutOptions.Center
         };
+        dot.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
         dot.SetBinding(VisualElement.IsVisibleProperty, static (CalendarListDayGroup g) => g.IsToday);
 
         var dateLabel = new Label
@@ -98,10 +97,10 @@ public static class DefaultTemplates
         var countLabel = new Label
         {
             FontSize = 12,
-            TextColor = Colors.Gray,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.End
         };
+        countLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         countLabel.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.EventCountDisplay);
 
         var grid = new Grid
@@ -115,9 +114,9 @@ public static class DefaultTemplates
             },
             Padding = new Thickness(0, 0, 12, 0),
             ColumnSpacing = 8,
-            BackgroundColor = Color.FromRgba(240, 240, 240, 255),
             MinimumHeightRequest = 36
         };
+        grid.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         grid.Add(accentBar, 0);
         grid.Add(dot, 1);
@@ -132,9 +131,9 @@ public static class DefaultTemplates
         var colorBar = new BoxView
         {
             WidthRequest = 4,
-            CornerRadius = 2,
-            Color = Colors.CornflowerBlue
+            CornerRadius = 2
         };
+        colorBar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
         colorBar.SetBinding(BoxView.ColorProperty, static (SchedulerEvent e) => e.Color);
 
         var titleLabel = new Label
@@ -148,43 +147,35 @@ public static class DefaultTemplates
         var descLabel = new Label
         {
             FontSize = 11,
-            TextColor = Colors.Gray,
             LineBreakMode = LineBreakMode.TailTruncation,
             MaxLines = 1
         };
+        descLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         descLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Description);
 
-        var startLabel = new Label
-        {
-            FontSize = 11,
-            TextColor = Colors.Gray
-        };
+        var startLabel = new Label { FontSize = 11 };
+        startLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         startLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Start, stringFormat: "{0:h:mm tt}");
 
-        var endLabel = new Label
-        {
-            FontSize = 11,
-            TextColor = Colors.Gray
-        };
+        var endLabel = new Label { FontSize = 11 };
+        endLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         endLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.End, stringFormat: "{0:h:mm tt}");
 
         var allDayLabel = new Label
         {
             FontSize = 11,
-            TextColor = Colors.Gray,
             Text = "All Day"
         };
+        allDayLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         allDayLabel.SetBinding(VisualElement.IsVisibleProperty, static (SchedulerEvent e) => e.IsAllDay);
+
+        var dash = new Label { Text = " – ", FontSize = 11 };
+        dash.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var timeRange = new HorizontalStackLayout
         {
             Spacing = 0,
-            Children =
-            {
-                startLabel,
-                new Label { Text = " – ", FontSize = 11, TextColor = Colors.Gray },
-                endLabel
-            }
+            Children = { startLabel, dash, endLabel }
         };
         timeRange.SetBinding(VisualElement.IsVisibleProperty, static (SchedulerEvent e) => e.IsAllDay,
             converter: new InverseBoolConverter());
@@ -221,12 +212,12 @@ public static class DefaultTemplates
         var border = new Border
         {
             Content = grid,
-            Stroke = Color.FromRgba(230, 230, 230, 255),
             StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
-            Margin = new Thickness(12, 2),
-            BackgroundColor = Colors.White
+            Margin = new Thickness(12, 2)
         };
+        border.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         return border;
     });
@@ -274,9 +265,28 @@ public static class DefaultTemplates
             var selected = ctx.IsSelected;
             var today = ctx.IsToday;
 
-            b.BackgroundColor = selected ? Colors.DodgerBlue : Colors.Transparent;
-            dayName.TextColor = today && !selected ? Colors.DodgerBlue : selected ? Colors.White : Colors.Gray;
-            dayNumber.TextColor = today && !selected ? Colors.DodgerBlue : selected ? Colors.White : Colors.Black;
+            // Themed via dynamic resources rather than literal colours so the picker follows the
+            // active theme pack. The unselected pill has no token (it is deliberately transparent),
+            // so that branch clears the dynamic resource before assigning.
+            if (selected)
+            {
+                b.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+            }
+            else
+            {
+                b.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+                b.BackgroundColor = Colors.Transparent;
+            }
+
+            dayName.SetDynamicResource(Label.TextColorProperty,
+                today && !selected ? ShinyThemeKeys.Color.Primary
+                : selected ? ShinyThemeKeys.Color.OnPrimary
+                : ShinyThemeKeys.Color.OnSurfaceVariant);
+
+            dayNumber.SetDynamicResource(Label.TextColorProperty,
+                today && !selected ? ShinyThemeKeys.Color.Primary
+                : selected ? ShinyThemeKeys.Color.OnPrimary
+                : ShinyThemeKeys.Color.OnSurface);
         };
 
         return circle;

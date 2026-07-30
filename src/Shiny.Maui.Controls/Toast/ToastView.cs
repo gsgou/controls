@@ -4,8 +4,13 @@ namespace Shiny.Maui.Controls.Toast;
 
 sealed class ToastView : ContentView
 {
-    static readonly Color DefaultBackground = Color.FromArgb("#323232");
-    static readonly Color DefaultTextColor = Colors.White;
+    // M3's neutral snackbar is the inverse surface pair, so the default toast follows the theme
+    // instead of a fixed dark grey. Resolved per-toast (these are one-shot, short-lived views).
+    static Color DefaultBackground => ThemeColor(ShinyThemeKeys.Color.InverseSurface, Color.FromArgb("#323232"));
+    static Color DefaultTextColor => ThemeColor(ShinyThemeKeys.Color.InverseOnSurface, Colors.White);
+
+    static Color ThemeColor(string key, Color fallback)
+        => Application.Current?.Resources.TryGetValue(key, out var v) == true && v is Color c ? c : fallback;
     static readonly Color ProgressBarColor = Color.FromArgb("#FFFFFF");
 
     readonly ToastConfig config;

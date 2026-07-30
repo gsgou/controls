@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -19,7 +20,6 @@ public class FontSizePickerButton : ContentView
         buttonLabel = new Label
         {
             FontSize = 13,
-            TextColor = Colors.White,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
         };
@@ -27,15 +27,17 @@ public class FontSizePickerButton : ContentView
         buttonBorder = new Border
         {
             StrokeThickness = 2,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             Padding = new Thickness(12, 6),
             MinimumWidthRequest = 60,
             MinimumHeightRequest = 36,
-            BackgroundColor = Color.FromArgb("#2C2C2E"),
             Content = buttonLabel,
             HorizontalOptions = LayoutOptions.Start
         };
+
+        buttonLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
+        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        buttonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnButtonTapped;
@@ -52,13 +54,13 @@ public class FontSizePickerButton : ContentView
         {
             Text = "Done",
             FontSize = 14,
-            TextColor = Colors.White,
-            BackgroundColor = Color.FromArgb("#007AFF"),
             CornerRadius = 8,
             HeightRequest = 36,
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
         };
+        doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();
 
         var pickerWithDone = new VerticalStackLayout
@@ -69,9 +71,7 @@ public class FontSizePickerButton : ContentView
         popupBorder = new Border
         {
             StrokeThickness = 1,
-            Stroke = Colors.LightGray,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
-            BackgroundColor = Colors.White,
             Padding = 0,
             Content = pickerWithDone,
             Shadow = new Shadow
@@ -88,11 +88,14 @@ public class FontSizePickerButton : ContentView
 
         var backdrop = new BoxView
         {
-            Color = Colors.Black,
             Opacity = 0.3,
             IsVisible = false,
             InputTransparent = false
         };
+        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        popupBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
+        backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
+
         var backdropTap = new TapGestureRecognizer();
         backdropTap.Tapped += (_, _) => Close();
         backdrop.GestureRecognizers.Add(backdropTap);
@@ -117,7 +120,7 @@ public class FontSizePickerButton : ContentView
         typeof(IList<double>),
         typeof(FontSizePickerButton),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FontSizePickerButton), () =>
             {
                 ((FontSizePickerButton)b).picker.AvailableFontSizes = n as IList<double>;
             }));
@@ -134,7 +137,7 @@ public class FontSizePickerButton : ContentView
         typeof(FontSizePickerButton),
         16.0,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FontSizePickerButton), () =>
             {
                 ((FontSizePickerButton)b).OnSelectedFontSizeChanged((double)n);
             }));
@@ -150,7 +153,7 @@ public class FontSizePickerButton : ContentView
         typeof(int),
         typeof(FontSizePickerButton),
         8,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FontSizePickerButton), () =>
             {
                 ((FontSizePickerButton)b).buttonBorder.StrokeShape =
                 new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = (int)n };

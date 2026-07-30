@@ -30,68 +30,68 @@ public class EntryCell : CellBase
     public static readonly BindableProperty ValueTextProperty = BindableProperty.Create(
         nameof(ValueText), typeof(string), typeof(EntryCell), string.Empty,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).OnValueTextChanged((string)n);
             }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(EntryCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).UpdateEntryColor();
             }));
 
     public static readonly BindableProperty ValueTextFontSizeProperty = BindableProperty.Create(
         nameof(ValueTextFontSize), typeof(double), typeof(EntryCell), -1d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).UpdateEntryFontSize();
             }));
 
     public static readonly BindableProperty ValueTextFontFamilyProperty = BindableProperty.Create(
         nameof(ValueTextFontFamily), typeof(string), typeof(EntryCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).UpdateEntryFontFamily();
             }));
 
     public static readonly BindableProperty ValueTextFontAttributesProperty = BindableProperty.Create(
         nameof(ValueTextFontAttributes), typeof(FontAttributes?), typeof(EntryCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).UpdateEntryFontAttributes();
             }));
 
     public static readonly BindableProperty PlaceholderProperty = BindableProperty.Create(
         nameof(Placeholder), typeof(string), typeof(EntryCell), string.Empty,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).entry.Placeholder = (string)n;
             }));
 
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(EntryCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             { if (n is Color c) ((EntryCell)b).entry.PlaceholderColor = c; }));
 
     public static readonly BindableProperty KeyboardProperty = BindableProperty.Create(
         nameof(Keyboard), typeof(Keyboard), typeof(EntryCell), Keyboard.Default,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).entry.Keyboard = (Keyboard)n;
             }));
 
     public static readonly BindableProperty IsPasswordProperty = BindableProperty.Create(
         nameof(IsPassword), typeof(bool), typeof(EntryCell), false,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).entry.IsPassword = (bool)n;
             }));
 
     public static readonly BindableProperty MaxLengthProperty = BindableProperty.Create(
         nameof(MaxLength), typeof(int), typeof(EntryCell), -1,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
             var cell = (EntryCell)b;
             cell.entry.MaxLength = (int)n > 0 ? (int)n : int.MaxValue;
@@ -99,7 +99,7 @@ public class EntryCell : CellBase
 
     public static readonly BindableProperty TextAlignmentProperty = BindableProperty.Create(
         nameof(TextAlignment), typeof(TextAlignment), typeof(EntryCell), TextAlignment.End,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
             {
                 ((EntryCell)b).entry.HorizontalTextAlignment = (TextAlignment)n;
             }));

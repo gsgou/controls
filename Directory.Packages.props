@@ -39,16 +39,18 @@
     <PackageVersion Include="Plugin.Maui.Audio" Version="4.0.0" />
     <PackageVersion Include="Shiny.Maui.Shell" Version="6.3.1" />
     <!-- maui-labs desktop hosts (preview/CI builds via dotnet10 feed in NuGet.config) -->
-    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.1.0-preview.10.26309.1" />
-    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.1.0-preview.10.26309.1" />
+    <!-- keep in step with Microsoft.Maui.DevFlow.* — the DevFlow agent pins the same maui-labs build -->
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS" Version="0.1.0-preview.12.26368.2" />
+    <PackageVersion Include="Microsoft.Maui.Platforms.MacOS.Essentials" Version="0.1.0-preview.12.26368.2" />
     <PackageVersion Include="Platform.Maui.Linux.Gtk4" Version="0.6.0" />
     <PackageVersion Include="Platform.Maui.Linux.Gtk4.Essentials" Version="0.6.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
-    <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.26170.4" />
-    <PackageVersion Include="Microsoft.Maui.DevFlow.Driver" Version="0.1.0-preview.26170.4" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Agent" Version="0.1.0-preview.12.26368.2" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Agent.Gtk" Version="0.1.0-preview.12.26368.2" />
+    <PackageVersion Include="Microsoft.Maui.DevFlow.Driver" Version="0.1.0-preview.12.26368.2" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="TUnit" Version="1.43.11" />
     <PackageVersion Include="xunit" Version="2.9.3" />

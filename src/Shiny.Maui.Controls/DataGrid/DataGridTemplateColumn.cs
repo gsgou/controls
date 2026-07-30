@@ -15,7 +15,7 @@ public class DataGridTemplateColumn : DataGridColumn
 
     internal override bool HasValue => false;
 
-    internal override object? GetValue(object? item) => null;
+    internal override object? GetCellValue(object? item) => null;
 
     internal override string? GetText(object? item) => null;
 }

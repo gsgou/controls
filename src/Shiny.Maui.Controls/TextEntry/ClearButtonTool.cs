@@ -8,7 +8,6 @@ public class ClearButtonTool : TextEntryTool, ITextEntryAwareTool
     public ClearButtonTool()
     {
         Text = "\u2715"; // unicode X
-        ToolColor = Colors.Grey;
         IsVisible = false;
         Clicked += OnClicked;
 

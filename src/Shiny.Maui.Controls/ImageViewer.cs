@@ -109,7 +109,7 @@ public class ImageViewer : ContentView
         typeof(ImageSource),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
             var viewer = (ImageViewer)b;
             var source = (ImageSource?)n;
@@ -130,7 +130,7 @@ public class ImageViewer : ContentView
         typeof(Aspect),
         typeof(ImageViewer),
         Aspect.AspectFit,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
                 ((ImageViewer)b).thumbnailImage.Aspect = (Aspect)n;
             }));
@@ -146,7 +146,7 @@ public class ImageViewer : ContentView
         typeof(Aspect),
         typeof(ImageViewer),
         Aspect.AspectFit,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
                 ((ImageViewer)b).overlayImage.Aspect = (Aspect)n;
             }));
@@ -175,7 +175,7 @@ public class ImageViewer : ContentView
         typeof(ImageViewer),
         false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
             var viewer = (ImageViewer)b;
             if ((bool)n)
@@ -195,7 +195,7 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
                 ((ImageViewer)b).ApplyCloseButtonTemplate();
             }));
@@ -211,7 +211,7 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
                 ((ImageViewer)b).ApplyHeaderTemplate();
             }));
@@ -227,7 +227,7 @@ public class ImageViewer : ContentView
         typeof(DataTemplate),
         typeof(ImageViewer),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
             {
                 ((ImageViewer)b).ApplyFooterTemplate();
             }));

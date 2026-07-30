@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.FontPicker;
 
@@ -32,7 +33,7 @@ public class FontPicker : ContentView
         typeof(IList<string>),
         typeof(FontPicker),
         null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(FontPicker), () =>
             {
                 ((FontPicker)b).OnAvailableFontsChanged(o as IList<string>, n as IList<string>);
             }));
@@ -49,7 +50,7 @@ public class FontPicker : ContentView
         typeof(FontPicker),
         null,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FontPicker), () =>
             {
                 ((FontPicker)b).OnSelectedFontChanged(n as string);
             }));
@@ -65,7 +66,7 @@ public class FontPicker : ContentView
         typeof(string),
         typeof(FontPicker),
         "The quick brown fox",
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FontPicker), () =>
             {
                 ((FontPicker)b).Rebuild();
             }));
@@ -81,7 +82,7 @@ public class FontPicker : ContentView
         typeof(double),
         typeof(FontPicker),
         18.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FontPicker), () =>
             {
                 ((FontPicker)b).Rebuild();
             }));
@@ -160,9 +161,15 @@ public class FontPicker : ContentView
             if (child is Border b)
             {
                 var isSelected = !string.IsNullOrEmpty(SelectedFont) && b.StyleId == SelectedFont;
-                b.BackgroundColor = isSelected
-                    ? Color.FromArgb("#1F007AFF")
-                    : Colors.Transparent;
+                if (isSelected)
+                {
+                    b.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
+                }
+                else
+                {
+                    b.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+                    b.BackgroundColor = Colors.Transparent;
+                }
             }
         }
     }

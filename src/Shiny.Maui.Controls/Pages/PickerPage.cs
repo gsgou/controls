@@ -3,6 +3,8 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Cells;
 
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Pages;
 
 public class PickerPage : ContentPage
@@ -16,7 +18,10 @@ public class PickerPage : ContentPage
         this.ownerCell = ownerCell;
         Title = ownerCell.PageTitle;
 
-        var accentColor = ownerCell.AccentColor ?? ownerCell.ParentTableView?.CellAccentColor ?? Colors.Blue;
+        // No explicit accent anywhere in the chain => fall back to the theme's Primary.
+        var accentColor = ownerCell.AccentColor
+            ?? ownerCell.ParentTableView?.CellAccentColor
+            ?? ThemeColor(ShinyThemeKeys.Color.Primary, Colors.Blue);
 
         collectionView = new CollectionView
         {
@@ -165,6 +170,10 @@ public class PickerPage : ContentPage
             ownerCell.OnSelectionComplete(null, selected);
         }
     }
+
+    /// <summary>Resolves a theme token to a concrete colour for one-shot (non-bindable) use.</summary>
+    static Color ThemeColor(string key, Color fallback)
+        => Application.Current?.Resources.TryGetValue(key, out var v) == true && v is Color c ? c : fallback;
 }
 
 class PickerItemViewModel : BindableObject
@@ -223,4 +232,5 @@ class PickerItemViewModel : BindableObject
             OnPropertyChanged(nameof(HasSubText));
         }
     }
+
 }

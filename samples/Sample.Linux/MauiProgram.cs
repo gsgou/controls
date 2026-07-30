@@ -2,6 +2,9 @@ using Microsoft.Extensions.Logging;
 using Platform.Maui.Linux.Gtk4.Essentials.Hosting;
 using Platform.Maui.Linux.Gtk4.Hosting;
 using Shiny;
+#if DEBUG
+using Microsoft.Maui.DevFlow.Agent.Gtk;
+#endif
 
 namespace Sample.Linux;
 
@@ -27,6 +30,7 @@ public static class MauiProgram
 #if DEBUG
         builder.Logging.SetMinimumLevel(LogLevel.Debug);
         builder.Logging.AddDebug();
+        builder.AddMauiDevFlowAgent();
 #endif
 
         return builder.Build();

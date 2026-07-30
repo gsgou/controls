@@ -34,6 +34,7 @@
 
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+        <PackageReference Include="Microsoft.Maui.DevFlow.Agent.Gtk" />
     </ItemGroup>
 
     <ItemGroup>
@@ -41,10 +42,10 @@
              Microsoft.Maui.Graphics platform types (PlatformBitmapExportContext) that aren't
              available on plain net10.0. -->
         <Compile Include="..\Sample\**\*.cs"
-                 Exclude="..\Sample\Platforms\**;..\Sample\MauiProgram.cs;..\Sample\MyCustomFeedbackService.cs;..\Sample\App.xaml.cs;..\Sample\AppShell.xaml.cs;..\Sample\Controls\DrawingCanvas.cs;..\Sample\Features\Chat\**;..\Sample\Features\FloatingPanel\**;..\Sample\bin\**;..\Sample\obj\**"
+                 Exclude="..\Sample\Platforms\**;..\Sample\MauiProgram.cs;..\Sample\MyCustomFeedbackService.cs;..\Sample\App.xaml.cs;..\Sample\AppShell.xaml.cs;..\Sample\Controls\DrawingCanvas.cs;..\Sample\Features\Chat\**;..\Sample\Features\Camera\**;..\Sample\Features\Barcodes\**;..\Sample\Features\KitchenSink\**;..\Sample\Features\FloatingPanel\**;..\Sample\bin\**;..\Sample\obj\**"
                  Link="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiXaml Include="..\Sample\**\*.xaml"
-                  Exclude="..\Sample\Platforms\**;..\Sample\App.xaml;..\Sample\AppShell.xaml;..\Sample\Features\Chat\**;..\Sample\Features\FloatingPanel\**;..\Sample\bin\**;..\Sample\obj\**"
+                  Exclude="..\Sample\Platforms\**;..\Sample\App.xaml;..\Sample\AppShell.xaml;..\Sample\Features\Chat\**;..\Sample\Features\Camera\**;..\Sample\Features\Barcodes\**;..\Sample\Features\KitchenSink\**;..\Sample\Features\FloatingPanel\**;..\Sample\bin\**;..\Sample\obj\**"
                   Link="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 

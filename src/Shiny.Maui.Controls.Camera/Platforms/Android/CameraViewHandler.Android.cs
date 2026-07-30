@@ -27,14 +27,18 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     Java.Util.Concurrent.IExecutorService? analysisExecutor;
     ICamera? camera;
     // Burn-in video overlay: when set, BindUseCases attaches an OverlayEffect to the VideoCapture use case so
-    // the renderer is composited into the recorded file. Only active while recording (no analyzer bound).
+    // the renderer is composited into the recorded file.
     IVideoOverlayRenderer? recordingOverlay;
     AndroidX.Camera.Effects.OverlayEffect? overlayEffect;
     Android.OS.HandlerThread? overlayThread;
-    // CameraX's ~3-use-case budget makes ImageAnalysis and VideoCapture mutually exclusive, so the bound set
-    // is decided up-front from whether any analyzer is enabled. Tracks which mode is currently bound so an
-    // analyzer toggle that flips it (the enabled set crossing zero) triggers a rebind.
-    bool boundAnalysisMode;
+    // True from StartVideoRecordingAsync until the recording finalizes. CameraX guarantees Preview plus two
+    // more use cases at LIMITED hardware level and a fourth only at LEVEL_3, so something has to give when an
+    // analyzer and a recording are both live — and ImageCapture is it (see BindUseCases). Tracking the wish
+    // separately from the binding is what lets a scanner app that never records keep photo capture.
+    bool wantsVideoCapture;
+    // The use-case shape currently bound. A change in either dimension (an analyzer toggling, a recording
+    // starting or finishing) is what triggers a rebind.
+    (bool Analyzing, bool Video) boundShape;
 
     protected override AWidget.FrameLayout CreatePlatformView()
     {
@@ -77,6 +81,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         }
         catch { /* tearing down */ }
         this.recordingOverlay = null;
+        this.wantsVideoCapture = false;
+        this.boundShape = default;
         this.overlayThread = null;
         this.analysisExecutor = null;
         this.camera = null;
@@ -169,7 +175,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     public Task<CameraPhoto> CapturePhotoAsync(CancellationToken ct = default)
     {
         if (this.imageCapture == null)
-            throw new InvalidOperationException("Camera is not running");
+            throw new InvalidOperationException(this.activeRecording != null
+                ? "Photo capture is unavailable while recording with a frame analyzer active — CameraX has no use-case budget left for ImageCapture on this hardware. It returns when the recording stops."
+                : "Camera is not running");
 
         this.imageCapture.FlashMode = this.VirtualView.FlashMode switch
         {
@@ -187,19 +195,20 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     public async Task StartVideoRecordingAsync(VideoRecordingOptions options, CancellationToken ct = default)
     {
-        if (this.Pipeline.HasAnalyzer)
-            throw new InvalidOperationException("Video recording is unavailable while a frame analyzer is active (Android binds ImageAnalysis instead of VideoCapture). Clear CameraView.Analyzer to record.");
+        // VideoCapture may not be bound yet — with an analyzer running the camera sits on
+        // Preview + ImageCapture + ImageAnalysis until a recording actually asks for it. Ask for it now, then
+        // rebind if either that or a burn-in overlay (which needs an OverlayEffect attached to VideoCapture)
+        // means the current binding is wrong. With no analyzer and no overlay this is the old path untouched.
+        var needsRebind = this.videoCapture == null || options.Overlay != null;
+        this.wantsVideoCapture = true;
+        this.recordingOverlay = options.Overlay;
 
-        // Overlay set -> rebind with an OverlayEffect on VideoCapture so it's burned into the file. Overlay
-        // null -> existing Recorder path unchanged (raw feed, no perf/behavior change).
-        if (options.Overlay != null)
-        {
-            this.recordingOverlay = options.Overlay;
+        if (needsRebind)
             await MainThread.InvokeOnMainThreadAsync(this.BindUseCases).ConfigureAwait(false);
-        }
 
         if (this.recorder == null)
         {
+            this.wantsVideoCapture = false;
             this.recordingOverlay = null;
             throw new InvalidOperationException("Camera is not running");
         }
@@ -234,9 +243,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.activeRecording = null;
         var hadOverlay = this.recordingOverlay != null;
         this.recordingOverlay = null;
+        // release the claim on VideoCapture so ImageCapture can come back if an analyzer is still running
+        this.wantsVideoCapture = false;
 
-        // once the recording finalizes, rebind: detach the overlay effect (if any) and re-evaluate analyzers
-        // that couldn't be bound while VideoCapture held the slot.
+        // once the recording finalizes, rebind: detach the overlay effect (if any) and restore the use-case
+        // shape now that the recording no longer needs VideoCapture.
         _ = task.ContinueWith(
             _ => MainThread.BeginInvokeOnMainThread(() =>
             {
@@ -276,17 +287,25 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     }
 
 
-    // Re-bind use cases when the enabled-analyzer set has crossed the ImageAnalysis<->VideoCapture boundary.
-    // Invoked via the OnAnalyzersSynced hook (analyzer added/removed or IsEnabled toggled) and after a
-    // recording finalizes. A no-op while not started, mid-recording, or when the mode is unchanged.
+    // The use-case shape BindUseCases would produce right now. Compared against boundShape to decide whether
+    // anything actually needs rebinding.
+    (bool Analyzing, bool Video) DesiredShape()
+    {
+        var analyzing = this.Pipeline.HasAnalyzer;
+        return (analyzing, this.wantsVideoCapture || !analyzing);
+    }
+
+    // Re-bind use cases when the wanted shape has moved away from the bound one — an analyzer being added,
+    // removed or toggled, or a recording starting/finishing. Invoked via the OnAnalyzersSynced hook and after
+    // a recording finalizes. A no-op while not started, mid-recording, or when the shape is unchanged.
     partial void OnAnalyzersSynced()
     {
         if (this.cameraProvider == null || this.lifecycleOwner == null)
             return; // not started yet — BindUseCases will read the current set when it runs
         if (this.activeRecording != null)
-            return; // can't swap the video use case mid-recording; deferred until it finalizes
-        if (this.Pipeline.HasAnalyzer == this.boundAnalysisMode)
-            return; // mode unchanged (e.g. a 2nd analyzer added) — runner set already updated, no rebind
+            return; // can't swap use cases mid-recording; deferred until it finalizes
+        if (this.DesiredShape() == this.boundShape)
+            return; // shape unchanged (e.g. a 2nd analyzer added) — runner set already updated, no rebind
 
         MainThread.BeginInvokeOnMainThread(this.RebindIfModeChanged);
     }
@@ -296,7 +315,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         // re-check after marshalling to the main thread: state may have moved on
         if (this.cameraProvider != null
             && this.activeRecording == null
-            && this.Pipeline.HasAnalyzer != this.boundAnalysisMode)
+            && this.DesiredShape() != this.boundShape)
             this.BindUseCases();
     }
 
@@ -366,16 +385,27 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
                 : CameraSelector.LensFacingBack);
         var selector = selectorBuilder.Build();
 
-        this.imageCapture = new ImageCapture.Builder().Build();
-
-        // CameraX allows Preview + 2 more use cases on most hardware, so analysis and recording are
-        // mutually exclusive: bind ImageAnalysis when analyzers are present, otherwise VideoCapture.
-        var useCases = new List<UseCase> { preview, this.imageCapture };
+        this.imageCapture = null;
         this.imageAnalysis = null;
         this.videoCapture = null;
         this.recorder = null;
 
-        if (this.Pipeline.HasAnalyzer)
+        // Use-case budget. CameraX guarantees Preview + 2 more at LIMITED hardware level; a fourth use case
+        // needs LEVEL_3, which most phones are not. Preview + VideoCapture + ImageAnalysis IS a guaranteed
+        // LIMITED combination, so analysis and recording are not actually mutually exclusive — a live-analysis
+        // recorder (a dash cam reading signs or plates off its own feed) is supportable. What does not fit is
+        // ImageCapture on top, so that is the one dropped, and only for as long as a recording is running.
+        var analyzing = this.Pipeline.HasAnalyzer;
+        var video = this.wantsVideoCapture || !analyzing;
+        var useCases = new List<UseCase> { preview };
+
+        if (!(analyzing && video))
+        {
+            this.imageCapture = new ImageCapture.Builder().Build();
+            useCases.Add(this.imageCapture);
+        }
+
+        if (analyzing)
         {
             this.analysisExecutor ??= Java.Util.Concurrent.Executors.NewSingleThreadExecutor();
             this.imageAnalysis = new ImageAnalysis.Builder()
@@ -384,7 +414,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
             this.imageAnalysis.SetAnalyzer(this.analysisExecutor!, new FrameAnalyzerBridge(this));
             useCases.Add(this.imageAnalysis);
         }
-        else
+
+        if (video)
         {
             this.recorder = new Recorder.Builder()
                 .SetQualitySelector(QualitySelector.From(Quality.Hd!))
@@ -411,7 +442,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         {
             this.camera = this.cameraProvider.BindToLifecycle(this.lifecycleOwner, selector, useCases.ToArray());
         }
-        this.boundAnalysisMode = this.Pipeline.HasAnalyzer;
+        this.boundShape = (analyzing, video);
 
         this.ApplyFilter(this.VirtualView.Filter);
 

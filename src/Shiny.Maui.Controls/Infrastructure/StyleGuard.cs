@@ -23,19 +23,28 @@ namespace Shiny.Maui.Controls.Infrastructure;
 /// </code>
 /// <para>
 /// Reordering a constructor cannot fix this - nothing in it has run yet. Instead, wrap the
-/// body of any child-touching callback in <see cref="WhenReady{T}"/> and call
-/// <see cref="MarkReady"/> as the last line of the constructor:
+/// body of any child-touching callback in <see cref="WhenReady(BindableObject, Type, Action)"/>,
+/// passing the type that declares the property, and call <see cref="MarkReady"/> as the last
+/// line of that same type's constructor:
 /// </para>
 /// <code>
-///     propertyChanged: (b, _, n) => StyleGuard.WhenReady&lt;MyControl&gt;(b, c => c.label.Text = (string)n)
+///     propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(MyControl), () => ...)
 ///     ...
 ///     public MyControl()
 ///     {
 ///         label = new Label();
 ///         Content = label;
-///         StyleGuard.MarkReady(this);
+///         StyleGuard.MarkReady(this, typeof(MyControl));
 ///     }
 /// </code>
+/// <para>
+/// Readiness is tracked <b>per level of the type hierarchy</b>, not per object. A callback
+/// declared by <c>MyControl</c> only needs <c>MyControl</c>'s constructor to have finished -
+/// it touches <c>MyControl</c>'s fields and nothing else. Scoping it that way is what lets a
+/// control be subclassed: <c>class MyPage : MyControl</c> inherits the guard for free and its
+/// author never calls into this class. A subclass that declares guarded properties of its own
+/// simply passes its own type, and its level is marked when its own constructor ends.
+/// </para>
 /// <para>
 /// Callbacks that arrive early are <b>queued rather than dropped</b>, then replayed in order
 /// by <see cref="MarkReady"/>. That matters: silently swallowing them would turn a loud crash
@@ -46,36 +55,48 @@ public static class StyleGuard
 {
     // Weak keys, so a control that is never marked ready (or is discarded mid-construction)
     // does not keep its queue alive.
-    static readonly ConditionalWeakTable<object, List<Action>> pending = new();
-    static readonly ConditionalWeakTable<object, object> ready = new();
+    static readonly ConditionalWeakTable<object, Levels> levels = new();
+
+    sealed class Levels
+    {
+        public HashSet<Type> Ready { get; } = new();
+        public Dictionary<Type, List<Action>> Pending { get; } = new();
+    }
 
     /// <summary>
-    /// Declares that <paramref name="control"/> has finished building its children, and
-    /// replays anything that arrived beforehand. Call this as the last line of the
-    /// constructor, after every field is assigned, passing the type whose constructor this
-    /// is: <c>StyleGuard.MarkReady(this, typeof(MyControl))</c>.
+    /// Declares that <paramref name="declaringType"/>'s constructor has finished building the
+    /// children its own callbacks touch, and replays anything that arrived beforehand. Call it
+    /// as the last line of that constructor, passing the type whose constructor this is:
+    /// <c>StyleGuard.MarkReady(this, typeof(MyControl))</c>.
     /// </summary>
     /// <param name="declaringType">
-    /// The type whose constructor is calling. Base constructors always run first, so a base
-    /// marking the control ready would replay while the derived class's own fields are still
-    /// null - exactly the bug this class exists to prevent, one level up. Passing the
-    /// declaring type means only the most-derived constructor actually marks; every other
-    /// call in the chain is a no-op. Every instantiable class in a hierarchy should call it,
-    /// so whichever one is the runtime type does the marking.
+    /// The type whose constructor is calling. Every class that guards properties of its own
+    /// calls this with its own type; base and derived levels are tracked separately, so a base
+    /// control's callbacks replay as soon as the base constructor ends even when the object's
+    /// runtime type is some subclass that is still half-built.
     /// </param>
     public static void MarkReady(object control, Type declaringType)
     {
         ArgumentNullException.ThrowIfNull(control);
+        ArgumentNullException.ThrowIfNull(declaringType);
 
-        if (control.GetType() != declaringType)
-            return;
+        Flush(control, declaringType);
+    }
 
-        ready.AddOrUpdate(control, control);
+    static void Flush(object control, Type level)
+    {
+        List<Action>? queued;
+        var state = levels.GetOrCreateValue(control);
 
-        if (!pending.TryGetValue(control, out var queued))
-            return;
+        lock (state)
+        {
+            state.Ready.Add(level);
 
-        pending.Remove(control);
+            if (!state.Pending.TryGetValue(level, out queued))
+                return;
+
+            state.Pending.Remove(level);
+        }
 
         // In arrival order - the style's setters ran in declaration order and later ones are
         // expected to win.
@@ -84,8 +105,36 @@ public static class StyleGuard
     }
 
     /// <summary>
-    /// Runs <paramref name="apply"/> now if the control is ready, otherwise queues it until
-    /// <see cref="MarkReady"/>.
+    /// Runs <paramref name="apply"/> now if <paramref name="level"/>'s constructor has
+    /// finished, otherwise queues it until <see cref="MarkReady"/> is called for that level.
+    /// Pass the type that declares the property being guarded.
+    /// </summary>
+    public static void WhenReady(BindableObject bindable, Type level, Action apply)
+    {
+        if (bindable is null)
+            return;
+
+        var state = levels.GetOrCreateValue(bindable);
+
+        lock (state)
+        {
+            if (!state.Ready.Contains(level))
+            {
+                if (!state.Pending.TryGetValue(level, out var queue))
+                    state.Pending[level] = queue = new List<Action>();
+
+                queue.Add(apply);
+                return;
+            }
+        }
+
+        apply();
+    }
+
+    /// <summary>
+    /// Runs <paramref name="apply"/> now if <typeparamref name="T"/>'s constructor has finished,
+    /// otherwise queues it until <see cref="MarkReady"/> is called for that level.
+    /// <typeparamref name="T"/> is the type that declares the property being guarded.
     /// </summary>
     public static void WhenReady<T>(BindableObject bindable, Action<T> apply)
         where T : class
@@ -93,37 +142,31 @@ public static class StyleGuard
         if (bindable is not T control)
             return;
 
-        if (ready.TryGetValue(control, out _))
-        {
-            apply(control);
-            return;
-        }
-
-        pending.GetOrCreateValue(control).Add(() => apply(control));
+        WhenReady(bindable, typeof(T), () => apply(control));
     }
 
     /// <summary>
-    /// Runs <paramref name="apply"/> now if the control is ready, otherwise queues it until
-    /// <see cref="MarkReady"/>. This overload lets a callback body be wrapped verbatim -
-    /// it already closes over the bindable and the new value.
+    /// True once <see cref="MarkReady"/> has been called for <paramref name="level"/>.
     /// </summary>
-    public static void WhenReady(BindableObject bindable, Action apply)
+    public static bool IsReady(object control, Type level)
     {
-        if (bindable is null)
-            return;
+        var state = levels.GetOrCreateValue(control);
 
-        if (ready.TryGetValue(bindable, out _))
-        {
-            apply();
-            return;
-        }
-
-        pending.GetOrCreateValue(bindable).Add(apply);
+        lock (state)
+            return state.Ready.Contains(level);
     }
 
     /// <summary>
-    /// True once <see cref="MarkReady"/> has been called. For controls that need to branch on
-    /// readiness themselves rather than queue work.
+    /// True if any guarded callback is still parked waiting for a level that was never marked.
+    /// Once a control's constructor has returned this must be false: anything still queued is a
+    /// styled or XAML-set value that silently never applied, which is precisely the failure this
+    /// class exists to make impossible. Tests assert on it.
     /// </summary>
-    public static bool IsReady(object control) => ready.TryGetValue(control, out _);
+    public static bool HasPending(object control)
+    {
+        var state = levels.GetOrCreateValue(control);
+
+        lock (state)
+            return state.Pending.Count > 0;
+    }
 }

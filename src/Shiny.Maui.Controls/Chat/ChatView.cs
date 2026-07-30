@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.Chat.Internal;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Chat;
 
@@ -73,7 +74,6 @@ public partial class ChatView : ContentView
         // Shared toast pill — new messages on top, typing below
         this.toastNewMessagesLabel = new Label
         {
-            TextColor = Colors.White,
             FontSize = 13,
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
@@ -82,7 +82,6 @@ public partial class ChatView : ContentView
         };
         this.toastTypingLabel = new Label
         {
-            TextColor = Color.FromArgb("#D0E8FF"),
             FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
@@ -92,7 +91,6 @@ public partial class ChatView : ContentView
         {
             StrokeThickness = 0,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
-            BackgroundColor = Color.FromArgb("#007AFF"),
             Padding = new Thickness(16, 8),
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.End,
@@ -104,6 +102,11 @@ public partial class ChatView : ContentView
                 Children = { this.toastNewMessagesLabel, this.toastTypingLabel }
             }
         };
+        this.toastNewMessagesLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        this.toastTypingLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        this.toastTypingLabel.Opacity = 0.85;
+        this.toastPill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+
         var pillTap = new TapGestureRecognizer();
         pillTap.Tapped += this.OnToastPillTapped;
         this.toastPill.GestureRecognizers.Add(pillTap);
@@ -111,7 +114,6 @@ public partial class ChatView : ContentView
         // connection banner (top)
         this.connectionBannerLabel = new Label
         {
-            TextColor = Colors.White,
             FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
@@ -119,12 +121,13 @@ public partial class ChatView : ContentView
         this.connectionBanner = new Border
         {
             StrokeThickness = 0,
-            BackgroundColor = Color.FromArgb("#B00020"),
             Padding = new Thickness(8, 4),
             VerticalOptions = LayoutOptions.Start,
             IsVisible = false,
             Content = this.connectionBannerLabel
         };
+        this.connectionBannerLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnError);
+        this.connectionBanner.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Error);
 
         // loader overlay
         this.loaderOverlay = new Grid
@@ -300,7 +303,6 @@ public partial class ChatView : ContentView
         {
             StrokeThickness = 0,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
-            BackgroundColor = Colors.White,
             Padding = 4,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
@@ -308,6 +310,7 @@ public partial class ChatView : ContentView
             Scale = 0.85,
             Content = pickerGrid
         };
+        container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
 
         void Close(string? result)
         {

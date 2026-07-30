@@ -5,7 +5,7 @@ public partial class BadgeView
 {
     public static readonly BindableProperty ContentProperty = BindableProperty.Create(
         nameof(Content), typeof(View), typeof(BadgeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnContentChanged();
             }));
@@ -14,7 +14,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty TextProperty = BindableProperty.Create(
         nameof(Text), typeof(string), typeof(BadgeView), string.Empty,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -23,7 +23,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty PositionProperty = BindableProperty.Create(
         nameof(Position), typeof(BadgePosition), typeof(BadgeView), BadgePosition.TopRight,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -32,7 +32,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty BadgeColorProperty = BindableProperty.Create(
         nameof(BadgeColor), typeof(Color), typeof(BadgeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -41,7 +41,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty BadgeTextColorProperty = BindableProperty.Create(
         nameof(BadgeTextColor), typeof(Color), typeof(BadgeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -50,7 +50,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty BadgeBorderColorProperty = BindableProperty.Create(
         nameof(BadgeBorderColor), typeof(Color), typeof(BadgeView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -59,7 +59,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty BadgeBorderThicknessProperty = BindableProperty.Create(
         nameof(BadgeBorderThickness), typeof(double), typeof(BadgeView), 1.5,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -68,7 +68,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(BadgeView), 10.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -77,7 +77,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty FontAttributesProperty = BindableProperty.Create(
         nameof(FontAttributes), typeof(FontAttributes), typeof(BadgeView), Microsoft.Maui.Controls.FontAttributes.Bold,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -86,7 +86,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(double), typeof(BadgeView), 999.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -95,7 +95,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty BadgePaddingProperty = BindableProperty.Create(
         nameof(BadgePadding), typeof(Thickness), typeof(BadgeView), new Thickness(6, 2),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -104,7 +104,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty OffsetXProperty = BindableProperty.Create(
         nameof(OffsetX), typeof(double), typeof(BadgeView), 4.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -113,7 +113,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty OffsetYProperty = BindableProperty.Create(
         nameof(OffsetY), typeof(double), typeof(BadgeView), -4.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -122,7 +122,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty IsDotProperty = BindableProperty.Create(
         nameof(IsDot), typeof(bool), typeof(BadgeView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -131,7 +131,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty DotSizeProperty = BindableProperty.Create(
         nameof(DotSize), typeof(double), typeof(BadgeView), 10.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -140,7 +140,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty MaxCountProperty = BindableProperty.Create(
         nameof(MaxCount), typeof(int), typeof(BadgeView), 0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnBadgeVisualChanged();
             }));
@@ -154,7 +154,7 @@ public partial class BadgeView
 
     public static readonly BindableProperty IsPulsingProperty = BindableProperty.Create(
         nameof(IsPulsing), typeof(bool), typeof(BadgeView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(BadgeView), () =>
             {
                 ((BadgeView)b).OnPulsingChanged();
             }));

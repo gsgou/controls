@@ -12,7 +12,7 @@ public partial class SignaturePad
         typeof(SignaturePad),
         false,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnIsOpenChanged(b, o, n)));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () => OnIsOpenChanged(b, o, n)));
 
     public bool IsOpen
     {
@@ -25,7 +25,7 @@ public partial class SignaturePad
         typeof(FloatingPanelPosition),
         typeof(SignaturePad),
         FloatingPanelPosition.Bottom,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).floatingPanel.Position = (FloatingPanelPosition)n;
             }));
@@ -41,7 +41,7 @@ public partial class SignaturePad
         typeof(bool),
         typeof(SignaturePad),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).floatingPanel.IsLocked = (bool)n;
             }));
@@ -57,7 +57,7 @@ public partial class SignaturePad
         typeof(DetentValue),
         typeof(SignaturePad),
         DetentValue.Half,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
             var pad = (SignaturePad)b;
             pad.floatingPanel.Detents = new ObservableCollection<DetentValue> { (DetentValue)n };
@@ -74,7 +74,7 @@ public partial class SignaturePad
         typeof(Color),
         typeof(SignaturePad),
         Colors.Black,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
             var pad = (SignaturePad)b;
             pad.drawable.StrokeColor = (Color)n;
@@ -92,7 +92,7 @@ public partial class SignaturePad
         typeof(Color),
         typeof(SignaturePad),
         Colors.White,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
             var pad = (SignaturePad)b;
             pad.drawable.BackgroundColor = (Color)n;
@@ -110,7 +110,7 @@ public partial class SignaturePad
         typeof(double),
         typeof(SignaturePad),
         3.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
             var pad = (SignaturePad)b;
             pad.drawable.StrokeWidth = (float)(double)n;
@@ -128,7 +128,7 @@ public partial class SignaturePad
         typeof(string),
         typeof(SignaturePad),
         "Sign",
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).signButton.Text = (string)n;
             }));
@@ -144,7 +144,7 @@ public partial class SignaturePad
         typeof(string),
         typeof(SignaturePad),
         "Cancel",
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).cancelButton.Text = (string)n;
             }));
@@ -159,15 +159,16 @@ public partial class SignaturePad
         nameof(SignButtonColor),
         typeof(Color),
         typeof(SignaturePad),
-        Colors.Blue,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
-                ((SignaturePad)b).signButton.BackgroundColor = (Color)n;
+                ((SignaturePad)b).ApplySignButtonColor((Color?)n);
             }));
 
-    public Color SignButtonColor
+    /// <summary>Leave unset to follow the active theme.</summary>
+    public Color? SignButtonColor
     {
-        get => (Color)GetValue(SignButtonColorProperty);
+        get => (Color?)GetValue(SignButtonColorProperty);
         set => SetValue(SignButtonColorProperty, value);
     }
 
@@ -175,15 +176,16 @@ public partial class SignaturePad
         nameof(CancelButtonColor),
         typeof(Color),
         typeof(SignaturePad),
-        Colors.Gray,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
-                ((SignaturePad)b).cancelButton.BackgroundColor = (Color)n;
+                ((SignaturePad)b).ApplyCancelButtonColor((Color?)n);
             }));
 
-    public Color CancelButtonColor
+    /// <summary>Leave unset to follow the active theme.</summary>
+    public Color? CancelButtonColor
     {
-        get => (Color)GetValue(CancelButtonColorProperty);
+        get => (Color?)GetValue(CancelButtonColorProperty);
         set => SetValue(CancelButtonColorProperty, value);
     }
 
@@ -192,7 +194,7 @@ public partial class SignaturePad
         typeof(bool),
         typeof(SignaturePad),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).cancelButton.IsVisible = (bool)n;
             }));
@@ -207,8 +209,8 @@ public partial class SignaturePad
         nameof(PanelBackgroundColor),
         typeof(Color),
         typeof(SignaturePad),
-        Colors.White,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).floatingPanel.PanelBackgroundColor = (Color)n;
             }));
@@ -224,7 +226,7 @@ public partial class SignaturePad
         typeof(double),
         typeof(SignaturePad),
         16.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).floatingPanel.PanelCornerRadius = (double)n;
             }));
@@ -240,7 +242,7 @@ public partial class SignaturePad
         typeof(bool),
         typeof(SignaturePad),
         true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
                 ((SignaturePad)b).floatingPanel.HasBackdrop = (bool)n;
             }));

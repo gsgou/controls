@@ -87,7 +87,7 @@ public class CountryPicker : ContentView
         typeof(CountryPicker),
         null,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).OnSelectedCountryChanged(n as Country);
             }));
@@ -102,7 +102,7 @@ public class CountryPicker : ContentView
         typeof(string),
         typeof(CountryPicker),
         "Search countries...",
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.Placeholder = (string)n;
             }));
@@ -117,7 +117,7 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.TextColor = n as Color;
             }));
@@ -132,7 +132,7 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.PlaceholderColor = n as Color;
             }));
@@ -147,7 +147,7 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBackgroundColor = c; }));
     public Color? DropDownBackgroundColor
     {
@@ -160,7 +160,7 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             { if (n is Color c) ((CountryPicker)b).autoComplete.DropDownBorderColor = c; }));
     public Color? DropDownBorderColor
     {
@@ -173,7 +173,7 @@ public class CountryPicker : ContentView
         typeof(Color),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             { if (n is Color c) ((CountryPicker)b).autoComplete.SpinnerColor = c; }));
     public Color? SpinnerColor
     {
@@ -186,7 +186,7 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         200d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.MaxDropDownHeight = (double)n;
             }));
@@ -201,7 +201,7 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         14d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.FontSize = (double)n;
             }));
@@ -216,7 +216,7 @@ public class CountryPicker : ContentView
         typeof(string),
         typeof(CountryPicker),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.FontFamily = n as string;
             }));
@@ -231,7 +231,7 @@ public class CountryPicker : ContentView
         typeof(double),
         typeof(CountryPicker),
         4d,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(CountryPicker), () =>
             {
                 ((CountryPicker)b).autoComplete.CornerRadius = (double)n;
             }));

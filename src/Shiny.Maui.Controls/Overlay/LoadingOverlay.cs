@@ -59,7 +59,7 @@ public class LoadingOverlay : Overlay
     // IsIndeterminate
     public static readonly BindableProperty IsIndeterminateProperty = BindableProperty.Create(
         nameof(IsIndeterminate), typeof(bool), typeof(LoadingOverlay), true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(LoadingOverlay), () =>
             {
                 ((LoadingOverlay)b).OnModeChanged();
             }));
@@ -69,7 +69,7 @@ public class LoadingOverlay : Overlay
     public static readonly BindableProperty ProgressProperty = BindableProperty.Create(
         nameof(Progress), typeof(double), typeof(LoadingOverlay), 0.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(LoadingOverlay), () =>
             {
                 ((LoadingOverlay)b).progressBar.Value = (double)n;
             }));
@@ -78,7 +78,7 @@ public class LoadingOverlay : Overlay
     // Message
     public static readonly BindableProperty MessageProperty = BindableProperty.Create(
         nameof(Message), typeof(string), typeof(LoadingOverlay), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(LoadingOverlay), () =>
             {
             var lo = (LoadingOverlay)b;
             var text = (string?)n;
@@ -90,7 +90,7 @@ public class LoadingOverlay : Overlay
     // SpinnerColor
     public static readonly BindableProperty SpinnerColorProperty = BindableProperty.Create(
         nameof(SpinnerColor), typeof(Color), typeof(LoadingOverlay), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(LoadingOverlay), () =>
             {
             var lo = (LoadingOverlay)b;
             if (n is Color c)

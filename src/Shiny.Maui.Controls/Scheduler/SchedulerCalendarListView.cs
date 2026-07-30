@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.Infrastructure;
 
+using Shiny.Maui.Controls.Themes;
+
 namespace Shiny.Maui.Controls.Scheduler;
 
 public class SchedulerCalendarListView : ContentView
@@ -22,7 +24,7 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty ProviderProperty = BindableProperty.Create(
         nameof(Provider), typeof(ISchedulerEventProvider), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).OnProviderChanged();
             }));
@@ -31,28 +33,28 @@ public class SchedulerCalendarListView : ContentView
         nameof(SelectedDate), typeof(DateOnly), typeof(SchedulerCalendarListView),
         defaultValue: DateOnly.FromDateTime(DateTime.Today),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).LoadInitial();
             }));
 
     public static readonly BindableProperty EventItemTemplateProperty = BindableProperty.Create(
         nameof(EventItemTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).ApplyTemplates();
             }));
 
     public static readonly BindableProperty DayHeaderTemplateProperty = BindableProperty.Create(
         nameof(DayHeaderTemplate), typeof(DataTemplate), typeof(SchedulerCalendarListView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).ApplyTemplates();
             }));
 
     public static readonly BindableProperty StickyDayHeadersProperty = BindableProperty.Create(
         nameof(StickyDayHeaders), typeof(bool), typeof(SchedulerCalendarListView), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).UpdateStickyHeader();
             }));
@@ -64,13 +66,13 @@ public class SchedulerCalendarListView : ContentView
         nameof(DaysPerPage), typeof(int), typeof(SchedulerCalendarListView), 30);
 
     public static readonly BindableProperty DefaultEventColorProperty = BindableProperty.Create(
-        nameof(DefaultEventColor), typeof(Color), typeof(SchedulerCalendarListView), Colors.CornflowerBlue);
+        nameof(DefaultEventColor), typeof(Color), typeof(SchedulerCalendarListView), null);
 
     public static readonly BindableProperty DayHeaderBackgroundColorProperty = BindableProperty.Create(
         nameof(DayHeaderBackgroundColor), typeof(Color), typeof(SchedulerCalendarListView), Colors.Transparent);
 
     public static readonly BindableProperty DayHeaderTextColorProperty = BindableProperty.Create(
-        nameof(DayHeaderTextColor), typeof(Color), typeof(SchedulerCalendarListView), Colors.Black);
+        nameof(DayHeaderTextColor), typeof(Color), typeof(SchedulerCalendarListView), null);
 
     public static readonly BindableProperty MinDateProperty = BindableProperty.Create(
         nameof(MinDate), typeof(DateOnly?), typeof(SchedulerCalendarListView));
@@ -80,7 +82,7 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty AllowPanProperty = BindableProperty.Create(
         nameof(AllowPan), typeof(bool), typeof(SchedulerCalendarListView), true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).collectionView.VerticalScrollBarVisibility =
             (bool)n ? ScrollBarVisibility.Default : ScrollBarVisibility.Never;
@@ -88,7 +90,7 @@ public class SchedulerCalendarListView : ContentView
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
         nameof(AllowZoom), typeof(bool), typeof(SchedulerCalendarListView), false,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerCalendarListView), () =>
             {
                 ((SchedulerCalendarListView)b).UpdateZoomGesture();
             }));
@@ -205,9 +207,10 @@ public class SchedulerCalendarListView : ContentView
 
         loaderOverlay = new ContentView
         {
-            BackgroundColor = Color.FromRgba(255, 255, 255, 200),
+            Opacity = 0.8,
             IsVisible = false
         };
+        loaderOverlay.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         // input-transparent so pan/scroll gestures over the pinned header reach the list
         stickyHeader = new ContentView
@@ -340,6 +343,14 @@ public class SchedulerCalendarListView : ContentView
             ScrollToSelectedDate();
         }
         catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            // These loaders are `async void`, so anything escaping here is posted to the sync
+            // context and terminates the process - including an exception from the consumer's
+            // ISchedulerEventProvider. Surface it for debugging and leave the view usable rather
+            // than taking the host app down.
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] load failed: {ex}");
+        }
         finally
         {
             if (!token.IsCancellationRequested)
@@ -365,6 +376,14 @@ public class SchedulerCalendarListView : ContentView
                 groups.Add(g);
         }
         catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            // These loaders are `async void`, so anything escaping here is posted to the sync
+            // context and terminates the process - including an exception from the consumer's
+            // ISchedulerEventProvider. Surface it for debugging and leave the view usable rather
+            // than taking the host app down.
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] load failed: {ex}");
+        }
         finally
         {
             isLoadingMore = false;
@@ -395,6 +414,14 @@ public class SchedulerCalendarListView : ContentView
                 groups.Insert(0, loadedGroups[i]);
         }
         catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            // These loaders are `async void`, so anything escaping here is posted to the sync
+            // context and terminates the process - including an exception from the consumer's
+            // ISchedulerEventProvider. Surface it for debugging and leave the view usable rather
+            // than taking the host app down.
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] load failed: {ex}");
+        }
         finally
         {
             isLoadingMore = false;

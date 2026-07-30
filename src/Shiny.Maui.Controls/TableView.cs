@@ -60,42 +60,42 @@ public partial class TableView : ContentView
 
     public static readonly BindableProperty ShowSectionSeparatorProperty = BindableProperty.Create(
         nameof(ShowSectionSeparator), typeof(bool), typeof(TableView), true,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
 
     public static readonly BindableProperty SectionSeparatorHeightProperty = BindableProperty.Create(
         nameof(SectionSeparatorHeight), typeof(double), typeof(TableView), 8d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
 
     public static readonly BindableProperty SectionSeparatorColorProperty = BindableProperty.Create(
         nameof(SectionSeparatorColor), typeof(Color), typeof(TableView), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
 
     public static readonly BindableProperty SeparatorColorProperty = BindableProperty.Create(
         nameof(SeparatorColor), typeof(Color), typeof(TableView), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
 
     public static readonly BindableProperty SeparatorHeightProperty = BindableProperty.Create(
         nameof(SeparatorHeight), typeof(double), typeof(TableView), -1d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
 
     public static readonly BindableProperty SeparatorPaddingProperty = BindableProperty.Create(
         nameof(SeparatorPadding), typeof(double), typeof(TableView), -1d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RenderSections();
             }));
@@ -105,18 +105,18 @@ public partial class TableView : ContentView
 
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource), typeof(IEnumerable), typeof(TableView), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnViewItemsSourceChanged(b, o, n)));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () => OnViewItemsSourceChanged(b, o, n)));
 
     public static readonly BindableProperty ItemTemplateProperty = BindableProperty.Create(
         nameof(ItemTemplate), typeof(DataTemplate), typeof(TableView), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RegenerateTemplatedSections();
             }));
 
     public static readonly BindableProperty TemplateStartIndexProperty = BindableProperty.Create(
         nameof(TemplateStartIndex), typeof(int), typeof(TableView), 0,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
             {
                 ((TableView)b).RegenerateTemplatedSections();
             }));
@@ -125,7 +125,7 @@ public partial class TableView : ContentView
         nameof(ScrollToTop), typeof(bool), typeof(TableView), false,
         // Deliberately not an async lambda: that compiles to async void, so a fault here
         // becomes an unobserved task exception rather than something a caller can handle.
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
         {
             if ((bool)n)
                 _ = ((TableView)b).ScrollToTopAndResetAsync();
@@ -135,7 +135,7 @@ public partial class TableView : ContentView
         nameof(ScrollToBottom), typeof(bool), typeof(TableView), false,
         // Deliberately not an async lambda: that compiles to async void, so a fault here
         // becomes an unobserved task exception rather than something a caller can handle.
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
         {
             if ((bool)n)
                 _ = ((TableView)b).ScrollToBottomAndResetAsync();

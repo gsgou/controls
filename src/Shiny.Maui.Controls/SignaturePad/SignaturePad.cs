@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.SignaturePad;
 
@@ -34,22 +35,22 @@ public partial class SignaturePad : ContentView
         signButton = new Button
         {
             Text = "Sign",
-            BackgroundColor = Colors.Blue,
-            TextColor = Colors.White,
             IsEnabled = false,
             CornerRadius = 8,
             HorizontalOptions = LayoutOptions.Fill
         };
+        signButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        this.ApplySignButtonColor(this.SignButtonColor);
         signButton.Clicked += OnSignClicked;
 
         cancelButton = new Button
         {
             Text = "Cancel",
-            BackgroundColor = Colors.Gray,
-            TextColor = Colors.White,
             CornerRadius = 8,
             HorizontalOptions = LayoutOptions.Fill
         };
+        cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
+        this.ApplyCancelButtonColor(this.CancelButtonColor);
         cancelButton.Clicked += OnCancelClicked;
 
         var clearButton = new Button
@@ -57,11 +58,11 @@ public partial class SignaturePad : ContentView
             Text = "Clear",
             FontSize = 12,
             BackgroundColor = Colors.Transparent,
-            TextColor = Colors.Gray,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Padding = new Thickness(8, 2)
         };
+        clearButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         clearButton.Clicked += OnClearClicked;
 
         // Canvas area with clear button overlaid
@@ -118,7 +119,6 @@ public partial class SignaturePad : ContentView
             CloseOnBackdropTap = false,
             ShowHandle = false,
             IsContentScrollEnabled = false,
-            PanelBackgroundColor = Colors.White,
             PanelCornerRadius = 16,
             Position = FloatingPanelPosition.Bottom,
             PanelContent = contentGrid,
@@ -222,4 +222,24 @@ public partial class SignaturePad : ContentView
     //             rects) and a hosting TabbedPage's ViewPager2 swipe.
     // No-op on platforms without such gestures (Windows).
     partial void SetBackGestureEnabled(bool enabled);
+
+    void ApplySignButtonColor(Color? explicitColor)
+        => Tint(signButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.Primary);
+
+    void ApplyCancelButtonColor(Color? explicitColor)
+        => Tint(cancelButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.SecondaryContainer);
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
+    {
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
+    }
 }

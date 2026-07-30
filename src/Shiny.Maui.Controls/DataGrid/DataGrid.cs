@@ -183,7 +183,7 @@ public partial class DataGrid : ContentView
             var col = this.Columns.FirstOrDefault(c => c.Id == this.groupColumnId);
             if (col is not null)
             {
-                foreach (var g in this.ProcessedData().GroupBy(col.GetValue))
+                foreach (var g in this.ProcessedData().GroupBy(col.GetCellValue))
                 {
                     var items = g.ToList();
                     var collapsed = g.Key is not null && this.collapsedGroups.Contains(g.Key);
@@ -236,7 +236,7 @@ public partial class DataGrid : ContentView
         this.editingRow = row;
         this.editValues.Clear();
         foreach (var col in this.Columns.Where(c => c.HasValue))
-            this.editValues[col.Id] = col.GetValue(row.Data);
+            this.editValues[col.Id] = col.GetCellValue(row.Data);
 
         row.IsEditing = true;
         this.RefreshRow(row);
@@ -440,7 +440,7 @@ public partial class DataGrid : ContentView
         else
         {
             var nums = items
-                .Select(i => ToDouble(col.GetValue(i)))
+                .Select(i => ToDouble(col.GetCellValue(i)))
                 .Where(d => d.HasValue)
                 .Select(d => d!.Value)
                 .ToList();
@@ -526,7 +526,7 @@ public partial class DataGrid : ContentView
             if (col is null)
                 continue;
             var capture = def;
-            result = result.Where(item => DataGridFilterEvaluator.Matches(col.GetValue(item), capture.Operator, capture.Value));
+            result = result.Where(item => DataGridFilterEvaluator.Matches(col.GetCellValue(item), capture.Operator, capture.Value));
         }
         return result;
     }
@@ -544,7 +544,7 @@ public partial class DataGrid : ContentView
                 continue;
 
             var comparer = col.Comparer ?? DataGridValueComparer.Instance;
-            Func<object, object?> key = col.GetValue;
+            Func<object, object?> key = col.GetCellValue;
             var asc = def.Direction == DataGridSortDirection.Ascending;
 
             ordered = ordered is null
@@ -668,7 +668,11 @@ public partial class DataGrid : ContentView
                 {
                     Text = column.Title,
                     FontAttributes = FontAttributes.Bold,
-                    VerticalOptions = LayoutOptions.Center
+                    VerticalOptions = LayoutOptions.Center,
+                    // Narrow columns are the norm on phones; a header that refuses to shrink spills
+                    // over the next one instead of ellipsizing like the cells below it do.
+                    LineBreakMode = LineBreakMode.TailTruncation,
+                    MaxLines = 1
                 };
                 title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
@@ -680,7 +684,19 @@ public partial class DataGrid : ContentView
                 };
                 sortGlyph.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Primary);
 
-                var sortablePart = new HorizontalStackLayout { Spacing = 4, Children = { title, sortGlyph } };
+                // Grid rather than a stack so the title actually gets squeezed (and ellipsized)
+                // instead of the whole part overflowing its column.
+                var sortablePart = new Grid
+                {
+                    ColumnSpacing = 4,
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition(GridLength.Star),
+                        new ColumnDefinition(GridLength.Auto)
+                    }
+                };
+                sortablePart.Add(title, 0, 0);
+                sortablePart.Add(sortGlyph, 1, 0);
                 if (this.EffectiveSortable(column))
                 {
                     var t = new TapGestureRecognizer();
@@ -688,12 +704,18 @@ public partial class DataGrid : ContentView
                     sortablePart.GestureRecognizers.Add(t);
                 }
 
-                var cell = new HorizontalStackLayout
+                // The sort/filter/group/reorder affordances go in their own strip so the header can
+                // be laid out with the title taking priority. A HorizontalStackLayout here is fine:
+                // the strip lives in a star column that clips, so it shrinks by losing glyphs off
+                // the end rather than by pushing the title out of the way.
+                var glyphs = new HorizontalStackLayout
                 {
                     Spacing = 6,
-                    Padding = this.CellPadding,
-                    Children = { sortablePart }
+                    HorizontalOptions = LayoutOptions.End,
+                    VerticalOptions = LayoutOptions.Center
                 };
+
+                void AddGlyph(View glyph) => glyphs.Children.Add(glyph);
 
                 if (this.FilterMode == DataGridFilterMode.Menu && this.EffectiveFilterable(column))
                 {
@@ -709,7 +731,7 @@ public partial class DataGrid : ContentView
                     var ft = new TapGestureRecognizer();
                     ft.Tapped += (_, _) => this.OpenFilterMenu(capture);
                     filterGlyph.GestureRecognizers.Add(ft);
-                    cell.Children.Add(filterGlyph);
+                    AddGlyph(filterGlyph);
                 }
 
                 if (this.EffectiveGroupable(column))
@@ -727,13 +749,32 @@ public partial class DataGrid : ContentView
                     var gt = new TapGestureRecognizer();
                     gt.Tapped += (_, _) => this.ToggleGroupBy(capture);
                     groupGlyph.GestureRecognizers.Add(gt);
-                    cell.Children.Add(groupGlyph);
+                    AddGlyph(groupGlyph);
                 }
 
                 if (this.AllowColumnReorder)
                 {
-                    cell.Children.Add(this.ReorderArrow("‹", capture, -1));
-                    cell.Children.Add(this.ReorderArrow("›", capture, +1));
+                    AddGlyph(this.ReorderArrow("‹", capture, -1));
+                    AddGlyph(this.ReorderArrow("›", capture, +1));
+                }
+
+                // Star columns (not Auto) so the title keeps a fixed share of a narrow column and
+                // ellipsizes, instead of an Auto glyph strip eating the row and squeezing the title
+                // down to nothing. Clipped, so whatever does not fit is cut rather than spilling
+                // into the next header.
+                var cell = new Grid
+                {
+                    ColumnSpacing = 6,
+                    Padding = this.CellPadding,
+                    IsClippedToBounds = true
+                };
+                cell.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(3, GridUnitType.Star)));
+                cell.Add(sortablePart, 0, 0);
+
+                if (glyphs.Children.Count > 0)
+                {
+                    cell.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(2, GridUnitType.Star)));
+                    cell.Add(glyphs, 1, 0);
                 }
 
                 headerView = cell;
@@ -810,7 +851,9 @@ public partial class DataGrid : ContentView
 
     View ResizeHandle(DataGridColumn col, VisualElement headerCell)
     {
-        var handle = new BoxView
+        // Invisible hit target only - a Grid, not a BoxView, so a host app's implicit
+        // Style TargetType="BoxView" cannot paint it (see the parallax/skeleton fixes).
+        var handle = new Grid
         {
             WidthRequest = 8,
             BackgroundColor = Colors.Transparent,

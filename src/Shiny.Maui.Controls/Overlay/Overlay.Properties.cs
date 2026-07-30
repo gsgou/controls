@@ -6,7 +6,7 @@ public partial class Overlay
     public static readonly BindableProperty IsShownProperty = BindableProperty.Create(
         nameof(IsShown), typeof(bool), typeof(Overlay), false,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Overlay), () =>
             {
                 ((Overlay)b).OnIsShownChanged((bool)n);
             }));
@@ -18,7 +18,7 @@ public partial class Overlay
 
     public static readonly BindableProperty BlurRadiusProperty = BindableProperty.Create(
         nameof(BlurRadius), typeof(double), typeof(Overlay), 0d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Overlay), () =>
             {
                 ((Overlay)b).OnBlurRadiusChanged();
             }));
@@ -30,7 +30,7 @@ public partial class Overlay
 
     public static readonly BindableProperty OverlayContentTemplateProperty = BindableProperty.Create(
         nameof(OverlayContentTemplate), typeof(DataTemplate), typeof(Overlay),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Overlay), () =>
             {
                 ((Overlay)b).UpdateOverlayContent();
             }));

@@ -20,35 +20,35 @@ public class TimePickerCell : CellBase
     public static readonly BindableProperty TimeProperty = BindableProperty.Create(
         nameof(Time), typeof(TimeSpan), typeof(TimePickerCell), TimeSpan.Zero,
         BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TimePickerCell), () =>
             {
                 ((TimePickerCell)b).OnTimeChanged();
             }));
 
     public static readonly BindableProperty FormatProperty = BindableProperty.Create(
         nameof(Format), typeof(string), typeof(TimePickerCell), "t",
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TimePickerCell), () =>
             {
                 ((TimePickerCell)b).UpdateDisplayText();
             }));
 
     public static readonly BindableProperty MinuteIntervalProperty = BindableProperty.Create(
         nameof(MinuteInterval), typeof(int), typeof(TimePickerCell), 1,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TimePickerCell), () =>
             {
                 ((TimePickerCell)b).SyncMinuteInterval();
             }));
 
     public static readonly BindableProperty Use24HourProperty = BindableProperty.Create(
         nameof(Use24Hour), typeof(bool), typeof(TimePickerCell), false,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TimePickerCell), () =>
             {
                 ((TimePickerCell)b).SyncUse24Hour();
             }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(TimePickerCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TimePickerCell), () =>
             {
                 ((TimePickerCell)b).UpdateValueColor();
             }));

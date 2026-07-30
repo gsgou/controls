@@ -56,7 +56,7 @@ public class TextEntryTool : ContentView
 
     public static readonly BindableProperty IconProperty = BindableProperty.Create(
         nameof(Icon), typeof(ImageSource), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
             {
             var t = (TextEntryTool)b;
             t.iconImage.Source = n as ImageSource;
@@ -66,7 +66,7 @@ public class TextEntryTool : ContentView
 
     public static readonly BindableProperty TextProperty = BindableProperty.Create(
         nameof(Text), typeof(string), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
             {
             var t = (TextEntryTool)b;
             t.textLabel.Text = n as string;
@@ -75,8 +75,8 @@ public class TextEntryTool : ContentView
     public string? Text { get => (string?)GetValue(TextProperty); set => SetValue(TextProperty, value); }
 
     public static readonly BindableProperty ToolColorProperty = BindableProperty.Create(
-        nameof(ToolColor), typeof(Color), typeof(TextEntryTool), Colors.Grey,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        nameof(ToolColor), typeof(Color), typeof(TextEntryTool), null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
             {
             if (n is Color c)
                 ((TextEntryTool)b).textLabel.TextColor = c;

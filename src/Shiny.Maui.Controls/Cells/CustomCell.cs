@@ -10,11 +10,11 @@ public class CustomCell : CellBase
 {
     public static readonly BindableProperty CustomContentProperty = BindableProperty.Create(
         nameof(CustomContent), typeof(View), typeof(CustomCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnCustomContentChanged(b, o, n)));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CustomCell), () => OnCustomContentChanged(b, o, n)));
 
     public static readonly BindableProperty UseFullSizeProperty = BindableProperty.Create(
         nameof(UseFullSize), typeof(bool), typeof(CustomCell), false,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CustomCell), () =>
             {
                 ((CustomCell)b).UpdateLayout();
             }));
@@ -33,7 +33,7 @@ public class CustomCell : CellBase
 
     public static readonly BindableProperty ShowArrowProperty = BindableProperty.Create(
         nameof(ShowArrow), typeof(bool), typeof(CustomCell), false,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CustomCell), () =>
             {
                 ((CustomCell)b).UpdateArrowVisibility();
             }));

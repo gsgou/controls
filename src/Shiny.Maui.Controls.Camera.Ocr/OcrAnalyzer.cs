@@ -25,6 +25,20 @@ public class OcrAnalyzer : FrameAnalyzer
     /// <summary>Box outline + caption color. Default a violet accent.</summary>
     public Color BoxColor { get; set; } = Color.FromArgb("#A78BFA");
 
+    /// <summary>
+    /// Smallest text to recognize, as a fraction of the recognized image's height. <c>0</c> (default) leaves the
+    /// platform default — Apple Vision's is 1/32, so ~34px in a 1080p frame, which discards small or distant
+    /// text outright. Apple-only; see <see cref="TextRecognitionOptions.MinimumTextHeight"/>.
+    /// </summary>
+    public float MinimumTextHeight { get; set; }
+
+    /// <summary>
+    /// Upscale the <see cref="FrameAnalyzer.ScanWindow"/> crop to at least this many pixels tall before
+    /// recognizing, so small text survives the engine's own downscale. <c>0</c> (default) disables it, and it
+    /// only applies when a scan window is set. See <see cref="TextRecognitionOptions.MinimumInputHeight"/>.
+    /// </summary>
+    public int MinimumInputHeight { get; set; }
+
     /// <summary>Command invoked (with the <see cref="TextRecognizedEventArgs"/>) when text is recognized.</summary>
     public static readonly BindableProperty TextRecognizedCommandProperty = BindableProperty.Create(
         nameof(TextRecognizedCommand), typeof(ICommand), typeof(OcrAnalyzer));
@@ -63,7 +77,14 @@ public class OcrAnalyzer : FrameAnalyzer
     /// <inheritdoc/>
     public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
     {
-        var text = await this.recognizer.RecognizeAsync(frame, ct).ConfigureAwait(false);
+        // ScanWindow becomes the recognizer's region of interest, so it restricts what the engine actually
+        // looks at rather than only post-filtering what came back — which is the difference between finding
+        // small text inside the window and never seeing it at all.
+        var options = this.ScanWindow is { } window
+            ? new TextRecognitionOptions(window, this.MinimumTextHeight, this.MinimumInputHeight)
+            : new TextRecognitionOptions(null, this.MinimumTextHeight);
+
+        var text = await this.recognizer.RecognizeAsync(frame, options, ct).ConfigureAwait(false);
         if (text.Count == 0)
             return null;
 

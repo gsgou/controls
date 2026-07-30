@@ -204,16 +204,16 @@
                        HorizontalTextAlignment="Center"
                        TextColor="{AppThemeBinding Light=#9CA3AF, Dark=#6B7280}" />
                 <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                    <Button Text="Basic" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnBasicTheme" />
-                    <Button Text="Ocean" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnOceanTheme" />
-                    <Button Text="Material" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnMaterialTheme" />
+                    <Button x:Name="basicThemeButton" Text="Basic" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnBasicTheme" />
+                    <Button x:Name="oceanThemeButton" Text="Ocean" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnOceanTheme" />
+                    <Button x:Name="materialThemeButton" Text="Material" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnMaterialTheme" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
                     <Label Text="Dark mode"
                            VerticalOptions="Center"
                            FontSize="12"
                            TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
-                    <Switch x:Name="darkSwitch" Toggled="OnDarkToggled" />
+                    <Switch x:Name="darkSwitch" AutomationId="DarkModeSwitch" Toggled="OnDarkToggled" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
 

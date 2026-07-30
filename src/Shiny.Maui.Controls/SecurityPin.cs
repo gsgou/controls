@@ -72,7 +72,7 @@ public class SecurityPin : ContentView
         typeof(int),
         typeof(SecurityPin),
         DefaultLength,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).BuildCells();
             })
@@ -89,7 +89,7 @@ public class SecurityPin : ContentView
         typeof(SecurityPin),
         string.Empty,
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).OnValueChangedExternally((string?)n);
             })
@@ -105,7 +105,7 @@ public class SecurityPin : ContentView
         typeof(Keyboard),
         typeof(SecurityPin),
         Keyboard.Numeric,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).hiddenEntry.Keyboard = (Keyboard)n;
             })
@@ -121,7 +121,7 @@ public class SecurityPin : ContentView
         typeof(string),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).RefreshCells();
             })
@@ -137,7 +137,7 @@ public class SecurityPin : ContentView
         typeof(double),
         typeof(SecurityPin),
         DefaultCellSize,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -153,7 +153,7 @@ public class SecurityPin : ContentView
         typeof(double),
         typeof(SecurityPin),
         DefaultCellSpacing,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).cellsLayout.Spacing = (double)n;
             })
@@ -169,7 +169,7 @@ public class SecurityPin : ContentView
         typeof(double),
         typeof(SecurityPin),
         DefaultCornerRadius,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -185,7 +185,7 @@ public class SecurityPin : ContentView
         typeof(Color),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -201,7 +201,7 @@ public class SecurityPin : ContentView
         typeof(Color),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -217,7 +217,7 @@ public class SecurityPin : ContentView
         typeof(Color),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -233,7 +233,7 @@ public class SecurityPin : ContentView
         typeof(Color),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
             })
@@ -249,7 +249,7 @@ public class SecurityPin : ContentView
         typeof(Color),
         typeof(SecurityPin),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
             var pin = (SecurityPin)b;
             if (n is Color c)
@@ -270,7 +270,7 @@ public class SecurityPin : ContentView
         typeof(double),
         typeof(SecurityPin),
         DefaultFontSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
             var pin = (SecurityPin)b;
             foreach (var label in pin.cellLabels)

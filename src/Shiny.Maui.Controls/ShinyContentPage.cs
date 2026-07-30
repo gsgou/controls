@@ -41,7 +41,7 @@ public class ShinyContentPage : ContentPage
         typeof(View),
         typeof(ShinyContentPage),
         null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () => OnPageContentChanged(b, o, n)));
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () => OnPageContentChanged(b, o, n)));
 
     public View? PageContent
     {
@@ -59,15 +59,16 @@ public class ShinyContentPage : ContentPage
         nameof(BackdropColor),
         typeof(Color),
         typeof(ShinyContentPage),
-        Colors.Black,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
-                ((ShinyContentPage)b).overlayHost.BackdropColor = (Color)n;
+                ((ShinyContentPage)b).overlayHost.BackdropColor = (Color?)n;
             }));
 
-    public Color BackdropColor
+    /// <summary>Leave unset to follow the active theme's scrim.</summary>
+    public Color? BackdropColor
     {
-        get => (Color)GetValue(BackdropColorProperty);
+        get => (Color?)GetValue(BackdropColorProperty);
         set => SetValue(BackdropColorProperty, value);
     }
 
@@ -76,7 +77,7 @@ public class ShinyContentPage : ContentPage
         typeof(double),
         typeof(ShinyContentPage),
         0.5,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).overlayHost.BackdropMaxOpacity = (double)n;
             }));
@@ -104,7 +105,7 @@ public class ShinyContentPage : ContentPage
     public static readonly BindableProperty IsLoadingProperty = BindableProperty.Create(
         nameof(IsLoading), typeof(bool), typeof(ShinyContentPage), false,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
             var page = (ShinyContentPage)b;
             if ((bool)n)
@@ -120,7 +121,7 @@ public class ShinyContentPage : ContentPage
     /// <summary>Optional message shown beneath the spinner/progress bar.</summary>
     public static readonly BindableProperty LoadingMessageProperty = BindableProperty.Create(
         nameof(LoadingMessage), typeof(string), typeof(ShinyContentPage), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.Message = (string?)n;
             }));
@@ -133,7 +134,7 @@ public class ShinyContentPage : ContentPage
     /// <summary>When true (default) shows a spinner; when false shows a determinate progress bar.</summary>
     public static readonly BindableProperty LoadingIsIndeterminateProperty = BindableProperty.Create(
         nameof(LoadingIsIndeterminate), typeof(bool), typeof(ShinyContentPage), true,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.IsIndeterminate = (bool)n;
             }));
@@ -147,7 +148,7 @@ public class ShinyContentPage : ContentPage
     public static readonly BindableProperty LoadingProgressProperty = BindableProperty.Create(
         nameof(LoadingProgress), typeof(double), typeof(ShinyContentPage), 0.0,
         BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.Progress = (double)n;
             }));
@@ -160,7 +161,7 @@ public class ShinyContentPage : ContentPage
     /// <summary>Overrides the spinner/progress accent color.</summary>
     public static readonly BindableProperty LoadingSpinnerColorProperty = BindableProperty.Create(
         nameof(LoadingSpinnerColor), typeof(Color), typeof(ShinyContentPage), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.SpinnerColor = (Color?)n;
             }));
@@ -173,7 +174,7 @@ public class ShinyContentPage : ContentPage
     /// <summary>Frosted-glass blur radius for the loading backdrop (0 = plain dim).</summary>
     public static readonly BindableProperty LoadingBlurRadiusProperty = BindableProperty.Create(
         nameof(LoadingBlurRadius), typeof(double), typeof(ShinyContentPage), 0.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.BlurRadius = (double)n;
             }));
@@ -189,7 +190,7 @@ public class ShinyContentPage : ContentPage
     /// </summary>
     public static readonly BindableProperty LoadingContentTemplateProperty = BindableProperty.Create(
         nameof(LoadingContentTemplate), typeof(DataTemplate), typeof(ShinyContentPage), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyContentPage), () =>
             {
                 ((ShinyContentPage)b).loadingOverlay.OverlayContentTemplate = (DataTemplate?)n;
             }));

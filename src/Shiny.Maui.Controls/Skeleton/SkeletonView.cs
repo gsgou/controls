@@ -14,7 +14,7 @@ public partial class SkeletonView : Grid, IDisposable
     readonly ContentView realContentHost;
     readonly Grid skeletonHost;
     readonly ContentView placeholderHost;
-    readonly BoxView shimmerBand;
+    readonly Grid shimmerBand;
 
     bool isAnimating;
     double containerWidth;
@@ -24,7 +24,11 @@ public partial class SkeletonView : Grid, IDisposable
         this.realContentHost = new ContentView();
         this.placeholderHost = new ContentView();
 
-        this.shimmerBand = new BoxView
+        // The band is drawn entirely by its gradient Background, so it must not be a BoxView: a
+        // BoxView with no Color of its own picks up whatever the host app's implicit
+        // Style TargetType="BoxView" says, and an opaque fill over the gradient shows up as a solid
+        // bar sweeping across the placeholders. A layout has no such fill to hijack.
+        this.shimmerBand = new Grid
         {
             IsVisible = false,
             InputTransparent = true,

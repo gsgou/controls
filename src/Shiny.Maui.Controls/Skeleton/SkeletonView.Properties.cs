@@ -5,7 +5,7 @@ public partial class SkeletonView
 {
     public static readonly BindableProperty ContentProperty = BindableProperty.Create(
         nameof(Content), typeof(View), typeof(SkeletonView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnContentChanged();
             }));
@@ -14,7 +14,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty IsBusyProperty = BindableProperty.Create(
         nameof(IsBusy), typeof(bool), typeof(SkeletonView), false,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnIsBusyChanged((bool)n);
             }));
@@ -23,7 +23,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty SkeletonTemplateProperty = BindableProperty.Create(
         nameof(SkeletonTemplate), typeof(DataTemplate), typeof(SkeletonView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));
@@ -32,7 +32,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty ItemCountProperty = BindableProperty.Create(
         nameof(ItemCount), typeof(int), typeof(SkeletonView), 3,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));
@@ -41,7 +41,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty BaseColorProperty = BindableProperty.Create(
         nameof(BaseColor), typeof(Color), typeof(SkeletonView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));
@@ -50,7 +50,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty ShimmerColorProperty = BindableProperty.Create(
         nameof(ShimmerColor), typeof(Color), typeof(SkeletonView), null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnShimmerColorChanged();
             }));
@@ -59,7 +59,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty ShimmerEnabledProperty = BindableProperty.Create(
         nameof(ShimmerEnabled), typeof(bool), typeof(SkeletonView), true,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnShimmerEnabledChanged();
             }));
@@ -73,7 +73,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(double), typeof(SkeletonView), 6d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));
@@ -82,7 +82,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty ItemHeightProperty = BindableProperty.Create(
         nameof(ItemHeight), typeof(double), typeof(SkeletonView), 16d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));
@@ -91,7 +91,7 @@ public partial class SkeletonView
 
     public static readonly BindableProperty ItemSpacingProperty = BindableProperty.Create(
         nameof(ItemSpacing), typeof(double), typeof(SkeletonView), 12d,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SkeletonView), () =>
             {
                 ((SkeletonView)b).OnSkeletonAppearanceChanged();
             }));

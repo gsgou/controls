@@ -13,12 +13,16 @@ public class ParallaxCollectionView : ContentView
 {
     readonly Grid root;
     readonly ContentView heroHost;
-    readonly BoxView spacerHeader;
+    readonly Grid spacerHeader;
     readonly CollectionView collection;
 
     public ParallaxCollectionView()
     {
-        spacerHeader = new BoxView { Color = Colors.Transparent };
+        // The list's header is pure empty space that the hero shows through, so it must paint
+        // nothing at all. A BoxView cannot do that: its Color maps to a shape fill, and a
+        // transparent fill still renders the shape's default black on iOS - which is what turned
+        // the whole parallax header into a black box. An empty layout draws nothing.
+        spacerHeader = new Grid { BackgroundColor = Colors.Transparent, InputTransparent = true };
 
         collection = new CollectionView
         {
@@ -57,7 +61,7 @@ public class ParallaxCollectionView : ContentView
         nameof(ItemsSource),
         typeof(IEnumerable),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.ItemsSource = (IEnumerable?)n;
             }));
@@ -72,7 +76,7 @@ public class ParallaxCollectionView : ContentView
         nameof(ItemTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.ItemTemplate = (DataTemplate?)n;
             }));
@@ -88,7 +92,7 @@ public class ParallaxCollectionView : ContentView
         typeof(IItemsLayout),
         typeof(ParallaxCollectionView),
         LinearItemsLayout.Vertical,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.ItemsLayout =
             (IItemsLayout?)n ?? LinearItemsLayout.Vertical;
@@ -104,7 +108,7 @@ public class ParallaxCollectionView : ContentView
         nameof(HeaderTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).ApplyHeaderTemplate();
             }));
@@ -120,7 +124,7 @@ public class ParallaxCollectionView : ContentView
         typeof(double),
         typeof(ParallaxCollectionView),
         240.0,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).ApplyHeaderHeight();
             }));
@@ -184,7 +188,7 @@ public class ParallaxCollectionView : ContentView
         nameof(EmptyView),
         typeof(object),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.EmptyView = n;
             }));
@@ -199,7 +203,7 @@ public class ParallaxCollectionView : ContentView
         nameof(EmptyViewTemplate),
         typeof(DataTemplate),
         typeof(ParallaxCollectionView),
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.EmptyViewTemplate = (DataTemplate?)n;
             }));
@@ -215,7 +219,7 @@ public class ParallaxCollectionView : ContentView
         typeof(SelectionMode),
         typeof(ParallaxCollectionView),
         SelectionMode.None,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.SelectionMode = (SelectionMode)n;
             }));
@@ -231,7 +235,7 @@ public class ParallaxCollectionView : ContentView
         typeof(object),
         typeof(ParallaxCollectionView),
         defaultBindingMode: BindingMode.TwoWay,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ParallaxCollectionView), () =>
             {
                 ((ParallaxCollectionView)b).collection.SelectedItem = n;
             }));

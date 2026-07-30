@@ -18,9 +18,16 @@
         <Setter Property="StrokeThickness" Value="1"/>
     </Style>
 
-    <Style TargetType="BoxView">
-        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Gray950}, Dark={StaticResource Gray200}}" />
-    </Style>
+    <!--
+        No implicit BoxView style on purpose.
+
+        The .NET MAUI template ships one that sets BackgroundColor to Gray950 - an opaque near-black
+        rectangle painted *behind* the BoxView's fill. Nothing here needs it (every BoxView in this
+        app sets its own Color or Background), and an implicit style reaches into the controls too:
+        it turned a transparent spacer into a solid black bar, put black corners behind the rounded
+        skeleton placeholders, and made the docking splitter a thick black slab. Any implicit style
+        on BoxView will do that again, so there isn't one.
+    -->
 
     <Style TargetType="Button">
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />

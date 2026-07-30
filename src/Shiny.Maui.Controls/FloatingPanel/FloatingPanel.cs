@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.FloatingPanel;
 
@@ -66,7 +67,6 @@ public partial class FloatingPanel : ContentView
             HeightRequest = 4,
             WidthRequest = 40,
             CornerRadius = 2,
-            Color = Colors.Grey,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
             Margin = new Thickness(0, 10, 0, 10)
@@ -128,9 +128,10 @@ public partial class FloatingPanel : ContentView
             },
             Stroke = Colors.Transparent,
             StrokeThickness = 0,
-            BackgroundColor = Colors.White,
             Content = sheetInnerGrid
         };
+        Tint(dragHandle, BoxView.ColorProperty, this.HandleColor, ShinyThemeKeys.Color.OutlineVariant);
+        Tint(sheetContainer, VisualElement.BackgroundColorProperty, this.PanelBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
 
         // Outer grid: Border on top, safeAreaFill below
         var outerGrid = new Grid

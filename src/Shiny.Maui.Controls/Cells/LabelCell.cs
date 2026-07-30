@@ -18,35 +18,35 @@ public class LabelCell : CellBase
 
     public static readonly BindableProperty ValueTextProperty = BindableProperty.Create(
         nameof(ValueText), typeof(string), typeof(LabelCell), string.Empty,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(LabelCell), () =>
             {
                 ((LabelCell)b).valueLabel.Text = (string)n;
             }));
 
     public static readonly BindableProperty ValueTextColorProperty = BindableProperty.Create(
         nameof(ValueTextColor), typeof(Color), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(LabelCell), () =>
             {
                 ((LabelCell)b).UpdateValueTextColor();
             }));
 
     public static readonly BindableProperty ValueTextFontSizeProperty = BindableProperty.Create(
         nameof(ValueTextFontSize), typeof(double), typeof(LabelCell), -1d,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(LabelCell), () =>
             {
                 ((LabelCell)b).UpdateValueTextFontSize();
             }));
 
     public static readonly BindableProperty ValueTextFontFamilyProperty = BindableProperty.Create(
         nameof(ValueTextFontFamily), typeof(string), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(LabelCell), () =>
             {
                 ((LabelCell)b).UpdateValueTextFontFamily();
             }));
 
     public static readonly BindableProperty ValueTextFontAttributesProperty = BindableProperty.Create(
         nameof(ValueTextFontAttributes), typeof(FontAttributes?), typeof(LabelCell), null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(LabelCell), () =>
             {
                 ((LabelCell)b).UpdateValueTextFontAttributes();
             }));

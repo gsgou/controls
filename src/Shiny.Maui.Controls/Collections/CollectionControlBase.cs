@@ -9,12 +9,18 @@ public abstract class CollectionControlBase : View
 {
     INotifyCollectionChanged? observedCollection;
 
+    protected CollectionControlBase()
+        // This level owns no children of its own - OnItemsSourceChanged only touches a field and
+        // the handler - so it is ready the moment its own constructor ends. Scoping it here is
+        // what lets the concrete grids inherit the guard without writing anything themselves.
+        => StyleGuard.MarkReady(this, typeof(CollectionControlBase));
+
     public static readonly BindableProperty ItemsSourceProperty = BindableProperty.Create(
         nameof(ItemsSource),
         typeof(IEnumerable),
         typeof(CollectionControlBase),
         null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(CollectionControlBase), () =>
             {
                 ((CollectionControlBase)b).OnItemsSourceChanged((IEnumerable?)o, (IEnumerable?)n);
             }));

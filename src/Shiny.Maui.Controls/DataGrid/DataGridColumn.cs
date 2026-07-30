@@ -126,7 +126,14 @@ public class DataGridColumn : BindableObject
     /// <summary>True when the column has a value (sortable/filterable/editable); false for template-only columns.</summary>
     internal virtual bool HasValue => true;
 
-    internal virtual object? GetValue(object? item)
+    /// <remarks>
+    /// Deliberately NOT named <c>GetValue</c>: an overload taking <c>object?</c> on a
+    /// <see cref="BindableObject"/> hides <c>BindableObject.GetValue(BindableProperty)</c> entirely
+    /// (C# stops at the most-derived type that declares the name), so every bindable property getter
+    /// on this class would call back into here, read <see cref="PropertyName"/>, and recurse until
+    /// the stack blew up.
+    /// </remarks>
+    internal virtual object? GetCellValue(object? item)
         => this.ValueGetter is not null && item is not null
             ? this.ValueGetter(item)
             : DataGridReflection.GetValue(item, this.PropertyName);
@@ -144,7 +151,7 @@ public class DataGridColumn : BindableObject
 
     internal virtual string? GetText(object? item)
     {
-        var value = this.GetValue(item);
+        var value = this.GetCellValue(item);
         if (value is null)
             return null;
 
