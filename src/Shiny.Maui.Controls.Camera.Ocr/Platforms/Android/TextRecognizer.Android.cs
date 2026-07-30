@@ -140,21 +140,20 @@ public partial class TextRecognizer
         var blocks = new List<RecognizedText>();
         if (result is Text text)
         {
-            foreach (var block in text.TextBlocks)
+            var lines = text.TextBlocks
+                .SelectMany(b => b.Lines)
+                .Where(l => l.BoundingBox != null);
+
+            foreach (var line in lines)
             {
-                foreach (var line in block.Lines)
-                {
-                    var r = line.BoundingBox;
-                    if (r == null)
-                        continue;
-                    // the crop is already upright, so its own space maps linearly onto the upright ROI
-                    var box = new RectF(
-                        clamped.X + (float)r.Left / crop.Width * clamped.Width,
-                        clamped.Y + (float)r.Top / crop.Height * clamped.Height,
-                        (float)r.Width() / crop.Width * clamped.Width,
-                        (float)r.Height() / crop.Height * clamped.Height);
-                    blocks.Add(new RecognizedText(line.Text ?? string.Empty, box));
-                }
+                var r = line.BoundingBox!;
+                // the crop is already upright, so its own space maps linearly onto the upright ROI
+                var box = new RectF(
+                    clamped.X + (float)r.Left / crop.Width * clamped.Width,
+                    clamped.Y + (float)r.Top / crop.Height * clamped.Height,
+                    (float)r.Width() / crop.Width * clamped.Width,
+                    (float)r.Height() / crop.Height * clamped.Height);
+                blocks.Add(new RecognizedText(line.Text ?? string.Empty, box));
             }
         }
         return blocks;
