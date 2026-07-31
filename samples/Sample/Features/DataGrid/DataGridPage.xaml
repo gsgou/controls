@@ -20,20 +20,20 @@
                         Groupable="True"
                         PageSize="6"
                         EditMode="Form"
-                        AllowColumnResize="True"
-                        AllowColumnReorder="True"
+                        AllowColumnResize="False"
+                        AllowColumnReorder="False"
                         Striped="True"
                         Bordered="True">
-            <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
-            <shiny:DataGridColumn Title="Last" PropertyName="LastName" Width="*" />
-            <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
-            <shiny:DataGridColumn Title="Department" PropertyName="Department" Width="2*" />
-            <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
+            <!-- Widths are explicit (star / absolute) rather than Auto: header, footer and each
+                 row are separate Grids, so an Auto column sizes to its own cell's content and the
+                 columns drift out of alignment. -->
+            <shiny:DataGridColumn Title="Name" PropertyName="LastName" Width="1.3*" />
+            <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="1.3*">
                 <shiny:DataGridColumn.Aggregate>
                     <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
                 </shiny:DataGridColumn.Aggregate>
             </shiny:DataGridColumn>
-            <shiny:DataGridTemplateColumn Title="Status" Width="Auto" Editable="False">
+            <shiny:DataGridTemplateColumn Title="Status" Width="96" Editable="False">
                 <shiny:DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="local:Person">
                         <shiny:PillView Text="{Binding StatusText}"

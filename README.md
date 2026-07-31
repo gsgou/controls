@@ -1519,7 +1519,7 @@ await ToastService.SuccessAsync("File saved");
 
 A service-first dialog system that emulates the classic `alert`, `confirm`, `prompt`, and `action sheet` primitives — with **owned (non-native), animated, themeable** dialogs on **both MAUI and Blazor**. Inject `IDialogService` and `await` a result — no markup per call. Calls are queued, so awaiting several in a row shows them one at a time.
 
-- **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to the current page (no XAML or OverlayHost required).
+- **MAUI**: registered by `UseShinyControls()`. The overlay auto-attaches to whichever page is current **at the time of each call** (no XAML or OverlayHost required), so dialogs keep working across navigation.
 - **Blazor**: register `AddShinyDialogs()` in DI and place a single `<DialogHost />` in your layout.
 
 ```csharp

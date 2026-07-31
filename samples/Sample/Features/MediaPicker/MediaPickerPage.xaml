@@ -31,6 +31,14 @@
             <Label Text="{Binding Photos.Count, StringFormat='Photos added: {0}'}"
                    FontAttributes="Bold" />
 
+            <!-- Lets the populated state be demoed without photo-library access -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Text="Load Sample Photos" FontSize="13"
+                        Command="{Binding LoadSamplePhotosCommand}" />
+                <Button Grid.Column="1" Text="Clear" FontSize="13"
+                        Command="{Binding ClearPhotosCommand}" />
+            </Grid>
+
             <BoxView HeightRequest="1" Color="#33888888" />
 
             <Grid ColumnDefinitions="*,Auto" RowSpacing="8">

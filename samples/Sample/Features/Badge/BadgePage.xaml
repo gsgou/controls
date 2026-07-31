@@ -19,40 +19,40 @@
 
                 <shiny:BadgeView Grid.Row="0" Grid.Column="0"
                                  Text="9"
-                                 Position="TopLeft">
+                                 Position="TopLeft"
+                                 HorizontalOptions="Center">
                     <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="16"
-                            StrokeShape="RoundRectangle 12"
-                            HorizontalOptions="Center">
+                            StrokeShape="RoundRectangle 12">
                         <Label Text="Top Left" />
                     </Border>
                 </shiny:BadgeView>
 
                 <shiny:BadgeView Grid.Row="0" Grid.Column="1"
                                  Text="9"
-                                 Position="TopRight">
+                                 Position="TopRight"
+                                 HorizontalOptions="Center">
                     <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="16"
-                            StrokeShape="RoundRectangle 12"
-                            HorizontalOptions="Center">
+                            StrokeShape="RoundRectangle 12">
                         <Label Text="Top Right" />
                     </Border>
                 </shiny:BadgeView>
 
                 <shiny:BadgeView Grid.Row="1" Grid.Column="0"
                                  Text="9"
-                                 Position="BottomLeft">
+                                 Position="BottomLeft"
+                                 HorizontalOptions="Center">
                     <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="16"
-                            StrokeShape="RoundRectangle 12"
-                            HorizontalOptions="Center">
+                            StrokeShape="RoundRectangle 12">
                         <Label Text="Bottom Left" />
                     </Border>
                 </shiny:BadgeView>
 
                 <shiny:BadgeView Grid.Row="1" Grid.Column="1"
                                  Text="9"
-                                 Position="BottomRight">
+                                 Position="BottomRight"
+                                 HorizontalOptions="Center">
                     <Border Stroke="#E5E7EB" StrokeThickness="1" Padding="16"
-                            StrokeShape="RoundRectangle 12"
-                            HorizontalOptions="Center">
+                            StrokeShape="RoundRectangle 12">
                         <Label Text="Bottom Right" />
                     </Border>
                 </shiny:BadgeView>

@@ -7,52 +7,61 @@ sealed class DialogManager
 {
     static readonly ConcurrentDictionary<Window, DialogManager> Instances = new();
 
-    readonly AbsoluteLayout overlay;
     readonly Queue<(DialogConfig Config, DialogOptions Options, TaskCompletionSource<DialogOutcome> Tcs)> queue = new();
     bool isProcessingQueue;
-
-    DialogManager(AbsoluteLayout overlay) => this.overlay = overlay;
 
     public static Task<DialogOutcome> ShowAsync(DialogConfig config, DialogOptions options)
     {
         var window = Application.Current?.Windows.FirstOrDefault()
             ?? throw new InvalidOperationException("No active window found. Dialogs require an active MAUI window.");
 
-        var manager = Instances.GetOrAdd(window, CreateManager);
+        var manager = Instances.GetOrAdd(window, static _ => new DialogManager());
         return manager.EnqueueAsync(config, options);
     }
 
-    static DialogManager CreateManager(Window window)
+    /// <summary>
+    /// Resolves the overlay for the page that is current *right now*, attaching one on first
+    /// use for that page. Resolved per show (not cached on the manager) so that dialogs raised
+    /// after navigation land on the visible page instead of the one that happened to be
+    /// current when the first dialog was shown.
+    /// </summary>
+    static DialogOverlay GetOrCreateOverlay()
     {
-        var overlay = new AbsoluteLayout
-        {
-            InputTransparent = true,
-            CascadeInputTransparent = false,
-            ZIndex = 10_000
-        };
+        var window = Application.Current?.Windows.FirstOrDefault()
+            ?? throw new InvalidOperationException("No active window found. Dialogs require an active MAUI window.");
 
         var page = window.Page
             ?? throw new InvalidOperationException("Window has no Page. Dialogs require an active page.");
 
         var targetPage = GetLeafPage(page);
 
-        if (targetPage.Content is View existingContent)
+        if (targetPage.Content is Grid host &&
+            host.Children.OfType<DialogOverlay>().FirstOrDefault() is { } existing)
         {
-            var grid = new Grid();
-            targetPage.Content = null;
-            grid.Children.Add(existingContent);
-            grid.Children.Add(overlay);
-            targetPage.Content = grid;
-        }
-        else
-        {
-            var grid = new Grid();
-            grid.Children.Add(overlay);
-            targetPage.Content = grid;
+            return existing;
         }
 
-        return new DialogManager(overlay);
+        var overlay = new DialogOverlay
+        {
+            InputTransparent = true,
+            CascadeInputTransparent = false,
+            ZIndex = 10_000
+        };
+
+        var grid = new Grid();
+        if (targetPage.Content is View existingContent)
+        {
+            targetPage.Content = null;
+            grid.Children.Add(existingContent);
+        }
+        grid.Children.Add(overlay);
+        targetPage.Content = grid;
+
+        return overlay;
     }
+
+    /// <summary>Marker type so an already-attached dialog overlay can be found again.</summary>
+    sealed class DialogOverlay : AbsoluteLayout;
 
     static ContentPage GetLeafPage(Page page) => page switch
     {
@@ -95,18 +104,25 @@ sealed class DialogManager
 
     async Task ShowSingleAsync(DialogConfig config, DialogOptions options, TaskCompletionSource<DialogOutcome> tcs)
     {
+        var overlay = GetOrCreateOverlay();
+
         var dismissed = new TaskCompletionSource();
         var view = new DialogView(config, options);
         view.SetOnDismissed(() => dismissed.TrySetResult());
 
         AbsoluteLayout.SetLayoutBounds(view, new Rect(0, 0, 1, 1));
         AbsoluteLayout.SetLayoutFlags(view, AbsoluteLayoutFlags.All);
-        this.overlay.Children.Add(view);
+        overlay.Children.Add(view);
 
-        await view.AnimateInAsync();
-        await dismissed.Task;
-
-        this.overlay.Children.Remove(view);
+        try
+        {
+            await view.AnimateInAsync();
+            await dismissed.Task;
+        }
+        finally
+        {
+            overlay.Children.Remove(view);
+        }
         tcs.TrySetResult(view.Outcome);
     }
 }
