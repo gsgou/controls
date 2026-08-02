@@ -1,0 +1,193 @@
+/*
+ * Shiny.Blazor.Controls - SplashScreen
+ *
+ * Plain (unscoped) static asset on purpose: this paints before Blazor exists, so it cannot
+ * be a .razor.css scoped stylesheet. Falls back to sane light/dark values when the Shiny
+ * theme stylesheet has not been linked.
+ */
+
+.shiny-splash {
+    --shiny-splash-bg: var(--shiny-color-surface, #FFFFFF);
+    --shiny-splash-fg: var(--shiny-color-on-surface, #161C23);
+    --shiny-splash-accent: var(--shiny-color-primary, #0055D9);
+    --shiny-splash-muted: var(--shiny-color-on-surface-variant, #6C788D);
+    --shiny-splash-fade-ms: 250ms;
+
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    background: var(--shiny-splash-bg);
+    color: var(--shiny-splash-fg);
+    font-family: var(--shiny-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+    opacity: 1;
+    transition: opacity var(--shiny-splash-fade-ms) ease;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .shiny-splash {
+        --shiny-splash-bg: var(--shiny-color-surface, #12161C);
+        --shiny-splash-fg: var(--shiny-color-on-surface, #E2E9F2);
+        --shiny-splash-muted: var(--shiny-color-on-surface-variant, #9CA9BE);
+    }
+}
+
+.shiny-splash--hiding {
+    opacity: 0;
+    pointer-events: none;
+}
+
+html.shiny-splash-locked,
+html.shiny-splash-locked body {
+    overflow: hidden;
+}
+
+.shiny-splash-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
+}
+
+.shiny-splash-logo {
+    width: 96px;
+    height: 96px;
+    max-width: 40vw;
+    max-height: 40vw;
+    object-fit: contain;
+}
+
+.shiny-splash-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.shiny-splash-subtitle {
+    margin-top: -10px;
+    font-size: 0.875rem;
+    color: var(--shiny-splash-muted);
+}
+
+.shiny-splash-status {
+    min-height: 1.25em;
+    font-size: 0.8125rem;
+    color: var(--shiny-splash-muted);
+}
+
+/* ===== Spinner: ring ===== */
+.shiny-splash-ring {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid color-mix(in srgb, var(--shiny-splash-accent) 24%, transparent);
+    border-top-color: var(--shiny-splash-accent);
+    animation: shiny-splash-spin 800ms linear infinite;
+}
+
+@keyframes shiny-splash-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== Spinner: dots ===== */
+.shiny-splash-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.shiny-splash-dots span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--shiny-splash-accent);
+    animation: shiny-splash-bounce 1200ms ease-in-out infinite;
+}
+
+.shiny-splash-dots span:nth-child(2) { animation-delay: 160ms; }
+.shiny-splash-dots span:nth-child(3) { animation-delay: 320ms; }
+
+@keyframes shiny-splash-bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+    40% { transform: translateY(-7px); opacity: 1; }
+}
+
+/* ===== Spinner: pulse ===== */
+.shiny-splash-pulse {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--shiny-splash-accent);
+    animation: shiny-splash-pulse 1400ms ease-out infinite;
+}
+
+@keyframes shiny-splash-pulse {
+    0% { transform: scale(0.6); opacity: 0.85; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* ===== Progress bar (also the 'bar' spinner) ===== */
+.shiny-splash-progress {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--shiny-splash-accent) 18%, transparent);
+}
+
+.shiny-splash-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--shiny-splash-accent);
+    transition: width 180ms ease;
+}
+
+/* Indeterminate: the fill is ignored and a band sweeps the track instead. */
+.shiny-splash--indeterminate .shiny-splash-progress-fill {
+    width: 0;
+}
+
+.shiny-splash--indeterminate .shiny-splash-progress::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    border-radius: inherit;
+    background: var(--shiny-splash-accent);
+    animation: shiny-splash-sweep 1400ms cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+@keyframes shiny-splash-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+}
+
+/* Every indicator degrades to a static, still-legible shape rather than being animated to
+   nothing (an animation that never runs would leave the sweep band parked off-screen and the
+   pulse at opacity 0). */
+@media (prefers-reduced-motion: reduce) {
+    .shiny-splash { transition-duration: 0s; }
+
+    .shiny-splash-ring,
+    .shiny-splash-dots span,
+    .shiny-splash-pulse,
+    .shiny-splash--indeterminate .shiny-splash-progress::after {
+        animation: none;
+        transform: none;
+        opacity: 0.7;
+    }
+
+    .shiny-splash--indeterminate .shiny-splash-progress::after {
+        width: 100%;
+        opacity: 0.35;
+    }
+}

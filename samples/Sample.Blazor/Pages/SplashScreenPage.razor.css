@@ -1,0 +1,45 @@
+.splash-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.splash-options label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8125rem;
+    color: #6B7280;
+}
+
+.splash-options input,
+.splash-options select {
+    padding: 6px 8px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 0.875rem;
+}
+
+.splash-options input[type=color] {
+    padding: 2px;
+    height: 34px;
+}
+
+.splash-options .splash-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    align-self: end;
+    padding-bottom: 8px;
+}
+
+pre {
+    overflow-x: auto;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #0F172A;
+    color: #E2E8F0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}

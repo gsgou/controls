@@ -8,14 +8,30 @@
     <!-- Shiny Controls theme tokens (Basic, ships in the core package). Swap or add a theme
          pack stylesheet after this line to override, e.g. shiny-theme-ocean.css. -->
     <link id="shiny-theme" href="_content/Shiny.Blazor.Controls/css/shiny-theme.css" rel="stylesheet" />
+    <link href="_content/Shiny.Blazor.Controls/css/shiny-splash.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
     <link href="Sample.Blazor.styles.css" rel="stylesheet" />
 </head>
 <body>
-    <div id="app">
-        <div class="loading-host">Loading…</div>
-    </div>
+    <!-- The stock template's loading UI lived in here. It is redundant now: it sits INSIDE #app,
+         so Blazor wipes it at attach and it can only ever cover the framework download. The
+         SplashScreen below covers that phase AND app startup. -->
+    <div id="app"></div>
 
+    <!-- SplashScreen. Note it lives OUTSIDE #app: Blazor clears #app's contents the moment it
+         attaches the root component, which is long before the app is actually ready. -->
+    <div id="shiny-splash"
+         data-shiny-splash
+         data-title="Shiny Controls"
+         data-subtitle="Blazor Gallery"
+         data-logo="css/shiny_logo.png"
+         data-spinner="ring"
+         data-status="Starting up…"
+         data-blazor-progress="true"
+         data-min-duration="600"
+         data-fade="300"></div>
+
+    <script src="_content/Shiny.Blazor.Controls/splash.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 </html>

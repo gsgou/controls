@@ -1,0 +1,160 @@
+@page "/splashscreen"
+@inject ISplashScreen Splash
+@inject IJSRuntime JS
+
+<PageTitle>Splash Screen</PageTitle>
+
+<h1>Splash Screen</h1>
+
+<section class="demo-section">
+    <p>
+        You already saw it — the splash that covered this app while it booted is the one wired
+        up in <code>wwwroot/index.html</code>. It is <strong>not</strong> a Razor component: it
+        is static markup plus <code>splash.js</code>, so it paints on the very first frame,
+        long before Blazor exists. The <code>ISplashScreen</code> service and
+        <code>&lt;SplashScreenHost /&gt;</code> only own the other end — status, progress, and
+        the handoff to the app.
+    </p>
+    <p style="color:#6B7280;">
+        Reload the page to watch the real boot splash again, or replay it below with different
+        options.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>Replay</h2>
+    <p>Re-shows the splash, runs a scripted startup sequence through <code>ISplashScreen</code>, then hides it.</p>
+
+    <div class="splash-options">
+        <label>
+            Spinner
+            <select @bind="spinner">
+                <option value="ring">ring</option>
+                <option value="dots">dots</option>
+                <option value="bar">bar</option>
+                <option value="pulse">pulse</option>
+                <option value="none">none</option>
+            </select>
+        </label>
+        <label>
+            Title
+            <input @bind="title" />
+        </label>
+        <label>
+            Subtitle
+            <input @bind="subtitle" />
+        </label>
+        <label>
+            Accent
+            <input type="color" @bind="accent" />
+        </label>
+        <label>
+            Background
+            <input type="color" @bind="background" />
+        </label>
+        <label>
+            Fade (ms)
+            <input type="number" @bind="fadeMs" min="0" max="2000" step="50" />
+        </label>
+        <label class="splash-check">
+            <input type="checkbox" @bind="determinate" /> Determinate progress
+        </label>
+    </div>
+
+    <button class="btn btn-primary" @onclick="ReplayAsync" disabled="@busy">Replay Splash</button>
+</section>
+
+<section class="demo-section">
+    <h2>index.html</h2>
+    <p>The declarative form — no <code>&lt;script&gt;</code> block of your own needed.</p>
+    <pre><code>@IndexHtmlSnippet</code></pre>
+    <p>
+        The host <code>&lt;div&gt;</code> sits <strong>outside</strong> <code>#app</code> on
+        purpose. Blazor wipes <code>#app</code>'s contents the instant it attaches the root
+        component — well before your data has loaded — so a splash placed inside it disappears
+        too early and you get a blank flash.
+    </p>
+</section>
+
+@code {
+    string spinner = "ring";
+    string title = "Shiny Controls";
+    string subtitle = "Blazor Gallery";
+    string accent = "#7C3AED";
+    string background = "#0F172A";
+    int fadeMs = 300;
+    bool determinate = true;
+    bool busy;
+
+    const string IndexHtmlSnippet = """
+<link href="_content/Shiny.Blazor.Controls/css/shiny-splash.css" rel="stylesheet" />
+...
+<div id="app">...</div>
+
+<div id="shiny-splash"
+     data-shiny-splash
+     data-title="My App"
+     data-spinner="ring"
+     data-min-duration="600"></div>
+
+<script src="_content/Shiny.Blazor.Controls/splash.js"></script>
+<script src="_framework/blazor.webassembly.js"></script>
+""";
+
+    async Task ReplayAsync()
+    {
+        this.busy = true;
+        try
+        {
+            await this.JS.InvokeVoidAsync("shinySplash.show", new SplashOptions
+            {
+                Title = this.title,
+                Subtitle = this.subtitle,
+                Spinner = this.spinner,
+                Accent = this.accent,
+                Background = this.background,
+                Foreground = "#F8FAFC",
+                Muted = "#94A3B8",
+                FadeMs = this.fadeMs,
+                Progress = this.determinate ? 0 : null,
+                FailSafeMs = 10000
+            });
+
+            var steps = new (string Text, double Progress)[]
+            {
+                ("Connecting…", 0.25),
+                ("Loading accounts…", 0.55),
+                ("Warming cache…", 0.85),
+                ("Ready", 1)
+            };
+
+            foreach (var step in steps)
+            {
+                await this.Splash.SetStatusAsync(step.Text);
+                if (this.determinate)
+                    await this.Splash.SetProgressAsync(step.Progress);
+                await Task.Delay(500);
+            }
+
+            await this.Splash.HideAsync();
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+
+    sealed class SplashOptions
+    {
+        public string? Title { get; set; }
+        public string? Subtitle { get; set; }
+        public string? Spinner { get; set; }
+        public string? Accent { get; set; }
+        public string? Background { get; set; }
+        public string? Foreground { get; set; }
+        public string? Muted { get; set; }
+        public int FadeMs { get; set; }
+        public double? Progress { get; set; }
+        public int FailSafeMs { get; set; }
+    }
+}

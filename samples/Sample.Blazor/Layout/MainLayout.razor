@@ -36,6 +36,7 @@
 
 <ToastHost />
 <DialogHost />
+<SplashScreenHost Until="StartupAsync" />
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -45,6 +46,27 @@
 
 @code {
     bool dark;
+
+    [Inject] ISplashScreen Splash { get; set; } = default!;
+
+    // Stands in for real startup work (prefs, cache warm-up, first fetch). The splash is
+    // already on screen - this just narrates it before SplashScreenHost dismisses it.
+    async Task StartupAsync()
+    {
+        var steps = new (string Text, double Progress)[]
+        {
+            ("Loading theme…", 0.35),
+            ("Preparing gallery…", 0.75),
+            ("Almost there…", 1)
+        };
+
+        foreach (var step in steps)
+        {
+            await this.Splash.SetStatusAsync(step.Text);
+            await this.Splash.SetProgressAsync(step.Progress);
+            await Task.Delay(220);
+        }
+    }
 
     string SelectedTabKey
     {

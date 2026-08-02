@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), and a cross-platform CameraView (preview, photo/video capture, live filters, and a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -147,6 +147,7 @@ No DI registration is required — drop the components into any `.razor` page.
 | `<shiny:Overlay>` in `<shiny:ShinyContentPage.Panels>` | `<Overlay>` (wraps ChildContent; custom content in `<OverlayContent>` slot) |
 | `<shiny:LoadingOverlay>` in `<shiny:ShinyContentPage.Panels>` | `<LoadingOverlay>` (wraps ChildContent) |
 | `<shiny:ProgressBar>` | `<ProgressBar>` |
+| `<MauiSplashScreen>` (native, build-time) | `SplashScreen` — `index.html` markup + `splash.js`, driven by `ISplashScreen` / `<SplashScreenHost />` |
 
 `ISchedulerEventProvider` is identical across both hosts.
 
@@ -884,6 +885,59 @@ MAUI backdrop color/opacity are controlled by `ShinyContentPage.BackdropColor` /
     <p>Your page content here — gets overlaid when IsShown=true</p>
 </LoadingOverlay>
 ```
+
+### SplashScreen (Blazor only)
+
+A boot splash that is on screen **before Blazor starts**. It cannot be a Razor component — nothing
+Blazor renders exists on the first frame — so it ships as static markup you own in `index.html`
+plus a classic `splash.js`, with the managed side (`ISplashScreen` + `<SplashScreenHost />`)
+owning only status, progress, and the handoff to the app.
+
+MAUI has no equivalent because it does not need one — use the native `MauiSplashScreen`.
+
+```html
+<!-- index.html -->
+<link href="_content/Shiny.Blazor.Controls/css/shiny-splash.css" rel="stylesheet" />
+...
+<div id="app">...</div>
+
+<!-- OUTSIDE #app: Blazor clears #app the moment it attaches the root component -->
+<div id="shiny-splash"
+     data-shiny-splash
+     data-title="My App"
+     data-logo="img/logo.svg"
+     data-spinner="ring"
+     data-min-duration="600"></div>
+
+<script src="_content/Shiny.Blazor.Controls/splash.js"></script>
+<script src="_framework/blazor.webassembly.js"></script>
+```
+
+```csharp
+builder.Services.AddShinySplashScreen();
+```
+
+```razor
+@* in MainLayout / App.razor *@
+<SplashScreenHost Until="StartupAsync" />
+
+@code {
+    [Inject] ISplashScreen Splash { get; set; } = default!;
+
+    async Task StartupAsync()
+    {
+        await Splash.SetStatusAsync("Loading accounts…");
+        await Splash.SetProgressAsync(0.4);
+        await LoadAsync();
+    }
+}
+```
+
+Customization comes in three tiers — data attributes, a `shinySplash.show({...})` config object,
+or your own arbitrary HTML inside the host `<div>` (the script then only binds
+`[data-shiny-splash-status]`, `[data-shiny-splash-progress-fill]` and
+`[data-shiny-splash-percent]` and owns the fade/hide). A `failSafeMs` timer (30s default)
+dismisses the splash if the app fails to boot, so a startup exception is never hidden behind it.
 
 ### AutoCompleteEntry
 
