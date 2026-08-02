@@ -125,7 +125,13 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         // Overlay null -> fast native AVCaptureMovieFileOutput path (unchanged, no perf/behavior change).
         if (options.Overlay != null)
         {
-            var recorder = new AppleVideoOverlayRecorder(path, options.IncludeAudio, this.VirtualView.Facing, options.Overlay);
+            var recorder = new AppleVideoOverlayRecorder(
+                path,
+                options.IncludeAudio,
+                this.VirtualView.Facing,
+                options.Overlay,
+                this.VirtualView.VideoBitrate
+            );
             if (options.IncludeAudio)
             {
                 this.EnsureAudioInput();
@@ -226,6 +232,137 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     static partial void MapFilter(CameraViewHandler handler, CameraView view)
         => handler.MainThread(() => handler.ApplyFilter(view.Filter));
 
+    // The preset sizes the whole session — preview, data output and movie output alike — so this is a session
+    // reconfiguration, not a recording setting. Refused mid-recording: changing the preset renegotiates the
+    // active format underneath a running AVAssetWriter or movie output, which corrupts the file being written.
+    static partial void MapVideoQuality(CameraViewHandler handler, CameraView view)
+        => handler.sessionQueue.DispatchAsync(handler.ApplyVideoSettings);
+
+
+    void ApplyVideoSettings()
+    {
+        if (this.session is not { } s || this.overlayRecorder != null || this.movieOutput is { Recording: true })
+            return;
+
+        var preset = this.ResolvePreset();
+        if (s.SessionPreset != preset && s.CanSetSessionPreset(preset))
+        {
+            s.BeginConfiguration();
+            s.SessionPreset = preset;
+            s.CommitConfiguration();
+        }
+
+        this.ApplyFrameRate();
+        this.ApplyMovieOutputBitrate();
+    }
+
+
+    /// <summary>
+    /// The session preset for the requested quality, falling back down the ladder when the device does not
+    /// support it.
+    /// </summary>
+    /// <remarks>
+    /// <c>CanSetSessionPreset</c> has to be asked — assigning an unsupported preset throws, and the front
+    /// camera on many devices tops out well below the back one, so the answer changes with
+    /// <see cref="CameraView.Facing"/> and not only with the hardware. Walking downwards keeps the failure
+    /// mode "smaller than you asked for" rather than "camera did not start".
+    /// </remarks>
+    NSString ResolvePreset()
+    {
+        var ladder = this.MaybeVirtualView?.VideoQuality switch
+        {
+            VideoQuality.Lowest => new[] { AVCaptureSession.PresetLow, AVCaptureSession.Preset352x288, AVCaptureSession.Preset640x480 },
+            VideoQuality.Low => new[] { AVCaptureSession.Preset640x480, AVCaptureSession.PresetMedium, AVCaptureSession.PresetLow },
+            VideoQuality.Medium => new[] { AVCaptureSession.Preset1280x720, AVCaptureSession.Preset640x480, AVCaptureSession.PresetMedium },
+            VideoQuality.UltraHigh => new[] { AVCaptureSession.Preset3840x2160, AVCaptureSession.Preset1920x1080, AVCaptureSession.Preset1280x720 },
+            VideoQuality.Highest => new[] { AVCaptureSession.PresetHigh, AVCaptureSession.Preset1920x1080 },
+            _ => new[] { AVCaptureSession.Preset1920x1080, AVCaptureSession.Preset1280x720, AVCaptureSession.PresetHigh }
+        };
+
+        foreach (var preset in ladder)
+        {
+            if (this.session?.CanSetSessionPreset(preset) != false)
+                return preset;
+        }
+
+        return AVCaptureSession.PresetHigh;
+    }
+
+
+    /// <summary>
+    /// Pins the capture frame rate by clamping both the min and max frame duration on the device.
+    /// </summary>
+    /// <remarks>
+    /// Setting only the max leaves AVFoundation free to run faster under good light, which defeats the point
+    /// when the request was made for thermal or file-size reasons. The value is clamped to what the active
+    /// format actually supports — asking for 60 on a format that tops out at 30 throws rather than degrading.
+    /// </remarks>
+    void ApplyFrameRate()
+    {
+        if (this.MaybeVirtualView?.VideoFrameRate is not > 0 || this.device is not { } dev)
+            return;
+
+        var requested = this.MaybeVirtualView.VideoFrameRate!.Value;
+
+        try
+        {
+            var supported = dev.ActiveFormat?.VideoSupportedFrameRateRanges;
+            if (supported is not { Length: > 0 })
+                return;
+
+            var max = supported.Max(r => r.MaxFrameRate);
+            var min = supported.Min(r => r.MinFrameRate);
+            var fps = (int)Math.Clamp(requested, Math.Ceiling(min), Math.Floor(max));
+            if (fps <= 0)
+                return;
+
+            if (dev.LockForConfiguration(out var err) && err == null)
+            {
+                dev.ActiveVideoMinFrameDuration = new CMTime(1, fps);
+                dev.ActiveVideoMaxFrameDuration = new CMTime(1, fps);
+                dev.UnlockForConfiguration();
+            }
+        }
+        catch (Exception ex)
+        {
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Could not apply the requested frame rate", ex));
+        }
+    }
+
+
+    /// <summary>
+    /// Applies the bitrate to the native (no-overlay) recording path. The burn-in path owns its own
+    /// <c>AVAssetWriter</c> settings and is handed the value at construction instead.
+    /// </summary>
+    void ApplyMovieOutputBitrate()
+    {
+        if (this.MaybeVirtualView?.VideoBitrate is not > 0 || this.movieOutput is not { } output)
+            return;
+
+        var conn = output.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!);
+        if (conn == null)
+            return;
+
+        try
+        {
+            // Start from the codec settings the output would have used and override only the bitrate, so the
+            // codec and dimensions stay whatever AVFoundation negotiated for the preset
+            var settings = output.GetOutputSettings(conn)?.MutableCopy() as NSMutableDictionary
+                           ?? new NSMutableDictionary();
+
+            var props = settings[AVVideo.CompressionPropertiesKey] as NSDictionary;
+            var compression = props?.MutableCopy() as NSMutableDictionary ?? new NSMutableDictionary();
+            compression[AVVideo.AverageBitRateKey] = NSNumber.FromInt32(this.MaybeVirtualView.VideoBitrate!.Value);
+            settings[AVVideo.CompressionPropertiesKey] = compression;
+
+            output.SetOutputSettings(settings, conn);
+        }
+        catch (Exception ex)
+        {
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Could not apply the requested video bitrate", ex));
+        }
+    }
+
 
     // ---- internals ----
 
@@ -234,7 +371,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         if (this.session != null)
             return;
 
-        this.session = new AVCaptureSession { SessionPreset = AVCaptureSession.PresetHigh };
+        this.session = new AVCaptureSession { SessionPreset = this.ResolvePreset() };
         this.session.BeginConfiguration();
 
         this.AddVideoInput();
@@ -257,6 +394,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         this.session.CommitConfiguration();
         this.ConfigureFocus();
+
+        // After the commit, because the frame rate needs the device and the bitrate needs the movie output.
+        // Also re-run on an input change: the front camera's supported presets and frame-rate ranges are
+        // usually a subset of the back one's, so a facing switch can invalidate what was negotiated.
+        this.ApplyVideoSettings();
 
         this.MainThread(() =>
         {
@@ -458,6 +600,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         this.AddVideoInput();
         this.session.CommitConfiguration();
         this.ConfigureFocus();
+
+        // After the commit, because the frame rate needs the device and the bitrate needs the movie output.
+        // Also re-run on an input change: the front camera's supported presets and frame-rate ranges are
+        // usually a subset of the back one's, so a facing switch can invalidate what was negotiated.
+        this.ApplyVideoSettings();
 
         this.MainThread(() =>
         {

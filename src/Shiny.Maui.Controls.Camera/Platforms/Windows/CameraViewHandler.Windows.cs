@@ -237,10 +237,47 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
         var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(Path.GetDirectoryName(path));
         var storageFile = await folder.CreateFileAsync(Path.GetFileName(path), Windows.Storage.CreationCollisionOption.ReplaceExisting);
 
-        var profile = MediaEncodingProfile.CreateMp4(VideoEncodingQuality.HD720p);
+        var profile = this.BuildEncodingProfile();
         this.recording = await this.capture.PrepareLowLagRecordToStorageFileAsync(profile, storageFile);
         await this.recording.StartAsync();
         this.recordingPath = storageFile.Path;
+    }
+
+    /// <summary>
+    /// The encoding profile for the requested quality, bitrate and frame rate.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the other platforms, Windows builds this per recording rather than when the session is
+    /// configured, so <see cref="CameraView.VideoQuality"/> and friends need no rebind here and simply take
+    /// effect on the next <c>StartVideoRecordingAsync</c>. <c>MediaEncodingProfile</c> also carries its own
+    /// bitrate and frame rate, so both are honoured on the raw-feed path — there is no burn-in path on
+    /// Windows to keep in step (see the overlay guard above).
+    /// </remarks>
+    MediaEncodingProfile BuildEncodingProfile()
+    {
+        var profile = MediaEncodingProfile.CreateMp4(this.VirtualView.VideoQuality switch
+        {
+            VideoQuality.Lowest => VideoEncodingQuality.Qvga,
+            VideoQuality.Low => VideoEncodingQuality.Vga,
+            VideoQuality.Medium => VideoEncodingQuality.HD720p,
+            VideoQuality.UltraHigh => VideoEncodingQuality.Uhd2160p,
+            VideoQuality.Highest => VideoEncodingQuality.Uhd2160p,
+            _ => VideoEncodingQuality.HD1080p
+        });
+
+        if (profile.Video == null)
+            return profile;
+
+        if (this.VirtualView.VideoBitrate is > 0 and var bitrate)
+            profile.Video.Bitrate = (uint)bitrate;
+
+        if (this.VirtualView.VideoFrameRate is > 0 and var fps)
+        {
+            profile.Video.FrameRate.Numerator = (uint)fps;
+            profile.Video.FrameRate.Denominator = 1;
+        }
+
+        return profile;
     }
 
     string? recordingPath;
@@ -327,4 +364,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* drawn by managed overlay */ }
 
     static partial void MapFilter(CameraViewHandler handler, CameraView view) { /* best-effort: no live filter on Windows */ }
+
+    // Nothing to do: the MediaEncodingProfile is built per recording, so the new value is picked up by the
+    // next StartVideoRecordingAsync without touching the running session.
+    static partial void MapVideoQuality(CameraViewHandler handler, CameraView view) { }
 }

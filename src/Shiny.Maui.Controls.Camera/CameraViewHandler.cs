@@ -63,6 +63,9 @@ public partial class CameraViewHandler
             [nameof(CameraView.ScanWindow)] = MapOverlay,
             [nameof(CameraView.Analyzer)] = MapAnalyzer,
             [nameof(CameraView.Filter)] = MapFilter,
+            [nameof(CameraView.VideoQuality)] = MapVideoQuality,
+            [nameof(CameraView.VideoBitrate)] = MapVideoQuality,
+            [nameof(CameraView.VideoFrameRate)] = MapVideoQuality,
         };
 
     static void MapAnalyzer(CameraViewHandler handler, CameraView view) => handler.SyncAnalyzer();
@@ -85,5 +88,9 @@ public partial class CameraViewHandler
     static partial void MapScaleMode(CameraViewHandler handler, CameraView view);
     static partial void MapOverlay(CameraViewHandler handler, CameraView view);
     static partial void MapFilter(CameraViewHandler handler, CameraView view);
+
+    // Backs VideoQuality, VideoBitrate and VideoFrameRate — all three are fixed when the session is
+    // configured, so one mapper reapplies the set of them rather than three that each reconfigure.
+    static partial void MapVideoQuality(CameraViewHandler handler, CameraView view);
 }
 #endif

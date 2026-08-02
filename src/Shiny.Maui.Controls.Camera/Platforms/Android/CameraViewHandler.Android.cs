@@ -260,6 +260,55 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     }
 
 
+    // Build the Recorder for the requested quality and bitrate.
+    //
+    // The fallback strategy is what stops a quality request being a compatibility cliff: capture ladders vary
+    // wildly across Android hardware, and QualitySelector.From with no fallback simply produces no supported
+    // quality on a device that lacks the exact rung — which surfaces as a camera that will not bind, not as a
+    // lower-resolution recording. LowerQualityOrHigherThan degrades first (smaller files are the safer
+    // surprise) and only goes up if there is nothing below.
+    Recorder BuildRecorder()
+    {
+        var quality = this.VirtualView.VideoQuality switch
+        {
+            VideoQuality.Lowest => Quality.Lowest!,
+            VideoQuality.Low => Quality.Sd!,
+            VideoQuality.Medium => Quality.Hd!,
+            VideoQuality.High => Quality.Fhd!,
+            VideoQuality.UltraHigh => Quality.Uhd!,
+            _ => Quality.Highest!
+        };
+
+        var builder = new Recorder.Builder()
+            .SetQualitySelector(QualitySelector.From(quality, FallbackStrategy.LowerQualityOrHigherThan(quality)!)!);
+
+        // CameraX rejects a non-positive target outright, so a nonsense value is dropped rather than passed on
+        if (this.VirtualView.VideoBitrate is > 0 and var bitrate)
+            builder.SetTargetVideoEncodingBitRate(bitrate);
+
+        return builder.Build();
+    }
+
+
+    // Frame rate rides on VideoCapture rather than the Recorder. It is a *range* in CameraX, and passing the
+    // requested value as both bounds is deliberate: a range would let the device drift back up to its
+    // preferred rate under good light, which defeats the point when the reason for asking was thermals or
+    // file size rather than motion.
+    VideoCapture BuildVideoCapture(Recorder rec)
+    {
+        if (this.VirtualView.VideoFrameRate is not > 0)
+            return VideoCapture.WithOutput(rec);
+
+        var fps = this.VirtualView.VideoFrameRate!.Value;
+
+        // Builder.Build() is bound as Java.Lang.Object (the generic VideoCapture<T> erases in the binding),
+        // so the cast is not optional
+        return (VideoCapture)new VideoCapture.Builder(rec)
+            .SetTargetFrameRate(new Android.Util.Range(Java.Lang.Integer.ValueOf(fps), Java.Lang.Integer.ValueOf(fps)))
+            .Build();
+    }
+
+
     // Force ImageAnalysis and VideoCapture onto the same field of view.
     //
     // CameraX sizes each use case independently — ImageAnalysis lands on a 4:3 buffer by default while the
@@ -377,6 +426,15 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     static partial void MapFilter(CameraViewHandler handler, CameraView view) => handler.ApplyFilter(view.Filter);
 
+    // Quality is baked into the Recorder at bind time, so a change means a rebind. Refused mid-recording:
+    // rebinding tears down the Recorder that owns the file being written, which would truncate the clip. The
+    // new value lands on the next binding — the one the recording already triggers when it stops.
+    static partial void MapVideoQuality(CameraViewHandler handler, CameraView view)
+    {
+        if (handler.cameraProvider != null && handler.activeRecording == null)
+            handler.BindUseCases();
+    }
+
 
     // ---- internals ----
 
@@ -442,10 +500,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
         if (video)
         {
-            this.recorder = new Recorder.Builder()
-                .SetQualitySelector(QualitySelector.From(Quality.Hd!))
-                .Build();
-            this.videoCapture = VideoCapture.WithOutput(this.recorder);
+            this.recorder = this.BuildRecorder();
+            this.videoCapture = this.BuildVideoCapture(this.recorder);
             useCases.Add(this.videoCapture);
         }
 

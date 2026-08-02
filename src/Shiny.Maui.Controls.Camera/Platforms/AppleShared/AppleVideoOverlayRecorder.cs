@@ -23,6 +23,19 @@ sealed class AppleVideoOverlayRecorder
     readonly CameraFacing facing;
     readonly string path;
     readonly bool includeAudio;
+
+    /// <summary>
+    /// Target video bitrate, or null for AVFoundation's default for the dimensions.
+    /// </summary>
+    /// <remarks>
+    /// This path has to be given the bitrate explicitly because it does not go through
+    /// <c>AVCaptureMovieFileOutput</c> — it owns its own <c>AVAssetWriter</c>. Leaving it unset was a real
+    /// inconsistency rather than a gap: with an overlay attached the encode silently changed codec *and*
+    /// bitrate compared to the same recording without one, so toggling a burn-in overlay changed the size and
+    /// fidelity of the output for reasons nothing in the API hinted at.
+    /// </remarks>
+    readonly int? videoBitrate;
+
     readonly object gate = new();
     readonly TaskCompletionSource<CameraVideo> tcs = new();
 
@@ -35,12 +48,19 @@ sealed class AppleVideoOverlayRecorder
     long frameIndex;
     bool finished;
 
-    public AppleVideoOverlayRecorder(string path, bool includeAudio, CameraFacing facing, IVideoOverlayRenderer overlay)
+    public AppleVideoOverlayRecorder(
+        string path,
+        bool includeAudio,
+        CameraFacing facing,
+        IVideoOverlayRenderer overlay,
+        int? videoBitrate = null
+    )
     {
         this.path = path;
         this.includeAudio = includeAudio;
         this.facing = facing;
         this.overlay = overlay;
+        this.videoBitrate = videoBitrate;
     }
 
     public Task<CameraVideo> Task => this.tcs.Task;
@@ -103,6 +123,14 @@ sealed class AppleVideoOverlayRecorder
                 Width = width,
                 Height = height
             };
+
+            if (this.videoBitrate is > 0 and var bitrate)
+            {
+                videoSettings.CodecSettings = new AVVideoCodecSettings
+                {
+                    AverageBitRate = bitrate
+                };
+            }
             this.videoInput = new AVAssetWriterInput(AVMediaTypes.Video.GetConstant()!, videoSettings)
             {
                 ExpectsMediaDataInRealTime = true

@@ -29,6 +29,29 @@ public partial class CameraPage : ShinyContentPage
     public CameraFilter[] Filters { get; } = Enum.GetValues<CameraFilter>();
     public ObservableCollection<CameraInfo> Cameras { get; } = [];
 
+    /// <summary>Target capture resolutions for the "Video quality" picker.</summary>
+    public VideoQuality[] VideoQualities { get; } = Enum.GetValues<VideoQuality>();
+
+    /// <summary>
+    /// Frame-rate choices, with 0 standing in for "platform default" — <see cref="CameraView.VideoFrameRate"/>
+    /// is <c>int?</c> and a picker cannot bind a null entry, so <see cref="SelectedFrameRate"/> maps between them.
+    /// </summary>
+    public int[] FrameRates { get; } = [0, 15, 24, 30, 60];
+
+    int selectedFrameRate;
+
+    /// <summary>Two-way bound to the sheet's frame-rate picker; 0 clears the request back to the platform default.</summary>
+    public int SelectedFrameRate
+    {
+        get => this.selectedFrameRate;
+        set
+        {
+            this.selectedFrameRate = value;
+            this.Camera.VideoFrameRate = value > 0 ? value : null;
+            this.OnPropertyChanged();
+        }
+    }
+
     /// <summary>The detector names shown in the "Detector" picker.</summary>
     public string[] Detectors { get; }
 

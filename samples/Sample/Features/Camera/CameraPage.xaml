@@ -122,6 +122,19 @@
                                               SelectedItem="{Binding SelectedCamera, Mode=TwoWay}" />
                     </shiny:TableSection>
 
+                    <!-- Capture settings, not per-recording ones: both AVFoundation and CameraX fix these when
+                         the session is configured, so changing one here reconfigures the running camera. -->
+                    <shiny:TableSection Title="Video">
+                        <shiny:TextPickerCell Title="Quality"
+                                              PickerTitle="Video quality"
+                                              ItemsSource="{Binding VideoQualities}"
+                                              SelectedItem="{Binding VideoQuality, Source={x:Reference Camera}, Mode=TwoWay}" />
+                        <shiny:TextPickerCell Title="Frame rate"
+                                              PickerTitle="Frame rate (0 = platform default)"
+                                              ItemsSource="{Binding FrameRates}"
+                                              SelectedItem="{Binding SelectedFrameRate, Mode=TwoWay}" />
+                    </shiny:TableSection>
+
                     <shiny:TableSection Title="Session">
                         <shiny:CommandCell Title="Scanned documents"
                                            ValueText="{Binding ScannedSummary}"

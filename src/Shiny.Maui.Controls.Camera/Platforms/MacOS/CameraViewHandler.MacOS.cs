@@ -122,7 +122,13 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
         // Overlay set -> owned AVAssetWriter path; overlay null -> fast native AVCaptureMovieFileOutput path.
         if (options.Overlay != null)
         {
-            var recorder = new AppleVideoOverlayRecorder(path, options.IncludeAudio, this.VirtualView.Facing, options.Overlay);
+            var recorder = new AppleVideoOverlayRecorder(
+                path,
+                options.IncludeAudio,
+                this.VirtualView.Facing,
+                options.Overlay,
+                this.VirtualView.VideoBitrate
+            );
             if (options.IncludeAudio)
             {
                 this.EnsureAudioInput();
@@ -213,6 +219,57 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* drawn by managed overlay */ }
 
+    // Same session-level reconfiguration as iOS, and refused mid-recording for the same reason — the
+    // preset renegotiates the active format underneath whatever is writing the file.
+    static partial void MapVideoQuality(CameraViewHandler handler, CameraView view)
+        => handler.sessionQueue.DispatchAsync(handler.ApplyVideoSettings);
+
+
+    void ApplyVideoSettings()
+    {
+        if (this.session is not { } s || this.overlayRecorder != null || this.movieOutput is { Recording: true })
+            return;
+
+        var preset = this.ResolvePreset();
+        if (s.SessionPreset != preset && s.CanSetSessionPreset(preset))
+        {
+            s.BeginConfiguration();
+            s.SessionPreset = preset;
+            s.CommitConfiguration();
+        }
+    }
+
+
+    /// <summary>
+    /// The session preset for the requested quality, walking down the ladder until the device accepts one.
+    /// </summary>
+    /// <remarks>
+    /// Mac cameras vary more than iPhone ones — a built-in FaceTime camera, a Continuity iPhone and a USB
+    /// capture device have very different ladders — so an unsupported preset has to be discovered rather than
+    /// assumed. Assigning one throws, hence <c>CanSetSessionPreset</c> before each attempt.
+    /// </remarks>
+    NSString ResolvePreset()
+    {
+        var ladder = this.MaybeVirtualView?.VideoQuality switch
+        {
+            VideoQuality.Lowest => new[] { AVCaptureSession.PresetLow, AVCaptureSession.Preset352x288, AVCaptureSession.Preset640x480 },
+            VideoQuality.Low => new[] { AVCaptureSession.Preset640x480, AVCaptureSession.PresetMedium, AVCaptureSession.PresetLow },
+            VideoQuality.Medium => new[] { AVCaptureSession.Preset1280x720, AVCaptureSession.Preset640x480, AVCaptureSession.PresetMedium },
+            VideoQuality.UltraHigh => new[] { AVCaptureSession.Preset3840x2160, AVCaptureSession.Preset1920x1080, AVCaptureSession.Preset1280x720 },
+            VideoQuality.Highest => new[] { AVCaptureSession.PresetHigh, AVCaptureSession.Preset1920x1080 },
+            _ => new[] { AVCaptureSession.Preset1920x1080, AVCaptureSession.Preset1280x720, AVCaptureSession.PresetHigh }
+        };
+
+        foreach (var preset in ladder)
+        {
+            if (this.session?.CanSetSessionPreset(preset) != false)
+                return preset;
+        }
+
+        return AVCaptureSession.PresetHigh;
+    }
+
+
     static partial void MapFilter(CameraViewHandler handler, CameraView view)
         => handler.MainThread(() => handler.ApplyFilter(view.Filter));
 
@@ -222,7 +279,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
         if (this.session != null)
             return;
 
-        this.session = new AVCaptureSession { SessionPreset = AVCaptureSession.PresetHigh };
+        this.session = new AVCaptureSession { SessionPreset = this.ResolvePreset() };
         this.session.BeginConfiguration();
         this.AddVideoInput();
 
