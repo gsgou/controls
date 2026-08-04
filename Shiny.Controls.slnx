@@ -47,4 +47,5 @@
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.Camera.Tests/Shiny.Maui.Controls.Camera.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.Tests/Shiny.Maui.Controls.Tests.csproj" />
+    <Project Path="tests/Shiny.Blazor.Controls.Camera.Tests/Shiny.Blazor.Controls.Camera.Tests.csproj" />
 </Solution>

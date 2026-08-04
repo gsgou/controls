@@ -181,7 +181,18 @@ public static partial class CameraEffects
                     return half4(content.eval(block));
                 }
                 """,
-            // no SVG primitive produces a mosaic; the browser falls back to the managed pass on capture
+            // No SVG primitive mosaics directly, but the classic flood/tile/mask/dilate chain does: flood a
+            // single pixel, composite it into one 12x12 cell, tile that cell across the frame to build a grid
+            // of one-pixel holes, mask the frame through it to keep one pixel per cell, then dilate each
+            // survivor back out to fill its cell. Needs the filter region pinned to the frame origin (the
+            // browser backend does that when it injects the filter) or the tiling drifts off the picture.
+            SvgFilter: """
+                <feFlood x="5" y="5" width="1" height="1" result="cell" />
+                <feComposite in="cell" width="12" height="12" />
+                <feTile result="grid" />
+                <feComposite in="SourceGraphic" in2="grid" operator="in" />
+                <feMorphology operator="dilate" radius="6" />
+                """,
             Managed: s => ManagedEffects.Pixelate(s)
         ));
 

@@ -31,7 +31,9 @@ export async function start(video, overlay, dotnetRef, facingMode, analyzerKind,
         analyzerKind, showOverlay,
         showBoundingBox: showBoundingBox !== false,
         scanWindow: scanWindow || null,   // [x, y, w, h] normalized, or null for the whole frame
-        filterCss: 'none',
+        // the element keeps its filter across a stop/start (an analyzer or lens change restarts the stream), so
+        // seed from it rather than resetting to none and shipping unfiltered document crops afterwards
+        filterCss: video.style.filter || 'none',
         running: true,
         rafId: null,
         detector: null,
@@ -185,6 +187,13 @@ function applySvgFilters(prefix, defs) {
         filter.setAttribute('id', def.id);
         // the frame is already in sRGB; the SVG default (linearRGB) would shift every colour
         filter.setAttribute('color-interpolation-filters', 'sRGB');
+        // Pin the filter region to the frame. The default (-10%, -10%, 120%, 120%) pads the source with
+        // transparent black, which both softens the edges of a convolution and — because feTile tiles from the
+        // region origin — knocks the pixelate mosaic out of alignment with the picture.
+        filter.setAttribute('x', '0');
+        filter.setAttribute('y', '0');
+        filter.setAttribute('width', '100%');
+        filter.setAttribute('height', '100%');
         filter.innerHTML = def.markup;
         host.appendChild(filter);
     }

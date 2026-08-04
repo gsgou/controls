@@ -25,6 +25,7 @@
                     Analyzer="analyzer"
                     ShowOverlay="showBoxes"
                     Filter="filter"
+                    Effects="effects"
                     BarcodesDetected="OnBarcodes"
                     OnError="OnError"
                     OnStarted="LoadCamerasAsync"
@@ -63,6 +64,18 @@
                     }
                 </select>
             </label>
+            <label style="display:block;margin-top:6px;">Effect:
+                <select @bind="spatialEffect" @bind:after="ApplyEffects">
+                    @foreach (var e in SpatialEffects)
+                    {
+                        <option value="@e">@e</option>
+                    }
+                </select>
+            </label>
+            @if (effectNote != null)
+            {
+                <p style="margin:4px 0 0;font-size:12px;color:#9CA3AF;">@effectNote</p>
+            }
             <label style="display:block;margin-top:6px;">Lens:
                 <select value="@cameraId" @onchange="OnLensChanged" disabled="@(cameras.Count == 0)">
                     @foreach (var c in cameras)
@@ -127,6 +140,47 @@
     CameraFacing facing = CameraFacing.Back;
     string? cameraId;
     CameraFilter filter = CameraFilter.None;
+
+    // The spatial looks — unlike the colour grades in `filter`, these need a pixel's neighbours, so they run
+    // as SVG filters rather than a CSS shorthand. They stack on top of whatever `filter` is set to.
+    static readonly string[] SpatialEffects = ["None", "Comic", "Sketch", "Posterize", "Pixelate", "Blur"];
+    string spatialEffect = "None";
+    IReadOnlyList<ICameraEffect>? effects;
+    string? effectNote;
+
+    void ApplyEffects()
+    {
+        if (SpatialEffect(spatialEffect) is { } spatial)
+        {
+            effects = [spatial];
+            // coverage is uneven (no SVG primitive produces a mosaic, so Pixelate is stills-only here)
+            var support = CameraView.GetEffectSupport(spatial);
+            effectNote = support == EffectSupport.Full ? null : $"{spatialEffect}: {Describe(support)}";
+        }
+        else
+        {
+            effects = null;
+            effectNote = null;
+        }
+    }
+
+    static BuiltInCameraEffect? SpatialEffect(string name) => name switch
+    {
+        "Comic" => CameraEffects.Comic,
+        "Sketch" => CameraEffects.Sketch,
+        "Posterize" => CameraEffects.Posterize,
+        "Pixelate" => CameraEffects.Pixelate,
+        "Blur" => CameraEffects.Blur,
+        _ => null
+    };
+
+    static string Describe(EffectSupport support) => support switch
+    {
+        EffectSupport.StillOnly => "photos only — the live preview can't run it",
+        EffectSupport.ColorOnly => "approximated with a colour matrix",
+        EffectSupport.Unsupported => "not supported in the browser",
+        _ => ""
+    };
     enum DetectorMode { Barcode, Document }
     DetectorMode mode = DetectorMode.Barcode;
     bool scanArea;

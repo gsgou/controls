@@ -89,14 +89,17 @@ public partial class CameraView : IAsyncDisposable
             "import", "./_content/Shiny.Blazor.Controls.Camera/camera.js");
         this.selfRef = DotNetObjectReference.Create(this);
 
+        // Filter first: it only needs the element, whereas StartAsync blocks on getUserMedia — which sits on the
+        // permission prompt for as long as the user takes to answer it. Applying after would leave the preview
+        // unfiltered for that whole window, then pop the effect in once permission lands.
+        await this.ApplyFilterAsync();
+
         if (this.AutoStart)
             await this.StartAsync();
-
-        await this.ApplyFilterAsync();
     }
 
 
-    string appliedCss = "none";
+    string appliedFilterKey = "none";
     CameraAnalyzer? appliedAnalyzer;
     bool appliedOverlay;
     CameraFacing appliedFacing;
@@ -144,13 +147,15 @@ public partial class CameraView : IAsyncDisposable
 
         this.EffectChain = CameraEffectChain.Create(this.Filter, this.Effects);
 
-        // Effects is a plain list, so we can't observe mutation — compare the resolved CSS instead, which
-        // also collapses "different effects, same rendering" into a single no-op.
+        // Effects is a plain list, so we can't observe mutation — compare the resolved rendering instead, which
+        // also collapses "different effects, same rendering" into a single no-op. The key covers the injected
+        // SVG markup as well as the CSS: url(#id) references are positional, so Comic and Sketch both come back
+        // as url(#prefix-0) and comparing CSS alone would skip the swap entirely.
         var resolved = BlazorCameraFilters.Resolve(this.EffectChain, this.filterIdPrefix);
-        if (resolved.Css == this.appliedCss)
+        if (resolved.Key == this.appliedFilterKey)
             return;
 
-        this.appliedCss = resolved.Css;
+        this.appliedFilterKey = resolved.Key;
         await this.module.InvokeVoidAsync(
             "setFilter", this.videoEl, resolved.Css, this.filterIdPrefix, resolved.Filters);
     }

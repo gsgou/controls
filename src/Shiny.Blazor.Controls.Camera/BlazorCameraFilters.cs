@@ -13,6 +13,23 @@ public sealed record CameraFilterCss(string Css, IReadOnlyList<SvgFilterDef> Fil
 {
     /// <summary>Nothing to apply.</summary>
     public static CameraFilterCss None { get; } = new("none", []);
+
+    /// <summary>
+    /// A value that changes whenever the rendered result would — used to skip redundant interop.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Css"/> alone is <b>not</b> enough: the generated <c>url(#id)</c> references are positional, so
+    /// two entirely different effects (Comic and Sketch, say) both resolve to <c>url(#prefix-0)</c> and only the
+    /// injected <see cref="SvgFilterDef.Markup"/> tells them apart. Keying on the CSS alone made switching
+    /// between any two SVG-backed effects a silent no-op.
+    /// </remarks>
+    public string Key => this.Filters.Count == 0
+        ? this.Css
+        : string.Join(Sep, [this.Css, .. this.Filters.Select(f => f.Id + Sep + f.Markup)]);
+
+    // ASCII unit separator: cannot occur in a CSS filter value or SVG markup, so no pair of distinct
+    // resolutions can be joined into the same key.
+    const char Sep = '\u001f';
 }
 
 /// <summary>One SVG filter definition to inject into the document.</summary>

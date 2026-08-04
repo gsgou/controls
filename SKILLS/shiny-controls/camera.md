@@ -592,8 +592,8 @@ if (CameraView.GetEffectSupport(CameraEffects.Comic) != EffectSupport.Full)
 |---|---|---|---|---|
 | Colour effects, preview | ✅ | ✅ API 31+ | ✅ CSS | ❌ |
 | Colour effects, photo | ✅ | ✅ all API levels | ✅ | ✅ |
-| Spatial effects, preview | ✅ Core Image | ✅ API 33+ (Blur: 31+) | ✅ SVG filter (no `Pixelate`) | ❌ |
-| Spatial effects, photo | ✅ | ✅ managed CPU pass | ⚠️ CSS/SVG only | ✅ managed CPU pass |
+| Spatial effects, preview | ✅ Core Image | ✅ API 33+ (Blur: 31+) | ✅ all five, CSS/SVG filter | ❌ |
+| Spatial effects, photo | ✅ | ✅ managed CPU pass | ✅ same CSS/SVG, baked in | ✅ managed CPU pass |
 | Draw effects | ✅ all surfaces | ✅ all surfaces | ❌ not yet | preview + photo |
 | Effects in **recorded video** | ✅ pixel + draw | ⚠️ draw only | ❌ | ❌ |
 
@@ -647,6 +647,7 @@ need `<NoWarn>$(NoWarn);MEAI001</NoWarn>`.
             Analyzer="analyzer"
             ShowOverlay="true"
             Filter="filter"
+            Effects="effects"
             BarcodesDetected="OnBarcodes"
             OnError="m => status = m"
             Style="width:100%;height:100%;" />
@@ -657,6 +658,11 @@ need `<NoWarn>$(NoWarn);MEAI001</NoWarn>`.
 @code {
     CameraView? camera;
     CameraFilter filter = CameraFilter.None;
+
+    // Effects is a PARAMETER on Blazor, not the live IList it is on MAUI — assign a new list to change it.
+    // All five spatial looks run in the browser (Blur as a CSS filter, the rest as generated SVG filters).
+    IReadOnlyList<ICameraEffect>? effects = [CameraEffects.Comic];
+
     CameraAnalyzer? analyzer = new BarcodeAnalyzer();   // single analyzer; set null to disable, swap to change
     string? cameraId;
     string? status;
@@ -694,7 +700,7 @@ need `<NoWarn>$(NoWarn);MEAI001</NoWarn>`.
 }
 ```
 
-Blazor mirrors the MAUI single-analyzer shape: assign a typed **`Analyzer`** (today `BarcodeAnalyzer`, which carries `ScanWindow`; `FaceAnalyzer` is a placeholder that reports "not supported") — `null` disables analysis. It mirrors the gated model **imperatively** via `@ref`: boxes draw continuously, but a decoded value is only delivered through **`RequestBarcodeAsync(ct)`** — it arms the detector, resolves on the next barcode, then goes quiet (`await` = the gate; looping = "keep scanning"). `ct` cancels an outstanding request. The **`BarcodesDetected`** `EventCallback<IReadOnlyList<CameraBarcode>>` still exists but is **gated** — it fires (with every code in the frame) only while a `RequestBarcodeAsync` is outstanding, so the default is quiet (no per-frame firehose). Set `Analyzer.ScanWindow` to a normalized `RectF` to restrict scanning to a band (the JS overlay dims outside it and draws a reticle). Barcode scanning uses the browser `BarcodeDetector` (Chromium only); on unsupported browsers `OnError` fires once and preview continues. `OverlaysChanged` (`IReadOnlyList<OverlayBox>`) and `ShowOverlay="true"` (JS-canvas boxes) are unaffected. Changing `Facing`/`CameraId`/`Analyzer`/`ShowOverlay` while running re-acquires the stream; `Filter` updates live and is baked into `CapturePhotoAsync` stills. Two analyzers run in the browser: **`BarcodeAnalyzer`** (native `BarcodeDetector`) and **`DocumentAnalyzer`** (an in-browser presence heuristic that pairs with `RequestDocumentImageAsync` + the `Shiny.Blazor.Controls.Camera.Ai` `AiDocumentScanner` — see *AI document scanner* above). Face/motion/OCR analyzers are MAUI-native.
+Blazor mirrors the MAUI single-analyzer shape: assign a typed **`Analyzer`** (today `BarcodeAnalyzer`, which carries `ScanWindow`; `FaceAnalyzer` is a placeholder that reports "not supported") — `null` disables analysis. It mirrors the gated model **imperatively** via `@ref`: boxes draw continuously, but a decoded value is only delivered through **`RequestBarcodeAsync(ct)`** — it arms the detector, resolves on the next barcode, then goes quiet (`await` = the gate; looping = "keep scanning"). `ct` cancels an outstanding request. The **`BarcodesDetected`** `EventCallback<IReadOnlyList<CameraBarcode>>` still exists but is **gated** — it fires (with every code in the frame) only while a `RequestBarcodeAsync` is outstanding, so the default is quiet (no per-frame firehose). Set `Analyzer.ScanWindow` to a normalized `RectF` to restrict scanning to a band (the JS overlay dims outside it and draws a reticle). Barcode scanning uses the browser `BarcodeDetector` (Chromium only); on unsupported browsers `OnError` fires once and preview continues. `OverlaysChanged` (`IReadOnlyList<OverlayBox>`) and `ShowOverlay="true"` (JS-canvas boxes) are unaffected. Changing `Facing`/`CameraId`/`Analyzer`/`ShowOverlay` while running re-acquires the stream; `Filter` and `Effects` update live and are baked into `CapturePhotoAsync` stills. `Effects` is an `IReadOnlyList<ICameraEffect>` **parameter** rather than MAUI's live `IList` — mutating the list in place is not observed, so assign a new list to change the chain. All twelve colour grades resolve to a CSS `filter` shorthand; all five spatial looks run too — `Blur` as CSS, and `Comic`/`Sketch`/`Posterize`/`Pixelate` as SVG `<filter>` definitions generated into the document and referenced as `url(#id)`. `GetEffectSupport` reports `Full` for all of them in the browser. Two analyzers run in the browser: **`BarcodeAnalyzer`** (native `BarcodeDetector`) and **`DocumentAnalyzer`** (an in-browser presence heuristic that pairs with `RequestDocumentImageAsync` + the `Shiny.Blazor.Controls.Camera.Ai` `AiDocumentScanner` — see *AI document scanner* above). Face/motion/OCR analyzers are MAUI-native.
 
 ## Properties (MAUI `CameraView`)
 
