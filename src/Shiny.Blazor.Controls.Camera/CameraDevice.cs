@@ -6,7 +6,10 @@ namespace Shiny.Blazor.Controls.Camera;
 /// </summary>
 /// <remarks>
 /// Init properties (not a positional record) so System.Text.Json deserializes it via property setters —
-/// constructor-parameter names get trimmed in published WASM, which would otherwise throw.
+/// constructor-parameter names get trimmed in published WASM, which would otherwise throw. The parameterless
+/// constructor and the accessors are kept alive by the <c>[DynamicDependency]</c> on
+/// <see cref="CameraView.GetAvailableCamerasAsync"/>; JS interop's own annotation does not reach the element type
+/// of the <c>CameraDevice[]</c> it marshals.
 /// </remarks>
 public record CameraDevice
 {

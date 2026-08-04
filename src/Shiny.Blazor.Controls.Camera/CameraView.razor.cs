@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Microsoft.Maui.Graphics;
@@ -126,9 +127,23 @@ public partial class CameraView : IAsyncDisposable
     }
 
     /// <summary>
+    /// What System.Text.Json needs on a JS-interop DTO: a parameterless constructor plus the property accessors.
+    /// </summary>
+    /// <remarks>
+    /// JS interop annotates its generic/parameter types with <see cref="DynamicallyAccessedMembersAttribute"/>, but
+    /// that annotation stops at the <b>array</b> type — it never reaches the element type. So every DTO we marshal as
+    /// <c>T[]</c> loses its constructor and accessors in a trimmed (published) WASM build, and deserialization then
+    /// fails with "DeserializeNoConstructor". Root the element types explicitly with <see cref="DynamicDependencyAttribute"/>.
+    /// Non-array DTOs (see <c>MediaPickerJsResult</c>) are handled by the built-in annotation and need nothing.
+    /// </remarks>
+    const DynamicallyAccessedMemberTypes JsonSerialized =
+        DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.PublicProperties;
+
+    /// <summary>
     /// List the video input devices the browser exposes. Device <c>Name</c>s are only populated once camera
     /// permission has been granted, so call this after the preview has started.
     /// </summary>
+    [DynamicDependency(JsonSerialized, typeof(CameraDevice))]
     public async Task<IReadOnlyList<CameraDevice>> GetAvailableCamerasAsync()
     {
         if (this.module == null)
@@ -281,6 +296,7 @@ public partial class CameraView : IAsyncDisposable
 
     /// <summary>Invoked from JS with the latest styled overlay boxes. Public + named DTO for trim-safe interop.</summary>
     [JSInvokable]
+    [DynamicDependency(JsonSerialized, typeof(CameraOverlayBox))]
     public async Task OnOverlays(CameraOverlayBox[] boxes)
     {
         var mapped = boxes.Select(b => b.ToOverlayBox()).ToArray();
@@ -294,6 +310,7 @@ public partial class CameraView : IAsyncDisposable
     /// of them. Public + named DTO for trim-safe interop.
     /// </summary>
     [JSInvokable]
+    [DynamicDependency(JsonSerialized, typeof(CameraBarcode))]
     public async Task OnBarcodes(CameraBarcode[] barcodes)
     {
         if (barcodes.Length == 0)
