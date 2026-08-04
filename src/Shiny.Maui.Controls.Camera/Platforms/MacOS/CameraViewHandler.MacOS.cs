@@ -104,8 +104,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
         var settings = AVCapturePhotoSettings.Create();
         var del = new PhotoCaptureDelegate
         {
-            // apply the same filter as the live preview so the captured still matches what the user sees
-            Filter = AppleCameraFilters.Create(this.VirtualView.Filter)
+            // apply the same effects as the live preview so the captured still matches what the user sees
+            Filters = AppleCameraFilters.Create(this.VirtualView.EffectChain)
         };
         this.photoOutput.CapturePhoto(settings, del);
         return del.Task;
@@ -119,16 +119,22 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
         var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mov");
 
-        // Overlay set -> owned AVAssetWriter path; overlay null -> fast native AVCaptureMovieFileOutput path.
-        if (options.Overlay != null)
+        // Anything to composite (effects or a legacy overlay) -> owned AVAssetWriter path; nothing to composite
+        // -> fast native AVCaptureMovieFileOutput path.
+        var chain = this.VirtualView.EffectChain;
+        if (options.Overlay != null || !chain.IsEmpty)
         {
             var recorder = new AppleVideoOverlayRecorder(
                 path,
                 options.IncludeAudio,
                 this.VirtualView.Facing,
+                chain,
                 options.Overlay,
                 this.VirtualView.VideoBitrate
-            );
+            )
+            {
+                AnalyzerSnapshot = this.Pipeline.Snapshot
+            };
             if (options.IncludeAudio)
             {
                 this.EnsureAudioInput();
@@ -270,8 +276,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
     }
 
 
-    static partial void MapFilter(CameraViewHandler handler, CameraView view)
-        => handler.MainThread(() => handler.ApplyFilter(view.Filter));
+    static partial void MapEffects(CameraViewHandler handler, CameraView view)
+        => handler.MainThread(() => handler.ApplyEffects(view.EffectChain));
 
 
     void ConfigureSession()
@@ -301,7 +307,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
         {
             this.SetupLayers();
             this.dataOutput.SetSampleBufferDelegate(this.frameDelegate, this.videoQueue);
-            this.ApplyFilter(this.VirtualView.Filter);
+            this.ApplyEffects(this.VirtualView.EffectChain);
         });
     }
 
@@ -337,14 +343,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
     }
 
 
-    void ApplyFilter(CameraFilter filter)
+    void ApplyEffects(CameraEffectChain chain)
     {
         if (this.frameDelegate == null || this.filterView == null || this.previewLayer == null)
             return;
 
-        var ci = AppleCameraFilters.Create(filter);
-        this.frameDelegate.Filter = ci;
-        var active = ci != null;
+        var filters = AppleCameraFilters.Create(chain);
+        this.frameDelegate.Filters = filters;
+        var active = filters.Length > 0;
         this.filterView.Hidden = !active;
         this.previewLayer.Hidden = active;
     }

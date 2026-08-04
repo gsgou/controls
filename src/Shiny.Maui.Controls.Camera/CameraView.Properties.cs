@@ -39,6 +39,19 @@ public partial class CameraView
     public static readonly BindableProperty MaxZoomProperty = BindableProperty.Create(
         nameof(MaxZoom), typeof(double), typeof(CameraView), 1d);
 
+    /// <summary>
+    /// Whether a two-finger pinch on the preview drives <see cref="Zoom"/>. Default <c>false</c>.
+    /// </summary>
+    /// <remarks>
+    /// The gesture writes to <see cref="Zoom"/> like any other caller, so it is clamped to
+    /// <see cref="MinZoom"/>..<see cref="MaxZoom"/> and stays in step with anything else bound to it
+    /// (a slider, a view model). On a device that reports no zoom range — <c>MinZoom == MaxZoom</c>, which is
+    /// every macOS camera — pinching is a no-op.
+    /// </remarks>
+    public static readonly BindableProperty IsPinchToZoomEnabledProperty = BindableProperty.Create(
+        nameof(IsPinchToZoomEnabled), typeof(bool), typeof(CameraView), false,
+        propertyChanged: OnPinchToZoomEnabledChanged);
+
     /// <summary>How the preview fills the view. Default <see cref="PreviewScaleMode.AspectFill"/>.</summary>
     public static readonly BindableProperty ScaleModeProperty = BindableProperty.Create(
         nameof(ScaleMode), typeof(PreviewScaleMode), typeof(CameraView), PreviewScaleMode.AspectFill);
@@ -47,9 +60,18 @@ public partial class CameraView
     public static readonly BindableProperty ShowDetectionOverlayProperty = BindableProperty.Create(
         nameof(ShowDetectionOverlay), typeof(bool), typeof(CameraView), true);
 
-    /// <summary>Live color filter applied to the preview. Default <see cref="CameraFilter.None"/>.</summary>
+    /// <summary>
+    /// Live color filter applied to the preview. Default <see cref="CameraFilter.None"/>.
+    /// </summary>
+    /// <remarks>
+    /// Sugar over <see cref="Effects"/>: the chosen filter is materialized as the <b>first</b> effect in the
+    /// chain, so it composes predictably with anything else in <see cref="Effects"/>. For looks beyond the
+    /// twelve built-in colour grades — comic, sketch, face masks, AI stylization — add an
+    /// <see cref="ICameraEffect"/> to <see cref="Effects"/> instead.
+    /// </remarks>
     public static readonly BindableProperty FilterProperty = BindableProperty.Create(
-        nameof(Filter), typeof(CameraFilter), typeof(CameraView), CameraFilter.None);
+        nameof(Filter), typeof(CameraFilter), typeof(CameraView), CameraFilter.None,
+        propertyChanged: (b, _, _) => ((CameraView)b).RebuildEffectChain());
 
     /// <summary>
     /// Target capture resolution for video recording. Default <see cref="Camera.VideoQuality.High"/> (1080p).
@@ -166,6 +188,13 @@ public partial class CameraView
     {
         get => (double)this.GetValue(MaxZoomProperty);
         set => this.SetValue(MaxZoomProperty, value);
+    }
+
+    /// <inheritdoc cref="IsPinchToZoomEnabledProperty"/>
+    public bool IsPinchToZoomEnabled
+    {
+        get => (bool)this.GetValue(IsPinchToZoomEnabledProperty);
+        set => this.SetValue(IsPinchToZoomEnabledProperty, value);
     }
 
     /// <inheritdoc cref="ScaleModeProperty"/>

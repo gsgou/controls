@@ -11,6 +11,9 @@
 		<Nullable>enable</Nullable>
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ShinyMauiShell_GenerateNavExtensions>true</ShinyMauiShell_GenerateNavExtensions>
+		<!-- MEAI001: Microsoft.Extensions.AI's IImageGenerator (used by the AI stylize demo) is still marked
+		     evaluation-only. Any app consuming AiPhotoStylizer needs this same suppression. -->
+		<NoWarn>$(NoWarn);MEAI001</NoWarn>
 
 		<ApplicationTitle>Shiny Controls</ApplicationTitle>
 		<ApplicationId>org.shiny.controlsample</ApplicationId>

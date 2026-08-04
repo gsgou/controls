@@ -1,137 +1,132 @@
+using System.Runtime.Versioning;
 using Android.Graphics;
+using AndroidColorMatrix = Android.Graphics.ColorMatrix;
+using ShinyColorMatrix = Shiny.Controls.Camera.ColorMatrix4x5;
 
 namespace Shiny.Maui.Controls.Camera;
 
-// Maps the cross-platform CameraFilter enum to an Android ColorMatrix (null = passthrough),
-// applied to the live preview via View.SetRenderEffect on API 31+.
+// Turns a resolved CameraEffectChain into Android graphics primitives:
+//   * the live preview gets a chained RenderEffect on the PreviewView (API 31+, and the AGSL shader steps
+//     within it need API 33+);
+//   * captured stills get the collapsed colour matrix applied to the decoded bitmap, which works on every
+//     API level — so an old device shows an unfiltered preview but still saves a filtered photo.
 static class AndroidCameraFilters
 {
-    public static ColorMatrix? ColorMatrix(CameraFilter filter)
+    /// <summary>Whether this backend can run <paramref name="effect"/>'s native program on the preview.</summary>
+    /// <remarks>
+    /// Blur is the exception to the API-33 shader gate: it maps to <c>RenderEffect.CreateBlurEffect</c>, which
+    /// has been there since 31 — the same level the preview effect itself requires.
+    /// </remarks>
+    public static bool IsHandledNatively(ICameraEffect effect)
     {
-        switch (filter)
+        var descriptor = (effect as INativeEffect)?.Descriptor;
+        if (descriptor is null)
+            return false;
+
+        if (descriptor.AndroidBlurRadius is > 0)
+            return true;
+
+        return descriptor.AgslShader is not null && OperatingSystem.IsAndroidVersionAtLeast(33);
+    }
+
+    /// <summary>Whether this backend can run <paramref name="effect"/>'s native program on a still bitmap.</summary>
+    public static bool IsHandledNativelyForStills(ICameraEffect effect)
+        => (effect as INativeEffect)?.Descriptor.Managed is not null;
+
+    /// <summary>
+    /// Build the chained <see cref="RenderEffect"/> for the live preview, or <c>null</c> for passthrough.
+    /// </summary>
+    /// <remarks>
+    /// Steps compose via <c>RenderEffect.CreateChainEffect(outer, inner)</c>, where <c>inner</c> runs first —
+    /// so the chain is folded in reverse of the order effects were added.
+    /// </remarks>
+    [SupportedOSPlatform("android31.0")]
+    public static RenderEffect? CreatePreviewEffect(CameraEffectChain chain)
+    {
+        ArgumentNullException.ThrowIfNull(chain);
+
+        RenderEffect? result = null;
+        foreach (var step in chain.Plan(IsHandledNatively))
         {
-            case CameraFilter.Mono:
+            RenderEffect? effect;
+            if (step.Native is not null)
             {
-                var m = new ColorMatrix();
-                m.SetSaturation(0f);
-                return m;
+                var descriptor = step.Descriptor!;
+                if (descriptor.AndroidBlurRadius is > 0 and var radius)
+                {
+                    effect = RenderEffect.CreateBlurEffect(radius, radius, Shader.TileMode.Clamp!);
+                }
+                else
+                {
+                    // Plan only yields a shader step when IsHandledNatively said yes, which already required
+                    // API 33 — repeated here so the platform-compatibility analyzer can see the guard too.
+                    effect = OperatingSystem.IsAndroidVersionAtLeast(33)
+                        ? CreateShaderEffect(descriptor)
+                        : null;
+                }
+            }
+            else
+            {
+                effect = RenderEffect.CreateColorFilterEffect(new ColorMatrixColorFilter(ToNative(step.Color!)));
             }
 
-            case CameraFilter.Noir:
-            {
-                var m = new ColorMatrix();
-                m.SetSaturation(0f);
-                var contrast = new ColorMatrix(new[]
-                {
-                    1.4f, 0, 0, 0, -40f,
-                    0, 1.4f, 0, 0, -40f,
-                    0, 0, 1.4f, 0, -40f,
-                    0, 0, 0, 1f, 0
-                });
-                m.PostConcat(contrast);
-                return m;
-            }
+            if (effect is null)
+                continue;
 
-            case CameraFilter.Sepia:
-                return new ColorMatrix(new[]
-                {
-                    0.393f, 0.769f, 0.189f, 0, 0,
-                    0.349f, 0.686f, 0.168f, 0, 0,
-                    0.272f, 0.534f, 0.131f, 0, 0,
-                    0, 0, 0, 1f, 0
-                });
+            result = result is null ? effect : RenderEffect.CreateChainEffect(effect, result);
+        }
 
-            case CameraFilter.Invert:
-                return new ColorMatrix(new[]
-                {
-                    -1f, 0, 0, 0, 255f,
-                    0, -1f, 0, 0, 255f,
-                    0, 0, -1f, 0, 255f,
-                    0, 0, 0, 1f, 0
-                });
+        return result;
+    }
 
-            case CameraFilter.Vivid:
-            {
-                var m = new ColorMatrix();
-                m.SetSaturation(1.6f);
-                return m;
-            }
+    /// <summary>The still-image render plan, in application order.</summary>
+    public static IReadOnlyList<EffectStep> StillPlan(CameraEffectChain chain)
+    {
+        ArgumentNullException.ThrowIfNull(chain);
+        return chain.Plan(IsHandledNativelyForStills);
+    }
 
-            case CameraFilter.Cool:
-                return new ColorMatrix(new[]
-                {
-                    0.9f, 0, 0, 0, 0,
-                    0, 1.0f, 0, 0, 0,
-                    0, 0, 1.2f, 0, 10f,
-                    0, 0, 0, 1f, 0
-                });
+    /// <summary>
+    /// The single colour matrix for a plan that is <b>entirely</b> colour steps, or <c>null</c> when it isn't.
+    /// </summary>
+    /// <remarks>
+    /// This is the fast path — one <c>Canvas.DrawBitmap</c> with one <c>ColorMatrixColorFilter</c>, which is
+    /// what a plain <c>Filter="Noir"</c> capture has always done. A plan that mixes colour and spatial steps
+    /// can't use it: the steps have to interleave in chain order, so <c>[Comic, Mono]</c> is not the same
+    /// image as <c>[Mono, Comic]</c>, and folding all the matrices to the front would silently reorder them.
+    /// </remarks>
+    public static AndroidColorMatrix? CreateStillColorMatrix(IReadOnlyList<EffectStep> plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
 
-            case CameraFilter.Warm:
-                return new ColorMatrix(new[]
-                {
-                    1.2f, 0, 0, 0, 10f,
-                    0, 1.0f, 0, 0, 0,
-                    0, 0, 0.85f, 0, 0,
-                    0, 0, 0, 1f, 0
-                });
+        ShinyColorMatrix? combined = null;
+        foreach (var step in plan)
+        {
+            if (step.Color is not { } matrix)
+                return null; // a spatial step is present — the caller must take the ordered path
 
-            case CameraFilter.Fade:
-            {
-                // slightly desaturate, then lift blacks + drop contrast for a washed look
-                var m = new ColorMatrix();
-                m.SetSaturation(0.8f);
-                m.PostConcat(new ColorMatrix(new[]
-                {
-                    0.85f, 0, 0, 0, 22f,
-                    0, 0.85f, 0, 0, 22f,
-                    0, 0, 0.85f, 0, 22f,
-                    0, 0, 0, 1f, 0
-                }));
-                return m;
-            }
+            combined = combined is null ? matrix : combined.Then(matrix);
+        }
 
-            case CameraFilter.Chrome:
-            {
-                // punchy + slightly cool
-                var m = new ColorMatrix();
-                m.SetSaturation(1.3f);
-                m.PostConcat(new ColorMatrix(new[]
-                {
-                    1.05f, 0, 0, 0, -6f,
-                    0, 1.05f, 0, 0, -6f,
-                    0, 0, 1.15f, 0, 4f,
-                    0, 0, 0, 1f, 0
-                }));
-                return m;
-            }
+        return combined is null ? null : ToNative(combined);
+    }
 
-            case CameraFilter.Instant:
-                // warm, low-contrast vintage instant film
-                return new ColorMatrix(new[]
-                {
-                    1.0f, 0.1f, 0.05f, 0, 12f,
-                    0.05f, 0.95f, 0.05f, 0, 10f,
-                    0.05f, 0.1f, 0.8f, 0, 4f,
-                    0, 0, 0, 1f, 0
-                });
+    /// <summary>Convert a portable colour matrix to Android's, rescaling the offset column to 0..255.</summary>
+    public static AndroidColorMatrix ToNative(ShinyColorMatrix matrix) => new(matrix.ToAndroidArray());
 
-            case CameraFilter.Tonal:
-            {
-                // muted, low-contrast black & white
-                var m = new ColorMatrix();
-                m.SetSaturation(0f);
-                m.PostConcat(new ColorMatrix(new[]
-                {
-                    0.9f, 0, 0, 0, 14f,
-                    0, 0.9f, 0, 0, 14f,
-                    0, 0, 0.9f, 0, 14f,
-                    0, 0, 0, 1f, 0
-                }));
-                return m;
-            }
-
-            default:
-                return null;
+    [SupportedOSPlatform("android33.0")]
+    static RenderEffect? CreateShaderEffect(NativeEffectDescriptor descriptor)
+    {
+        try
+        {
+            var shader = new RuntimeShader(descriptor.AgslShader!);
+            return RenderEffect.CreateRuntimeShaderEffect(shader, descriptor.AgslInputName ?? "content");
+        }
+        catch (Exception)
+        {
+            // A malformed shader throws at link time. Dropping the step degrades the look rather than killing
+            // the preview — GetEffectSupport already told the app this platform might not honour it.
+            return null;
         }
     }
 }

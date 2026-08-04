@@ -54,12 +54,35 @@ public partial class FaceAnalyzer : FrameAnalyzer
         set => this.SetValue(OnDetectedProperty, value);
     }
 
+    /// <summary>
+    /// Whether to also detect facial feature points (<see cref="FaceLandmarks"/>). Default <c>false</c>.
+    /// </summary>
+    /// <remarks>
+    /// Off by default because landmarks cost meaningfully more per frame than bounding boxes alone, and most
+    /// uses (counting faces, framing a portrait) don't need them. Turn it on for anything that anchors to
+    /// features — a <c>FaceMaskEffect</c> requires it. Populated by Apple Vision and Android MLKit; the
+    /// Windows and managed backends report boxes only, so <c>Landmarks</c> stays <c>null</c> there.
+    /// </remarks>
+    public static readonly BindableProperty DetectLandmarksProperty = BindableProperty.Create(
+        nameof(DetectLandmarks), typeof(bool), typeof(FaceAnalyzer), false);
+
+    /// <inheritdoc cref="DetectLandmarksProperty"/>
+    public bool DetectLandmarks
+    {
+        get => (bool)this.GetValue(DetectLandmarksProperty);
+        set => this.SetValue(DetectLandmarksProperty, value);
+    }
+
     /// <summary>Raised on the UI thread when one or more faces are detected in a frame, while the analyzer is armed.</summary>
     public event EventHandler<FacesDetectedEventArgs>? FacesDetected;
 
     /// <summary>Deliver <see cref="FacesDetected"/>/command (while armed) and turn the faces into overlay boxes (null clears).</summary>
     protected IReadOnlyList<OverlayBox>? Report(IReadOnlyList<DetectedFace> faces)
     {
+        // Publish on EVERY frame, before the arm gate. Draw effects (a face mask) need to follow the face
+        // continuously; the typed event below is one-shot by design and would leave a mask frozen in place.
+        this.PublishLive(faces.Count == 0 ? null : faces);
+
         if (faces.Count == 0)
             return null;
 

@@ -25,6 +25,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     VideoFrameDelegate? frameDelegate;
     MovieRecordingDelegate? recordingDelegate;
     UIImageView? filterView;
+    NSObject? interruptedToken;
+    NSObject? interruptionEndedToken;
+    NSObject? runtimeErrorToken;
     readonly DispatchQueue sessionQueue = new("shiny.camera.session");
     readonly DispatchQueue videoQueue = new("shiny.camera.video");
 
@@ -106,8 +109,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         var del = new PhotoCaptureDelegate
         {
-            // apply the same filter as the live preview so the captured still matches what the user sees
-            Filter = AppleCameraFilters.Create(this.VirtualView.Filter)
+            // apply the same effects as the live preview so the captured still matches what the user sees
+            Filters = AppleCameraFilters.Create(this.VirtualView.EffectChain)
         };
         this.photoOutput.CapturePhoto(settings, del);
         return del.Task;
@@ -121,17 +124,23 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         var path = options.FilePath ?? Path.Combine(Path.GetTempPath(), $"shiny-{Guid.NewGuid():N}.mov");
 
-        // Overlay set -> owned AVAssetWriter path (composites the overlay into every frame off the data output).
-        // Overlay null -> fast native AVCaptureMovieFileOutput path (unchanged, no perf/behavior change).
-        if (options.Overlay != null)
+        // Anything to composite (effects or a legacy overlay) -> owned AVAssetWriter path, which processes every
+        // frame off the data output so the recording matches the preview. Nothing to composite -> fast native
+        // AVCaptureMovieFileOutput path (unchanged, no perf/behavior change).
+        var chain = this.VirtualView.EffectChain;
+        if (options.Overlay != null || !chain.IsEmpty)
         {
             var recorder = new AppleVideoOverlayRecorder(
                 path,
                 options.IncludeAudio,
                 this.VirtualView.Facing,
+                chain,
                 options.Overlay,
                 this.VirtualView.VideoBitrate
-            );
+            )
+            {
+                AnalyzerSnapshot = this.Pipeline.Snapshot
+            };
             if (options.IncludeAudio)
             {
                 this.EnsureAudioInput();
@@ -229,8 +238,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* Phase 2 */ }
 
-    static partial void MapFilter(CameraViewHandler handler, CameraView view)
-        => handler.MainThread(() => handler.ApplyFilter(view.Filter));
+    static partial void MapEffects(CameraViewHandler handler, CameraView view)
+        => handler.MainThread(() => handler.ApplyEffects(view.EffectChain));
 
     // The preset sizes the whole session — preview, data output and movie output alike — so this is a session
     // reconfiguration, not a recording setting. Refused mid-recording: changing the preset renegotiates the
@@ -372,6 +381,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             return;
 
         this.session = new AVCaptureSession { SessionPreset = this.ResolvePreset() };
+        this.ObserveSession(this.session);
         this.session.BeginConfiguration();
 
         this.AddVideoInput();
@@ -414,7 +424,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
                 this.ReportZoomRange();
                 this.ApplyZoom(this.VirtualView.Zoom);
                 this.ApplyTorch(this.VirtualView.IsTorchOn);
-                this.ApplyFilter(this.VirtualView.Filter);
+                this.ApplyEffects(this.VirtualView.EffectChain);
             }
             catch (Exception ex)
             {
@@ -422,6 +432,97 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             }
         });
     }
+
+
+    /// <summary>
+    /// Watches the session for the two things that take the camera away without asking: an interruption and a
+    /// runtime error.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>AVFoundation suspends a capture session and tells nobody.</b> A phone call, another app claiming the
+    /// device, a second foreground app in Split View, or the system throttling under thermal/power pressure
+    /// all stop frame delivery — and the failure is completely silent. The preview layer simply holds its last
+    /// frame, an <c>AVAssetWriter</c> fed off the data output stops advancing, and the app carries on running
+    /// as if nothing happened. Nothing here recovers by itself either: without
+    /// <c>AVCaptureSessionInterruptionEnded</c> being acted on, the session stays down until the process is
+    /// restarted, and a caller that reacts to <c>IsActive</c> sees a session that still claims to be active.
+    /// For anything recording unattended — a dash cam being the obvious case — that is footage lost with no
+    /// indication at the time and no way to notice afterwards.
+    /// </para>
+    /// <para>
+    /// <b>Backgrounding is excluded deliberately.</b> iOS raises
+    /// <see cref="AVCaptureSessionInterruptionReason.VideoDeviceNotAvailableInBackground"/> every time the app
+    /// leaves the foreground, which is ordinary lifecycle rather than a fault; reporting it would fire
+    /// <see cref="CameraView.CameraError"/> on every app switch. It still resumes through the same
+    /// interruption-ended path as everything else.
+    /// </para>
+    /// <para>
+    /// The restart is gated on <see cref="CameraView.IsActive"/>: an interruption that ends after the caller
+    /// has deliberately stopped the camera must not bring it back.
+    /// </para>
+    /// </remarks>
+    void ObserveSession(AVCaptureSession s)
+    {
+        this.interruptedToken = AVCaptureSession.Notifications.ObserveWasInterrupted(s, (_, e) =>
+        {
+            var reason = ReadInterruptionReason(e.Notification);
+            if (reason == AVCaptureSessionInterruptionReason.VideoDeviceNotAvailableInBackground)
+                return;
+
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError(DescribeInterruption(reason)));
+        });
+
+        this.interruptionEndedToken = AVCaptureSession.Notifications.ObserveInterruptionEnded(s, (_, _) =>
+            this.RestartIfStopped());
+
+        this.runtimeErrorToken = AVCaptureSession.Notifications.ObserveRuntimeError(s, (_, e) =>
+        {
+            var error = e.Error;
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError(
+                error?.LocalizedDescription ?? "The camera stopped unexpectedly"));
+
+            // MediaServicesWereReset is the recoverable one — the media daemon restarted underneath us and the
+            // session can simply be started again. Everything else is left down rather than spun in a retry
+            // loop against a device that is not coming back.
+            if (error?.Code == (long)AVError.MediaServicesWereReset)
+                this.RestartIfStopped();
+        });
+    }
+
+
+    void RestartIfStopped() => this.sessionQueue.DispatchAsync(() =>
+    {
+        try
+        {
+            if (this.MaybeVirtualView?.IsActive == true && this.session is { Running: false })
+                this.session.StartRunning();
+        }
+        catch (Exception ex)
+        {
+            this.MainThread(() => this.MaybeVirtualView?.OnCameraError("Could not restart the camera", ex));
+        }
+    });
+
+
+    static AVCaptureSessionInterruptionReason ReadInterruptionReason(NSNotification notification)
+        => notification.UserInfo?[AVCaptureSession.InterruptionReasonKey] is NSNumber n
+            ? (AVCaptureSessionInterruptionReason)n.Int64Value
+            : default;
+
+
+    static string DescribeInterruption(AVCaptureSessionInterruptionReason reason) => reason switch
+    {
+        AVCaptureSessionInterruptionReason.VideoDeviceInUseByAnotherClient
+            => "The camera is in use by another app",
+        AVCaptureSessionInterruptionReason.AudioDeviceInUseByAnotherClient
+            => "The microphone is in use by another app",
+        AVCaptureSessionInterruptionReason.VideoDeviceNotAvailableWithMultipleForegroundApps
+            => "The camera is unavailable while another app shares the screen",
+        AVCaptureSessionInterruptionReason.VideoDeviceNotAvailableDueToSystemPressure
+            => "The camera was stopped by the system — the device is too hot or low on power",
+        _ => "The camera was interrupted"
+    };
 
 
     // Orient the frame-delivery connection so buffers arrive upright (portrait) and front-mirrored to
@@ -489,19 +590,19 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     }
 
 
-    void ApplyFilter(CameraFilter filter)
+    void ApplyEffects(CameraEffectChain chain)
     {
         if (this.frameDelegate == null || this.filterView == null)
             return;
 
-        var ci = AppleCameraFilters.Create(filter);
-        this.frameDelegate.Filter = ci;
+        var filters = AppleCameraFilters.Create(chain);
+        this.frameDelegate.Filters = filters;
 
-        // Show the filtered-frame overlay on top of the live preview while a filter is active. We must NOT
+        // Show the filtered-frame overlay on top of the live preview while any effect is active. We must NOT
         // hide the preview layer to reveal it: PreviewLayer is the view's *backing* layer and the overlay is
         // a subview (a sublayer of it), so hiding the preview layer also hides the overlay — which blanked the
         // whole preview. The overlay's frames are opaque and fill the bounds, so they cover the live preview.
-        this.filterView.Hidden = ci == null;
+        this.filterView.Hidden = filters.Length == 0;
     }
 
 
@@ -721,6 +822,16 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         {
             if (this.session == null)
                 return;
+
+            // Before the session is disposed — the observers are registered against it, and one firing into a
+            // disposed session would land in a handler holding a dead handle.
+            this.interruptedToken?.Dispose();
+            this.interruptedToken = null;
+            this.interruptionEndedToken?.Dispose();
+            this.interruptionEndedToken = null;
+            this.runtimeErrorToken?.Dispose();
+            this.runtimeErrorToken = null;
+
             if (this.movieOutput is { Recording: true })
                 this.movieOutput.StopRecording();
             if (this.session.Running)

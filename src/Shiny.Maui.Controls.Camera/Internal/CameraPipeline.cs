@@ -39,6 +39,19 @@ sealed class CameraPipeline
 
     public bool HasAnalyzer => this.enabled;
 
+    /// <summary>
+    /// The analyzer's current boxes and ungated typed result, for consumers running off the render/encoder
+    /// threads (draw effects). Safe to call from any thread; never touches a bindable.
+    /// </summary>
+    public (IReadOnlyList<OverlayBox> Overlays, object? Result) Snapshot()
+    {
+        IReadOnlyList<OverlayBox> boxes;
+        lock (this.gate)
+            boxes = this.latest;
+
+        return (boxes, (this.analyzer as FrameAnalyzer)?.LiveResult);
+    }
+
     /// <summary>Dispatcher the analyzer uses to raise its typed events on the UI thread (re-applied on change).</summary>
     public void SetDispatcher(Action<Action>? post)
     {

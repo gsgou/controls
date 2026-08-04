@@ -1,19 +1,19 @@
 using Android.Graphics;
 using AndroidX.Camera.Core;
-using CameraFilter = Shiny.Controls.Camera.CameraFilter;
 
 namespace Shiny.Maui.Controls.Camera;
 
 // Bridges CameraX ImageCapture's in-memory callback to a Task<CameraPhoto>. ImageCapture emits a
-// JPEG-format ImageProxy whose single plane holds the encoded bytes. When a filter is active the still is
-// run through the same CameraFilter as the live preview before re-encoding, so photos match what the user
-// sees.
+// JPEG-format ImageProxy whose single plane holds the encoded bytes. When effects are active the still is
+// run through the same chain as the live preview before re-encoding, so photos match what the user sees —
+// and, on API levels below the preview's RenderEffect requirement, the photo is filtered even though the
+// preview was not.
 sealed class ImageCapturedCallback : ImageCapture.OnImageCapturedCallback
 {
     readonly TaskCompletionSource<CameraPhoto> tcs = new();
-    readonly CameraFilter filter;
+    readonly CameraEffectChain chain;
 
-    public ImageCapturedCallback(CameraFilter filter) => this.filter = filter;
+    public ImageCapturedCallback(CameraEffectChain chain) => this.chain = chain;
 
     public Task<CameraPhoto> Task => this.tcs.Task;
 
@@ -25,10 +25,10 @@ sealed class ImageCapturedCallback : ImageCapture.OnImageCapturedCallback
             var bytes = new byte[buffer.Remaining()];
             buffer.Get(bytes);
 
-            // None keeps the raw JPEG (with its EXIF orientation) untouched
-            var result = this.filter == CameraFilter.None
+            // an empty chain keeps the raw JPEG (with its EXIF orientation) untouched
+            var result = this.chain.IsEmpty
                 ? new CameraPhoto(bytes, image.Width, image.Height)
-                : ApplyFilter(bytes, this.filter, image.ImageInfo?.RotationDegrees ?? 0);
+                : ApplyEffects(bytes, this.chain, image.ImageInfo?.RotationDegrees ?? 0);
 
             this.tcs.TrySetResult(result);
         }
@@ -45,7 +45,7 @@ sealed class ImageCapturedCallback : ImageCapture.OnImageCapturedCallback
     public override void OnError(ImageCaptureException exception)
         => this.tcs.TrySetException(new InvalidOperationException(exception.Message, exception));
 
-    static CameraPhoto ApplyFilter(byte[] jpeg, CameraFilter filter, int rotationDegrees)
+    static CameraPhoto ApplyEffects(byte[] jpeg, CameraEffectChain chain, int rotationDegrees)
     {
         using var src = BitmapFactory.DecodeByteArray(jpeg, 0, jpeg.Length)
             ?? throw new InvalidOperationException("Could not decode the captured photo");
@@ -61,21 +61,85 @@ sealed class ImageCapturedCallback : ImageCapture.OnImageCapturedCallback
 
         try
         {
-            using var output = Bitmap.CreateBitmap(upright.Width, upright.Height, Bitmap.Config.Argb8888!)!;
-            using var canvas = new Canvas(output);
-            using var paint = new Android.Graphics.Paint();
-            if (AndroidCameraFilters.ColorMatrix(filter) is { } matrix)
-                paint.SetColorFilter(new ColorMatrixColorFilter(matrix));
-            canvas.DrawBitmap(upright, 0, 0, paint);
+            var plan = AndroidCameraFilters.StillPlan(chain);
 
-            using var ms = new MemoryStream();
-            output.Compress(Bitmap.CompressFormat.Jpeg!, 95, ms);
-            return new CameraPhoto(ms.ToArray(), output.Width, output.Height);
+            // Fast path — an all-colour plan is one draw with one ColorMatrixColorFilter, exactly as before.
+            if (AndroidCameraFilters.CreateStillColorMatrix(plan) is { } matrix)
+            {
+                using var graded = Bitmap.CreateBitmap(upright.Width, upright.Height, Bitmap.Config.Argb8888!)!;
+                using (var canvas = new Canvas(graded))
+                using (var paint = new Android.Graphics.Paint())
+                {
+                    paint.SetColorFilter(new ColorMatrixColorFilter(matrix));
+                    canvas.DrawBitmap(upright, 0, 0, paint);
+                }
+                return Encode(graded);
+            }
+
+            // Ordered path — a spatial effect is in the chain, so every step runs in sequence over the pixels.
+            // A still is one-shot, so the managed cost is paid once rather than per frame.
+            using var output = ApplyOrderedPlan(upright, plan);
+            return Encode(output);
         }
         finally
         {
             if (!ReferenceEquals(upright, src))
                 upright.Dispose();
         }
+    }
+
+    static CameraPhoto Encode(Bitmap bitmap)
+    {
+        using var ms = new MemoryStream();
+        bitmap.Compress(Bitmap.CompressFormat.Jpeg!, 95, ms);
+        return new CameraPhoto(ms.ToArray(), bitmap.Width, bitmap.Height);
+    }
+
+    static Bitmap ApplyOrderedPlan(Bitmap source, IReadOnlyList<EffectStep> plan)
+    {
+        var width = source.Width;
+        var height = source.Height;
+
+        var argb = new int[width * height];
+        source.GetPixels(argb, 0, width, 0, 0, width, height);
+
+        var surface = new PixelSurface(width, height, ToBgra(argb));
+        foreach (var step in plan)
+        {
+            if (step.Color is { } matrix)
+                surface.Apply(matrix);
+            else if (step.Descriptor?.Managed is { } pass)
+                surface = pass(surface);
+        }
+
+        var result = Bitmap.CreateBitmap(surface.Width, surface.Height, Bitmap.Config.Argb8888!)!;
+        result.SetPixels(ToArgb(surface.Pixels), 0, surface.Width, 0, 0, surface.Width, surface.Height);
+        return result;
+    }
+
+    static byte[] ToBgra(int[] argb)
+    {
+        var bgra = new byte[argb.Length * 4];
+        for (var i = 0; i < argb.Length; i++)
+        {
+            var c = argb[i];
+            var o = i * 4;
+            bgra[o] = (byte)c;               // B
+            bgra[o + 1] = (byte)(c >> 8);    // G
+            bgra[o + 2] = (byte)(c >> 16);   // R
+            bgra[o + 3] = (byte)(c >> 24);   // A
+        }
+        return bgra;
+    }
+
+    static int[] ToArgb(byte[] bgra)
+    {
+        var argb = new int[bgra.Length / 4];
+        for (var i = 0; i < argb.Length; i++)
+        {
+            var o = i * 4;
+            argb[i] = (bgra[o + 3] << 24) | (bgra[o + 2] << 16) | (bgra[o + 1] << 8) | bgra[o];
+        }
+        return argb;
     }
 }

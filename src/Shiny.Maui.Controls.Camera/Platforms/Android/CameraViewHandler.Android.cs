@@ -8,7 +8,6 @@ using Java.Lang;
 using Microsoft.Maui.Handlers;
 using AView = Android.Views.View;
 using AWidget = Android.Widget;
-using ShinyFilter = Shiny.Controls.Camera.CameraFilter;
 
 namespace Shiny.Maui.Controls.Camera;
 
@@ -187,7 +186,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         };
 
         // apply the same filter as the live preview so the captured still matches what the user sees
-        var cb = new ImageCapturedCallback(this.VirtualView.Filter);
+        var cb = new ImageCapturedCallback(this.VirtualView.EffectChain);
         this.imageCapture.TakePicture(ContextCompat.GetMainExecutor(this.Context)!, cb);
         return cb.Task;
     }
@@ -199,9 +198,17 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         // Preview + ImageCapture + ImageAnalysis until a recording actually asks for it. Ask for it now, then
         // rebind if either that or a burn-in overlay (which needs an OverlayEffect attached to VideoCapture)
         // means the current binding is wrong. With no analyzer and no overlay this is the old path untouched.
-        var needsRebind = this.videoCapture == null || options.Overlay != null;
+        //
+        // Draw effects are folded into the same OverlayEffect as the legacy per-recording overlay, so a face
+        // mask that's visible on the preview also lands in the file. Pixel effects do NOT — the preview's
+        // RenderEffect lives on the PreviewView, not on the VideoCapture use case, so recorded video is
+        // unfiltered on Android until the CameraX CameraEffect path replaces it.
+        var overlay = Internal.EffectVideoOverlay.Create(
+            this.VirtualView.EffectChain, options.Overlay, this.Pipeline.Snapshot);
+
+        var needsRebind = this.videoCapture == null || overlay != null;
         this.wantsVideoCapture = true;
-        this.recordingOverlay = options.Overlay;
+        this.recordingOverlay = overlay;
 
         if (needsRebind)
             await MainThread.InvokeOnMainThreadAsync(this.BindUseCases).ConfigureAwait(false);
@@ -424,7 +431,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* Phase 2 */ }
 
-    static partial void MapFilter(CameraViewHandler handler, CameraView view) => handler.ApplyFilter(view.Filter);
+    static partial void MapEffects(CameraViewHandler handler, CameraView view) => handler.ApplyEffects(view.EffectChain);
 
     // Quality is baked into the Recorder at bind time, so a change means a rebind. Refused mid-recording:
     // rebinding tears down the Recorder that owns the file being written, which would truncate the clip. The
@@ -438,17 +445,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     // ---- internals ----
 
-    void ApplyFilter(ShinyFilter filter)
+    void ApplyEffects(CameraEffectChain chain)
     {
+        // RenderEffect is API 31+. Below that the preview stays clean while captured stills are still
+        // filtered — reported as EffectSupport.StillOnly rather than silently doing nothing.
         if (this.previewView == null || !OperatingSystem.IsAndroidVersionAtLeast(31))
             return;
 
-        var matrix = AndroidCameraFilters.ColorMatrix(filter);
-        if (matrix == null)
-            this.previewView.SetRenderEffect(null);
-        else
-            this.previewView.SetRenderEffect(
-                RenderEffect.CreateColorFilterEffect(new ColorMatrixColorFilter(matrix)));
+        this.previewView.SetRenderEffect(AndroidCameraFilters.CreatePreviewEffect(chain));
     }
 
     void BindUseCases()
@@ -532,7 +536,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         }
         this.boundShape = (analyzing, video);
 
-        this.ApplyFilter(this.VirtualView.Filter);
+        this.ApplyEffects(this.VirtualView.EffectChain);
 
         this.ReportZoomRange();
         this.camera.CameraControl.SetZoomRatio((float)this.VirtualView.Zoom);

@@ -1,6 +1,7 @@
 using AVFoundation;
 using AudioToolbox;
 using CoreGraphics;
+using CoreImage;
 using CoreMedia;
 using CoreVideo;
 using Foundation;
@@ -9,17 +10,25 @@ using Microsoft.Maui.Graphics.Platform;
 
 namespace Shiny.Maui.Controls.Camera;
 
-// Owns an AVAssetWriter that burns an IVideoOverlayRenderer into every recorded frame. Shared by the
-// iOS/MacCatalyst and macOS handlers when VideoRecordingOptions.Overlay is set; the raw-feed fast path uses
-// AVCaptureMovieFileOutput instead. Frames/audio arrive off the capture queues, so all state is guarded.
+// Owns an AVAssetWriter that burns the camera's effects — and any legacy IVideoOverlayRenderer — into every
+// recorded frame. Shared by the iOS/MacCatalyst and macOS handlers whenever there is something to composite;
+// with no effects and no overlay the raw-feed fast path (AVCaptureMovieFileOutput) is used instead. Frames and
+// audio arrive off the capture queues, so all state is guarded.
 //
-// The incoming BGRA CVPixelBuffer is composited in place — we wrap it in a CGBitmapContext, flip to the
-// UIKit top-left origin MAUI Graphics expects, invoke DrawOverlay, then append the (now-composited) sample
-// buffer straight to the video input (no separate pixel-buffer pool needed). Frames arrive already upright
-// and front-mirror-corrected via the handler's OrientConnections, so overlay text renders the right way up.
+// Each frame is processed in two stages, in this order:
+//   1. pixel effects — the Core Image chain is rendered back into the same CVPixelBuffer, so the recording
+//      matches the filtered preview rather than the raw sensor feed;
+//   2. compositing — the buffer is wrapped in a CGBitmapContext, flipped to the UIKit top-left origin MAUI
+//      Graphics expects, and every IDrawEffect (then the legacy overlay) is drawn on top.
+// The (now-composited) sample buffer is appended straight to the video input, so no separate pixel-buffer pool
+// is needed. Frames arrive already upright and front-mirror-corrected via the handler's OrientConnections, so
+// overlay text renders the right way up.
 sealed class AppleVideoOverlayRecorder
 {
-    readonly IVideoOverlayRenderer overlay;
+    readonly IVideoOverlayRenderer? overlay;
+    readonly CameraEffectChain chain;
+    readonly CIFilter[] filters;
+    readonly CIContext? ciContext;
     readonly CameraFacing facing;
     readonly string path;
     readonly bool includeAudio;
@@ -52,16 +61,28 @@ sealed class AppleVideoOverlayRecorder
         string path,
         bool includeAudio,
         CameraFacing facing,
-        IVideoOverlayRenderer overlay,
+        CameraEffectChain chain,
+        IVideoOverlayRenderer? overlay,
         int? videoBitrate = null
     )
     {
         this.path = path;
         this.includeAudio = includeAudio;
         this.facing = facing;
+        this.chain = chain;
         this.overlay = overlay;
         this.videoBitrate = videoBitrate;
+        this.filters = AppleCameraFilters.Create(chain);
+
+        // Only pay for a CIContext when there is actually a pixel chain to render through it.
+        this.ciContext = this.filters.Length > 0 ? new CIContext() : null;
     }
+
+    /// <summary>
+    /// Supplies the analyzer's current boxes and typed result to draw effects. Set by the handler; invoked once
+    /// per recorded frame on the capture queue, so it must be lock-light and must not touch bindables.
+    /// </summary>
+    public Func<(IReadOnlyList<OverlayBox> Overlays, object? Result)>? AnalyzerSnapshot;
 
     public Task<CameraVideo> Task => this.tcs.Task;
 
@@ -173,7 +194,14 @@ sealed class AppleVideoOverlayRecorder
 
     void Composite(CVPixelBuffer pixelBuffer, CMTime pts)
     {
-        // read-write lock (flags 0) so DrawOverlay writes land in the buffer we then encode
+        // Stage 1 — pixel effects, rendered back into the same buffer. Done before the lock below because
+        // CIContext.Render wants to manage the buffer's memory itself.
+        this.ApplyPixelEffects(pixelBuffer);
+
+        if (this.chain.DrawEffects.Count == 0 && this.overlay == null)
+            return;
+
+        // Stage 2 — compositing. Read-write lock (flags 0) so the draws land in the buffer we then encode.
         pixelBuffer.Lock((CVPixelBufferLock)0);
         try
         {
@@ -194,12 +222,53 @@ sealed class AppleVideoOverlayRecorder
                 ? TimeSpan.Zero
                 : TimeSpan.FromSeconds(CMTime.Subtract(pts, this.startPts).Seconds);
 
-            this.overlay.DrawOverlay(canvas, new RectF(0, 0, w, h),
+            var bounds = new RectF(0, 0, w, h);
+            var (overlays, analyzerResult) = this.AnalyzerSnapshot?.Invoke() ?? ([], null);
+            var effectContext = new CameraEffectContext(
+                elapsed, this.frameIndex, w, h, this.facing, CameraSurface.Video,
+                overlays, analyzerResult);
+
+            foreach (var draw in this.chain.DrawEffects)
+                draw.Draw(canvas, bounds, effectContext);
+
+            // the legacy per-recording overlay draws last, on top of the effect chain
+            this.overlay?.DrawOverlay(canvas, bounds,
                 new VideoOverlayContext(elapsed, this.frameIndex, w, h, this.facing));
         }
         finally
         {
             pixelBuffer.Unlock((CVPixelBufferLock)0);
+        }
+    }
+
+    readonly List<CIImage> produced = [];
+
+    void ApplyPixelEffects(CVPixelBuffer pixelBuffer)
+    {
+        if (this.ciContext is null || this.filters.Length == 0)
+            return;
+
+        using var input = new CIImage(pixelBuffer);
+
+        this.produced.Clear();
+        var output = AppleCameraFilters.Apply(input, this.filters, this.produced);
+
+        try
+        {
+            if (output == null)
+                return;
+
+            // Render back over the source buffer. Core Image evaluates the recipe here, reading the buffer it
+            // is also writing — safe only because Core Image snapshots the source surface before writing, and
+            // it avoids a second pixel-buffer pool for every recorded frame.
+            this.ciContext.Render(output, pixelBuffer);
+        }
+        finally
+        {
+            foreach (var image in this.produced)
+                image.Dispose();
+
+            this.produced.Clear();
         }
     }
 

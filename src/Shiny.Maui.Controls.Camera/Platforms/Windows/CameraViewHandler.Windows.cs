@@ -200,6 +200,15 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
         if (snapshot == null)
             throw new InvalidOperationException("Camera is not running");
 
+        // Windows can't filter the live preview, but it can filter what gets saved — so the chain is applied
+        // here rather than nowhere at all.
+        var filtered = WindowsCameraFilters.Apply(snapshot, this.VirtualView.EffectChain);
+        if (!ReferenceEquals(filtered, snapshot))
+        {
+            snapshot.Dispose();
+            snapshot = filtered;
+        }
+
         using var stream = new InMemoryRandomAccessStream();
         var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, stream);
         encoder.SetSoftwareBitmap(snapshot);
@@ -363,7 +372,10 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* drawn by managed overlay */ }
 
-    static partial void MapFilter(CameraViewHandler handler, CameraView view) { /* best-effort: no live filter on Windows */ }
+    // Nothing to do for the live preview: MediaCapture has no cheap effect hook (it would take an
+    // IBasicVideoEffect + Win2D pipeline), so effects here are applied to captured stills only. That is
+    // reported as EffectSupport.StillOnly rather than pretending the effect took.
+    static partial void MapEffects(CameraViewHandler handler, CameraView view) { }
 
     // Nothing to do: the MediaEncodingProfile is built per recording, so the new value is picked up by the
     // next StartVideoRecordingAsync without touching the running session.

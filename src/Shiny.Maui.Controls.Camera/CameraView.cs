@@ -31,6 +31,7 @@ public partial class CameraView : View
     public CameraView()
     {
         this.ScanCommand = new Command(this.Scan);
+        this.InitializeEffects();
     }
 
     static void OnAnalyzerChanged(BindableObject bindable, object oldValue, object newValue)
@@ -105,13 +106,30 @@ public partial class CameraView : View
     public Task StopAsync(CancellationToken ct = default)
         => this.Controller?.StopAsync(ct) ?? Task.CompletedTask;
 
-    /// <summary>Capture a single still photo. Also raises <see cref="MediaCaptured"/>.</summary>
+    /// <summary>
+    /// Capture a single still photo. Also raises <see cref="MediaCaptured"/>.
+    /// </summary>
+    /// <remarks>
+    /// The photo comes back with the full <see cref="Effects"/> chain applied, in three stages: pixel effects
+    /// are baked in by the platform capture path, draw effects are composited on top, and any
+    /// <see cref="ICaptureEffect"/> runs last. That last stage can be slow by design — an AI stylizer is a
+    /// network round-trip — so show a busy state around this call when one is in the chain.
+    /// </remarks>
     public async Task<CameraPhoto> CapturePhotoAsync(CancellationToken ct = default)
     {
         if (this.Controller is null)
             throw new InvalidOperationException("CameraView handler is not connected");
 
         var photo = await this.Controller.CapturePhotoAsync(ct).ConfigureAwait(false);
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS || MACOS
+        var chain = this.EffectChain;
+        photo = Internal.StillCompositor.Composite(photo, chain, this.Facing);
+        photo = await Internal.StillCompositor
+            .ApplyCaptureEffectsAsync(photo, chain, ct)
+            .ConfigureAwait(false);
+#endif
+
         this.MediaCaptured?.Invoke(this, photo);
         return photo;
     }

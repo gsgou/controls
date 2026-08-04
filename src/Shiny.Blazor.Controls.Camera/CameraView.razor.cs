@@ -35,8 +35,30 @@ public partial class CameraView : IAsyncDisposable
     /// <summary>Start the preview automatically on first render.</summary>
     [Parameter] public bool AutoStart { get; set; } = true;
 
-    /// <summary>Live color filter applied to the preview via CSS.</summary>
+    /// <summary>
+    /// Live color filter applied to the preview via CSS. Sugar over <see cref="Effects"/> — the chosen filter
+    /// is applied <b>first</b>, so setting both is well-defined.
+    /// </summary>
     [Parameter] public CameraFilter Filter { get; set; } = CameraFilter.None;
+
+    /// <summary>
+    /// The ordered effects applied to the preview and baked into <see cref="CapturePhotoAsync"/> stills.
+    /// Mirrors the MAUI <c>CameraView.Effects</c> collection.
+    /// </summary>
+    /// <remarks>
+    /// The browser backend applies effects through CSS <c>filter</c>, which cannot express an arbitrary colour
+    /// matrix — check <see cref="GetEffectSupport"/> before offering an effect in a UI.
+    /// </remarks>
+    [Parameter] public IReadOnlyList<ICameraEffect>? Effects { get; set; }
+
+    /// <summary>
+    /// The current effects resolved into an immutable, ordered snapshot — rebuilt whenever
+    /// <see cref="Filter"/> or <see cref="Effects"/> changes.
+    /// </summary>
+    public CameraEffectChain EffectChain { get; private set; } = CameraEffectChain.Empty;
+
+    /// <summary>How much of <paramref name="effect"/> the browser backend will actually honour.</summary>
+    public static EffectSupport GetEffectSupport(ICameraEffect effect) => BlazorCameraFilters.Resolve(effect);
 
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public string? Style { get; set; }
@@ -74,7 +96,7 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
-    CameraFilter appliedFilter = CameraFilter.None;
+    string appliedCss = "none";
     CameraAnalyzer? appliedAnalyzer;
     bool appliedOverlay;
     CameraFacing appliedFacing;
@@ -85,8 +107,7 @@ public partial class CameraView : IAsyncDisposable
         if (this.module == null)
             return;
 
-        if (this.Filter != this.appliedFilter)
-            await this.ApplyFilterAsync();   // CSS filter — applied live without a restart
+        await this.ApplyFilterAsync();   // CSS filter — applied live without a restart (no-op when unchanged)
 
         // Analyzer / ShowOverlay / Facing / CameraId are read by the JS `start` call, so changing them
         // re-acquires the stream. Re-apply by restarting while running (matches MAUI's live toggling).
@@ -113,12 +134,25 @@ public partial class CameraView : IAsyncDisposable
     }
 
 
+    // Scopes generated SVG filter ids to this component, so two cameras on one page never collide.
+    readonly string filterIdPrefix = $"shiny-fx-{Guid.NewGuid():N}";
+
     async Task ApplyFilterAsync()
     {
         if (this.module == null)
             return;
-        this.appliedFilter = this.Filter;
-        await this.module.InvokeVoidAsync("setFilter", this.videoEl, BlazorCameraFilters.ToCss(this.Filter));
+
+        this.EffectChain = CameraEffectChain.Create(this.Filter, this.Effects);
+
+        // Effects is a plain list, so we can't observe mutation — compare the resolved CSS instead, which
+        // also collapses "different effects, same rendering" into a single no-op.
+        var resolved = BlazorCameraFilters.Resolve(this.EffectChain, this.filterIdPrefix);
+        if (resolved.Css == this.appliedCss)
+            return;
+
+        this.appliedCss = resolved.Css;
+        await this.module.InvokeVoidAsync(
+            "setFilter", this.videoEl, resolved.Css, this.filterIdPrefix, resolved.Filters);
     }
 
 
@@ -217,7 +251,9 @@ public partial class CameraView : IAsyncDisposable
         if (this.module == null)
             return [];
         // bake the current filter into the still so it matches the preview (parity with MAUI)
-        return await this.module.InvokeAsync<byte[]>("capture", this.videoEl, BlazorCameraFilters.ToCss(this.Filter));
+        // the SVG defs are already in the document from ApplyFilterAsync, so the CSS alone is enough here
+        var css = BlazorCameraFilters.Resolve(this.EffectChain, this.filterIdPrefix).Css;
+        return await this.module.InvokeAsync<byte[]>("capture", this.videoEl, css);
     }
 
 

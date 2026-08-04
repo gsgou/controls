@@ -4,6 +4,7 @@
                         xmlns:cam="http://shiny.net/maui/camera"
                         xmlns:shiny="http://shiny.net/maui/controls"
                         x:Class="Sample.Features.Camera.CameraPage"
+                        x:Name="Page"
                         Title="Camera"
                         AutomationId="CameraPage">
 
@@ -15,7 +16,8 @@
                  ShowBoundingBox; the ScanAreaSwitch sets a center-band ScanWindow on the barcode analyzer. -->
             <cam:CameraView x:Name="Camera"
                             Facing="Back"
-                            ScaleMode="AspectFill" />
+                            ScaleMode="AspectFill"
+                            IsPinchToZoomEnabled="True" />
 
             <!-- bounding-box overlay + scan-window reticle (auto-binds to the camera's analyzer) -->
             <cam:CameraOverlayView Camera="{x:Reference Camera}" InputTransparent="True" />
@@ -57,6 +59,25 @@
                             Maximum="{Binding MaxZoom, Source={x:Reference Camera}}"
                             Value="{Binding Zoom, Source={x:Reference Camera}, Mode=TwoWay}" />
                 </HorizontalStackLayout>
+
+                <!-- Quick-access look strip, like a real camera app. Each chip sets either CameraView.Filter
+                     (the colour grades) or adds a CameraEffects.* spatial effect — the Options sheet still
+                     exposes both as separate pickers, which is what shows they are distinct APIs. -->
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout Spacing="6" BindableLayout.ItemsSource="{Binding Looks}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate>
+                                <Button Text="{Binding Name}"
+                                        FontSize="12"
+                                        Padding="12,4"
+                                        MinimumHeightRequest="34"
+                                        HeightRequest="34"
+                                        Command="{Binding SelectLookCommand, Source={x:Reference Page}}"
+                                        CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </ScrollView>
 
                 <!-- arms every enabled analyzer for one scan; nothing is delivered until this is tapped -->
                 <Button Text="Scan" Clicked="OnScanClicked" />
@@ -111,10 +132,27 @@
                         <shiny:SwitchCell x:Name="OverlayVideoSwitch"
                                           Title="Burn overlay into video"
                                           Description="Composite a live timestamp + watermark into the recorded file (not just the preview)" />
+                        <!-- needs the Face detector selected above: the mask follows the analyzer's landmarks -->
+                        <shiny:SwitchCell x:Name="FaceMaskSwitch"
+                                          Title="Face mask"
+                                          Description="Draw shades + a moustache pinned to every tracked face (select the Face detector first)" />
+                        <shiny:SwitchCell x:Name="AiStylizeSwitch"
+                                          Title="AI stylize on capture"
+                                          Description="Run the captured still through an image model (offline stand-in here — adds seconds to a capture)" />
+                        <!-- the gesture writes Zoom, so the slider above tracks it live and both stay inside MinZoom..MaxZoom -->
+                        <shiny:SwitchCell Title="Pinch to zoom"
+                                          Description="Two-finger pinch on the preview drives Zoom (clamped to the device's reported range)"
+                                          On="{Binding IsPinchToZoomEnabled, Source={x:Reference Camera}, Mode=TwoWay}" />
                         <shiny:TextPickerCell Title="Filter"
                                               PickerTitle="Filter"
                                               ItemsSource="{Binding Filters}"
                                               SelectedItem="{Binding Filter, Source={x:Reference Camera}, Mode=TwoWay}" />
+                        <!-- spatial effects: these see a pixel's neighbours, so a colour matrix can't express
+                             them. They stack on top of Filter, which always applies first. -->
+                        <shiny:TextPickerCell Title="Effect"
+                                              PickerTitle="Spatial effect"
+                                              ItemsSource="{Binding SpatialEffects}"
+                                              SelectedItem="{Binding SelectedEffect, Mode=TwoWay}" />
                         <shiny:TextPickerCell Title="Lens"
                                               PickerTitle="Camera"
                                               ItemsSource="{Binding Cameras}"

@@ -97,7 +97,16 @@ public class CameraOverlayView : GraphicsView
         this.drawable.ScanWindow = e.ScanWindow;
         this.drawable.ImageAspect = e.ImageHeight == 0 ? 1f : (float)e.ImageWidth / e.ImageHeight;
         if (this.Camera is { } cam)
+        {
             this.drawable.ScaleMode = cam.ScaleMode;
+            this.drawable.Facing = cam.Facing;
+
+            // Draw effects paint over the preview here rather than being composited into every frame on the
+            // capture thread — the same effect instances are used for stills and recordings, where compositing
+            // is unavoidable, but the live path stays a cheap canvas draw.
+            this.drawable.DrawEffects = cam.EffectChain.DrawEffects;
+            this.drawable.AnalyzerResult = cam.LastAnalyzerResult;
+        }
         this.Invalidate();
     }
 }

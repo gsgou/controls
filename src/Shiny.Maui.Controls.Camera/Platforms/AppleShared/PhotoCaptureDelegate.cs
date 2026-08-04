@@ -6,8 +6,8 @@ using ImageIO;
 
 namespace Shiny.Maui.Controls.Camera;
 
-// Bridges AVCapturePhotoOutput's delegate callback to a Task<CameraPhoto>. When a Filter is set, the captured
-// still is run through the same CameraFilter as the live preview before encoding, so photos match what the
+// Bridges AVCapturePhotoOutput's delegate callback to a Task<CameraPhoto>. When effects are set, the captured
+// still is run through the same Core Image chain as the live preview before encoding, so photos match what the
 // user sees. Stays UIKit/AppKit-free (CoreImage + ImageIO) so the one delegate serves iOS and macOS alike.
 sealed class PhotoCaptureDelegate : AVCapturePhotoCaptureDelegate
 {
@@ -15,8 +15,8 @@ sealed class PhotoCaptureDelegate : AVCapturePhotoCaptureDelegate
 
     public Task<CameraPhoto> Task => this.tcs.Task;
 
-    /// <summary>Set by the handler to the preview's current filter; null = unfiltered (raw capture).</summary>
-    public CIFilter? Filter;
+    /// <summary>Set by the handler to the preview's current effect chain; empty = unfiltered (raw capture).</summary>
+    public CIFilter[] Filters = [];
 
     public override void DidFinishProcessingPhoto(AVCapturePhotoOutput output, AVCapturePhoto photo, NSError? error)
     {
@@ -28,8 +28,8 @@ sealed class PhotoCaptureDelegate : AVCapturePhotoCaptureDelegate
 
         try
         {
-            var result = this.Filter != null
-                ? Filtered(photo, this.Filter)
+            var result = this.Filters.Length > 0
+                ? Filtered(photo, this.Filters)
                 : Raw(photo);
 
             if (result == null)
@@ -53,7 +53,7 @@ sealed class PhotoCaptureDelegate : AVCapturePhotoCaptureDelegate
         return new CameraPhoto(data.ToArray(), dims.Width, dims.Height);
     }
 
-    static CameraPhoto? Filtered(AVCapturePhoto photo, CIFilter filter)
+    static CameraPhoto? Filtered(AVCapturePhoto photo, CIFilter[] filters)
     {
         using var cg = photo.CGImageRepresentation;
         if (cg == null)
@@ -62,20 +62,31 @@ sealed class PhotoCaptureDelegate : AVCapturePhotoCaptureDelegate
         // CGImageRepresentation is in stored (sensor) orientation; apply the EXIF orientation so the filtered
         // result is upright. This orientation handling is the part most worth verifying on-device.
         using var source = new CIImage(cg);
-        var oriented = source.CreateByApplyingOrientation(ReadOrientation(photo));
+        using var oriented = source.CreateByApplyingOrientation(ReadOrientation(photo));
 
-        filter.SetValueForKey(oriented, new NSString("inputImage"));
-        using var outputImage = filter.OutputImage;
-        if (outputImage == null)
-            return Raw(photo);
+        // Intermediates stay alive until the render below has actually evaluated the recipe, then all go.
+        var produced = new List<CIImage>(filters.Length);
+        try
+        {
+            var outputImage = AppleCameraFilters.Apply(oriented, filters, produced);
+            if (outputImage == null)
+                return Raw(photo);
 
-        using var context = new CIContext();
-        using var outCg = context.CreateCGImage(outputImage, outputImage.Extent);
-        if (outCg == null)
-            return Raw(photo);
+            using var context = new CIContext();
+            // the ORIENTED source extent, not the filter's: CIPixellate reports an infinite extent and
+            // CIGaussianBlur a grown one, and a captured photo should match the frame that was captured
+            using var outCg = context.CreateCGImage(outputImage, oriented.Extent);
+            if (outCg == null)
+                return Raw(photo);
 
-        var bytes = EncodeJpeg(outCg);
-        return bytes == null ? Raw(photo) : new CameraPhoto(bytes, (int)outCg.Width, (int)outCg.Height);
+            var bytes = EncodeJpeg(outCg);
+            return bytes == null ? Raw(photo) : new CameraPhoto(bytes, (int)outCg.Width, (int)outCg.Height);
+        }
+        finally
+        {
+            foreach (var image in produced)
+                image.Dispose();
+        }
     }
 
     static CGImagePropertyOrientation ReadOrientation(AVCapturePhoto photo)

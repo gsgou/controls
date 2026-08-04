@@ -21,5 +21,6 @@
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera\Shiny.Maui.Controls.Camera.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Motion\Shiny.Maui.Controls.Camera.Motion.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Documents\Shiny.Maui.Controls.Camera.Documents.csproj"/>
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Face\Shiny.Maui.Controls.Camera.Face.csproj"/>
     </ItemGroup>
 </Project>

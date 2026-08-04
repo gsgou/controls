@@ -155,7 +155,44 @@ export function disarm(video) {
 }
 
 
-export function setFilter(video, css) {
+// A single hidden <svg> holds every generated filter definition. Effects that CSS shorthands can't express —
+// an arbitrary colour matrix, a convolution — live here and are referenced from the CSS `filter` value as
+// url(#id), which the spec composes in order alongside the built-in filter functions.
+let svgDefsHost = null;
+
+function ensureSvgHost() {
+    if (svgDefsHost) return svgDefsHost;
+
+    svgDefsHost = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgDefsHost.setAttribute('aria-hidden', 'true');
+    // must stay in the layout tree for the filters to resolve, so hide it without display:none
+    svgDefsHost.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none';
+    document.body.appendChild(svgDefsHost);
+    return svgDefsHost;
+}
+
+function applySvgFilters(prefix, defs) {
+    const host = ensureSvgHost();
+
+    // drop this camera's previous definitions before adding the new ones
+    for (const existing of [...host.children])
+        if (existing.id && existing.id.startsWith(prefix)) existing.remove();
+
+    if (!defs || defs.length === 0) return;
+
+    for (const def of defs) {
+        const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+        filter.setAttribute('id', def.id);
+        // the frame is already in sRGB; the SVG default (linearRGB) would shift every colour
+        filter.setAttribute('color-interpolation-filters', 'sRGB');
+        filter.innerHTML = def.markup;
+        host.appendChild(filter);
+    }
+}
+
+export function setFilter(video, css, prefix, defs) {
+    if (prefix) applySvgFilters(prefix, defs);
+
     video.style.filter = css || 'none';
     const state = states.get(video);
     if (state) state.filterCss = css || 'none';

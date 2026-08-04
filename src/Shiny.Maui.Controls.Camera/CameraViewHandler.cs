@@ -62,7 +62,8 @@ public partial class CameraViewHandler
             [nameof(CameraView.Overlays)] = MapOverlay,
             [nameof(CameraView.ScanWindow)] = MapOverlay,
             [nameof(CameraView.Analyzer)] = MapAnalyzer,
-            [nameof(CameraView.Filter)] = MapFilter,
+            [nameof(CameraView.Filter)] = MapEffects,
+            [nameof(CameraView.Effects)] = MapEffects,
             [nameof(CameraView.VideoQuality)] = MapVideoQuality,
             [nameof(CameraView.VideoBitrate)] = MapVideoQuality,
             [nameof(CameraView.VideoFrameRate)] = MapVideoQuality,
@@ -87,7 +88,9 @@ public partial class CameraViewHandler
     static partial void MapZoom(CameraViewHandler handler, CameraView view);
     static partial void MapScaleMode(CameraViewHandler handler, CameraView view);
     static partial void MapOverlay(CameraViewHandler handler, CameraView view);
-    static partial void MapFilter(CameraViewHandler handler, CameraView view);
+    // Backs both Filter and Effects — they resolve into one CameraEffectChain, so one mapper reapplies the
+    // whole chain rather than two that each try to own part of it.
+    static partial void MapEffects(CameraViewHandler handler, CameraView view);
 
     // Backs VideoQuality, VideoBitrate and VideoFrameRate — all three are fixed when the session is
     // configured, so one mapper reapplies the set of them rather than three that each reconfigure.

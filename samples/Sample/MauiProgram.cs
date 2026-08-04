@@ -69,6 +69,8 @@ public static class MauiProgram
         // the "AI Document" camera detector ships frames to an IChatClient; the sample registers an offline
         // stand-in so it runs without keys. Swap in a real vision client (Azure OpenAI / OpenAI / Ollama) here.
         builder.Services.AddSingleton<Microsoft.Extensions.AI.IChatClient, Sample.Features.Camera.SampleVisionChatClient>();
+        // offline stand-in for an image-to-image model, so the "AI stylize" capture effect demos without a key
+        builder.Services.AddSingleton<Microsoft.Extensions.AI.IImageGenerator, Sample.Features.Camera.SampleImageGenerator>();
 
 #if DEBUG
         builder.Logging.SetMinimumLevel(LogLevel.Trace);

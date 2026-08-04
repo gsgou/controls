@@ -87,6 +87,27 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     /// </summary>
     public bool IsArmed => this.isArmed;
 
+    volatile object? liveResult;
+
+    /// <summary>
+    /// The analyzer's most recent <i>ungated</i> result — what it currently sees, updated every frame,
+    /// independent of <see cref="IsArmed"/>.
+    /// </summary>
+    /// <remarks>
+    /// This is the channel <see cref="IDrawEffect"/>s read (via <c>CameraEffectContext.AnalyzerResult</c>) so an
+    /// effect can anchor to something the camera is tracking. It exists <b>because</b> the typed event is gated:
+    /// a face mask has to follow the face on every frame, not once per <c>Scan()</c>. Not every analyzer
+    /// publishes one — it is <c>null</c> unless the analyzer calls <see cref="PublishLive"/>.
+    /// </remarks>
+    public object? LiveResult => this.liveResult;
+
+    /// <summary>
+    /// Publish the analyzer's current ungated result for draw effects to read. Call from the analysis thread
+    /// on every frame, passing <c>null</c> when nothing is seen. The value must be immutable (or a fresh
+    /// snapshot) — it is read from render threads without locking.
+    /// </summary>
+    protected void PublishLive(object? result) => this.liveResult = result;
+
     /// <summary>Arm this analyzer so the next confirmed detection is delivered. Called by <see cref="CameraView.Scan"/>.</summary>
     internal void Arm() => this.isArmed = true;
 
