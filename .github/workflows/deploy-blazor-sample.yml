@@ -8,6 +8,9 @@ on:
     paths:
       - 'samples/Sample.Blazor/**'
       - 'src/Shiny.Blazor.Controls*/**'
+      # the Blazor packages build on these shared projects (camera effects/filters, barcode symbologies) —
+      # without them a shared-only fix ships to NuGet but never redeploys the playground
+      - 'src/Shiny.Controls.*.Shared/**'
       - 'Directory.Build.props'
       - 'Directory.Packages.props'
       - '.github/workflows/deploy-blazor-sample.yml'

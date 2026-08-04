@@ -173,18 +173,19 @@ function ensureSvgHost() {
     return svgDefsHost;
 }
 
-function applySvgFilters(prefix, defs) {
+// ids/markups are parallel arrays (not an array of objects) — see ApplyFilterAsync for why.
+function applySvgFilters(prefix, ids, markups) {
     const host = ensureSvgHost();
 
     // drop this camera's previous definitions before adding the new ones
     for (const existing of [...host.children])
         if (existing.id && existing.id.startsWith(prefix)) existing.remove();
 
-    if (!defs || defs.length === 0) return;
+    if (!ids || ids.length === 0) return;
 
-    for (const def of defs) {
+    for (let i = 0; i < ids.length; i++) {
         const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-        filter.setAttribute('id', def.id);
+        filter.setAttribute('id', ids[i]);
         // the frame is already in sRGB; the SVG default (linearRGB) would shift every colour
         filter.setAttribute('color-interpolation-filters', 'sRGB');
         // Pin the filter region to the frame. The default (-10%, -10%, 120%, 120%) pads the source with
@@ -194,13 +195,13 @@ function applySvgFilters(prefix, defs) {
         filter.setAttribute('y', '0');
         filter.setAttribute('width', '100%');
         filter.setAttribute('height', '100%');
-        filter.innerHTML = def.markup;
+        filter.innerHTML = markups[i];
         host.appendChild(filter);
     }
 }
 
-export function setFilter(video, css, prefix, defs) {
-    if (prefix) applySvgFilters(prefix, defs);
+export function setFilter(video, css, prefix, ids, markups) {
+    if (prefix) applySvgFilters(prefix, ids, markups);
 
     video.style.filter = css || 'none';
     const state = states.get(video);

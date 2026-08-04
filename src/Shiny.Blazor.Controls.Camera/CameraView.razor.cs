@@ -171,8 +171,23 @@ public partial class CameraView : IAsyncDisposable
             return;
 
         this.appliedFilterKey = resolved.Key;
+
+        // Marshalled as two parallel string arrays instead of the SvgFilterDef list itself: the JS interop args
+        // are serialized as object[], so each def goes through a polymorphic write that reflects over the type —
+        // and in a trimmed (published) WASM build the record's constructor parameter names are gone, which
+        // System.Text.Json rejects with "ConstructorContainsNullParameterNames". string[] carries no metadata to
+        // lose, so nothing here depends on the trimmer keeping a DTO alive.
+        var count = resolved.Filters.Count;
+        var filterIds = new string[count];
+        var filterMarkup = new string[count];
+        for (var i = 0; i < count; i++)
+        {
+            filterIds[i] = resolved.Filters[i].Id;
+            filterMarkup[i] = resolved.Filters[i].Markup;
+        }
+
         await this.module.InvokeVoidAsync(
-            "setFilter", this.videoEl, resolved.Css, this.filterIdPrefix, resolved.Filters);
+            "setFilter", this.videoEl, resolved.Css, this.filterIdPrefix, filterIds, filterMarkup);
     }
 
 

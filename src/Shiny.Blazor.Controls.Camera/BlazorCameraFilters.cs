@@ -35,6 +35,12 @@ public sealed record CameraFilterCss(string Css, IReadOnlyList<SvgFilterDef> Fil
 /// <summary>One SVG filter definition to inject into the document.</summary>
 /// <param name="Id">Element id, referenced from CSS as <c>url(#Id)</c>.</param>
 /// <param name="Markup">The filter's inner primitives (e.g. an <c>feColorMatrix</c>).</param>
+/// <remarks>
+/// Never hand this type to JS interop directly. Interop arguments are serialized as <c>object[]</c>, so every
+/// argument takes a polymorphic write that reflects over its runtime type — and a positional record's constructor
+/// parameter names are gone in a trimmed (published) WASM build, which System.Text.Json rejects outright
+/// ("ConstructorContainsNullParameterNames"). Marshal the <see cref="Id"/>/<see cref="Markup"/> strings instead.
+/// </remarks>
 public sealed record SvgFilterDef(string Id, string Markup);
 
 
