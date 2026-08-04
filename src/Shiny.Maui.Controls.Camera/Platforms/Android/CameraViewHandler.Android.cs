@@ -452,7 +452,10 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         if (this.previewView == null || !OperatingSystem.IsAndroidVersionAtLeast(31))
             return;
 
-        this.previewView.SetRenderEffect(AndroidCameraFilters.CreatePreviewEffect(chain));
+        this.previewView.SetRenderEffect(AndroidCameraFilters.CreatePreviewEffect(
+            chain,
+            // surface shader compile failures instead of silently dropping the effect
+            message => this.MaybeVirtualView?.OnCameraError(message)));
     }
 
     void BindUseCases()

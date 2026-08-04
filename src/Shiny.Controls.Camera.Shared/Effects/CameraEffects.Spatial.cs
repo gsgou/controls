@@ -60,15 +60,16 @@ public static partial class CameraEffects
                 half4 main(float2 coord) {
                     float4 c = float4(content.eval(coord));
 
-                    // quantize to flat cels
-                    float3 flat = floor(c.rgb * 4.0 + 0.5) / 4.0;
+                    // quantize to flat cels. NB: do not name this `flat` — that is a reserved interpolation
+                    // qualifier in AGSL and the whole shader silently fails to compile.
+                    float3 cel = floor(c.rgb * 4.0 + 0.5) / 4.0;
 
-                    // push saturation around the flat's own grey so the cels stay graphic
-                    float grey = dot(flat, float3(0.299, 0.587, 0.114));
-                    flat = clamp(grey + (flat - grey) * 1.35, 0.0, 1.0);
+                    // push saturation around the cel's own grey so it stays graphic
+                    float grey = dot(cel, float3(0.299, 0.587, 0.114));
+                    cel = clamp(grey + (cel - grey) * 1.35, 0.0, 1.0);
 
                     float ink = smoothstep(0.21, 0.35, sobel(coord));
-                    return half4(half3(mix(flat, float3(0.0), ink)), half(c.a));
+                    return half4(half3(mix(cel, float3(0.0), ink)), half(c.a));
                 }
                 """,
             SvgFilter: """
@@ -149,8 +150,9 @@ public static partial class CameraEffects
 
                 half4 main(float2 coord) {
                     float4 c = float4(content.eval(coord));
-                    float3 flat = floor(c.rgb * 6.0 + 0.5) / 6.0;
-                    return half4(half3(flat), half(c.a));
+                    // NB: not `flat` — reserved interpolation qualifier in AGSL, the shader won't compile
+                    float3 quantized = floor(c.rgb * 6.0 + 0.5) / 6.0;
+                    return half4(half3(quantized), half(c.a));
                 }
                 """,
             SvgFilter: """

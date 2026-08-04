@@ -41,7 +41,7 @@ static class AndroidCameraFilters
     /// so the chain is folded in reverse of the order effects were added.
     /// </remarks>
     [SupportedOSPlatform("android31.0")]
-    public static RenderEffect? CreatePreviewEffect(CameraEffectChain chain)
+    public static RenderEffect? CreatePreviewEffect(CameraEffectChain chain, Action<string>? onError = null)
     {
         ArgumentNullException.ThrowIfNull(chain);
 
@@ -61,7 +61,7 @@ static class AndroidCameraFilters
                     // Plan only yields a shader step when IsHandledNatively said yes, which already required
                     // API 33 — repeated here so the platform-compatibility analyzer can see the guard too.
                     effect = OperatingSystem.IsAndroidVersionAtLeast(33)
-                        ? CreateShaderEffect(descriptor)
+                        ? CreateShaderEffect(descriptor, step.Native.Id, onError)
                         : null;
                 }
             }
@@ -115,17 +115,20 @@ static class AndroidCameraFilters
     public static AndroidColorMatrix ToNative(ShinyColorMatrix matrix) => new(matrix.ToAndroidArray());
 
     [SupportedOSPlatform("android33.0")]
-    static RenderEffect? CreateShaderEffect(NativeEffectDescriptor descriptor)
+    static RenderEffect? CreateShaderEffect(NativeEffectDescriptor descriptor, string effectId, Action<string>? onError)
     {
         try
         {
             var shader = new RuntimeShader(descriptor.AgslShader!);
             return RenderEffect.CreateRuntimeShaderEffect(shader, descriptor.AgslInputName ?? "content");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // A malformed shader throws at link time. Dropping the step degrades the look rather than killing
-            // the preview — GetEffectSupport already told the app this platform might not honour it.
+            // A malformed shader throws at compile/link time. Dropping the step keeps the preview alive rather
+            // than killing the camera — but it must NOT be silent: swallowing this is exactly how two built-in
+            // shaders shipped using `flat` (a reserved AGSL qualifier) as a variable name and simply did
+            // nothing on Android, with no way to tell that from "the effect isn't supported here".
+            onError?.Invoke($"Camera effect '{effectId}' has an AGSL shader that failed to compile: {ex.Message}");
             return null;
         }
     }
