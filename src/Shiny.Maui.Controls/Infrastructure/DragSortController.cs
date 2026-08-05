@@ -30,9 +30,6 @@ sealed class DragSortController
     public DragSortController(TvTableView owner) => this.owner = owner;
 
 
-    public bool IsDragging => this.source != null;
-
-
     public void Begin(DragSortRow row)
     {
         Abort();

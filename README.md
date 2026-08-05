@@ -1769,6 +1769,29 @@ A settings-style table view with 14+ built-in cell types, section grouping, drag
 <shiny:TableView ItemsSource="{Binding Items}" ItemTemplate="{StaticResource SectionTemplate}" />
 ```
 
+**Drag to reorder** - `UseDragSort="True"` puts a drag handle on every row in a section. Dragging a
+handle lifts the row under the finger, draws an insertion line at the drop position, and auto-scrolls
+when the drag reaches the top or bottom edge; touches anywhere else still scroll the table. Rows
+reorder within their own section only.
+
+```xml
+<shiny:TableView ItemDropped="OnItemDropped">
+    <shiny:TableRoot>
+        <shiny:TableSection Title="Reorder" UseDragSort="True">
+            <shiny:LabelCell Title="First" ValueText="1" />
+            <shiny:LabelCell Title="Second" ValueText="2" />
+        </shiny:TableSection>
+    </shiny:TableRoot>
+</shiny:TableView>
+```
+
+`ItemDropped` / `ItemDroppedCommand` report `Section`, `Cell`, `Item`, `FromIndex`, and `ToIndex`.
+Cells declared in XAML are reordered by the control; rows generated from a section's `ItemsSource`
+are not - their order lives in your collection, so move `Item` to `ToIndex` yourself in the handler.
+The gesture is pan-driven on every platform (the platform `DragGestureRecognizer` is broken on Mac
+Catalyst and absent from the AppKit and GTK4 hosts, and reports no pointer position where it does
+work), with native hooks on iOS and Android that stop the enclosing scroller from stealing the drag.
+
 ### TreeView
 
 Hierarchical tree control with lazy-loaded branches, configurable expand/collapse icons, single or multi-selection, per-item `CanExpand`/`CanSelect` predicates, retry on load failure, optional guide lines, and drag/drop reorder. Available on both MAUI and Blazor.

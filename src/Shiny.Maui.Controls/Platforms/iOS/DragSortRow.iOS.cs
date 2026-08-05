@@ -23,6 +23,15 @@ partial class DragSortRow
     }
 
 
+    partial void SetPlatformRaised(bool raised)
+    {
+        // Reordering subviews doesn't disturb UIKit's touch delivery, unlike the remove/re-add
+        // that MAUI's ZIndex performs on Android.
+        if (raised && this.Handler?.PlatformView is UIView native)
+            native.Superview?.BringSubviewToFront(native);
+    }
+
+
     void AttachTouchHook()
     {
         var native = this.DragHandle.Handler?.PlatformView as UIView;

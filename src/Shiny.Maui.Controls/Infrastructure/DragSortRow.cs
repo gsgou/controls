@@ -62,9 +62,9 @@ sealed partial class DragSortRow : Grid
         this.Opacity = dragging ? 0.95 : 1.0;
         RaiseAboveSiblings(dragging);
 
-        // The row has no background of its own, so raising the ZIndex isn't enough - a
-        // transparent row lifted over its neighbour renders as two rows of text on top of
-        // each other. Paint it while it travels.
+        // The row has no background of its own, so raising it isn't enough - a transparent
+        // row lifted over its neighbour renders as two rows of text on top of each other.
+        // Paint it while it travels.
         if (dragging)
         {
             // Fallback first: a dynamic resource whose key isn't in the app's dictionaries
