@@ -9,6 +9,7 @@ public class Fab : ContentView
     const double DefaultSize = 56;
     const double DefaultIconSize = 24;
     const double DefaultFontSize = 14;
+    const double IconTextSpacing = 8;
 
     readonly Border border;
     readonly Grid innerGrid;
@@ -24,7 +25,9 @@ public class Fab : ContentView
             HeightRequest = DefaultIconSize,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
-            Aspect = Aspect.AspectFit
+            Aspect = Aspect.AspectFit,
+            // No Icon set yet — an empty but visible Image still reserves IconSize inside the button.
+            IsVisible = false
         };
 
         textLabel = new Label
@@ -43,7 +46,9 @@ public class Fab : ContentView
                 new ColumnDefinition(GridLength.Auto),
                 new ColumnDefinition(GridLength.Auto)
             },
-            ColumnSpacing = 8,
+            // Spacing is applied by the grid whether or not both cells have a visible child, so it
+            // is set from UpdateContentLayout instead — a hidden icon must not pad the label.
+            ColumnSpacing = 0,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
         };
@@ -85,7 +90,7 @@ public class Fab : ContentView
         VerticalOptions = LayoutOptions.End;
 
         UpdateTextVisibility();
-        ApplyCircularShape();
+        UpdateContentLayout();
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -103,6 +108,7 @@ public class Fab : ContentView
             var fab = (Fab)b;
             fab.iconImage.Source = n as ImageSource;
             fab.iconImage.IsVisible = n is not null;
+            fab.UpdateContentLayout();
         }));
     public ImageSource? Icon
     {
@@ -120,7 +126,7 @@ public class Fab : ContentView
             var fab = (Fab)b;
             fab.textLabel.Text = n as string ?? string.Empty;
             fab.UpdateTextVisibility();
-            fab.ApplyCircularShape();
+            fab.UpdateContentLayout();
         }));
     public string? Text
     {
@@ -260,7 +266,7 @@ public class Fab : ContentView
             var fab = (Fab)b;
             fab.border.HeightRequest = fab.Size;
             fab.border.MinimumWidthRequest = fab.Size;
-            fab.ApplyCircularShape();
+            fab.UpdateContentLayout();
         }));
     public double Size
     {
@@ -333,28 +339,32 @@ public class Fab : ContentView
     void UpdateTextVisibility()
         => textLabel.IsVisible = !string.IsNullOrEmpty(textLabel.Text);
 
-    void ApplyCircularShape()
+    void UpdateContentLayout()
     {
-        // If no text, make the FAB a perfect circle sized to Size
-        if (string.IsNullOrEmpty(Text))
+        var hasIcon = iconImage.IsVisible;
+        var hasText = textLabel.IsVisible;
+
+        // Only pad between the two when both are actually there.
+        innerGrid.ColumnSpacing = hasIcon && hasText ? IconTextSpacing : 0;
+
+        border.HeightRequest = Size;
+        border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
         {
+            CornerRadius = new CornerRadius(Size / 2)
+        };
+
+        if (!hasText)
+        {
+            // Icon-only (or empty): a perfect circle sized to Size.
             border.WidthRequest = Size;
-            border.HeightRequest = Size;
             border.Padding = 0;
-            border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = new CornerRadius(Size / 2)
-            };
         }
         else
         {
+            // Extended: width grows with the label, but MinimumWidthRequest keeps a short
+            // label (a "+", a count) circular rather than a slightly-too-wide pill.
             border.WidthRequest = -1;
-            border.HeightRequest = Size;
-            border.Padding = new Thickness(20, 0);
-            border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = new CornerRadius(Size / 2)
-            };
+            border.Padding = new Thickness(hasIcon ? 20 : 16, 0);
         }
     }
 }

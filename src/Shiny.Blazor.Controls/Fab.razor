@@ -66,6 +66,13 @@
                 sb.Append("width:").Append(Size).Append("px;");
                 sb.Append("padding:0;");
             }
+            else
+            {
+                // Keeps a short label (a "+", a count) circular instead of a slightly-too-wide pill.
+                sb.Append("min-width:").Append(Size).Append("px;");
+                if (string.IsNullOrEmpty(Icon))
+                    sb.Append("padding:0 16px;");
+            }
             if (BorderThickness > 0 && !string.IsNullOrEmpty(BorderColor))
                 sb.Append("border:").Append(BorderThickness).Append("px solid ").Append(BorderColor).Append(';');
             return sb.ToString();

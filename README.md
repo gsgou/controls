@@ -1229,7 +1229,7 @@ A Material Design-style floating action button, plus an expanding multi-action m
 | Property | Type | Default | Description |
 |---|---|---|---|
 | Icon | ImageSource? | null | Button icon |
-| Text | string? | null | Optional label; when null the Fab is a perfect circle |
+| Text | string? | null | Optional label; when null the Fab is a perfect circle. A short label (e.g. `+`) still renders circular; the Fab stretches into a pill only when the label needs more than Size |
 | Command | ICommand? | null | Invoked when the Fab is tapped |
 | CommandParameter | object? | null | Parameter passed to the Command |
 | FabBackgroundColor | Color | #2196F3 | Fill color |
