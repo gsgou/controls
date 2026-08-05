@@ -18,9 +18,13 @@ public class SchedulerAgendaView : ContentView
     readonly CurrentTimeIndicator timeIndicator;
     readonly List<AgendaTimelinePanel> panels = [];
 
+    readonly List<SchedulerEvent> loadedTimedEvents = [];
+    readonly AgendaDragController dragController;
+
     CancellationTokenSource? loadCts;
     IDispatcherTimer? timer;
     PinchGestureRecognizer? pinchGesture;
+    PointerGestureRecognizer? pointerGesture;
     double startTimeSlotHeight;
 
 
@@ -140,6 +144,37 @@ public class SchedulerAgendaView : ContentView
             {
                 ((SchedulerAgendaView)b).Rebuild();
             }));
+
+    public static readonly BindableProperty AllowEventDragProperty = BindableProperty.Create(
+        nameof(AllowEventDrag), typeof(bool), typeof(SchedulerAgendaView), false,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
+            {
+                ((SchedulerAgendaView)b).UpdateDragGestures();
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
+
+    public static readonly BindableProperty AllowEventResizeProperty = BindableProperty.Create(
+        nameof(AllowEventResize), typeof(bool), typeof(SchedulerAgendaView), false,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SchedulerAgendaView), () =>
+            {
+                ((SchedulerAgendaView)b).UpdateDragGestures();
+                ((SchedulerAgendaView)b).Rebuild();
+            }));
+
+    public static readonly BindableProperty DragSnapMinutesProperty = BindableProperty.Create(
+        nameof(DragSnapMinutes), typeof(int), typeof(SchedulerAgendaView), 15);
+
+    public static readonly BindableProperty MinEventDurationProperty = BindableProperty.Create(
+        nameof(MinEventDuration), typeof(TimeSpan), typeof(SchedulerAgendaView), TimeSpan.FromMinutes(15));
+
+    public static readonly BindableProperty DragActivationDelayProperty = BindableProperty.Create(
+        nameof(DragActivationDelay), typeof(TimeSpan), typeof(SchedulerAgendaView), TimeSpan.FromMilliseconds(350));
+
+    public static readonly BindableProperty AllowCrossDayDragProperty = BindableProperty.Create(
+        nameof(AllowCrossDayDrag), typeof(bool), typeof(SchedulerAgendaView), true);
+
+    public static readonly BindableProperty DragSnapGuideColorProperty = BindableProperty.Create(
+        nameof(DragSnapGuideColor), typeof(Color), typeof(SchedulerAgendaView), null);
 
     public ISchedulerEventProvider? Provider
     {
@@ -270,6 +305,68 @@ public class SchedulerAgendaView : ContentView
         set => SetValue(UseFeedbackProperty, value);
     }
 
+    /// <summary>Drag an event to a new time (and, when <see cref="DaysToShow"/> &gt; 1, another day).</summary>
+    /// <remarks>
+    /// Off by default, and the provider must also override
+    /// <see cref="ISchedulerEventProvider.CanChangeEvent"/> - the opt-in is required on both sides.
+    /// </remarks>
+    public bool AllowEventDrag
+    {
+        get => (bool)GetValue(AllowEventDragProperty);
+        set => SetValue(AllowEventDragProperty, value);
+    }
+
+    /// <summary>Drag the top/bottom edge of an event to change its duration.</summary>
+    public bool AllowEventResize
+    {
+        get => (bool)GetValue(AllowEventResizeProperty);
+        set => SetValue(AllowEventResizeProperty, value);
+    }
+
+    /// <summary>Snap granularity in minutes, clamped to 1-60.</summary>
+    public int DragSnapMinutes
+    {
+        get => (int)GetValue(DragSnapMinutesProperty);
+        set => SetValue(DragSnapMinutesProperty, value);
+    }
+
+    /// <summary>Resize floor. A move never changes duration, so this only gates resize.</summary>
+    public TimeSpan MinEventDuration
+    {
+        get => (TimeSpan)GetValue(MinEventDurationProperty);
+        set => SetValue(MinEventDurationProperty, value);
+    }
+
+    /// <summary>
+    /// Long-press arming delay for touch - the window in which the scroller can still claim the
+    /// gesture. <see cref="TimeSpan.Zero"/> arms immediately. Ignored for mouse input.
+    /// </summary>
+    public TimeSpan DragActivationDelay
+    {
+        get => (TimeSpan)GetValue(DragActivationDelayProperty);
+        set => SetValue(DragActivationDelayProperty, value);
+    }
+
+    /// <summary>Only meaningful when <see cref="DaysToShow"/> &gt; 1.</summary>
+    public bool AllowCrossDayDrag
+    {
+        get => (bool)GetValue(AllowCrossDayDragProperty);
+        set => SetValue(AllowCrossDayDragProperty, value);
+    }
+
+    /// <summary>The horizontal guide line drawn at the snapped position while dragging.</summary>
+    public Color? DragSnapGuideColor
+    {
+        get => (Color?)GetValue(DragSnapGuideColorProperty);
+        set => SetValue(DragSnapGuideColorProperty, value);
+    }
+
+    /// <summary>
+    /// Raised when <see cref="ISchedulerEventProvider.OnEventChanged"/> threw. The change has
+    /// already been reverted; a revert with no explanation is the worst failure mode here.
+    /// </summary>
+    public event EventHandler<SchedulerEventChangeFailure>? EventChangeFailed;
+
     public IList<TimeZoneInfo> AdditionalTimezones { get; } = new List<TimeZoneInfo>();
 
 
@@ -303,6 +400,8 @@ public class SchedulerAgendaView : ContentView
             Content = columnsGrid,
             Orientation = ScrollOrientation.Vertical
         };
+
+        dragController = new AgendaDragController(this, scrollView);
 
         loaderOverlay = new ContentView { IsVisible = false, Opacity = 0.8 };
         loaderOverlay.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
@@ -391,8 +490,38 @@ public class SchedulerAgendaView : ContentView
         }
     }
 
+    /// <summary>
+    /// MAUI's PanGestureRecognizer does not report the input device, so this tracks whether a mouse
+    /// has ever hovered the view - PointerEntered fires for mouse and never for touch. When it has,
+    /// the drag arms immediately instead of waiting out <see cref="DragActivationDelay"/>.
+    /// </summary>
+    internal bool HasPointerDevice { get; private set; }
+
+    void UpdateDragGestures()
+    {
+        var wanted = AllowEventDrag || AllowEventResize;
+
+        if (pointerGesture != null)
+        {
+            GestureRecognizers.Remove(pointerGesture);
+            pointerGesture = null;
+        }
+        if (!wanted) return;
+
+        pointerGesture = new PointerGestureRecognizer();
+        pointerGesture.PointerEntered += (_, _) => HasPointerDevice = true;
+        GestureRecognizers.Add(pointerGesture);
+    }
+
     void OnPinchUpdated(object? sender, PinchGestureUpdatedEventArgs e)
     {
+        // A two-finger pinch that starts on an event must not also drag it.
+        if (dragController.IsDragging)
+        {
+            dragController.Cancel();
+            return;
+        }
+
         switch (e.Status)
         {
             case GestureStatus.Started:
@@ -414,6 +543,8 @@ public class SchedulerAgendaView : ContentView
 
     void Rebuild()
     {
+        // BuildColumns discards every panel, which would orphan a view the drag is holding.
+        dragController.Cancel(relayout: false);
         datePicker.SelectedDate = SelectedDate;
         datePicker.DaysToShow = DaysToShow;
         calendarSheetPicker.SelectedDate = SelectedDate;
@@ -566,7 +697,10 @@ public class SchedulerAgendaView : ContentView
                 ShowTimeLabels = false,
                 EventTemplate = EventItemTemplate,
                 EventTapped = OnEventTapped,
-                TimeSlotTapped = OnTimeSlotTapped
+                TimeSlotTapped = OnTimeSlotTapped,
+                DragController = dragController,
+                AllowEventDrag = AllowEventDrag,
+                AllowEventResize = AllowEventResize
             };
             panels.Add(panel);
             var col = timeColumnCount + i;
@@ -616,19 +750,9 @@ public class SchedulerAgendaView : ContentView
             var allDayEvents = events.Where(e => e.IsAllDay).ToList();
             allDaySection.SetEvents(allDayEvents, EventItemTemplate, OnEventTapped);
 
-            var timedEvents = events.Where(e => !e.IsAllDay).ToList();
-
-            for (var i = 0; i < DaysToShow && i < panels.Count; i++)
-            {
-                var date = startDate.AddDays(i);
-                var dayEvents = timedEvents
-                    .Where(e => DateOnly.FromDateTime(e.Start.LocalDateTime) <= date &&
-                                DateOnly.FromDateTime(e.End.LocalDateTime) >= date)
-                    .ToList();
-
-                var indicator = i == 0 ? timeIndicator : null;
-                panels[i].Build(date, dayEvents, indicator, ShowCurrentTimeMarker);
-            }
+            loadedTimedEvents.Clear();
+            loadedTimedEvents.AddRange(events.Where(e => !e.IsAllDay));
+            LayoutDays();
 
             ScrollToCurrentTime();
         }
@@ -647,6 +771,38 @@ public class SchedulerAgendaView : ContentView
                 ShowLoader(false);
         }
     }
+
+    void LayoutDays()
+    {
+        for (var i = 0; i < DaysToShow && i < panels.Count; i++)
+        {
+            var date = SelectedDate.AddDays(i);
+            var dayEvents = loadedTimedEvents
+                .Where(e => DateOnly.FromDateTime(e.Start.LocalDateTime) <= date &&
+                            DateOnly.FromDateTime(e.End.LocalDateTime) >= date)
+                .ToList();
+
+            var indicator = i == 0 ? timeIndicator : null;
+            panels[i].Build(date, dayEvents, indicator, ShowCurrentTimeMarker);
+        }
+    }
+
+    // ------------- drag/resize plumbing for AgendaDragController -------------
+
+    internal AgendaTimelinePanel? PanelAt(int index) =>
+        index >= 0 && index < panels.Count ? panels[index] : null;
+
+    internal int IndexOfPanel(AgendaTimelinePanel panel) => panels.IndexOf(panel);
+
+    /// <summary>
+    /// Re-runs the overlap clustering and rebuilds the visible days from the already-loaded events,
+    /// without re-calling <see cref="ISchedulerEventProvider.GetEvents"/>. A cross-day move changes
+    /// the clustering of both the source and destination day, so all visible days are relaid out.
+    /// </summary>
+    internal void RelayoutDays() => LayoutDays();
+
+    internal void RaiseChangeFailed(SchedulerEventChange change, Exception ex) =>
+        EventChangeFailed?.Invoke(this, new SchedulerEventChangeFailure(change, ex));
 
     async void ScrollToCurrentTime()
     {

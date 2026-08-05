@@ -14,6 +14,9 @@ public class AgendaViewModel(ISchedulerEventProvider provider) : INotifyProperty
     int daysToShow = 1;
     bool showAdditionalTimezones;
     AgendaDatePickerMode datePickerMode = AgendaDatePickerMode.Carousel;
+    bool allowEventDrag = true;
+    bool allowEventResize = true;
+    int dragSnapMinutes = 15;
 
     public ISchedulerEventProvider Provider => provider;
 
@@ -40,6 +43,34 @@ public class AgendaViewModel(ISchedulerEventProvider provider) : INotifyProperty
         get => datePickerMode;
         set { datePickerMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(DatePickerToggleText)); }
     }
+
+    public bool AllowEventDrag
+    {
+        get => allowEventDrag;
+        set { allowEventDrag = value; OnPropertyChanged(); }
+    }
+
+    public bool AllowEventResize
+    {
+        get => allowEventResize;
+        set { allowEventResize = value; OnPropertyChanged(); }
+    }
+
+    public int DragSnapMinutes
+    {
+        get => dragSnapMinutes;
+        set { dragSnapMinutes = value; OnPropertyChanged(); OnPropertyChanged(nameof(SnapToggleText)); }
+    }
+
+    public string SnapToggleText => $"Snap {DragSnapMinutes}m";
+
+    /// <summary>Cycles 5 -> 15 -> 30 so the snap granularity is actually demonstrable.</summary>
+    public ICommand CycleSnapCommand => new Command(() => DragSnapMinutes = DragSnapMinutes switch
+    {
+        5 => 15,
+        15 => 30,
+        _ => 5
+    });
 
     public string DaysToggleText => DaysToShow == 1 ? "3-Day" : "1-Day";
     public string TimezoneToggleText => ShowAdditionalTimezones ? "Hide TZ" : "Show TZ";

@@ -29,8 +29,7 @@ static class SectionRenderer
 
             if (section.UseDragSort)
             {
-                var wrappedCell = WrapWithReorderControls(cell, section, parentTableView);
-                sectionLayout.Children.Add(wrappedCell);
+                sectionLayout.Children.Add(new DragSortRow(parentTableView, section, cell));
             }
             else
             {
@@ -184,82 +183,6 @@ static class SectionRenderer
             Margin = new Thickness(tableView.SeparatorPadding >= 0 ? tableView.SeparatorPadding : 16, 0, 0, 0),
             Color = tableView.SeparatorColor ?? GetDefaultSeparatorColor()
         };
-    }
-
-    static View WrapWithReorderControls(CellBase cell, TvTableSection section, TvTableView tableView)
-    {
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            {
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto)
-            }
-        };
-
-        Grid.SetColumn(cell, 0);
-        grid.Children.Add(cell);
-
-        // Drag handle – long-press initiates drag, which disambiguates from ScrollView scrolling
-        var dragHandle = new Label
-        {
-            Text = "\u2630",
-            FontSize = 18,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Center,
-            Padding = new Thickness(12, 8),
-            Opacity = 0.4
-        };
-
-        var dragGesture = new DragGestureRecognizer { CanDrag = true };
-        dragGesture.DragStarting += (s, e) =>
-        {
-            e.Data.Properties["DragCell"] = cell;
-            e.Data.Properties["DragSection"] = section;
-        };
-        dragHandle.GestureRecognizers.Add(dragGesture);
-
-        Grid.SetColumn(dragHandle, 1);
-        grid.Children.Add(dragHandle);
-
-        // Each row is a drop target
-        var dropGesture = new DropGestureRecognizer { AllowDrop = true };
-        dropGesture.DragOver += (s, e) =>
-        {
-            e.AcceptedOperation = DataPackageOperation.Copy;
-        };
-        dropGesture.Drop += (s, e) =>
-        {
-            if (e.Data.Properties.TryGetValue("DragCell", out var draggedObj) &&
-                e.Data.Properties.TryGetValue("DragSection", out var sectionObj) &&
-                draggedObj is CellBase draggedCell &&
-                sectionObj is TvTableSection draggedSection &&
-                draggedSection == section &&
-                draggedCell != cell)
-            {
-                var fromIndex = section.Cells.IndexOf(draggedCell);
-                var toIndex = section.Cells.IndexOf(cell);
-                if (fromIndex >= 0 && toIndex >= 0)
-                    MoveCell(tableView, section, draggedCell, fromIndex, toIndex);
-            }
-        };
-        grid.GestureRecognizers.Add(dropGesture);
-
-        return grid;
-    }
-
-    static void MoveCell(TvTableView tableView, TvTableSection section, CellBase cell, int fromIndex, int toIndex)
-    {
-        tableView.SuppressRender = true;
-        section.Cells.Move(fromIndex, toIndex);
-        tableView.SuppressRender = false;
-
-        // Defer re-render to next frame so the current touch event completes first
-        tableView.Dispatcher.Dispatch(() =>
-        {
-            tableView.RenderSections();
-            tableView.RaiseItemDropped(section, cell, fromIndex, toIndex);
-        });
     }
 
     static LayoutOptions ToLayoutOptions(LayoutAlignment alignment) => alignment switch

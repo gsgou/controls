@@ -19,6 +19,7 @@ public partial class TableView : ContentView
     bool isRendering;
     INotifyCollectionChanged? viewItemsSourceNotifier;
     readonly List<TvTableSection> generatedSections = new();
+    DragSortController? dragSort;
     internal bool SuppressRender { get; set; }
 
     public TableView()
@@ -238,10 +239,33 @@ public partial class TableView : ContentView
         ModelChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // ---------- Drag sort plumbing (see DragSortController) ----------
+
+    internal DragSortController DragSort => dragSort ??= new DragSortController(this);
+
+    internal double ScrollOffsetY => scrollView.ScrollY;
+
+    internal double ViewportHeight => scrollView.Height;
+
+    internal double ContentHeight => rootLayout.Height;
+
+    internal VisualElement ScrollContent => rootLayout;
+
+    internal void ScrollToY(double y) => _ = scrollView.ScrollToAsync(0, y, false);
+
+    // Note: suppressing the scroller during a drag via ScrollView.Orientation = Neither looks
+    // like the obvious lever, but on iOS toggling Orientation snaps the offset back to the top,
+    // which drops the drag geometry on the floor the instant it starts. Locking the scroller is
+    // left to the DragSortRow platform hooks, which do it natively without moving the content.
+
+
     internal void RenderSections()
     {
         if (isRendering || SuppressRender)
             return;
+
+        // Rebuilding the tree invalidates every row the drag is tracking.
+        dragSort?.Abort();
 
         isRendering = true;
 
@@ -429,8 +453,19 @@ public class ItemDroppedEventArgs : EventArgs
 {
     public TvTableSection Section { get; }
     public CellBase Cell { get; }
+
+    /// <summary>Position the cell was dragged from, among the section's rendered rows.</summary>
     public int FromIndex { get; }
+
+    /// <summary>Position the cell was dropped at, among the section's rendered rows.</summary>
     public int ToIndex { get; }
+
+    /// <summary>
+    /// The moved cell's binding context. This is the item to reorder when the section's rows
+    /// come from ItemsSource/ItemTemplate - the control cannot reorder a templated section for
+    /// you, because the order lives in your collection.
+    /// </summary>
+    public object? Item => Cell.BindingContext;
 
     public ItemDroppedEventArgs(TvTableSection section, CellBase cell, int fromIndex, int toIndex)
     {

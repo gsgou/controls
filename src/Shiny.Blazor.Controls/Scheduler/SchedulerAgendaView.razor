@@ -1,8 +1,11 @@
 @namespace Shiny.Blazor.Controls.Scheduler
 @using System.Globalization
+@using Microsoft.JSInterop
 @implements IDisposable
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 
-<div class="shiny-agenda">
+<div class="shiny-agenda" @ref="rootElement">
     @if (allDayEvents.Count > 0)
     {
         <div class="shiny-agenda-allday">
@@ -125,7 +128,7 @@
             {
                 var date = SelectedDate.AddDays(i);
                 var isToday = date == DateOnly.FromDateTime(DateTime.Today);
-                <div class="shiny-agenda-daycol" style="height:@(TimeSlotHeight * 24)px;">
+                <div class="shiny-agenda-daycol" style="height:@(TimeSlotHeight * 24)px;" data-day-index="@i">
                     @for (var hour = 0; hour < 24; hour++)
                     {
                         var hCaptured = hour;
@@ -138,16 +141,29 @@
                         var captured = p.Event;
                         <div class="shiny-agenda-event"
                              style="top:@(Px(p.Top))px;height:@(Px(p.Height))px;left:@(Px(p.LeftPct))%;width:calc(@(Px(p.WidthPct))% - 4px);background:@(p.Event.Color ?? DefaultEventColor);"
+                             data-event-id="@p.Event.Identifier"
+                             data-draggable="@(DragEnabled ? "true" : null)"
                              @onclick:stopPropagation
                              @onclick="() => OnEventTapped(captured)">
+                            @if (AllowEventResize && p.Height >= GripHeight * 3)
+                            {
+                                <span class="shiny-agenda-grip shiny-agenda-grip--start"></span>
+                                <span class="shiny-agenda-grip shiny-agenda-grip--end"></span>
+                            }
                             <div class="shiny-agenda-event-title">@p.Event.Title</div>
                             <div class="shiny-agenda-event-time">@p.Event.Start.LocalDateTime.ToString(TimeFormat) – @p.Event.End.LocalDateTime.ToString(TimeFormat)</div>
                         </div>
                     }
+                    @if (DragEnabled)
+                    {
+                        @* Rendered by Blazor and merely positioned by JS - a guide the module appended
+                           itself would be a foreign node inside a container the renderer diffs. *@
+                        <div class="shiny-agenda-snapguide" style="display:none;background:@(DragSnapGuideColor ?? "rgba(120,120,120,0.6)");"></div>
+                    }
                     @if (ShowCurrentTimeMarker && isToday)
                     {
                         var minutes = DateTime.Now.TimeOfDay.TotalMinutes;
-                        var top = minutes * (TimeSlotHeight / 60.0);
+                        var top = AgendaGeometry.MinutesToY(minutes, TimeSlotHeight);
                         <div class="shiny-agenda-now" style="top:@(Px(top))px;background:@CurrentTimeMarkerColor;"></div>
                     }
                 </div>
@@ -186,6 +202,52 @@
     [Parameter] public DateOnly? MinDate { get; set; }
     [Parameter] public DateOnly? MaxDate { get; set; }
     [Parameter] public bool Use24HourTime { get; set; } = true;
+
+    /// <summary>Drag an event to a new time (and, when <c>DaysToShow</c> &gt; 1, another day).</summary>
+    /// <remarks>
+    /// Off by default, and the provider must also override
+    /// <see cref="ISchedulerEventProvider.CanChangeEvent"/> - the opt-in is required on both sides.
+    /// </remarks>
+    [Parameter] public bool AllowEventDrag { get; set; }
+
+    /// <summary>Drag the top/bottom edge of an event to change its duration.</summary>
+    [Parameter] public bool AllowEventResize { get; set; }
+
+    /// <summary>Snap granularity in minutes, clamped to 1-60.</summary>
+    [Parameter] public int DragSnapMinutes { get; set; } = 15;
+
+    /// <summary>Resize floor. A move never changes duration, so this only gates resize.</summary>
+    [Parameter] public TimeSpan MinEventDuration { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Long-press arming delay for touch and pen. <see cref="TimeSpan.Zero"/> arms immediately.
+    /// Mouse input never waits.
+    /// </summary>
+    [Parameter] public TimeSpan DragActivationDelay { get; set; } = TimeSpan.FromMilliseconds(350);
+
+    /// <summary>Only meaningful when <c>DaysToShow</c> &gt; 1.</summary>
+    [Parameter] public bool AllowCrossDayDrag { get; set; } = true;
+
+    /// <summary>The horizontal guide line drawn at the snapped position while dragging.</summary>
+    [Parameter] public string? DragSnapGuideColor { get; set; }
+
+    /// <summary>How often the provider is asked to validate the in-flight position.</summary>
+    [Parameter] public AgendaDragValidationMode DragValidationMode { get; set; } = AgendaDragValidationMode.OnCommit;
+
+    /// <summary>
+    /// Raised when <see cref="ISchedulerEventProvider.OnEventChanged"/> threw. The change has
+    /// already been reverted; a revert with no explanation is the worst failure mode here.
+    /// </summary>
+    [Parameter] public EventCallback<SchedulerEventChangeFailure> EventChangeFailed { get; set; }
+
+    const double GripHeight = 16;
+
+    ElementReference rootElement;
+    IJSObjectReference? dragModule;
+    DotNetObjectReference<SchedulerAgendaView>? selfRef;
+    string? lastDragOptions;
+
+    bool DragEnabled => AllowEventDrag || AllowEventResize;
 
     int Days => Math.Clamp(DaysToShow, 1, 7);
     bool ShowTz => ShowAdditionalTimezones && (AdditionalTimezones?.Count ?? 0) > 0;
@@ -328,11 +390,11 @@
             var colCount = Math.Max(1, colEnds.Count);
             for (var k = clusterStartIdx; k < j; k++)
             {
-                var pxPerMin = TimeSlotHeight / 60.0;
+                // Through AgendaGeometry so the layout and the drag's inverse cannot drift apart.
                 yield return (
                     items[k].Event,
-                    items[k].StartMin * pxPerMin,
-                    Math.Max(20, (items[k].EndMin - items[k].StartMin) * pxPerMin),
+                    AgendaGeometry.MinutesToY(items[k].StartMin, TimeSlotHeight),
+                    Math.Max(20, AgendaGeometry.MinutesToY(items[k].EndMin - items[k].StartMin, TimeSlotHeight)),
                     items[k].Col * 100.0 / colCount,
                     100.0 / colCount);
             }
@@ -392,9 +454,206 @@
         }
     }
 
+    // ------------- drag / resize -------------
+    // The pointer drag itself lives in scheduler-agenda.js; nothing here runs per pointermove.
+    // JS reports a snapped *delta*, never an absolute time, so a clipped multi-day event's real
+    // Start is what the change is applied to - and AgendaGeometry (the same math the MAUI host uses)
+    // stays authoritative.
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!DragEnabled)
+        {
+            await DisposeModuleAsync();
+            return;
+        }
+
+        var options = new AgendaDragOptions
+        {
+            TimeSlotHeight = TimeSlotHeight,
+            SnapMinutes = Math.Clamp(DragSnapMinutes, 1, 60),
+            MinDurationMinutes = MinEventDuration.TotalMinutes,
+            ActivationDelayMs = DragActivationDelay.TotalMilliseconds,
+            AllowDrag = AllowEventDrag,
+            AllowResize = AllowEventResize,
+            AllowCrossDay = AllowCrossDayDrag,
+            PerPositionValidation = DragValidationMode == AgendaDragValidationMode.PerPosition,
+            Days = Days
+        };
+        var key = string.Create(CultureInfo.InvariantCulture,
+            $"{options.TimeSlotHeight}|{options.SnapMinutes}|{options.MinDurationMinutes}|{options.ActivationDelayMs}|{options.AllowDrag}|{options.AllowResize}|{options.AllowCrossDay}|{options.PerPositionValidation}|{options.Days}");
+
+        try
+        {
+            if (dragModule is null)
+            {
+                selfRef ??= DotNetObjectReference.Create(this);
+                dragModule = await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/Shiny.Blazor.Controls/scheduler-agenda.js");
+                await dragModule.InvokeVoidAsync("init", rootElement, selfRef, options);
+            }
+            else if (key != lastDragOptions)
+            {
+                await dragModule.InvokeVoidAsync("update", rootElement, options);
+            }
+            lastDragOptions = key;
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+
+    /// <summary>Gates the gesture. Returning false leaves the event exactly where it is.</summary>
+    [JSInvokable]
+    public bool OnDragArm(string eventId)
+    {
+        if (!DragEnabled || Provider is null) return false;
+        var evt = ResolveEvent(eventId);
+        return evt is not null && Provider.CanChangeEvent(evt);
+    }
+
+
+    /// <summary>Only called when <see cref="DragValidationMode"/> is PerPosition.</summary>
+    [JSInvokable]
+    public bool OnDragValidate(string eventId, int kind, double deltaMinutes, int dayDelta)
+    {
+        if (!DragEnabled || Provider is null) return false;
+        var evt = ResolveEvent(eventId);
+        if (evt is null) return false;
+        return Provider.CanChangeEventTo(BuildChange(evt, kind, deltaMinutes, dayDelta));
+    }
+
+
+    [JSInvokable]
+    public async Task<bool> OnDragCommit(string eventId, int kind, double deltaMinutes, int dayDelta)
+    {
+        if (!DragEnabled || Provider is null) return false;
+
+        var evt = ResolveEvent(eventId);
+        if (evt is null) return false;
+
+        var change = BuildChange(evt, kind, deltaMinutes, dayDelta);
+
+        // Re-checked here even in PerPosition mode: JS is a preview, .NET is the authority.
+        if (!Provider.CanChangeEventTo(change))
+        {
+            await InvokeAsync(StateHasChanged);
+            return false;
+        }
+
+        // Optimistic: a provider that hits the network would otherwise leave the event pinned under
+        // the pointer for the whole round trip.
+        evt.Start = change.NewStart;
+        evt.End = change.NewEnd;
+        ReorderEvents();
+        await InvokeAsync(StateHasChanged);
+
+        var ok = false;
+        try
+        {
+            ok = await Provider.OnEventChanged(change);
+        }
+        catch (Exception ex)
+        {
+            await EventChangeFailed.InvokeAsync(new SchedulerEventChangeFailure(change, ex));
+        }
+
+        if (!ok)
+        {
+            evt.Start = change.OriginalStart;
+            evt.End = change.OriginalEnd;
+            ReorderEvents();
+            await InvokeAsync(StateHasChanged);
+        }
+        return ok;
+    }
+
+
+    SchedulerEventChange BuildChange(SchedulerEvent evt, int kind, double deltaMinutes, int dayDelta)
+    {
+        var changeKind = kind switch
+        {
+            1 => SchedulerEventChangeKind.ResizeStart,
+            2 => SchedulerEventChangeKind.ResizeEnd,
+            _ => SchedulerEventChangeKind.Move
+        };
+        var snapped = AgendaGeometry.SnapMinutes(deltaMinutes, DragSnapMinutes);
+        var (start, end) = AgendaGeometry.Apply(
+            evt.Start, evt.End, changeKind, snapped,
+            changeKind == SchedulerEventChangeKind.Move ? dayDelta : 0,
+            MinEventDuration);
+
+        return new SchedulerEventChange
+        {
+            Event = evt,
+            OriginalStart = evt.Start,
+            OriginalEnd = evt.End,
+            NewStart = start,
+            NewEnd = end,
+            Kind = changeKind
+        };
+    }
+
+
+    /// <summary>
+    /// The MAUI host matches the dragged event by object reference; this one round-trips through the
+    /// DOM and so matches by <see cref="SchedulerEvent.Identifier"/>. It defaults to a Guid, but a
+    /// consumer who assigns duplicates would otherwise move the wrong event - so an ambiguous match
+    /// is a no-op, not a guess.
+    /// </summary>
+    SchedulerEvent? ResolveEvent(string eventId)
+    {
+        SchedulerEvent? found = null;
+        foreach (var e in timedEvents)
+        {
+            if (e.Identifier != eventId) continue;
+            if (found is not null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Shiny.Scheduler] duplicate SchedulerEvent.Identifier '{eventId}' - drag ignored.");
+                return null;
+            }
+            found = e;
+        }
+        if (found is null)
+            System.Diagnostics.Debug.WriteLine($"[Shiny.Scheduler] no event matched '{eventId}' - drag ignored.");
+        return found;
+    }
+
+
+    void ReorderEvents()
+    {
+        var ordered = timedEvents.OrderBy(e => e.Start).ToList();
+        timedEvents.Clear();
+        timedEvents.AddRange(ordered);
+    }
+
+
+    async Task DisposeModuleAsync()
+    {
+        if (dragModule is null) return;
+        var module = dragModule;
+        dragModule = null;
+        lastDragOptions = null;
+        try
+        {
+            await module.InvokeVoidAsync("dispose", rootElement);
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+
     public void Dispose()
     {
         loadCts?.Cancel();
         markerTimer?.Dispose();
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        await DisposeModuleAsync();
+        selfRef?.Dispose();
     }
 }

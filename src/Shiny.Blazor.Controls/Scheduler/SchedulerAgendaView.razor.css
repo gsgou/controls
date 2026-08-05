@@ -204,6 +204,58 @@
     margin-left: 2px;
 }
 
+/* touch-action:none is what stops the browser claiming the gesture as a scroll - the direct
+   analogue of MAUI's ScrollOrientation.Neither. Without it the drag simply will not work on touch. */
+.shiny-agenda-event[data-draggable="true"] {
+    touch-action: none;
+    cursor: grab;
+}
+
+.shiny-agenda-event.is-dragging {
+    cursor: grabbing;
+    opacity: 0.75;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+}
+
+.shiny-agenda-event.is-rejected {
+    opacity: 0.5;
+    outline: 2px dashed #EF4444;
+}
+
+.shiny-agenda-grip {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 16px;
+    cursor: ns-resize;
+    z-index: 1;
+}
+
+.shiny-agenda-grip::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.7);
+    transform: translateY(-50%);
+}
+
+.shiny-agenda-grip--start { top: 0; }
+.shiny-agenda-grip--end { bottom: 0; }
+
+.shiny-agenda-snapguide {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    z-index: 4;
+    pointer-events: none;
+}
+
 .shiny-agenda-event-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shiny-agenda-event-time { font-size: 10px; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 

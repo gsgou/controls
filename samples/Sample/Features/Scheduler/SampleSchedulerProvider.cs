@@ -15,6 +15,10 @@ public class SampleSchedulerProvider(IDialogs dialogs) : ISchedulerEventProvider
         Color.FromArgb("#00ACC1"), // Cyan - Travel
     ];
 
+    // Days are generated once and then handed back as the same instances, so an event you drag
+    // stays where you dropped it instead of being regenerated on the next load.
+    readonly Dictionary<DateTime, List<SchedulerEvent>> dayCache = [];
+
     public async Task<IReadOnlyList<SchedulerEvent>> GetEvents(DateTimeOffset start, DateTimeOffset end)
     {
         await Task.Delay(500); // simulate network
@@ -24,6 +28,22 @@ public class SampleSchedulerProvider(IDialogs dialogs) : ISchedulerEventProvider
         var endDate = end.LocalDateTime.Date;
 
         while (current <= endDate)
+        {
+            if (!dayCache.TryGetValue(current, out var dayEvents))
+            {
+                dayEvents = BuildDay(current);
+                dayCache[current] = dayEvents;
+            }
+            events.AddRange(dayEvents);
+            current = current.AddDays(1);
+        }
+        return events;
+    }
+
+
+    static List<SchedulerEvent> BuildDay(DateTime current)
+    {
+        var events = new List<SchedulerEvent>();
         {
             var dow = current.DayOfWeek;
 
@@ -234,10 +254,7 @@ public class SampleSchedulerProvider(IDialogs dialogs) : ISchedulerEventProvider
                     End = new DateTimeOffset(current.AddHours(18).AddMinutes(30))
                 });
             }
-
-            current = current.AddDays(1);
         }
-
         return events;
     }
 
@@ -258,4 +275,30 @@ public class SampleSchedulerProvider(IDialogs dialogs) : ISchedulerEventProvider
     }
 
     public bool CanSelectAgendaTime(DateTimeOffset selectedTime) => true;
+
+    // ------------- drag / resize -------------
+
+    /// <summary>Lunch is immovable - it demonstrates the per-event gate.</summary>
+    public bool CanChangeEvent(SchedulerEvent evt) =>
+        !evt.IsAllDay && evt.Title != "Lunch Break";
+
+    /// <summary>Nothing before 07:00, to show a rejected position live under the finger.</summary>
+    public bool CanChangeEventTo(SchedulerEventChange change) =>
+        change.NewStart.LocalDateTime.TimeOfDay >= TimeSpan.FromHours(7);
+
+    public async Task<bool> OnEventChanged(SchedulerEventChange change)
+    {
+        await Task.Delay(600); // simulate a save round trip
+
+        // 10% of saves fail, so optimistic-commit-then-revert is visible rather than theoretical.
+        if (Random.Shared.Next(10) == 0)
+        {
+            dialogs.Alert("Save failed", $"'{change.Event.Title}' snapped back to its original time.");
+            return false;
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[Sample] {change.Kind} {change.Event.Title} → {change.NewStart.LocalDateTime:g}-{change.NewEnd.LocalDateTime:t}");
+        return true;
+    }
 }

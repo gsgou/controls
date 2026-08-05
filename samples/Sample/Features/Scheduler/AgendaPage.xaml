@@ -7,8 +7,21 @@
              x:DataType="local:AgendaViewModel"
              Title="Agenda">
 
-    <Grid RowDefinitions="Auto,*">
-        <HorizontalStackLayout HorizontalOptions="End" Spacing="8" Margin="8">
+    <Grid RowDefinitions="Auto,Auto,*">
+        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="End" Spacing="8" Margin="8,8,8,0">
+            <Label Text="Drag" VerticalOptions="Center" FontSize="12" />
+            <Switch IsToggled="{Binding AllowEventDrag}" />
+            <Label Text="Resize" VerticalOptions="Center" FontSize="12" />
+            <Switch IsToggled="{Binding AllowEventResize}" />
+            <Button Text="{Binding SnapToggleText}"
+                    Command="{Binding CycleSnapCommand}"
+                    BackgroundColor="SeaGreen"
+                    TextColor="White"
+                    CornerRadius="8"
+                    FontSize="12" />
+        </HorizontalStackLayout>
+
+        <HorizontalStackLayout Grid.Row="1" HorizontalOptions="End" Spacing="8" Margin="8">
             <Button Text="{Binding DatePickerToggleText}"
                     Command="{Binding ToggleDatePickerModeCommand}"
                     BackgroundColor="MediumPurple"
@@ -29,8 +42,13 @@
                     FontSize="12" />
         </HorizontalStackLayout>
 
-        <shiny:SchedulerAgendaView Grid.Row="1"
+        <shiny:SchedulerAgendaView Grid.Row="2"
             x:Name="AgendaView"
+            AllowEventDrag="{Binding AllowEventDrag}"
+            AllowEventResize="{Binding AllowEventResize}"
+            DragSnapMinutes="{Binding DragSnapMinutes}"
+            MinEventDuration="00:15:00"
+            AllowCrossDayDrag="True"
             Provider="{Binding Provider}"
             SelectedDate="{Binding SelectedDate}"
             DaysToShow="{Binding DaysToShow}"

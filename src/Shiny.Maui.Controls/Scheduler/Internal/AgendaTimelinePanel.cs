@@ -23,6 +23,17 @@ class AgendaTimelinePanel : ContentView
     public Action<SchedulerEvent>? EventTapped { get; set; }
     public Action<DateTimeOffset>? TimeSlotTapped { get; set; }
 
+    /// <summary>Owner-coordinated drag: this panel detects and forwards, the view decides.</summary>
+    public AgendaDragController? DragController { get; set; }
+    public bool AllowEventDrag { get; set; }
+    public bool AllowEventResize { get; set; }
+
+    /// <summary>The absolute layer the drag controller repositions the dragged view inside.</summary>
+    public AbsoluteLayout EventsLayer => eventsLayer;
+
+    /// <summary>The day this panel last rendered - the drag controller's frame of reference.</summary>
+    public DateOnly BuildDate => buildDate;
+
     /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
     static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
     {
@@ -208,8 +219,8 @@ class AgendaTimelinePanel : ContentView
                 endMinutes = 24 * 60;
             var duration = Math.Max(endMinutes - startMinutes, 15);
 
-            var y = startMinutes * timeSlotHeight / 60.0;
-            var h = duration * timeSlotHeight / 60.0;
+            var y = AgendaGeometry.MinutesToY(startMinutes, timeSlotHeight);
+            var h = AgendaGeometry.MinutesToY(duration, timeSlotHeight);
 
             View eventView;
             if (eventTemplate != null)
@@ -224,15 +235,25 @@ class AgendaTimelinePanel : ContentView
 
             var tap = new TapGestureRecognizer();
             var captured = evt;
-            tap.Tapped += (_, _) => EventTapped?.Invoke(captured);
+            tap.Tapped += (_, _) =>
+            {
+                // Several platforms raise Tapped on the release that ends a pan, which would select
+                // the event you just dropped.
+                if (DragController?.ConsumedLastGesture == true) return;
+                EventTapped?.Invoke(captured);
+            };
             eventView.GestureRecognizers.Add(tap);
 
-            AbsoluteLayout.SetLayoutBounds(eventView, new Rect(
+            // When neither flag is on, the tree below is byte-for-byte what it has always been:
+            // the templated view goes straight into the layer with no wrapper and no recognizers.
+            var placed = DragEnabled ? WrapForDrag(eventView, captured, h) : eventView;
+
+            AbsoluteLayout.SetLayoutBounds(placed, new Rect(
                 (double)column / totalColumns, y, 1.0 / totalColumns, h));
-            AbsoluteLayout.SetLayoutFlags(eventView,
+            AbsoluteLayout.SetLayoutFlags(placed,
                 AbsoluteLayoutFlags.XProportional | AbsoluteLayoutFlags.WidthProportional);
 
-            eventsLayer.Children.Add(eventView);
+            eventsLayer.Children.Add(placed);
         }
 
         // time marker
@@ -267,6 +288,7 @@ class AgendaTimelinePanel : ContentView
             this.backgroundTap.Tapped += (_, e) =>
             {
                 if (TimeSlotTapped == null) return;
+                if (DragController?.ConsumedLastGesture == true) return;
                 var pos = e.GetPosition(eventsLayer);
                 if (pos.HasValue)
                 {
@@ -281,6 +303,98 @@ class AgendaTimelinePanel : ContentView
         }
 
     }
+
+    // ------------- drag / resize -------------
+
+    const double GripHeight = 16;
+
+    bool DragEnabled => DragController != null && (AllowEventDrag || AllowEventResize);
+
+    /// <summary>
+    /// Puts the templated event view in a host grid so the resize grips can sit over its top and
+    /// bottom edges. Which of Move/ResizeStart/ResizeEnd a gesture is, is decided by *which view*
+    /// received it - the grips are separate views with their own recognizers, so there is no
+    /// coordinate math and no ambiguity.
+    /// </summary>
+    View WrapForDrag(View eventView, SchedulerEvent evt, double height)
+    {
+        var host = new Grid();
+        host.Add(eventView);
+
+        if (AllowEventDrag)
+        {
+            var pan = new PanGestureRecognizer();
+            // Attached to the inner view, not the host: the grips are siblings stacked above it, so
+            // a touch in a grip goes to the grip alone.
+            pan.PanUpdated += (_, e) => HandlePan(e, host, evt, SchedulerEventChangeKind.Move);
+            eventView.GestureRecognizers.Add(pan);
+        }
+
+        // Too short to hold two grips and still be grabbable in the middle - move only.
+        if (AllowEventResize && height >= GripHeight * 3)
+        {
+            host.Add(CreateGrip(host, evt, true));
+            host.Add(CreateGrip(host, evt, false));
+        }
+        return host;
+    }
+
+
+    View CreateGrip(View host, SchedulerEvent evt, bool isStart)
+    {
+        var bar = new BoxView
+        {
+            HeightRequest = 3,
+            Color = Colors.White,
+            Opacity = 0.7,
+            Margin = new Thickness(14, 0),
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        // A 4px visual bar inside a 16px touch target.
+        var grip = new Grid
+        {
+            HeightRequest = GripHeight,
+            BackgroundColor = Colors.Transparent,
+            VerticalOptions = isStart ? LayoutOptions.Start : LayoutOptions.End,
+            Children = { bar }
+        };
+
+        var pan = new PanGestureRecognizer();
+        var kind = isStart ? SchedulerEventChangeKind.ResizeStart : SchedulerEventChangeKind.ResizeEnd;
+        pan.PanUpdated += (_, e) => HandlePan(e, host, evt, kind);
+        grip.GestureRecognizers.Add(pan);
+        return grip;
+    }
+
+
+    void HandlePan(PanUpdatedEventArgs e, View host, SchedulerEvent evt, SchedulerEventChangeKind kind)
+    {
+        var controller = DragController;
+        if (controller == null) return;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                controller.Arm(this, host, evt, kind);
+                break;
+
+            case GestureStatus.Running:
+                controller.Update(e.TotalX, e.TotalY);
+                break;
+
+            // iOS reports the final totals on Completed, Android reports zeros - so the controller
+            // commits from the last Running values it saw and this carries nothing.
+            case GestureStatus.Completed:
+                _ = controller.CompleteAsync();
+                break;
+
+            case GestureStatus.Canceled:
+                controller.Cancel();
+                break;
+        }
+    }
+
 
     View CreateDefaultEventView(SchedulerEvent evt)
     {

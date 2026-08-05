@@ -8,4 +8,28 @@ public interface ISchedulerEventProvider
     void OnCalendarDateSelected(DateOnly selectedDate);
     void OnAgendaTimeSelected(DateTimeOffset selectedTime);
     bool CanSelectAgendaTime(DateTimeOffset selectedTime);
+
+    /// <summary>
+    /// Gates whether this event can be dragged/resized at all. Called once when the gesture arms -
+    /// return false to leave the event fixed (e.g. read-only calendars, past events).
+    /// </summary>
+    /// <remarks>
+    /// Defaults to false, so a provider that ignores drag/drop can never have its events moved even
+    /// if an app sets <c>AllowEventDrag</c>. The opt-in is required on both the view and the provider.
+    /// </remarks>
+    bool CanChangeEvent(SchedulerEvent evt) => false;
+
+    /// <summary>
+    /// Called continuously as the event is dragged, before the change is committed. Return false to
+    /// reject this position - the control shows the rejected state and will not commit there.
+    /// Must be cheap: this runs on every snap boundary crossed.
+    /// </summary>
+    bool CanChangeEventTo(SchedulerEventChange change) => true;
+
+    /// <summary>
+    /// Called once when the gesture completes. The control has already applied the change
+    /// optimistically. Return true to keep it, false to revert to the original time. Exceptions are
+    /// treated as false and surfaced via <c>SchedulerAgendaView.EventChangeFailed</c>.
+    /// </summary>
+    Task<bool> OnEventChanged(SchedulerEventChange change) => Task.FromResult(false);
 }

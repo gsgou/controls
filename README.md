@@ -214,6 +214,30 @@ Calendar and agenda views for displaying events and appointments, powered by `IS
 
 **DatePickerMode** options: `Carousel` (default horizontal day picker), `Calendar` (collapsible month calendar with pull-to-expand), `None` (no picker).
 
+**Drag & drop event editing** (agenda timeline only) - drag an event to a new time, across day columns when `DaysToShow > 1`, or drag its top/bottom grip to change its duration. Off by default and additive: with `AllowEventDrag`/`AllowEventResize` unset, no gesture recognizers are attached (MAUI), no JS module is imported (Blazor), and the rendered tree is unchanged.
+
+```xml
+<shiny:SchedulerAgendaView
+    Provider="{Binding Provider}"
+    AllowEventDrag="True"
+    AllowEventResize="True"
+    DragSnapMinutes="15"
+    MinEventDuration="00:15:00"
+    AllowCrossDayDrag="True" />
+```
+
+| Property | Default | Notes |
+| --- | --- | --- |
+| `AllowEventDrag` | `false` | Move an event to a new time (and, when `DaysToShow > 1`, another day). |
+| `AllowEventResize` | `false` | Drag the top/bottom edge to change duration. |
+| `DragSnapMinutes` | `15` | Snap granularity, clamped to 1-60. |
+| `MinEventDuration` | 15 min | Resize floor. A move never changes duration. |
+| `DragActivationDelay` | 350 ms | Long-press arming delay for touch; mouse never waits. `Zero` arms immediately. |
+| `AllowCrossDayDrag` | `true` | Only meaningful when `DaysToShow > 1`. |
+| `DragSnapGuideColor` | separator colour | The guide line drawn at the snapped position. |
+
+On touch the drag arms on a long press, so a vertical swipe still scrolls the timeline; with a mouse it starts immediately. The change is committed optimistically and reverted if the provider says no. All-day events are not draggable, and timed ↔ all-day conversion is not supported.
+
 **SchedulerCalendarListView** - Scrollable event list grouped by day with infinite scroll loading and sticky day headers (`StickyDayHeaders`, on by default, pins the current day's header to the top while scrolling).
 
 ```xml
@@ -235,8 +259,17 @@ public class MyEventProvider : ISchedulerEventProvider
     public void OnCalendarDateSelected(DateOnly selectedDate) { }
     public bool CanSelectAgendaTime(DateTimeOffset selectedTime) => true;
     public void OnAgendaTimeSelected(DateTimeOffset selectedTime) { }
+
+    // drag/drop - all three are default interface methods, so existing providers still compile
+    public bool CanChangeEvent(SchedulerEvent evt) => true;                    // defaults to false
+    public bool CanChangeEventTo(SchedulerEventChange change) => true;
+    public async Task<bool> OnEventChanged(SchedulerEventChange change) { ... } // defaults to false
 }
 ```
+
+`CanChangeEvent` defaults to `false`, so a provider that ignores drag/drop can never have its events moved even if an app sets `AllowEventDrag` - the opt-in is required on both the view and the provider. `SchedulerEventChange` carries the event, its original `Start`/`End`, the proposed (already snapped) `NewStart`/`NewEnd`, and a `Kind` of `Move` / `ResizeStart` / `ResizeEnd`. Returning `false` from `OnEventChanged` reverts; throwing reverts and raises `EventChangeFailed` on the view.
+
+On Blazor, events are matched across the JS boundary by `SchedulerEvent.Identifier` (a `Guid` by default) - duplicate identifiers make a drag a no-op rather than move the wrong event. Blazor also has `DragValidationMode`: `OnCommit` (default, no interop while the pointer moves) or `PerPosition` (`CanChangeEventTo` per snap boundary, which is visibly slower on WASM).
 
 ### FloatingPanel + OverlayHost
 
