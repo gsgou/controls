@@ -117,6 +117,33 @@ public partial class CameraView
     public static readonly BindableProperty VideoFrameRateProperty = BindableProperty.Create(
         nameof(VideoFrameRate), typeof(int?), typeof(CameraView), null);
 
+    /// <summary>
+    /// Whether recording audio shares the device with whatever else is playing, instead of interrupting it.
+    /// Default <c>true</c>. Apple platforms only.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// iOS hands an <c>AVCaptureSession</c> the app's audio session by default, and the configuration it
+    /// applies is exclusive: starting a recording stops music, a podcast or a navigation app mid-sentence, and
+    /// — the direction that is far harder to diagnose — anything else starting playback afterwards
+    /// <i>interrupts the capture</i>, which stops video as well as audio. Left at <c>true</c> the session is
+    /// configured to mix instead, so neither side evicts the other. This is the right default for anything
+    /// recording continuously (a dash cam, a body cam, a long take) and for anything a driver has running.
+    /// </para>
+    /// <para>
+    /// Set it to <c>false</c> only when the recording's audio is the point and background playback would
+    /// pollute it — the microphone hears what the speakers are playing, and no processing removes it
+    /// afterwards.
+    /// </para>
+    /// <para>
+    /// Read when a recording with <see cref="VideoRecordingOptions.IncludeAudio"/> starts, so set it before
+    /// then; changing it mid-recording does nothing. A recording without audio never touches the audio session
+    /// at all and so never interrupts anything, whatever this is set to.
+    /// </para>
+    /// </remarks>
+    public static readonly BindableProperty MixWithOtherAudioProperty = BindableProperty.Create(
+        nameof(MixWithOtherAudio), typeof(bool), typeof(CameraView), true);
+
     /// <summary>Whether a video recording is currently in progress (updated by the control).</summary>
     public static readonly BindableProperty IsRecordingProperty = BindableProperty.Create(
         nameof(IsRecording), typeof(bool), typeof(CameraView), false, BindingMode.OneWayToSource);
@@ -237,6 +264,13 @@ public partial class CameraView
     {
         get => (int?)this.GetValue(VideoFrameRateProperty);
         set => this.SetValue(VideoFrameRateProperty, value);
+    }
+
+    /// <inheritdoc cref="MixWithOtherAudioProperty"/>
+    public bool MixWithOtherAudio
+    {
+        get => (bool)this.GetValue(MixWithOtherAudioProperty);
+        set => this.SetValue(MixWithOtherAudioProperty, value);
     }
 
     /// <inheritdoc cref="IsRecordingProperty"/>

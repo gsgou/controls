@@ -33,6 +33,28 @@ public class CameraViewVideoSettingsTests
     }
 
 
+    [Fact]
+    public void Audio_mixes_with_other_apps_by_default()
+    {
+        // The default is what fixes the bug, so it is the part worth pinning. Exclusive is what iOS applies on
+        // its own — and it costs both directions at once: starting a recording stops whatever was playing
+        // (music over CarPlay, a navigation app), and anything starting playback afterwards interrupts the
+        // capture session, which stops video as well as audio. Flipping this default back would reintroduce
+        // both, silently, in the platform layer where no test can see it.
+        new CameraView().MixWithOtherAudio.ShouldBeTrue();
+    }
+
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Audio_mixing_round_trips(bool mix)
+    {
+        var view = new CameraView { MixWithOtherAudio = mix };
+        view.MixWithOtherAudio.ShouldBe(mix);
+    }
+
+
     [Theory]
     [InlineData(VideoQuality.Lowest)]
     [InlineData(VideoQuality.Low)]

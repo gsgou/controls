@@ -20,6 +20,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     AVCaptureVideoDataOutput? dataOutput;
     AVCaptureAudioDataOutput? audioDataOutput;
     AppleAudioDelegate? audioDelegate;
+    AppleCaptureAudioSession? appAudioSession;
     AppleVideoOverlayRecorder? overlayRecorder;
     AVCaptureDevice? device;
     VideoFrameDelegate? frameDelegate;
@@ -381,6 +382,14 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             return;
 
         this.session = new AVCaptureSession { SessionPreset = this.ResolvePreset() };
+
+        // The app's audio session is ours to configure, not AVFoundation's — see AppleCaptureAudioSession for
+        // what the automatic configuration costs (it interrupts everything else playing, and lets everything
+        // else interrupt the capture). Set before the session ever runs, since that is when the automatic
+        // path would apply. A recording that wants audio configures it in EnsureAudioInput; one that does not
+        // leaves the audio session untouched entirely, which is why a silent recording no longer stops music.
+        this.session.AutomaticallyConfiguresApplicationAudioSession = false;
+
         this.ObserveSession(this.session);
         this.session.BeginConfiguration();
 
@@ -606,10 +615,21 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     }
 
 
+    // Adds the microphone to the session, configuring the app's audio session for it first. Both are one-time:
+    // the input stays for the life of the session, so a caller recording back-to-back clips (segmented
+    // recording) pays neither the reconfiguration nor the route change per clip.
     void EnsureAudioInput()
     {
         if (this.audioInput != null || this.session == null)
             return;
+
+        // Before the input is added, not after: adding an audio input to a session whose audio session is not
+        // in a record-capable category is what produces a recording that runs happily and contains silence.
+        this.appAudioSession ??= new AppleCaptureAudioSession
+        {
+            OnError = message => this.MainThread(() => this.MaybeVirtualView?.OnCameraError(message))
+        };
+        this.appAudioSession.Activate(this.MaybeVirtualView?.MixWithOtherAudio ?? true);
 
         var mic = AVCaptureDevice.GetDefaultDevice(AVMediaTypes.Audio);
         if (mic == null)
@@ -850,6 +870,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             this.dataOutput = null;
             this.audioDataOutput?.Dispose();
             this.audioDataOutput = null;
+            this.appAudioSession?.Deactivate();
+            this.appAudioSession = null;
             this.overlayRecorder = null;
             this.device = null;
         });
