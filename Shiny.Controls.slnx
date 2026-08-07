@@ -25,6 +25,9 @@
     <Project Path="src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Barcodes/Shiny.Maui.Controls.Barcodes.csproj" />
+    <Project Path="src/Shiny.Controls.Keyframe.Shared/Shiny.Controls.Keyframe.Shared.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Keyframe/Shiny.Maui.Controls.Keyframe.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Keyframe.Export/Shiny.Maui.Controls.Keyframe.Export.csproj" />
     <Project Path="src/Shiny.Controls.Camera.Shared/Shiny.Controls.Camera.Shared.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera/Shiny.Maui.Controls.Camera.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Camera.Motion/Shiny.Maui.Controls.Camera.Motion.csproj" />
@@ -47,5 +50,7 @@
     <Project Path="tests/Shiny.Maui.Controls.MermaidDiagrams.Tests/Shiny.Maui.Controls.MermaidDiagrams.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.Camera.Tests/Shiny.Maui.Controls.Camera.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.Tests/Shiny.Maui.Controls.Tests.csproj" />
+    <Project Path="tests/Shiny.Controls.Keyframe.Tests/Shiny.Controls.Keyframe.Tests.csproj" />
+    <Project Path="tests/Shiny.Maui.Controls.Keyframe.Export.Tests/Shiny.Maui.Controls.Keyframe.Export.Tests.csproj" />
     <Project Path="tests/Shiny.Blazor.Controls.Camera.Tests/Shiny.Blazor.Controls.Camera.Tests.csproj" />
 </Solution>

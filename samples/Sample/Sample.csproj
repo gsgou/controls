@@ -62,6 +62,7 @@
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Barcodes\Shiny.Maui.Controls.Barcodes.csproj" />
+		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Keyframe\Shiny.Maui.Controls.Keyframe.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera\Shiny.Maui.Controls.Camera.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Motion\Shiny.Maui.Controls.Camera.Motion.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Camera.Barcode\Shiny.Maui.Controls.Camera.Barcode.csproj" />

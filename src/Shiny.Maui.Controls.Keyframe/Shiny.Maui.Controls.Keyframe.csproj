@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-maccatalyst</TargetFrameworks>
+        <!-- Windows packaging (MakePri) only runs on Windows; add the Windows TFM only there so the solution still builds on macOS/Linux. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <IsAotCompatible>true</IsAotCompatible>
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <EnableAotAnalyzer>true</EnableAotAnalyzer>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- The repo uses two feeds (nuget.org + dotnet10) without source mapping; NU1507 is a
+             restore-config warning, not a code-quality one, so it must not fail these builds. -->
+        <NoWarn>$(NoWarn);NU1507</NoWarn>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+        <RootNamespace>Shiny.Maui.Controls.Keyframe</RootNamespace>
+        <Description>Declarative keyframe animation for .NET MAUI — XAML timelines with CSS easing syntax, seekable/reversible playback, storyboards, and a drawable scene view.</Description>
+        <PackageTags>maui shiny keyframe animation timeline easing storyboard xaml</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Keyframe.Shared\Shiny.Controls.Keyframe.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The timing engine lives in the shared package's namespace; surface it everywhere so
+             call sites read the same as they did when Core was the parent namespace. -->
+        <Using Include="Shiny.Controls.Keyframe" />
+    </ItemGroup>
+
+</Project>

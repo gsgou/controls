@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <EnableAotAnalyzer>true</EnableAotAnalyzer>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- The repo uses two feeds (nuget.org + dotnet10) without source mapping; NU1507 is a
+             restore-config warning, not a code-quality one, so it must not fail these builds. -->
+        <NoWarn>$(NoWarn);NU1507</NoWarn>
+        <RootNamespace>Shiny.Controls.Keyframe</RootNamespace>
+        <Description>Host-neutral keyframe timing engine — Timeline, Track&lt;T&gt;, IInterpolator&lt;T&gt;, easing curves, seekable playback, and the drawn scene graph. Evaluation is a pure function of time, so animations scrub, reverse and export deterministically.</Description>
+        <PackageTags>maui blazor shiny keyframe animation timeline easing interpolation</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Graphics" />
+    </ItemGroup>
+
+</Project>

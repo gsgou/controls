@@ -30,6 +30,7 @@
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
+                  xmlns:keyframe="clr-namespace:Sample.Features.Keyframe"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
                   xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
@@ -644,6 +645,25 @@
                              Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
+    </FlyoutItem>
+
+    <!-- ============================================================ -->
+    <!--  ANIMATION -->
+    <!-- ============================================================ -->
+    <MenuItem Text="ANIMATION"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <FlyoutItem Title="Keyframe">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25B7;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate keyframe:KeyframePage}" Route="keyframe" />
     </FlyoutItem>
 
     <!-- ============================================================ -->
