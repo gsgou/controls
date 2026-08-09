@@ -149,7 +149,23 @@ public static class ControlsMauiAppBuilderExtensions
         native.SpellCheckingType = enabled ? UIKit.UITextSpellCheckingType.Default : UIKit.UITextSpellCheckingType.No;
 
         // An empty content type is the documented opt-out from AutoFill and the strong-password sheet.
-        native.TextContentType = enabled ? null : new Foundation.NSString(string.Empty);
+        //
+        // Never assign null here. UITextField.TextContentType is bound WITHOUT [NullAllowed] (the type
+        // carries NullableContext=1 and the property has no NullableAttribute, unlike Text/Placeholder),
+        // so the setter takes the null straight into objc_msgSend and the app dies with EXC_BAD_ACCESS -
+        // not a catchable managed exception. Since this mapping runs for every BorderlessEntry, a null on
+        // the *enabled* path - the default - took down every page holding one: EntryCell, and therefore
+        // every TableView with a text row. Clearing the property means writing nil, which only KVC can do.
+        if (!enabled)
+        {
+            native.TextContentType = new Foundation.NSString(string.Empty);
+        }
+        else if (native.TextContentType is { Length: 0 })
+        {
+            // Only ours gets cleared - an empty content type is not something anything else sets, so a
+            // real one assigned by the app or by MAUI is left alone.
+            native.SetValueForKey(Foundation.NSNull.Null, new Foundation.NSString("textContentType"));
+        }
 #elif WINDOWS
         handler.PlatformView.IsSpellCheckEnabled = enabled && entry.IsSpellCheckEnabled;
 #endif

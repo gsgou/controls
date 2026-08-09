@@ -23,6 +23,9 @@ public class BasicSettingsViewModel(IDialogs dialogs) : INotifyPropertyChanged
     string username = string.Empty;
     string password = string.Empty;
     string email = string.Empty;
+    string phone = string.Empty;
+    string cardNumber = string.Empty;
+    string expiry = string.Empty;
     string selectedTheme = "System";
     int? fontSizeValue = 14;
     TimeSpan alarmTime = new(7, 0, 0);
@@ -47,6 +50,9 @@ public class BasicSettingsViewModel(IDialogs dialogs) : INotifyPropertyChanged
     public string Username { get => username; set => SetProperty(ref username, value); }
     public string Password { get => password; set => SetProperty(ref password, value); }
     public string Email { get => email; set => SetProperty(ref email, value); }
+    public string Phone { get => phone; set => SetProperty(ref phone, value); }
+    public string CardNumber { get => cardNumber; set => SetProperty(ref cardNumber, value); }
+    public string Expiry { get => expiry; set => SetProperty(ref expiry, value); }
     public string SelectedTheme { get => selectedTheme; set => SetProperty(ref selectedTheme, value); }
     public int? FontSizeValue { get => fontSizeValue; set => SetProperty(ref fontSizeValue, value); }
     public TimeSpan AlarmTime { get => alarmTime; set => SetProperty(ref alarmTime, value); }
@@ -68,6 +74,9 @@ public class BasicSettingsViewModel(IDialogs dialogs) : INotifyPropertyChanged
         Username = string.Empty;
         Password = string.Empty;
         Email = string.Empty;
+        Phone = string.Empty;
+        CardNumber = string.Empty;
+        Expiry = string.Empty;
         SelectedTheme = "System";
         FontSizeValue = 14;
         AlarmTime = new TimeSpan(7, 0, 0);

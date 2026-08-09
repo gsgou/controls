@@ -66,7 +66,7 @@ public static class KeyboardFieldNavigator
         return next >= 0 && next < fields.Count ? fields[next] : null;
     }
 
-    static string? GroupOf(VisualElement element) => element is TextEntry entry ? entry.FieldGroup : null;
+    static string? GroupOf(VisualElement element) => (string?)element.GetValue(KeyboardField.GroupProperty);
 
     static bool IsNavigable(VisualElement element)
     {
@@ -125,6 +125,17 @@ public static class KeyboardFieldNavigator
         foreach (var child in element.LogicalChildrenInternalWrapper())
             Walk(child, found);
     }
+}
+
+/// <summary>
+/// Carries the navigation group on whichever element the navigator actually collects. A
+/// <see cref="TextEntry"/> is collected as itself; an <see cref="Cells.EntryCell"/> is collected as
+/// the input inside it - so the group has to live on the element, not on the control that owns it.
+/// </summary>
+static class KeyboardField
+{
+    public static readonly BindableProperty GroupProperty = BindableProperty.CreateAttached(
+        "Group", typeof(string), typeof(KeyboardField), null);
 }
 
 static class NavigatorElementExtensions

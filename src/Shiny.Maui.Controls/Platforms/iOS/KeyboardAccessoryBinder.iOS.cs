@@ -4,27 +4,27 @@ using UIKit;
 
 namespace Shiny.Maui.Controls;
 
-public partial class TextEntry
+partial class KeyboardAccessoryBinder
 {
     UIView? accessoryPlatformView;
 
     // iOS is the one platform with a real API for this: a view assigned to the responder's
     // InputAccessoryView is docked to the keyboard by the OS and rides its animation exactly.
-    partial void ApplyAccessory(KeyboardAccessoryView? bar)
+    partial void ApplyPlatform(KeyboardAccessoryView? bar)
     {
-        if (entry.Handler?.PlatformView is not UITextField field)
+        if (input.Handler?.PlatformView is not UITextField field)
             return;
 
         if (bar is null)
         {
             field.InputAccessoryView = null;
             accessoryPlatformView = null;
-            if (entry.IsFocused)
+            if (input.IsFocused)
                 field.ReloadInputViews();
             return;
         }
 
-        var context = entry.Handler.MauiContext;
+        var context = input.Handler.MauiContext;
         if (context is null)
             return;
 
@@ -46,24 +46,24 @@ public partial class TextEntry
 
         // Swapping the accessory while the field already has focus does nothing until the responder
         // is told to reload its input views.
-        if (entry.IsFocused)
+        if (input.IsFocused)
             field.ReloadInputViews();
     }
 
-    partial void OnAccessoryFocusChangedPlatform(bool focused)
+    partial void OnFocusChangedPlatform(bool focused)
     {
         if (!focused || accessoryPlatformView is null)
             return;
 
         // Re-measure on focus: rotation while the field was unfocused leaves a stale width.
-        if (entry.Handler?.PlatformView is UITextField field && ResolvedAccessory is KeyboardAccessoryView bar)
+        if (input.Handler?.PlatformView is UITextField field && bar is KeyboardAccessoryView current)
         {
             var width = field.Window?.Bounds.Width ?? UIScreen.MainScreen.Bounds.Width;
             if (Math.Abs(accessoryPlatformView.Frame.Width - width) > 0.5)
             {
-                ((IView)bar).Measure(width, bar.BarHeight);
-                ((IView)bar).Arrange(new Rect(0, 0, width, bar.BarHeight));
-                accessoryPlatformView.Frame = new CGRect(0, 0, width, bar.BarHeight);
+                ((IView)current).Measure(width, current.BarHeight);
+                ((IView)current).Arrange(new Rect(0, 0, width, current.BarHeight));
+                accessoryPlatformView.Frame = new CGRect(0, 0, width, current.BarHeight);
             }
         }
     }

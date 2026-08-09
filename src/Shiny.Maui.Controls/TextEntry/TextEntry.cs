@@ -7,7 +7,7 @@ using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls;
 
 [ContentProperty(nameof(RightTools))]
-public partial class TextEntry : ContentView
+public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 {
     // Floating-label animation. The floated label is an M3 outlined "notch": it rides up onto the
     // top border line and paints the field background behind itself, so it never shares vertical
@@ -81,7 +81,6 @@ public partial class TextEntry : ContentView
         entry.Focused += OnEntryFocused;
         entry.Unfocused += OnEntryUnfocused;
         entry.Completed += OnEntryCompleted;
-        entry.HandlerChanged += (_, _) => SyncAccessory();
 
         entryArea = new Grid
         {
@@ -178,11 +177,6 @@ public partial class TextEntry : ContentView
         placeholderLabel.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         Content = rootGrid;
-
-        // The accessory bar lives outside this control's visual tree (a UIKit input accessory on iOS,
-        // a view in the activity's content frame on Android), so it has to be torn down explicitly
-        // when the field goes away - nothing else would.
-        Unloaded += (_, _) => OnAccessoryFocusChanged(false);
 
         // Initialize tool collections
         LeftTools = new ObservableCollection<TextEntryTool>();
@@ -441,19 +435,14 @@ public partial class TextEntry : ContentView
 
         if (!string.IsNullOrEmpty(Mask))
         {
-            var rawText = TextEntryMaskHelper.StripMask(entry.Text, Mask);
-            var maxRaw = TextEntryMaskHelper.CalculateRawMaxLength(Mask);
-            if (rawText.Length > maxRaw)
-                rawText = rawText[..maxRaw];
+            var masked = MaskedInput.Apply(entry.Text, Mask);
 
-            Text = rawText;
-            var formatted = TextEntryMaskHelper.ApplyMask(rawText, Mask);
-            FormattedText = formatted;
-            entry.Text = formatted;
+            Text = masked.Raw;
+            FormattedText = masked.Formatted;
+            entry.Text = masked.Formatted;
 
             // Set cursor position after formatting
-            var cursorPos = TextEntryMaskHelper.CalculateCursorPosition(rawText.Length, Mask);
-            Dispatcher.Dispatch(() => entry.CursorPosition = Math.Min(cursorPos, formatted.Length));
+            Dispatcher.Dispatch(() => entry.CursorPosition = masked.CursorPosition);
         }
         else
         {
@@ -488,8 +477,6 @@ public partial class TextEntry : ContentView
             ShowGlow(ErrorColor, ErrorColorToken);
         else
             ShowGlow(FocusedBorderColor, FocusedBorderColorToken);
-
-        OnAccessoryFocusChanged(true);
     }
 
     void OnEntryUnfocused(object? sender, FocusEventArgs e)
@@ -511,8 +498,6 @@ public partial class TextEntry : ContentView
             ShowGlow(ErrorColor, ErrorColorToken);
         else
             HideGlow();
-
-        OnAccessoryFocusChanged(false);
     }
 
     void OnEntryCompleted(object? sender, EventArgs e)
@@ -763,11 +748,13 @@ public partial class TextEntry : ContentView
 
     // ---- Keyboard accessory ---------------------------------------------------------------
 
-    KeyboardAccessoryView? resolvedAccessory;
+    KeyboardAccessoryBinder? accessoryBinder;
     KeyboardAccessoryView? presetAccessory;
 
-    /// <summary>The accessory bar currently in effect, whether set explicitly or built from a preset.</summary>
-    internal KeyboardAccessoryView? ResolvedAccessory => resolvedAccessory;
+    // Created on first use, so a field with no accessory costs nothing. The binder subscribes to the
+    // inner entry's handler/focus events itself, so creating it late is safe - anything it missed is
+    // re-applied by the SetBar below.
+    KeyboardAccessoryBinder AccessoryBinder => accessoryBinder ??= new KeyboardAccessoryBinder(this, entry, this);
 
     // An explicit Accessory always wins; a preset is materialized once and cached, because on iOS a
     // UIView can only have one superview and rebuilding the bar per focus would churn it.
@@ -777,14 +764,10 @@ public partial class TextEntry : ContentView
         if (bar is null && AccessoryPreset != KeyboardAccessoryPreset.None)
             bar = presetAccessory ??= KeyboardAccessoryView.FromPreset(AccessoryPreset);
 
-        if (!ReferenceEquals(bar, resolvedAccessory))
-        {
-            resolvedAccessory?.DetachOwner(this);
-            resolvedAccessory = bar;
-            resolvedAccessory?.AttachOwner(this);
-        }
+        if (bar is null && accessoryBinder is null)
+            return;
 
-        ApplyAccessory(resolvedAccessory);
+        AccessoryBinder.SetBar(bar);
     }
 
     void ResetPresetAccessory()
@@ -793,18 +776,11 @@ public partial class TextEntry : ContentView
         SyncAccessory();
     }
 
-    // Implemented per platform (iOS: UIResponder.InputAccessoryView, Android: an inset-tracked bar in
-    // the activity's content view). No implementation on the other heads, which is the no-op.
-    partial void ApplyAccessory(KeyboardAccessoryView? bar);
-    partial void OnAccessoryFocusChangedPlatform(bool focused);
+    VisualElement IKeyboardAccessoryHost.NavigationElement => this;
 
-    void OnAccessoryFocusChanged(bool focused)
-    {
-        if (resolvedAccessory is not null)
-            resolvedAccessory.NotifyFocusChanged(this, focused);
-
-        OnAccessoryFocusChangedPlatform(focused);
-    }
+    // Unfocus() is shadowed on this type - the interface call has to reach the shadowing member, not
+    // VisualElement's, or it would unfocus the wrapper and leave the keyboard up.
+    void IKeyboardAccessoryHost.DismissKeyboard() => Unfocus();
 
     // Public API
     public event EventHandler<TextChangedEventArgs>? TextChanged;

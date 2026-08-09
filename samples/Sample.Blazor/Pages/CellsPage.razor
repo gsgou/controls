@@ -27,8 +27,10 @@
     </TableSection>
 
     <TableSection Title="Edit">
-        <EntryCell Title="Email" Placeholder="user@example.com" @bind-ValueText="email" />
+        <EntryCell Title="Email" Placeholder="user@example.com" @bind-ValueText="email" IsAutoCompleteEnabled="false" />
         <EntryCell Title="Password" IsPassword="true" @bind-ValueText="password" />
+        <EntryCell Title="Phone" Mask="(###) ###-####" Placeholder="(555) 123-4567" @bind-ValueText="phone" />
+        <EntryCell Title="Card" Mask="#### #### #### ####" Placeholder="1234 5678 9012 3456" @bind-ValueText="card" />
         <NumberPickerCell Title="Age" Minimum="0" Maximum="120" @bind-Value="age" />
         <DurationPickerCell Title="Reminder" @bind-Duration="reminder" />
     </TableSection>
@@ -64,6 +66,8 @@ country=@country  theme=@theme  birthdate=@birthdate?.ToString("d")  wakeup=@wak
     string size = "Medium";
     string email = "";
     string password = "";
+    string phone = "";
+    string card = "";
     double age = 35;
     TimeSpan reminder = new(2, 30, 0);
     string? country;

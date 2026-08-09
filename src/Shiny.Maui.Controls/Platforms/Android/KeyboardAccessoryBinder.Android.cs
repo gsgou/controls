@@ -5,7 +5,7 @@ using Microsoft.Maui.Platform;
 
 namespace Shiny.Maui.Controls;
 
-public partial class TextEntry
+partial class KeyboardAccessoryBinder
 {
     // Android has no accessory API at all - the IME is a different process and only an IME app can
     // draw inside it. So the bar is our own view in the activity's content frame, bottom-anchored and
@@ -13,23 +13,17 @@ public partial class TextEntry
     // genuinely on screen, so a hardware keyboard (which raises no IME) correctly shows no bar.
     static Android.Views.View? currentAccessoryNative;
 
-    KeyboardAccessoryView? androidBar;
     Android.Views.View? accessoryNative;
 
-    partial void ApplyAccessory(KeyboardAccessoryView? bar)
+    partial void ApplyPlatform(KeyboardAccessoryView? bar)
     {
-        if (ReferenceEquals(androidBar, bar))
-            return;
-
-        androidBar = bar;
-
         if (bar is null)
             RemoveAccessory();
-        else if (entry.IsFocused)
+        else if (input.IsFocused)
             AddAccessory();
     }
 
-    partial void OnAccessoryFocusChangedPlatform(bool focused)
+    partial void OnFocusChangedPlatform(bool focused)
     {
         if (focused)
             AddAccessory();
@@ -39,10 +33,10 @@ public partial class TextEntry
 
     void AddAccessory()
     {
-        if (androidBar is null)
+        if (bar is null)
             return;
 
-        var context = entry.Handler?.MauiContext;
+        var context = input.Handler?.MauiContext;
         var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
         if (context is null || activity is null)
             return;
@@ -52,11 +46,11 @@ public partial class TextEntry
 
         RemoveCurrent();
 
-        var native = androidBar.ToPlatform(context);
+        var native = bar.ToPlatform(context);
         if (native.Parent is ViewGroup previousParent)
             previousParent.RemoveView(native);
 
-        var heightPx = (int)context.Context.ToPixels(androidBar.BarHeight);
+        var heightPx = (int)context.Context.ToPixels(bar.BarHeight);
         host.AddView(native, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, heightPx)
         {
             Gravity = GravityFlags.Bottom
@@ -110,7 +104,7 @@ public partial class TextEntry
     {
         var ime = insets.GetInsets(WindowInsetsCompat.Type.Ime()).Bottom;
 
-        if (ime <= 0 || !entry.IsFocused)
+        if (ime <= 0 || !input.IsFocused)
         {
             native.Visibility = ViewStates.Invisible;
             return;
@@ -134,7 +128,7 @@ public partial class TextEntry
         native.Visibility = ViewStates.Visible;
     }
 
-    sealed class AccessoryInsetsListener(TextEntry owner) : Java.Lang.Object, IOnApplyWindowInsetsListener
+    sealed class AccessoryInsetsListener(KeyboardAccessoryBinder owner) : Java.Lang.Object, IOnApplyWindowInsetsListener
     {
         public WindowInsetsCompat OnApplyWindowInsets(Android.Views.View v, WindowInsetsCompat insets)
         {
@@ -143,7 +137,7 @@ public partial class TextEntry
         }
     }
 
-    sealed class AccessoryInsetsAnimationCallback(TextEntry owner)
+    sealed class AccessoryInsetsAnimationCallback(KeyboardAccessoryBinder owner)
         : WindowInsetsAnimationCompat.Callback(DispatchModeStop)
     {
         public override WindowInsetsCompat OnProgress(WindowInsetsCompat insets, IList<WindowInsetsAnimationCompat> runningAnimations)

@@ -1915,7 +1915,7 @@ A settings-style table view with 14+ built-in cell types, section grouping, drag
 | Cell | Description |
 |---|---|
 | SwitchCell | Toggle switch |
-| EntryCell | Text input field |
+| EntryCell | Text input field — with TextEntry's input masking, keyboard accessory bar (iOS/Android) and autocomplete opt-out |
 | CheckboxCell | Checkbox with accent color |
 | RadioCell | Radio button with section-level grouping |
 | CommandCell | Tappable row with optional arrow indicator |
@@ -1929,6 +1929,30 @@ A settings-style table view with 14+ built-in cell types, section grouping, drag
 | NumberPickerCell | Integer picker with min/max/unit |
 | SimpleCheckCell | Checkmark indicator |
 | CustomCell | Custom view content with drag-reorder support |
+
+**EntryCell input features** — `EntryCell` shares `TextEntry`'s input behaviour without any of its chrome (no tools, no floating label, no hint — the cell already has those):
+
+```xml
+<shiny:TableSection Title="Payment">
+    <shiny:EntryCell Title="Phone" Mask="(###) ###-####"
+                     ValueText="{Binding Phone, Mode=TwoWay}"
+                     FieldGroup="payment" AccessoryPreset="NavigationAndDone" />
+    <shiny:EntryCell Title="Card" Mask="#### #### #### ####"
+                     ValueText="{Binding Card, Mode=TwoWay}"
+                     FieldGroup="payment" AccessoryPreset="NavigationAndDone" />
+</shiny:TableSection>
+```
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| Mask | string? | null | Input mask (`#` = digit slot). `ValueText` stays raw; `FormattedValueText` is what's displayed |
+| FormattedValueText | string | "" | Read-only masked display value |
+| Accessory | KeyboardAccessoryView? | null | Bar docked to the top of the soft keyboard (iOS + Android) |
+| AccessoryPreset | KeyboardAccessoryPreset | None | `Done`, `Navigation`, `NavigationAndDone` |
+| FieldGroup | string? | null | Scopes accessory prev/next to a subset of fields |
+| IsAutoCompleteEnabled | bool | true | False switches off autofill, autocorrect, prediction and spell check |
+
+`TableView` is not virtualized, so accessory prev/next reaches every cell on the page. Blazor supports `Mask` and `IsAutoCompleteEnabled`; the accessory bar is MAUI-only.
 
 **Dynamic Sections** - Bind to a collection to generate sections from data:
 

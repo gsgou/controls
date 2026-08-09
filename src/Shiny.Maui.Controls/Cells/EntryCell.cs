@@ -6,7 +6,7 @@ using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Cells;
 
-public class EntryCell : CellBase
+public class EntryCell : CellBase, IKeyboardAccessoryHost
 {
     /// <summary>
     /// Children are built by CellBase's constructor (BuildLayout -> the virtual
@@ -107,6 +107,65 @@ public class EntryCell : CellBase
     public static readonly BindableProperty CompletedCommandProperty = BindableProperty.Create(
         nameof(CompletedCommand), typeof(ICommand), typeof(EntryCell), null);
 
+    /// <summary>
+    /// Input mask — <c>#</c> is a digit slot, every other character is a literal inserted as the user
+    /// types. Same engine as <see cref="Shiny.Maui.Controls.TextEntry"/>: <see cref="ValueText"/> holds
+    /// the raw digits, <see cref="FormattedValueText"/> holds what is on screen, and the keyboard and
+    /// max length are set from the mask.
+    /// </summary>
+    public static readonly BindableProperty MaskProperty = BindableProperty.Create(
+        nameof(Mask), typeof(string), typeof(EntryCell), null,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
+            {
+                ((EntryCell)b).OnMaskChanged();
+            }));
+
+    /// <summary>The masked display value. Empty when no <see cref="Mask"/> is set.</summary>
+    public static readonly BindableProperty FormattedValueTextProperty = BindableProperty.Create(
+        nameof(FormattedValueText), typeof(string), typeof(EntryCell), string.Empty);
+
+    /// <summary>
+    /// A bar docked to the top of the soft keyboard while this cell has focus (iOS + Android).
+    /// </summary>
+    public static readonly BindableProperty AccessoryProperty = BindableProperty.Create(
+        nameof(Accessory), typeof(KeyboardAccessoryView), typeof(EntryCell), null,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
+            {
+                ((EntryCell)b).SyncAccessory();
+            }));
+
+    /// <summary>A stock accessory bar, used when <see cref="Accessory"/> is not set.</summary>
+    public static readonly BindableProperty AccessoryPresetProperty = BindableProperty.Create(
+        nameof(AccessoryPreset), typeof(KeyboardAccessoryPreset), typeof(EntryCell), KeyboardAccessoryPreset.None,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
+            {
+                ((EntryCell)b).ResetPresetAccessory();
+            }));
+
+    /// <summary>Groups cells for accessory prev/next navigation.</summary>
+    public static readonly BindableProperty FieldGroupProperty = BindableProperty.Create(
+        nameof(FieldGroup), typeof(string), typeof(EntryCell), null,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
+            {
+                // The group has to sit on the element the navigator collects, which is the inner input.
+                ((EntryCell)b).entry.SetValue(KeyboardField.GroupProperty, n);
+            }));
+
+    /// <summary>
+    /// When false, autofill, autocorrect, predictive text and spell check are all switched off for
+    /// this cell — the settings-form fields most likely to be rewritten by the OS.
+    /// </summary>
+    public static readonly BindableProperty IsAutoCompleteEnabledProperty = BindableProperty.Create(
+        nameof(IsAutoCompleteEnabled), typeof(bool), typeof(EntryCell), true,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
+            {
+            var cell = (EntryCell)b;
+            var enabled = (bool)n;
+            cell.entry.IsAutoCompleteEnabled = enabled;
+            cell.entry.IsSpellCheckEnabled = enabled;
+            cell.entry.IsTextPredictionEnabled = enabled;
+        }));
+
     public string ValueText
     {
         get => (string)GetValue(ValueTextProperty);
@@ -179,7 +238,75 @@ public class EntryCell : CellBase
         set => SetValue(CompletedCommandProperty, value);
     }
 
+    public string? Mask
+    {
+        get => (string?)GetValue(MaskProperty);
+        set => SetValue(MaskProperty, value);
+    }
+
+    public string FormattedValueText
+    {
+        get => (string)GetValue(FormattedValueTextProperty);
+        private set => SetValue(FormattedValueTextProperty, value);
+    }
+
+    public KeyboardAccessoryView? Accessory
+    {
+        get => (KeyboardAccessoryView?)GetValue(AccessoryProperty);
+        set => SetValue(AccessoryProperty, value);
+    }
+
+    public KeyboardAccessoryPreset AccessoryPreset
+    {
+        get => (KeyboardAccessoryPreset)GetValue(AccessoryPresetProperty);
+        set => SetValue(AccessoryPresetProperty, value);
+    }
+
+    public string? FieldGroup
+    {
+        get => (string?)GetValue(FieldGroupProperty);
+        set => SetValue(FieldGroupProperty, value);
+    }
+
+    public bool IsAutoCompleteEnabled
+    {
+        get => (bool)GetValue(IsAutoCompleteEnabledProperty);
+        set => SetValue(IsAutoCompleteEnabledProperty, value);
+    }
+
     public event EventHandler? Completed;
+
+    // ---- Keyboard accessory ---------------------------------------------------------------
+
+    bool suppressTextChanged;
+    KeyboardAccessoryBinder? accessoryBinder;
+    KeyboardAccessoryView? presetAccessory;
+
+    KeyboardAccessoryBinder AccessoryBinder => accessoryBinder ??= new KeyboardAccessoryBinder(this, entry, this);
+
+    void SyncAccessory()
+    {
+        var bar = Accessory;
+        if (bar is null && AccessoryPreset != KeyboardAccessoryPreset.None)
+            bar = presetAccessory ??= KeyboardAccessoryView.FromPreset(AccessoryPreset);
+
+        if (bar is null && accessoryBinder is null)
+            return;
+
+        AccessoryBinder.SetBar(bar);
+    }
+
+    void ResetPresetAccessory()
+    {
+        presetAccessory = null;
+        SyncAccessory();
+    }
+
+    // The cell is the control, but the input inside it is what the navigator collects and what has to
+    // lose focus - so both members point past the wrapper.
+    VisualElement IKeyboardAccessoryHost.NavigationElement => entry;
+
+    void IKeyboardAccessoryHost.DismissKeyboard() => entry.Unfocus();
 
     protected override View? CreateAccessoryView()
     {
@@ -193,8 +320,27 @@ public class EntryCell : CellBase
         };
         entry.TextChanged += (s, e) =>
         {
-            if (ValueText != e.NewTextValue)
+            if (suppressTextChanged)
+                return;
+
+            if (!string.IsNullOrEmpty(Mask))
+            {
+                suppressTextChanged = true;
+                var masked = MaskedInput.Apply(entry.Text, Mask);
+
+                ValueText = masked.Raw;
+                FormattedValueText = masked.Formatted;
+                entry.Text = masked.Formatted;
+                suppressTextChanged = false;
+
+                // The literals shift everything right, so the caret has to be put back after the
+                // text is replaced rather than left where the keystroke landed.
+                Dispatcher.Dispatch(() => entry.CursorPosition = masked.CursorPosition);
+            }
+            else if (ValueText != e.NewTextValue)
+            {
                 ValueText = e.NewTextValue;
+            }
         };
         entry.Completed += (s, e) =>
         {
@@ -209,8 +355,47 @@ public class EntryCell : CellBase
 
     void OnValueTextChanged(string newValue)
     {
-        if (entry != null && entry.Text != newValue)
+        if (entry is null || suppressTextChanged)
+            return;
+
+        // With a mask, ValueText is the raw value and the field shows the formatted one.
+        if (!string.IsNullOrEmpty(Mask))
+        {
+            var masked = MaskedInput.Apply(newValue, Mask);
+            FormattedValueText = masked.Formatted;
+
+            if (entry.Text != masked.Formatted)
+            {
+                suppressTextChanged = true;
+                entry.Text = masked.Formatted;
+                suppressTextChanged = false;
+            }
+            return;
+        }
+
+        if (entry.Text != newValue)
             entry.Text = newValue;
+    }
+
+    void OnMaskChanged()
+    {
+        if (string.IsNullOrEmpty(Mask))
+        {
+            // Mask removed - the field goes back to showing the raw value.
+            entry.MaxLength = MaxLength > 0 ? MaxLength : int.MaxValue;
+            FormattedValueText = string.Empty;
+
+            suppressTextChanged = true;
+            entry.Text = ValueText;
+            suppressTextChanged = false;
+            return;
+        }
+
+        // Same defaults TextEntry applies: a digit mask only accepts digits, and the field can never
+        // hold more than the mask renders.
+        entry.Keyboard = Keyboard.Numeric;
+        entry.MaxLength = Mask!.Length;
+        OnValueTextChanged(ValueText);
     }
 
     void UpdateEntryColor()

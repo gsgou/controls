@@ -137,37 +137,32 @@ public class KeyboardAccessoryView : ContentView
         set => SetValue(ItemSpacingProperty, value);
     }
 
-    /// <summary>The field the bar is serving right now. Null while nothing is focused.</summary>
-    public TextEntry? CurrentOwner { get; private set; }
+    /// <summary>
+    /// The field the bar is serving right now — a <see cref="TextEntry"/>, an
+    /// <see cref="Cells.EntryCell"/>, or anything else implementing
+    /// <see cref="IKeyboardAccessoryHost"/>. Null while nothing is focused.
+    /// </summary>
+    public IKeyboardAccessoryHost? CurrentOwner { get; private set; }
 
-    readonly List<TextEntry> owners = new();
-
-    internal void AttachOwner(TextEntry owner)
+    internal void DetachHost(IKeyboardAccessoryHost host)
     {
-        if (!owners.Contains(owner))
-            owners.Add(owner);
-    }
-
-    internal void DetachOwner(TextEntry owner)
-    {
-        owners.Remove(owner);
-        if (ReferenceEquals(CurrentOwner, owner))
+        if (ReferenceEquals(CurrentOwner, host))
             SetCurrentOwner(null);
     }
 
-    internal void NotifyFocusChanged(TextEntry owner, bool focused)
+    internal void NotifyFocusChanged(IKeyboardAccessoryHost host, bool focused)
     {
         if (focused)
-            SetCurrentOwner(owner);
-        else if (ReferenceEquals(CurrentOwner, owner))
+            SetCurrentOwner(host);
+        else if (ReferenceEquals(CurrentOwner, host))
             SetCurrentOwner(null);
     }
 
-    void SetCurrentOwner(TextEntry? owner)
+    void SetCurrentOwner(IKeyboardAccessoryHost? host)
     {
-        CurrentOwner = owner;
+        CurrentOwner = host;
         foreach (var item in EnumerateItems().OfType<KeyboardAccessoryItem>())
-            item.OnOwnerChanged(owner);
+            item.OnOwnerChanged(host);
     }
 
     IEnumerable<View> EnumerateItems() => Items ?? Enumerable.Empty<View>();

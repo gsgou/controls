@@ -22,10 +22,10 @@ public class KeyboardAccessoryItem : IconTextTool
     internal KeyboardAccessoryView? Bar { get; set; }
 
     /// <summary>The field the bar is currently serving. Null while nothing is focused.</summary>
-    protected TextEntry? Owner => Bar?.CurrentOwner;
+    protected IKeyboardAccessoryHost? Owner => Bar?.CurrentOwner;
 
     /// <summary>Called whenever the bar changes which field it serves, so items can re-evaluate.</summary>
-    protected internal virtual void OnOwnerChanged(TextEntry? owner)
+    protected internal virtual void OnOwnerChanged(IKeyboardAccessoryHost? owner)
     {
     }
 }
@@ -76,19 +76,19 @@ public class KeyboardNavigationItem : KeyboardAccessoryItem
         textSetByUser = false;
     }
 
-    protected internal override void OnOwnerChanged(TextEntry? owner) => SyncEnabled();
+    protected internal override void OnOwnerChanged(IKeyboardAccessoryHost? owner) => SyncEnabled();
 
     void SyncEnabled()
     {
-        var owner = Owner;
-        IsEnabled = owner is not null && KeyboardFieldNavigator.CanMove(owner, Direction);
+        var element = Owner?.NavigationElement;
+        IsEnabled = element is not null && KeyboardFieldNavigator.CanMove(element, Direction);
         Opacity = IsEnabled ? 1 : 0.35;
     }
 
     void OnClicked(object? sender, EventArgs e)
     {
-        if (Owner is TextEntry owner)
-            KeyboardFieldNavigator.Move(owner, Direction);
+        if (Owner?.NavigationElement is VisualElement element)
+            KeyboardFieldNavigator.Move(element, Direction);
     }
 }
 
@@ -108,7 +108,7 @@ public class KeyboardDismissItem : KeyboardAccessoryItem
         StyleGuard.MarkReady(this, typeof(KeyboardDismissItem));
     }
 
-    void OnClicked(object? sender, EventArgs e) => Owner?.Unfocus();
+    void OnClicked(object? sender, EventArgs e) => Owner?.DismissKeyboard();
 }
 
 /// <summary>

@@ -366,7 +366,8 @@ public partial class TextEntry
     /// other; ungrouped fields navigate across the whole page.
     /// </summary>
     public static readonly BindableProperty FieldGroupProperty = BindableProperty.Create(
-        nameof(FieldGroup), typeof(string), typeof(TextEntry), null);
+        nameof(FieldGroup), typeof(string), typeof(TextEntry), null,
+        propertyChanged: (b, _, n) => b.SetValue(KeyboardField.GroupProperty, n));
     public string? FieldGroup { get => (string?)GetValue(FieldGroupProperty); set => SetValue(FieldGroupProperty, value); }
 
     // Commands
