@@ -11,8 +11,8 @@ public class TextEntryTool
     /// <summary>Text label displayed in the tool button.</summary>
     public string? Text { get; set; }
 
-    /// <summary>CSS color for the tool.</summary>
-    public string ToolColor { get; set; } = "#9CA3AF";
+    /// <summary>CSS color for the tool. Null follows the on-surface-variant theme token.</summary>
+    public string? ToolColor { get; set; }
 
     /// <summary>Whether the tool is visible.</summary>
     public virtual bool IsVisible { get; set; } = true;

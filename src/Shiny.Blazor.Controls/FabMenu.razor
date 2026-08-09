@@ -1,4 +1,5 @@
 @namespace Shiny.Blazor.Controls
+@using System.Globalization
 
 @if (HasBackdrop)
 {
@@ -7,7 +8,7 @@
          @onclick="OnBackdropClicked"></div>
 }
 
-<div class="shiny-fab-menu">
+<div class="@MenuClass">
     <div class="shiny-fab-menu-items">
         @if (Items != null)
         {
@@ -16,33 +17,32 @@
             {
                 var localIndex = idx;
                 var staggerDelay = isOpen
-                    ? (Items.Count - 1 - localIndex) * 30
-                    : localIndex * 30;
-                var itemStyle = $"transition-delay:{staggerDelay}ms;";
-                <div class="@ItemClass" style="@itemStyle">
-                    @if (!string.IsNullOrEmpty(item.Text))
-                    {
-                        <span class="shiny-fab-menu-label"
-                              style="@($"background:{item.LabelBackgroundColor};color:{item.TextColor};font-size:{item.FontSize}px;")"
-                              @onclick="@(_ => OnItemClicked(item))">
-                            @item.Text
-                        </span>
-                    }
+                    ? (Items.Count - 1 - localIndex) * 35
+                    : localIndex * 35;
+                var hasText = !string.IsNullOrEmpty(item.Text);
+                <div class="@ItemClass" style="@ItemStyle(item, staggerDelay)">
                     <button type="button"
-                            class="shiny-fab-menu-btn shiny-fab-shadow"
-                            style="@($"background:{item.FabBackgroundColor};width:{item.Size}px;height:{item.Size}px;border-radius:{item.Size/2}px;")"
-                            @onclick="@(_ => OnItemClicked(item))">
+                            class="@ItemButtonClass(item)"
+                            style="@ItemButtonStyle(item)"
+                            @onclick="@(_ => OnItemClicked(item))"
+                            @onclick:stopPropagation="true">
+                        @if (hasText)
+                        {
+                            <span class="shiny-fab-menu-label" style="@LabelStyle(item)">@item.Text</span>
+                        }
                         @if (!string.IsNullOrEmpty(item.Icon))
                         {
-                            <span class="shiny-fab-menu-icon" style="@($"width:{item.IconSize}px;height:{item.IconSize}px;")">
-                                @if (IsImageUrl(item.Icon!))
-                                {
-                                    <img src="@item.Icon" alt="" />
-                                }
-                                else
-                                {
-                                    @((MarkupString)item.Icon!)
-                                }
+                            <span class="shiny-fab-menu-chip" style="@ChipStyle(item)">
+                                <span class="shiny-fab-menu-icon" style="@IconStyle(item)">
+                                    @if (IsImageUrl(item.Icon!))
+                                    {
+                                        <img src="@item.Icon" alt="" />
+                                    }
+                                    else
+                                    {
+                                        @((MarkupString)item.Icon!)
+                                    }
+                                </span>
                             </span>
                         }
                     </button>
@@ -52,16 +52,22 @@
         }
     </div>
 
-    <Fab Icon="@Icon"
-         Text="@Text"
-         FabBackgroundColor="@FabBackgroundColor"
-         TextColor="@TextColor"
-         BorderColor="@BorderColor"
-         BorderThickness="@BorderThickness"
-         Clicked="OnMainClicked" />
+    <div class="shiny-fab-menu-trigger" style="@TriggerStyle">
+        <Fab Icon="@Icon"
+             Text="@Text"
+             FabBackgroundColor="@FabBackgroundColor"
+             TextColor="@TextColor"
+             BorderColor="@BorderColor"
+             BorderThickness="@BorderThickness"
+             Size="@FabSize"
+             HasShadow="@HasShadow"
+             Clicked="OnMainClicked" />
+    </div>
 </div>
 
 @code {
+    const string DefaultOutline = "var(--shiny-color-outline-variant, rgba(0,0,0,0.10))";
+
     bool isOpen;
 
     [Parameter] public List<FabMenuItem>? Items { get; set; }
@@ -82,22 +88,40 @@
     // main fab passthroughs
     [Parameter] public string? Icon { get; set; }
     [Parameter] public string? Text { get; set; }
-    [Parameter] public string FabBackgroundColor { get; set; } = "#2196F3";
-    [Parameter] public string TextColor { get; set; } = "#FFFFFF";
+    [Parameter] public string FabBackgroundColor { get; set; } = "var(--shiny-color-primary, #2196F3)";
+    [Parameter] public string TextColor { get; set; } = "var(--shiny-color-on-primary, #FFFFFF)";
     [Parameter] public string? BorderColor { get; set; }
     [Parameter] public double BorderThickness { get; set; }
+    [Parameter] public double FabSize { get; set; } = 56;
+    [Parameter] public bool HasShadow { get; set; } = true;
 
     [Parameter] public bool HasBackdrop { get; set; } = true;
     [Parameter] public bool CloseOnBackdropTap { get; set; } = true;
     [Parameter] public bool CloseOnItemTap { get; set; } = true;
-    [Parameter] public string BackdropColor { get; set; } = "#000000";
+    [Parameter] public string BackdropColor { get; set; } = "var(--shiny-color-scrim, #000000)";
     [Parameter] public double BackdropOpacity { get; set; } = 0.4;
+
+    /// <summary>Set to "start" to grow the menu from the left edge; anything else keeps it right-aligned.</summary>
+    [Parameter] public string MenuAlignment { get; set; } = "end";
+
+    /// <summary>
+    /// Degrees the main FAB rotates while the menu is open - the classic "+" turning into an "×".
+    /// Set to 0 to disable. Ignored when the main FAB has <see cref="Text"/>, since a rotated label
+    /// reads as broken rather than deliberate.
+    /// </summary>
+    [Parameter] public double IconRotation { get; set; } = 45;
 
     [Parameter] public EventCallback<FabMenuItem> ItemTapped { get; set; }
 
     public void Open() => SetOpen(true);
     public void Close() => SetOpen(false);
     public void Toggle() => SetOpen(!isOpen);
+
+    bool IsLeading => string.Equals(MenuAlignment, "start", StringComparison.OrdinalIgnoreCase);
+
+    string MenuClass => IsLeading
+        ? "shiny-fab-menu shiny-fab-menu-start"
+        : "shiny-fab-menu";
 
     string BackdropClass => isOpen
         ? "shiny-fab-backdrop shiny-fab-backdrop-open"
@@ -109,13 +133,80 @@
         {
             var op = isOpen ? BackdropOpacity : 0;
             var pe = isOpen ? "auto" : "none";
-            return $"background:{BackdropColor};opacity:{op.ToString(System.Globalization.CultureInfo.InvariantCulture)};pointer-events:{pe};";
+            return $"background:{BackdropColor};opacity:{Num(op)};pointer-events:{pe};";
         }
     }
+
+    /// <summary>A rotated label reads as broken, so the spin is icon-only-FAB territory.</summary>
+    string TriggerStyle
+        => isOpen && IconRotation != 0 && string.IsNullOrEmpty(Text)
+            ? $"transform:rotate({Num(IconRotation)}deg);"
+            : "transform:none;";
 
     string ItemClass => isOpen
         ? "shiny-fab-menu-item shiny-fab-menu-item-open"
         : "shiny-fab-menu-item";
+
+    /// <summary>Insets the pill so its icon chip lands on the main FAB's vertical axis.</summary>
+    string ItemStyle(FabMenuItem item, double staggerDelay)
+    {
+        var inset = Math.Max(0, (FabSize - item.Size) / 2);
+        var side = IsLeading ? "margin-left" : "margin-right";
+        return $"transition-delay:{Num(staggerDelay)}ms;{side}:{Num(inset)}px;";
+    }
+
+    string ItemButtonClass(FabMenuItem item)
+    {
+        var c = "shiny-fab-menu-btn";
+        if (string.IsNullOrEmpty(item.Text))
+            c += " shiny-fab-menu-btn-circle";
+        else if (string.IsNullOrEmpty(item.Icon))
+            // No chip to hug - centre the label instead of leaving the chip's tight inset behind.
+            c += " shiny-fab-menu-btn-textonly";
+        if (item.HasShadow)
+            c += " shiny-fab-menu-shadow";
+        return c;
+    }
+
+    string ItemButtonStyle(FabMenuItem item)
+    {
+        var sb = new System.Text.StringBuilder();
+        var hasText = !string.IsNullOrEmpty(item.Text);
+
+        // With no label the pill *is* the button, so it takes the chip fill.
+        sb.Append("background:").Append(hasText ? item.LabelBackgroundColor : item.FabBackgroundColor).Append(';');
+        sb.Append("color:").Append(item.TextColor).Append(';');
+        sb.Append("height:").Append(Num(item.Size)).Append("px;");
+        sb.Append("min-width:").Append(Num(item.Size)).Append("px;");
+        sb.Append("border-radius:").Append(Num(item.Size / 2)).Append("px;");
+
+        if (!hasText)
+            sb.Append("width:").Append(Num(item.Size)).Append("px;");
+
+        if (item.BorderThickness > 0)
+            sb.Append("border:").Append(Num(item.BorderThickness)).Append("px solid ")
+              .Append(item.BorderColor ?? DefaultOutline).Append(';');
+        else
+            sb.Append("border:none;");
+
+        return sb.ToString();
+    }
+
+    string LabelStyle(FabMenuItem item)
+        => $"font-size:{Num(item.FontSize)}px;";
+
+    string ChipStyle(FabMenuItem item)
+    {
+        var hasText = !string.IsNullOrEmpty(item.Text);
+        // Inset by 6 on every side so the chip centre sits Size/2 from the pill edge - the same
+        // place a text-less circular item's centre sits, which is what keeps the column aligned.
+        var chip = hasText ? Math.Max(0, item.Size - 12) : item.Size;
+        var bg = hasText ? item.FabBackgroundColor : "transparent";
+        return $"width:{Num(chip)}px;height:{Num(chip)}px;background:{bg};";
+    }
+
+    string IconStyle(FabMenuItem item)
+        => $"width:{Num(item.IconSize)}px;height:{Num(item.IconSize)}px;";
 
     void OnMainClicked(MouseEventArgs e) => Toggle();
 
@@ -141,6 +232,9 @@
         _ = IsOpenChanged.InvokeAsync(isOpen);
         StateHasChanged();
     }
+
+    static string Num(double value)
+        => value.ToString(CultureInfo.InvariantCulture);
 
     static bool IsImageUrl(string s)
         => s.StartsWith("http", StringComparison.OrdinalIgnoreCase)

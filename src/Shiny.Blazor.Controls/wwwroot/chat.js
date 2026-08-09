@@ -5,7 +5,8 @@ export function init(messagesEl, dotnetRef) {
         messagesEl,
         dotnet: dotnetRef,
         autoScroll: true,
-        topLatched: false
+        topLatched: false,
+        mutations: null
     };
     states.set(messagesEl, state);
 
@@ -25,6 +26,46 @@ export function init(messagesEl, dotnetRef) {
             state.topLatched = false;
         }
     });
+
+    // A one-shot scrollToEnd after a render only works if the content had already reached its final
+    // height, which it has not while images and webfonts are still resolving - the list ends up a few
+    // hundred pixels short of the bottom. Re-pin whenever the content actually changes size, but only
+    // while the reader is following the live edge (autoScroll), so paging back through history and
+    // scrollToMessage are left alone.
+    state.mutations = new MutationObserver(() => {
+        if (state.autoScroll)
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+    state.mutations.observe(messagesEl, { childList: true, subtree: true, characterData: true });
+
+    // Images report their height only on load, and that fires too late for the observer above to see
+    // as a mutation. Capture phase, because load does not bubble.
+    messagesEl.addEventListener('load', e => {
+        if (state.autoScroll && e.target && e.target.tagName === 'IMG')
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, true);
+}
+
+// Grow the composer with its content up to maxRows, then let it scroll. The cap is computed from the
+// live font metrics rather than hardcoded so a restyled entry still gets maxRows worth of text.
+export function autoGrow(textareaEl, maxRows) {
+    if (!textareaEl) return;
+
+    const cs = getComputedStyle(textareaEl);
+    const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.4;
+    const chrome = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+        + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+    const max = Math.round(lineHeight * Math.max(1, maxRows || 1) + chrome);
+    const border = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+    textareaEl.style.maxHeight = max + 'px';
+    textareaEl.style.height = 'auto';
+
+    // scrollHeight excludes borders; box-sizing is border-box (see the stylesheet), so add them back.
+    const wanted = textareaEl.scrollHeight + border;
+    textareaEl.style.height = Math.min(wanted, max) + 'px';
+    textareaEl.style.overflowY = wanted > max ? 'auto' : 'hidden';
 }
 
 export function scrollToEnd(messagesEl, animate) {
@@ -112,5 +153,9 @@ export function copyText(text) {
 }
 
 export function dispose(messagesEl) {
+    const state = states.get(messagesEl);
+    if (state && state.mutations)
+        state.mutations.disconnect();
+
     states.delete(messagesEl);
 }

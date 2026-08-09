@@ -37,6 +37,11 @@
                  AllowFontSelection="true"
                  AllowFontSizeSelection="true"
                  AllowZoom="true"
+                 MaxZoom="8"
+                 ShowZoomControls="true"
+                 ShowToolLabels="true"
+                 ShowStrokeWidthPicker="true"
+                 ZoomLevelChanged="v => zoom = v"
                  DrawStrokeColor="@drawColor"
                  DrawStrokeWidth="@drawWidth"
                  TextFontFamily="@textFont"
@@ -52,6 +57,7 @@
 <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
     <button class="btn" @onclick="ExportPng">Export PNG</button>
     <button class="btn" @onclick="ExportJpeg">Export JPEG</button>
+    <span style="font-size:13px;color:#888;">Zoom: @(Math.Round(zoom * 100))%</span>
     @if (exportedSize > 0)
     {
         <span style="font-size:13px;color:#888;">Exported: @exportedSize bytes</span>
@@ -64,7 +70,8 @@
     byte[]? imageData;
     bool canUndo, canRedo;
     string drawColor = "#ff0000";
-    double drawWidth = 3;
+    double drawWidth = 4;
+    double zoom = 1;
     string textFont = "Arial";
     double textFontSize = 16;
     int exportedSize;

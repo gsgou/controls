@@ -62,7 +62,97 @@ public static class ControlsMauiAppBuilderExtensions
 #endif
         });
 
+        // Autofill / autocorrect / prediction opt-out. MAUI exposes spell-check and text-prediction but
+        // nothing for autofill, which is the one that silently replaces a half-typed serial with a saved
+        // address. The mapping is registered under several keys because the platform switches all live on
+        // the same native state that MAUI rewrites when the keyboard or password mode changes - re-running
+        // after those puts our flags back.
+        foreach (var key in new[]
+                 {
+                     BorderlessEntry.AutoCompleteMapperKey,
+                     nameof(InputView.Keyboard),
+                     nameof(Entry.IsPassword),
+                     nameof(Entry.IsTextPredictionEnabled),
+                     nameof(InputView.IsSpellCheckEnabled)
+                 })
+        {
+            EntryHandler.Mapper.AppendToMapping(key, (handler, view) =>
+            {
+                if (view is BorderlessEntry borderless)
+                    ApplyAutoComplete(handler, borderless);
+            });
+        }
+
+        // The multiline twin of the above. UITextView also carries a default text-container inset that
+        // an Entry does not, so it is zeroed here - otherwise the editor's text sits several points in
+        // from any single-line control sharing the same rounded container.
+        EditorHandler.Mapper.AppendToMapping("ShinyBorderless", (handler, view) =>
+        {
+            if (view is not BorderlessEditor)
+                return;
+
+#if ANDROID
+            handler.PlatformView.Background = null;
+            handler.PlatformView.SetPadding(0, 0, 0, 0);
+#elif IOS || MACCATALYST
+            handler.PlatformView.BackgroundColor = UIKit.UIColor.Clear;
+            handler.PlatformView.TextContainerInset = UIKit.UIEdgeInsets.Zero;
+            handler.PlatformView.TextContainer.LineFragmentPadding = 0;
+#elif WINDOWS
+            handler.PlatformView.BorderThickness = new Microsoft.UI.Xaml.Thickness(0);
+            handler.PlatformView.Background = null;
+            handler.PlatformView.Padding = new Microsoft.UI.Xaml.Thickness(0);
+#endif
+        });
+
         return builder;
+    }
+
+    static void ApplyAutoComplete(IEntryHandler handler, BorderlessEntry entry)
+    {
+        var enabled = entry.IsAutoCompleteEnabled;
+#if !ANDROID && !IOS && !MACCATALYST && !WINDOWS
+        _ = enabled; // no soft-input assistance to switch off on this head
+#endif
+#if ANDROID
+        var native = handler.PlatformView;
+
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            native.ImportantForAutofill = enabled
+                ? Android.Views.ImportantForAutofill.Auto
+                : Android.Views.ImportantForAutofill.NoExcludeDescendants;
+        }
+
+        // InputType is what carries the "no suggestions" flag, and assigning it resets the
+        // transformation method - which is the password mask. Leave password fields alone (autofill
+        // there is wanted anyway) and restore the transformation for everything else.
+        if (entry.IsPassword)
+            return;
+
+        var target = enabled
+            ? native.InputType & ~Android.Text.InputTypes.TextFlagNoSuggestions
+            : native.InputType | Android.Text.InputTypes.TextFlagNoSuggestions;
+
+        if (native.InputType != target)
+        {
+            var transformation = native.TransformationMethod;
+            var selection = native.SelectionStart;
+            native.InputType = target;
+            native.TransformationMethod = transformation;
+            if (selection >= 0 && selection <= (native.Text?.Length ?? 0))
+                native.SetSelection(selection);
+        }
+#elif IOS || MACCATALYST
+        var native = handler.PlatformView;
+        native.AutocorrectionType = enabled ? UIKit.UITextAutocorrectionType.Default : UIKit.UITextAutocorrectionType.No;
+        native.SpellCheckingType = enabled ? UIKit.UITextSpellCheckingType.Default : UIKit.UITextSpellCheckingType.No;
+
+        // An empty content type is the documented opt-out from AutoFill and the strong-password sheet.
+        native.TextContentType = enabled ? null : new Foundation.NSString(string.Empty);
+#elif WINDOWS
+        handler.PlatformView.IsSpellCheckEnabled = enabled && entry.IsSpellCheckEnabled;
+#endif
     }
 }
 

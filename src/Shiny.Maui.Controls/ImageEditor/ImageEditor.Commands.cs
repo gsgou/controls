@@ -13,9 +13,15 @@ public partial class ImageEditor
     public ICommand CropCommand { get; private set; } = null!;
     public ICommand DrawCommand { get; private set; } = null!;
     public ICommand TextCommand { get; private set; } = null!;
+    public ICommand ZoomInCommand { get; private set; } = null!;
+    public ICommand ZoomOutCommand { get; private set; } = null!;
+    public ICommand ZoomToFitCommand { get; private set; } = null!;
 
     void SetupCommands()
     {
+        ZoomInCommand = new Command(ZoomIn);
+        ZoomOutCommand = new Command(ZoomOut);
+        ZoomToFitCommand = new Command(ZoomToFit);
         UndoCommand = new Command(Undo, () => state.CanUndo);
         RedoCommand = new Command(Redo, () => state.CanRedo);
         RotateCommand = new Command<float>(Rotate);

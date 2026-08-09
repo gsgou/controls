@@ -41,6 +41,7 @@ public partial class ChatView
 
         this.ShowError(null);
         this.ShowLoader(true);
+        this.isReloading = true;
         try
         {
             var s = await provider.GetSessionAsync(sessionId, token);
@@ -52,9 +53,15 @@ public partial class ChatView
 
             this.session = s;
             this.Subscribe(s);
-            await this.InitialLoadAsync(token);
+
+            // ApplyInfo runs BEFORE the first page loads. It calls RefreshBubbles, which tears the
+            // items source down and rebuilds it on a dispatch - do that after the initial load and the
+            // rebuild lands between the load and the initial ScrollTo, resetting the offset to the top
+            // and leaving the scroll to fire against a collection that has not laid out yet. That
+            // ordering was why the view never opened at the newest message.
             this.ApplyInfo();
             this.UpdateConnectionUi(this.connectionState);
+            await this.InitialLoadAsync(token);
         }
         catch (TaskCanceledException) { }
         catch (ChatSessionException ex)
@@ -67,6 +74,7 @@ public partial class ChatView
         }
         finally
         {
+            this.isReloading = false;
             if (!token.IsCancellationRequested)
                 this.ShowLoader(false);
         }
@@ -93,6 +101,7 @@ public partial class ChatView
         this.hasMoreOlder = true;
         this.editingMessageId = null;
         this.inputBar.ExitEditMode();
+        this.SyncScrollMode();
         this.SyncTypingBubbles();
         this.UpdateToastPill();
     }
@@ -247,7 +256,7 @@ public partial class ChatView
         this.hasMoreOlder = page.HasMore;
         this.markReadRequested.Clear();
 
-        this.Dispatcher.Dispatch(() => this.Dispatcher.Dispatch(this.PerformInitialScroll));
+        this.PerformInitialScroll();
         this.MarkVisibleRead();
     }
 
@@ -259,6 +268,8 @@ public partial class ChatView
             return;
 
         this.isLoadingOlder = true;
+        this.SyncScrollMode();   // prepending must not drag the view to the newest message
+
         var cts = new CancellationTokenSource();
         var token = cts.Token;
         try
@@ -276,6 +287,12 @@ public partial class ChatView
                 this.messages.Insert(insertAt++, m);
             }
             this.hasMoreOlder = page.HasMore;
+
+            // KeepScrollOffset holds the numeric offset, not the visual position, so the page the user
+            // was reading slides down by however much history arrived. Re-anchor on what used to be the
+            // first row.
+            if (insertAt > 0)
+                this.ScrollWhenMeasured(insertAt, ScrollToPosition.Start, animate: false);
         }
         catch (TaskCanceledException) { }
         catch (ChatSessionException) { }
@@ -283,6 +300,7 @@ public partial class ChatView
         finally
         {
             this.isLoadingOlder = false;
+            this.SyncScrollMode();
         }
     }
 

@@ -1,0 +1,72 @@
+@namespace Shiny.Blazor.Controls.Chat
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* Stacked composer: formatting on top, the entry spanning the full width beneath it, every other
+   control on a row below that. *@
+<div class="shiny-chat-entry">
+    <div class="shiny-chat-composer">
+        @* Formatting gets its own row inside the card, above the entry: six buttons plus attach and
+           anything a consumer adds does not fit beside send on a phone, and keeping it above the
+           textarea means it stays put as the entry grows. *@
+        @if (BodyPermissions != MessageBodyPermissions.None)
+        {
+            <div class="shiny-chat-mdtoolbar">
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Bold))
+                {
+                    <button type="button" title="Bold" @onclick='() => ApplyMarkdownAsync("**", "**", "bold")'><b>B</b></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Italics))
+                {
+                    <button type="button" title="Italic" @onclick='() => ApplyMarkdownAsync("*", "*", "italic")'><i>I</i></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Underline))
+                {
+                    <button type="button" title="Underline" @onclick='() => ApplyMarkdownAsync("++", "++", "underline")'><u>U</u></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Strikethrough))
+                {
+                    <button type="button" title="Strikethrough" @onclick='() => ApplyMarkdownAsync("~~", "~~", "strike")'><s>S</s></button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Codeblocks))
+                {
+                    <button type="button" title="Code" @onclick='() => ApplyMarkdownAsync("`", "`", "code")'>&lt;/&gt;</button>
+                }
+                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Links))
+                {
+                    <button type="button" title="Link" @onclick="InsertLinkAsync">🔗</button>
+                }
+            </div>
+        }
+
+        <textarea class="shiny-chat-input"
+                  @ref="inputEl"
+                  placeholder="@Placeholder"
+                  rows="1"
+                  disabled="@(!IsEnabled)"
+                  value="@Text"
+                  @oninput="OnInputAsync"
+                  @onkeydown="OnKeyDownAsync"></textarea>
+
+        <div class="shiny-chat-toolbar">
+            <div class="shiny-chat-toolbar-left">
+                @if (ShowAttach)
+                {
+                    <label class="shiny-chat-attach" title="Attach image">
+                        +
+                        <InputFile OnChange="OnFileSelected" accept="image/*" capture="environment" style="display:none;" />
+                    </label>
+                }
+
+                @LeftToolbar
+            </div>
+
+            <div class="shiny-chat-toolbar-right">
+                @RightToolbar
+                <button class="shiny-chat-send" type="button" disabled="@(!IsEnabled)" @onclick="SubmitAsync">@SendButtonText</button>
+            </div>
+        </div>
+    </div>
+</div>

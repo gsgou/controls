@@ -1,13 +1,27 @@
+.fab-menu-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
 .fab-menu-host {
     position: relative;
     height: 480px;
-    background: white;
+    background: var(--shiny-color-surface, white);
     border-radius: 12px;
-    border: 1px dashed #D1D5DB;
+    border: 1px dashed var(--shiny-color-outline-variant, #D1D5DB);
 }
 
 ::deep .shiny-fab-menu {
     position: absolute;
     right: 24px;
     bottom: 24px;
+}
+
+.fab-menu-host-start ::deep .shiny-fab-menu {
+    right: auto;
+    left: 24px;
 }

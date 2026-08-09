@@ -28,6 +28,12 @@
     transition: transform 250ms cubic-bezier(.2,.8,.2,1);
     will-change: transform;
     cursor: grab;
+    /* the browser's native image drag (and touch scroll/pinch) cancels the pointer
+       stream mid-gesture, which kills panning - opt out of both. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
 }
 
 .shiny-imgviewer-img:active { cursor: grabbing; }

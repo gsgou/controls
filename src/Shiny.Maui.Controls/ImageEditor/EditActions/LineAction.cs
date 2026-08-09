@@ -8,4 +8,7 @@ public sealed class LineAction : IEditAction
     public required Color StrokeColor { get; init; }
     public required float StrokeWidth { get; init; }
     public bool IsArrow { get; init; }
+
+    /// <inheritdoc cref="DrawStrokeAction.ReferenceWidth"/>
+    public float ReferenceWidth { get; init; }
 }

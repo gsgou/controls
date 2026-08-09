@@ -8,4 +8,7 @@ public sealed class TextAnnotationAction : IEditAction
     public required float FontSize { get; init; }
     public required Color TextColor { get; init; }
     public string? FontFamily { get; init; }
+
+    /// <inheritdoc cref="DrawStrokeAction.ReferenceWidth"/>
+    public float ReferenceWidth { get; init; }
 }

@@ -4,20 +4,20 @@ namespace Shiny.Maui.Controls.Chat;
 
 public partial class ChatView
 {
-    void OnRemainingItemsThresholdReached(object? sender, EventArgs e) => this.LoadOlder();
-
     void OnCollectionViewScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
-        // near-top → load older history
-        if (e.FirstVisibleItemIndex <= 2)
-            this.LoadOlder();
-
         var lastIndex = this.messages.Count - 1;
         if (lastIndex < 0)
         {
             this.isNearBottom = true;
+            this.SyncScrollMode();
             return;
         }
+
+        // near-top → load older history. Driven off the scroll position rather than
+        // RemainingItemsThresholdReached, which fires at the *end* of the list.
+        if (e.FirstVisibleItemIndex >= 0 && e.FirstVisibleItemIndex <= 2)
+            this.LoadOlder();
 
         var wasNearBottom = this.isNearBottom;
         this.isNearBottom = e.LastVisibleItemIndex >= lastIndex - 1;
@@ -34,9 +34,26 @@ public partial class ChatView
 
         if (wasNearBottom != this.isNearBottom)
         {
+            this.SyncScrollMode();
             this.typingBubbleHost.IsVisible = this.isNearBottom && this.typingBubbleHost.Children.Count > 0;
             this.UpdateToastPill();
         }
+    }
+
+    /// <summary>
+    /// Chooses how the CollectionView reacts to its own collection changes. Pinning to the last item
+    /// is what makes new messages land in view - the handler runs the scroll after the layout pass, so
+    /// unlike ScrollTo it cannot fire against an unmeasured item. It is switched off while the user is
+    /// reading back through history, or while older messages are being prepended.
+    /// </summary>
+    void SyncScrollMode()
+    {
+        var mode = this.isNearBottom && !this.isLoadingOlder
+            ? ItemsUpdatingScrollMode.KeepLastItemInView
+            : ItemsUpdatingScrollMode.KeepScrollOffset;
+
+        if (this.collectionView.ItemsUpdatingScrollMode != mode)
+            this.collectionView.ItemsUpdatingScrollMode = mode;
     }
 
     void OnToastPillTapped(object? sender, TappedEventArgs e)
@@ -133,7 +150,11 @@ public partial class ChatView
             {
                 if (this.messages[i].Timestamp > last)
                 {
-                    this.collectionView.ScrollTo(i, position: ScrollToPosition.Start, animate: false);
+                    // Landing mid-history means the user is not at the bottom, so incoming
+                    // messages must queue behind the unread pill instead of yanking the view.
+                    this.isNearBottom = i >= this.messages.Count - 2;
+                    this.SyncScrollMode();
+                    this.ScrollWhenMeasured(i, ScrollToPosition.Start, animate: false);
                     return;
                 }
             }
@@ -141,22 +162,54 @@ public partial class ChatView
         this.ScrollToEnd();
     }
 
+    /// <summary>Scrolls to the newest message and re-arms auto-follow.</summary>
     public void ScrollToEnd(bool animate = false)
     {
-        if (this.messages.Count > 0)
-            this.collectionView.ScrollTo(this.messages.Count - 1, position: ScrollToPosition.End, animate: animate);
+        this.isNearBottom = true;
+        this.SyncScrollMode();
+        this.ScrollWhenMeasured(this.messages.Count - 1, ScrollToPosition.End, animate);
     }
 
+    /// <summary>Scrolls the given message into view, or to the end when it is not loaded.</summary>
     public void ScrollToMessage(string messageId, bool animate = true)
     {
         for (var i = 0; i < this.messages.Count; i++)
         {
             if (this.messages[i].MessageId == messageId)
             {
-                this.collectionView.ScrollTo(i, position: ScrollToPosition.Start, animate: animate);
+                this.isNearBottom = i >= this.messages.Count - 2;
+                this.SyncScrollMode();
+                this.ScrollWhenMeasured(i, ScrollToPosition.Start, animate);
                 return;
             }
         }
         this.ScrollToEnd(animate);
+    }
+
+    /// <summary>
+    /// ScrollTo is dropped on the floor when the target item has not been measured yet, which is the
+    /// normal state for a frame or two after the items source is populated or replaced - the single
+    /// biggest reason a chat opens somewhere other than the bottom. Re-issue across the next couple of
+    /// layout passes; repeats are no-ops once the first one lands.
+    /// </summary>
+    void ScrollWhenMeasured(int index, ScrollToPosition position, bool animate)
+    {
+        if (index < 0)
+            return;
+
+        var attempt = 0;
+
+        void Try()
+        {
+            if (index >= this.messages.Count)
+                return;
+
+            this.collectionView.ScrollTo(index, position: position, animate: animate && attempt == 0);
+
+            if (++attempt < 3)
+                this.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(80), Try);
+        }
+
+        this.Dispatcher.Dispatch(Try);
     }
 }

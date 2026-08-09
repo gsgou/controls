@@ -9,8 +9,28 @@
     Title="Chat Templates">
 
     <shiny:ChatView Provider="{Binding Provider}"
-                    SessionId="{Binding SessionId}"
-                    PlaceholderText="Type a message...">
+                    SessionId="{Binding SessionId}">
+        <!-- ChatView builds its own composer; supply one only to reshape it. -->
+        <shiny:ChatView.InputBar>
+            <shiny:ChatEntryView PlaceholderText="How can I help you today?"
+                                 SendButtonText="↑"
+                                 MaxLines="5"
+                                 CornerRadius="24">
+                <shiny:ChatEntryView.LeftToolbar>
+                    <Border StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="10,4"
+                            BackgroundColor="#22808080"
+                            VerticalOptions="Center">
+                        <Label Text="Chat" FontSize="13" />
+                    </Border>
+                </shiny:ChatEntryView.LeftToolbar>
+                <shiny:ChatEntryView.RightToolbar>
+                    <Label Text="Model" FontSize="13" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Label Text="🎤" FontSize="16" VerticalOptions="Center" />
+                </shiny:ChatEntryView.RightToolbar>
+            </shiny:ChatEntryView>
+        </shiny:ChatView.InputBar>
         <shiny:ChatView.MessageTemplateSelector>
             <local:ChatMessageTemplateSelector>
                 <local:ChatMessageTemplateSelector.TextTemplate>

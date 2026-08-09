@@ -13,6 +13,36 @@
 </div>
 
 <div class="demo-section">
+    <h2>Floating Label (M3 notched outline)</h2>
+    <TextEntry Placeholder="Email address" Variant="TextEntryVariant.Floating" @bind-Text="floatingEmail" />
+    <br />
+    <TextEntry Placeholder="Password" Variant="TextEntryVariant.Floating" IsPassword="true" @bind-Text="floatingPassword" />
+    <br />
+    <TextEntry Placeholder="Search with a leading icon"
+               Variant="TextEntryVariant.Floating"
+               @bind-Text="floatingSearch"
+               LeftTools="floatingLeftTools"
+               RightTools="floatingRightTools" />
+</div>
+
+<div class="demo-section">
+    <h2>No Autocomplete</h2>
+    <TextEntry Placeholder="Serial number"
+               @bind-Text="serial"
+               IsAutoCompleteEnabled="false"
+               HintText="Autofill, autocorrect, prediction and spell check are all off" />
+</div>
+
+<div class="demo-section">
+    <h2>Addon Tool Style (opt-in)</h2>
+    <TextEntry Placeholder="Amount"
+               @bind-Text="addonAmount"
+               ToolStyle="TextEntryToolStyle.Addon"
+               LeftTools="addonLeftTools"
+               RightTools="addonRightTools" />
+</div>
+
+<div class="demo-section">
     <h2>With Clear Button</h2>
     <TextEntry Placeholder="Search"
                @bind-Text="searchText"
@@ -112,6 +142,16 @@
     bool hasEmailError;
     string? emailError;
 
+    string floatingEmail = "";
+    string floatingPassword = "";
+    string floatingSearch = "";
+    string serial = "";
+    string addonAmount = "";
+
+    List<TextEntryTool> floatingLeftTools = [new TextEntryTool { Icon = "🔍" }];
+    List<TextEntryTool> floatingRightTools = [new ClearButtonTool()];
+    List<TextEntryTool> addonLeftTools = [new TextEntryTool { Text = "$" }];
+    List<TextEntryTool> addonRightTools = [new TextEntryTool { Text = ".00" }];
     List<TextEntryTool> searchTools = [new ClearButtonTool()];
     List<TextEntryTool> passwordTools = [new ClearButtonTool()];
     List<TextEntryTool> emailTools = [new ClearButtonTool()];

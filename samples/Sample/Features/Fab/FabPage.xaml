@@ -85,6 +85,10 @@
                                Text="Delete"
                                FabBackgroundColor="#F44336"
                                Command="{Binding DeleteCommand}" />
+            <!-- No Text: the pill collapses to a plain circle, still on the main FAB's axis -->
+            <shiny:FabMenuItem Icon="dotnet_bot.png"
+                               FabBackgroundColor="#0EA5E9"
+                               Command="{Binding ShareCommand}" />
         </shiny:FabMenu>
 
     </Grid>

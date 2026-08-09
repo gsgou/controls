@@ -24,29 +24,40 @@ export function init(root, canvas, dotnetRef, options) {
         textColor: options?.textColor || '#ffffff',
         textSize: options?.textSize || 16,
         textFont: options?.textFont || 'Arial',
-        // Zoom
+        // Zoom / pan. The transform is applied to the canvas rather than to the element so
+        // that it works with every tool: pointer coordinates are mapped back through it before
+        // any tool math runs, which is what lets you zoom to 400% and still draw accurately.
         pointers: new Map(),
-        pinchStartDist: 0,
-        pinchStartScale: 1,
-        panStart: null,
-        viewStart: null,
+        pinch: null,
+        pan: null,
         allowZoom: options?.allowZoom !== false,
+        minZoom: options?.minZoom || 1,
+        maxZoom: options?.maxZoom || 8,
         // Image rect cache
         imageRect: { x: 0, y: 0, w: 0, h: 0 }
     };
 
     states.set(root, state);
 
-    canvas.addEventListener('pointerdown', e => onPointerDown(state, e));
-    canvas.addEventListener('pointermove', e => onPointerMove(state, e));
-    canvas.addEventListener('pointerup', e => onPointerUp(state, e));
-    canvas.addEventListener('pointercancel', e => onPointerUp(state, e));
+    state._handlers = {
+        pointerdown: e => onPointerDown(state, e),
+        pointermove: e => onPointerMove(state, e),
+        pointerup: e => onPointerUp(state, e),
+        pointercancel: e => onPointerUp(state, e),
+        wheel: e => onWheel(state, e),
+        dblclick: e => onDoubleClick(state, e),
+        contextmenu: e => e.preventDefault()
+    };
+    for (const [name, handler] of Object.entries(state._handlers)) {
+        canvas.addEventListener(name, handler, name === 'wheel' ? { passive: false } : undefined);
+    }
 
     resizeCanvas(state);
     const container = canvas.parentElement;
-    const observer = new ResizeObserver(() => { resizeCanvas(state); redraw(state); });
+    const observer = new ResizeObserver(() => { resizeCanvas(state); clampOffsets(state); redraw(state); });
     observer.observe(container);
     state._observer = observer;
+    updateCursor(state);
 }
 
 export function loadImage(root, src) {
@@ -82,12 +93,15 @@ export function setMode(root, mode) {
     state.mode = mode;
 
     if (mode === 'crop') {
-        state.cropRect = { x: 0, y: 0, w: 1, h: 1 };
+        state.cropRect = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+        state.viewTransform = { scale: 1, tx: 0, ty: 0 };
+        notifyZoom(state);
     } else {
         state.cropRect = null;
     }
     state.activeLine = null;
     redraw(state);
+    updateCursor(state);
 }
 
 export function undo(root) {
@@ -130,8 +144,12 @@ export function reset(root) {
     state.currentStroke = null;
     state.mode = 'none';
     state.viewTransform = { scale: 1, tx: 0, ty: 0 };
+    state.pinch = null;
+    state.pan = null;
     redraw(state);
     notifyUndoState(state);
+    notifyZoom(state);
+    updateCursor(state);
 }
 
 export function applyCrop(root) {
@@ -171,7 +189,15 @@ export function updateTextSettings(root, color, size, font) {
 
 export function updateAllowZoom(root, allow) {
     const state = states.get(root);
-    if (state) state.allowZoom = allow;
+    if (!state) return;
+
+    state.allowZoom = allow;
+    if (!allow && state.viewTransform.scale !== 1) {
+        state.viewTransform = { scale: 1, tx: 0, ty: 0 };
+        redraw(state);
+        notifyZoom(state);
+    }
+    updateCursor(state);
 }
 
 export async function exportImage(root, format, quality, targetWidth, targetHeight) {
@@ -203,10 +229,9 @@ export function dispose(root) {
     const state = states.get(root);
     if (!state) return;
 
-    state.canvas.removeEventListener('pointerdown', onPointerDown);
-    state.canvas.removeEventListener('pointermove', onPointerMove);
-    state.canvas.removeEventListener('pointerup', onPointerUp);
-    state.canvas.removeEventListener('pointercancel', onPointerUp);
+    for (const [name, handler] of Object.entries(state._handlers || {})) {
+        state.canvas.removeEventListener(name, handler);
+    }
     state._observer?.disconnect();
     states.delete(root);
 }
@@ -255,7 +280,7 @@ function redraw(state) {
 
     // Draw in-progress crop overlay
     if (state.mode === 'crop' && state.cropRect) {
-        drawCropOverlay(ctx, state.cropRect, ir);
+        drawCropOverlay(ctx, state.cropRect, ir, vt.scale);
     }
 
     // Draw in-progress stroke
@@ -342,11 +367,11 @@ function replayActions(ctx, image, actions, canvasW, canvasH) {
                 x: drawRect.x + p.x * drawRect.w,
                 y: drawRect.y + p.y * drawRect.h
             }));
-            drawStroke(ctx, pts, action.color, action.width);
+            drawStroke(ctx, pts, action.color, rescale(action.width, action.refWidth, drawRect.w));
         } else if (action.type === 'text') {
             const tx = drawRect.x + action.position.x * drawRect.w;
             const ty = drawRect.y + action.position.y * drawRect.h;
-            ctx.font = `${action.size}px ${action.font}`;
+            ctx.font = `${rescale(action.size, action.refWidth, drawRect.w)}px ${action.font}`;
             ctx.fillStyle = action.color;
             ctx.textBaseline = 'top';
             ctx.fillText(action.text, tx, ty);
@@ -359,14 +384,22 @@ function replayActions(ctx, image, actions, canvasW, canvasH) {
                 x: drawRect.x + action.end.x * drawRect.w,
                 y: drawRect.y + action.end.y * drawRect.h
             };
-            drawLine(ctx, start, end, action.color, action.width, action.isArrow);
+            drawLine(ctx, start, end, action.color, rescale(action.width, action.refWidth, drawRect.w), action.isArrow);
         }
     }
 
     return drawRect;
 }
 
-function drawCropOverlay(ctx, crop, ir) {
+/**
+ * Scales a stroke width / font size captured against `refWidth` to the rect being drawn into,
+ * so a 3px pen on a 400px preview is not a hairline on a 4000px export.
+ */
+function rescale(value, refWidth, currentWidth) {
+    return refWidth > 0.01 ? value * (currentWidth / refWidth) : value;
+}
+
+function drawCropOverlay(ctx, crop, ir, scale) {
     const cx = ir.x + crop.x * ir.w;
     const cy = ir.y + crop.y * ir.h;
     const cw = crop.w * ir.w;
@@ -379,14 +412,15 @@ function drawCropOverlay(ctx, crop, ir) {
     ctx.fillRect(ir.x, cy, cx - ir.x, ch); // left
     ctx.fillRect(cx + cw, cy, ir.x + ir.w - cx - cw, ch); // right
 
-    // Crop border
+    // Crop border. Chrome divides by the view scale so handles and hairlines stay the same
+    // on-screen size however far the user has zoomed in.
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 / scale;
     ctx.strokeRect(cx, cy, cw, ch);
 
     // Rule of thirds
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 / scale;
     const tw = cw / 3, th = ch / 3;
     for (let i = 1; i <= 2; i++) {
         ctx.beginPath();
@@ -399,7 +433,7 @@ function drawCropOverlay(ctx, crop, ir) {
 
     // Handles
     ctx.fillStyle = '#fff';
-    const hs = 10;
+    const hs = 10 / scale;
     const handles = [
         [cx, cy], [cx + cw / 2, cy], [cx + cw, cy],
         [cx, cy + ch / 2], [cx + cw, cy + ch / 2],
@@ -485,7 +519,8 @@ function finalizeOperation(state) {
                 type: 'draw',
                 points: normalized,
                 color: state.drawColor,
-                width: state.drawWidth
+                width: state.drawWidth,
+                refWidth: ir.w
             });
             state.redoStack = [];
             notifyUndoState(state);
@@ -499,39 +534,169 @@ function notifyUndoState(state) {
     state.dotnet.invokeMethodAsync('OnCanRedoChanged', state.redoStack.length > 0);
 }
 
+// --- View transform (zoom / pan) ---
+
+function canvasSize(state) {
+    const dpr = window.devicePixelRatio || 1;
+    return { w: state.canvas.width / dpr, h: state.canvas.height / dpr };
+}
+
+/** Maps a point on the canvas element into the un-zoomed space imageRect lives in. */
+function screenToWorld(state, p) {
+    const vt = state.viewTransform;
+    if (vt.scale === 1 && vt.tx === 0 && vt.ty === 0) return { ...p };
+
+    const { w, h } = canvasSize(state);
+    const cx = w / 2, cy = h / 2;
+    return {
+        x: (p.x - cx - vt.tx) / vt.scale + cx,
+        y: (p.y - cy - vt.ty) / vt.scale + cy
+    };
+}
+
+/** Inverse of screenToWorld — used to position the inline text input over the image. */
+function worldToScreen(state, p) {
+    const vt = state.viewTransform;
+    if (vt.scale === 1 && vt.tx === 0 && vt.ty === 0) return { ...p };
+
+    const { w, h } = canvasSize(state);
+    const cx = w / 2, cy = h / 2;
+    return {
+        x: (p.x - cx) * vt.scale + cx + vt.tx,
+        y: (p.y - cy) * vt.scale + cy + vt.ty
+    };
+}
+
+/** Zooms while keeping the image content under `anchor` (element coordinates) pinned. */
+function setZoomAt(state, scale, anchor) {
+    if (!state.allowZoom) scale = 1;
+    const world = screenToWorld(state, anchor);
+    applyTransform(state, clamp(scale, state.minZoom, state.maxZoom), anchor, world);
+}
+
+/** The single place the view transform is written. */
+function applyTransform(state, scale, screen, world) {
+    const { w, h } = canvasSize(state);
+    const cx = w / 2, cy = h / 2;
+
+    state.viewTransform.scale = scale;
+    state.viewTransform.tx = screen.x - cx - (world.x - cx) * scale;
+    state.viewTransform.ty = screen.y - cy - (world.y - cy) * scale;
+
+    clampOffsets(state);
+    redraw(state);
+    notifyZoom(state);
+    updateCursor(state);
+}
+
+/** Centres the image while it is smaller than the view, edge-locks it once it is larger. */
+function clampOffsets(state) {
+    const ir = state.imageRect;
+    const { w, h } = canvasSize(state);
+
+    if (!ir || ir.w <= 0 || ir.h <= 0 || w <= 0 || h <= 0) {
+        state.viewTransform.tx = 0;
+        state.viewTransform.ty = 0;
+        return;
+    }
+
+    const s = state.viewTransform.scale;
+    state.viewTransform.tx = clampAxis(state.viewTransform.tx, ir.x + ir.w / 2, ir.w, w / 2, 0, w, s);
+    state.viewTransform.ty = clampAxis(state.viewTransform.ty, ir.y + ir.h / 2, ir.h, h / 2, 0, h, s);
+}
+
+function clampAxis(offset, imageCenter, imageSize, viewCenter, viewMin, viewMax, scale) {
+    const scaled = imageSize * scale;
+    const center = (imageCenter - viewCenter) * scale + viewCenter;
+    const half = scaled / 2;
+    const viewSize = viewMax - viewMin;
+
+    return scaled >= viewSize
+        ? clamp(offset, viewMax - center - half, viewMin - center + half)
+        : clamp(offset, viewMin - center + half, viewMax - center - half);
+}
+
+function notifyZoom(state) {
+    if (state.lastNotifiedZoom === state.viewTransform.scale) return;
+    state.lastNotifiedZoom = state.viewTransform.scale;
+    state.dotnet.invokeMethodAsync('OnZoomChanged', state.viewTransform.scale);
+}
+
+function updateCursor(state) {
+    const pannable = state.viewTransform.scale > 1.001;
+    state.canvas.style.cursor = state.pan ? 'grabbing'
+        : state.mode === 'none' ? (pannable ? 'grab' : 'default')
+        : 'crosshair';
+}
+
+export function setZoom(root, scale) {
+    const state = states.get(root);
+    if (!state) return;
+    const { w, h } = canvasSize(state);
+    setZoomAt(state, scale, { x: w / 2, y: h / 2 });
+}
+
+export function zoomIn(root) { stepZoom(root, 1.5); }
+export function zoomOut(root) { stepZoom(root, 1 / 1.5); }
+export function zoomToFit(root) { setZoom(root, 1); }
+
+function stepZoom(root, factor) {
+    const state = states.get(root);
+    if (!state) return;
+    const { w, h } = canvasSize(state);
+    setZoomAt(state, state.viewTransform.scale * factor, { x: w / 2, y: h / 2 });
+}
+
+export function updateZoomLimits(root, min, max) {
+    const state = states.get(root);
+    if (!state) return;
+    state.minZoom = min > 0 ? min : 1;
+    state.maxZoom = max > state.minZoom ? max : state.minZoom;
+}
+
 // --- Pointer events ---
+
+function localPoint(state, e) {
+    const rect = state.canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
 
 function onPointerDown(state, e) {
     e.preventDefault();
     state.canvas.setPointerCapture(e.pointerId);
-    state.pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
 
-    const pt = { x: e.offsetX, y: e.offsetY };
+    const screen = localPoint(state, e);
+    state.pointers.set(e.pointerId, screen);
 
-    if (state.pointers.size === 2 && state.mode === 'none' && state.allowZoom) {
-        // Start pinch
-        const pts = [...state.pointers.values()];
-        state.pinchStartDist = dist(pts[0], pts[1]);
-        state.pinchStartScale = state.viewTransform.scale;
+    if (state.pointers.size >= 2) {
+        beginPinch(state);
         return;
     }
 
+    // Middle-drag pans in every mode, so a mouse user can reposition mid-edit
+    if (e.button === 1) {
+        beginPan(state, screen);
+        return;
+    }
+
+    const pt = screenToWorld(state, screen);
+
     switch (state.mode) {
         case 'none':
-            if (state.viewTransform.scale > 1.05) {
-                state.panStart = pt;
-                state.viewStart = { tx: state.viewTransform.tx, ty: state.viewTransform.ty };
-            }
+            beginPan(state, screen);
             break;
-        case 'crop':
+        case 'crop': {
             startCropDrag(state, pt);
+            // Dragging outside the crop box pans instead of fighting the user
+            if (!state.activeCropHandle) beginPan(state, screen);
             break;
+        }
         case 'draw':
             state.currentStroke = { points: [pt] };
             redraw(state);
             break;
         case 'text':
-            handleTextPlacement(state, pt);
+            handleTextPlacement(state, pt, screen);
             break;
         case 'line':
         case 'arrow':
@@ -547,29 +712,33 @@ function onPointerDown(state, e) {
 }
 
 function onPointerMove(state, e) {
+    // Ignore hover moves — only pointers that went down here drive the tools
+    if (!state.pointers.has(e.pointerId)) return;
     e.preventDefault();
-    const pt = { x: e.offsetX, y: e.offsetY };
-    state.pointers.set(e.pointerId, pt);
 
-    // Pinch zoom
-    if (state.pointers.size === 2 && state.mode === 'none' && state.allowZoom) {
-        const pts = [...state.pointers.values()];
-        const d = dist(pts[0], pts[1]);
-        if (state.pinchStartDist > 0) {
-            state.viewTransform.scale = clamp(state.pinchStartScale * (d / state.pinchStartDist), 1, 5);
-            redraw(state);
-        }
+    const screen = localPoint(state, e);
+    state.pointers.set(e.pointerId, screen);
+
+    if (state.pinch) {
+        updatePinch(state);
         return;
     }
 
+    // A second finger arriving mid-stroke turns the gesture into a zoom
+    if (state.pointers.size >= 2 && state.allowZoom) {
+        abandonToolGesture(state);
+        beginPinch(state);
+        return;
+    }
+
+    if (state.pan) {
+        updatePan(state, screen);
+        return;
+    }
+
+    const pt = screenToWorld(state, screen);
+
     switch (state.mode) {
-        case 'none':
-            if (state.panStart && state.viewStart) {
-                state.viewTransform.tx = state.viewStart.tx + (pt.x - state.panStart.x);
-                state.viewTransform.ty = state.viewStart.ty + (pt.y - state.panStart.y);
-                redraw(state);
-            }
-            break;
         case 'crop':
             moveCropDrag(state, pt);
             break;
@@ -595,18 +764,21 @@ function onPointerMove(state, e) {
 
 function onPointerUp(state, e) {
     e.preventDefault();
-    state.canvas.releasePointerCapture(e.pointerId);
+    try { state.canvas.releasePointerCapture(e.pointerId); } catch { }
     state.pointers.delete(e.pointerId);
 
+    if (state.pinch) {
+        if (state.pointers.size < 2) state.pinch = null;
+        return;
+    }
+
+    if (state.pan) {
+        state.pan = null;
+        updateCursor(state);
+        return;
+    }
+
     switch (state.mode) {
-        case 'none':
-            state.panStart = null;
-            state.viewStart = null;
-            if (state.viewTransform.scale <= 1.05) {
-                state.viewTransform = { scale: 1, tx: 0, ty: 0 };
-                redraw(state);
-            }
-            break;
         case 'crop':
             state.activeCropHandle = null;
             break;
@@ -626,6 +798,83 @@ function onPointerUp(state, e) {
     }
 }
 
+function onWheel(state, e) {
+    if (!state.allowZoom) return;
+    e.preventDefault();
+
+    // Trackpad pinch arrives as ctrl+wheel; both gestures zoom about the cursor
+    const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022));
+    setZoomAt(state, state.viewTransform.scale * factor, localPoint(state, e));
+}
+
+function onDoubleClick(state, e) {
+    if (!state.allowZoom || state.mode !== 'none') return;
+    e.preventDefault();
+
+    const target = state.viewTransform.scale > 1.05 ? 1 : Math.min(2.5, state.maxZoom);
+    setZoomAt(state, target, localPoint(state, e));
+}
+
+function beginPinch(state) {
+    if (!state.allowZoom) return;
+    abandonToolGesture(state);
+
+    const pts = [...state.pointers.values()];
+    const distance = dist(pts[0], pts[1]);
+    if (distance <= 1) return;
+
+    const mid = midpoint(pts);
+    state.pinch = {
+        startDist: distance,
+        startScale: state.viewTransform.scale,
+        startWorld: screenToWorld(state, mid)
+    };
+}
+
+function updatePinch(state) {
+    const pts = [...state.pointers.values()];
+    if (pts.length < 2) return;
+
+    const scale = clamp(
+        state.pinch.startScale * (dist(pts[0], pts[1]) / state.pinch.startDist),
+        state.minZoom,
+        state.maxZoom);
+
+    // Re-anchoring the pinch-start world point to the *current* midpoint gives
+    // pinch and two-finger pan in one expression
+    applyTransform(state, scale, midpoint(pts), state.pinch.startWorld);
+}
+
+function beginPan(state, screen) {
+    if (state.viewTransform.scale <= 1.001) return;
+    state.pan = {
+        screen,
+        tx: state.viewTransform.tx,
+        ty: state.viewTransform.ty
+    };
+    updateCursor(state);
+}
+
+function updatePan(state, screen) {
+    state.viewTransform.tx = state.pan.tx + (screen.x - state.pan.screen.x);
+    state.viewTransform.ty = state.pan.ty + (screen.y - state.pan.screen.y);
+    clampOffsets(state);
+    redraw(state);
+}
+
+/** Drops an in-progress stroke/line without committing it (a pinch took over). */
+function abandonToolGesture(state) {
+    state.currentStroke = null;
+    state.activeLine = null;
+    state.activeCropHandle = null;
+    state.pan = null;
+    redraw(state);
+}
+
+function midpoint(pts) {
+    return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+}
+
 function commitLine(state) {
     if (!state.activeLine) return;
     const { start, end, isArrow } = state.activeLine;
@@ -643,6 +892,7 @@ function commitLine(state) {
         end: { x: (end.x - ir.x) / ir.w, y: (end.y - ir.y) / ir.h },
         color: state.drawColor,
         width: state.drawWidth,
+        refWidth: ir.w,
         isArrow: isArrow
     });
     state.redoStack = [];
@@ -661,7 +911,7 @@ function startCropDrag(state, pt) {
         h: state.cropRect.h * ir.h
     };
 
-    state.activeCropHandle = hitTestCropHandle(pt, cr);
+    state.activeCropHandle = hitTestCropHandle(pt, cr, 20 / state.viewTransform.scale);
     state.cropDragStart = pt;
     state.cropStartRect = { ...state.cropRect };
 }
@@ -709,8 +959,7 @@ function resizeCrop(c, dLeft, dTop, dRight, dBottom, minSize) {
     return { x, y, w, h };
 }
 
-function hitTestCropHandle(pt, cr) {
-    const r = 20;
+function hitTestCropHandle(pt, cr, r) {
     const cx = cr.x + cr.w / 2, cy = cr.y + cr.h / 2;
 
     if (dist(pt, { x: cr.x, y: cr.y }) < r) return 'tl';
@@ -728,7 +977,7 @@ function hitTestCropHandle(pt, cr) {
     return null;
 }
 
-async function handleTextPlacement(state, pt) {
+async function handleTextPlacement(state, pt, screen) {
     const ir = state.imageRect;
     if (ir.w <= 0 || ir.h <= 0) return;
     if (pt.x < ir.x || pt.x > ir.x + ir.w || pt.y < ir.y || pt.y > ir.y + ir.h) return;
@@ -738,8 +987,10 @@ async function handleTextPlacement(state, pt) {
         y: (pt.y - ir.y) / ir.h
     };
 
-    // Request inline text input from Blazor at the canvas position
-    await state.dotnet.invokeMethodAsync('OnRequestTextInput', pt.x, pt.y, normalized.x, normalized.y);
+    // The input is an ordinary DOM element on top of the canvas, so it is placed in screen
+    // coordinates and sized by the zoom factor to match what will be rendered
+    await state.dotnet.invokeMethodAsync(
+        'OnRequestTextInput', screen.x, screen.y, normalized.x, normalized.y, state.viewTransform.scale);
 }
 
 export function addTextAnnotation(root, text, normX, normY) {
@@ -752,7 +1003,8 @@ export function addTextAnnotation(root, text, normX, normY) {
         position: { x: normX, y: normY },
         size: state.textSize,
         color: state.textColor,
-        font: state.textFont
+        font: state.textFont,
+        refWidth: state.imageRect.w
     });
     state.redoStack = [];
     redraw(state);

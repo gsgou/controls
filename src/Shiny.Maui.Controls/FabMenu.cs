@@ -10,8 +10,10 @@ namespace Shiny.Maui.Controls;
 public class FabMenu : ContentView
 {
     const uint DefaultAnimationDuration = 200;
-    const double ItemStaggerMs = 30;
-    const double ItemTravelDistance = 16;
+    const double ItemStaggerMs = 35;
+    const double ItemTravelDistance = 12;
+    const double ItemCollapsedScale = 0.85;
+    const double DefaultIconRotation = 45;
 
     readonly Grid rootGrid;
     readonly BoxView backdrop;
@@ -36,7 +38,7 @@ public class FabMenu : ContentView
 
         itemsLayout = new VerticalStackLayout
         {
-            Spacing = 12,
+            Spacing = 10,
             HorizontalOptions = LayoutOptions.End
         };
 
@@ -45,7 +47,7 @@ public class FabMenu : ContentView
 
         stack = new VerticalStackLayout
         {
-            Spacing = 16,
+            Spacing = 14,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.End
         };
@@ -295,7 +297,12 @@ public class FabMenu : ContentView
         typeof(double),
         typeof(FabMenu),
         56.0,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.Size = (double)n));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu =>
+        {
+            menu.mainFab.Size = (double)n;
+            // The items inset themselves against the main FAB's width - re-run that math.
+            menu.ApplyItemAxis();
+        }));
     public double FabSize
     {
         get => (double)GetValue(FabSizeProperty);
@@ -326,6 +333,22 @@ public class FabMenu : ContentView
         set => SetValue(MenuAlignmentProperty, value);
     }
 
+    /// <summary>
+    /// Degrees the main FAB rotates while the menu is open - the classic "+" turning into an "×".
+    /// Set to 0 to disable. Ignored when the main FAB has <see cref="Text"/>, since a rotated label
+    /// reads as broken rather than deliberate.
+    /// </summary>
+    public static readonly BindableProperty IconRotationProperty = BindableProperty.Create(
+        nameof(IconRotation),
+        typeof(double),
+        typeof(FabMenu),
+        DefaultIconRotation);
+    public double IconRotation
+    {
+        get => (double)GetValue(IconRotationProperty);
+        set => SetValue(IconRotationProperty, value);
+    }
+
 
     public event EventHandler<FabMenuItem>? ItemTapped;
 
@@ -342,6 +365,15 @@ public class FabMenu : ContentView
         stack.HorizontalOptions = MenuAlignment;
         itemsLayout.HorizontalOptions = MenuAlignment;
         mainFab.HorizontalOptions = MenuAlignment;
+        ApplyItemAxis();
+    }
+
+    /// <summary>Keeps every item's icon chip centred on the main FAB's vertical axis.</summary>
+    void ApplyItemAxis()
+    {
+        var leading = MenuAlignment.Alignment == LayoutAlignment.Start;
+        foreach (var item in itemsLayout.Children.OfType<FabMenuItem>())
+            item.ApplyAxis(FabSize, leading);
     }
 
     void OnMainFabClicked(object? sender, EventArgs e)
@@ -371,14 +403,19 @@ public class FabMenu : ContentView
         if (Items is null)
             return;
 
+        var leading = MenuAlignment.Alignment == LayoutAlignment.Start;
+
         foreach (var item in Items)
         {
             item.Clicked -= OnMenuItemClicked;
             item.Clicked += OnMenuItemClicked;
 
+            item.ApplyAxis(FabSize, leading);
+
             // Prime initial state based on IsOpen
             item.Opacity = IsOpen ? 1 : 0;
             item.TranslationY = IsOpen ? 0 : ItemTravelDistance;
+            item.Scale = IsOpen ? 1 : ItemCollapsedScale;
             item.IsVisible = IsOpen;
 
             itemsLayout.Add(item);
@@ -405,6 +442,7 @@ public class FabMenu : ContentView
         {
             var duration = AnimationDuration;
             var items = itemsLayout.Children.OfType<FabMenuItem>().ToList();
+            var rotation = RotateMainFab() ? IconRotation : 0;
 
             if (open)
             {
@@ -421,18 +459,21 @@ public class FabMenu : ContentView
                     item.IsVisible = true;
                     item.Opacity = 0;
                     item.TranslationY = ItemTravelDistance;
+                    item.Scale = ItemCollapsedScale;
                 }
 
                 var tasks = new List<Task>();
                 if (HasBackdrop)
                     tasks.Add(backdrop.FadeToAsync(BackdropOpacity, duration, Easing.CubicOut));
+                if (rotation != 0)
+                    tasks.Add(mainFab.RotateToAsync(rotation, duration, Easing.CubicInOut));
 
                 // Stagger from bottom to top (closest to the main Fab animates first)
                 for (var i = items.Count - 1; i >= 0; i--)
                 {
                     var item = items[i];
                     var delay = (items.Count - 1 - i) * ItemStaggerMs;
-                    tasks.Add(AnimateItemAsync(item, 1, 0, duration, delay, Easing.CubicOut));
+                    tasks.Add(AnimateItemAsync(item, 1, 0, 1, duration, delay, Easing.CubicOut));
                 }
 
                 await Task.WhenAll(tasks);
@@ -442,13 +483,15 @@ public class FabMenu : ContentView
                 var tasks = new List<Task>();
                 if (HasBackdrop)
                     tasks.Add(backdrop.FadeToAsync(0, duration, Easing.CubicIn));
+                if (mainFab.Rotation != 0)
+                    tasks.Add(mainFab.RotateToAsync(0, duration, Easing.CubicInOut));
 
                 // Animate top to bottom on close
                 for (var i = 0; i < items.Count; i++)
                 {
                     var item = items[i];
                     var delay = i * ItemStaggerMs;
-                    tasks.Add(AnimateItemAsync(item, 0, ItemTravelDistance, duration, delay, Easing.CubicIn));
+                    tasks.Add(AnimateItemAsync(item, 0, ItemTravelDistance, ItemCollapsedScale, duration, delay, Easing.CubicIn));
                 }
 
                 await Task.WhenAll(tasks);
@@ -466,14 +509,19 @@ public class FabMenu : ContentView
         }
     }
 
-    static async Task AnimateItemAsync(View item, double targetOpacity, double targetTranslationY, uint duration, double delayMs, Easing easing)
+    /// <summary>A rotated label reads as broken, so the spin is icon-only-FAB territory.</summary>
+    bool RotateMainFab()
+        => IconRotation != 0 && string.IsNullOrEmpty(Text);
+
+    static async Task AnimateItemAsync(View item, double targetOpacity, double targetTranslationY, double targetScale, uint duration, double delayMs, Easing easing)
     {
         if (delayMs > 0)
             await Task.Delay((int)delayMs);
 
         await Task.WhenAll(
             item.FadeToAsync(targetOpacity, duration, easing),
-            item.TranslateToAsync(0, targetTranslationY, duration, easing)
+            item.TranslateToAsync(0, targetTranslationY, duration, easing),
+            item.ScaleToAsync(targetScale, duration, easing)
         );
     }
 }

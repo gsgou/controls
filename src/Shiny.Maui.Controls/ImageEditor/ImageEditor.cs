@@ -1,3 +1,4 @@
+using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.ColorPicker;
 using Shiny.Maui.Controls.FontPicker;
 using Shiny.Maui.Controls.ImageEditor.EditActions;
@@ -16,6 +17,10 @@ public partial class ImageEditor : ContentView
     ColorPickerButton? drawColorButton;
     FontPickerButton? fontPickerButton;
     FontSizePickerButton? fontSizePickerButton;
+    Label? zoomReadout;
+    Border? undoButton;
+    Border? redoButton;
+    Border? resetButton;
 
     public ImageEditor()
     {
@@ -33,7 +38,6 @@ public partial class ImageEditor : ContentView
 
         SetupGestures();
         SetupCommands();
-        EnableMoveGestures();
 
         rootGrid = new Grid
         {
@@ -51,8 +55,19 @@ public partial class ImageEditor : ContentView
 
         Content = rootGrid;
 
-        // Invalidate once layout is ready so images set during binding actually render
-        graphicsView.SizeChanged += (_, _) => Invalidate();
+        // Invalidate once layout is ready so images set during binding actually render. A resize
+        // (rotation, split view) also changes the viewport the pan is clamped against, so the
+        // offsets are re-clamped on the next frame — once the drawable knows the new viewport.
+        graphicsView.SizeChanged += (_, _) =>
+        {
+            Invalidate();
+            if (zoomScale > 1.001f)
+                Dispatcher.Dispatch(() =>
+                {
+                    ClampOffsets();
+                    PushTransformToDrawable();
+                });
+        };
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -199,7 +214,14 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty AllowZoomProperty = BindableProperty.Create(
-        nameof(AllowZoom), typeof(bool), typeof(ImageEditor), true);
+        nameof(AllowZoom), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                var editor = (ImageEditor)b;
+                if (!(bool)n)
+                    editor.ZoomToFit();
+                editor.BuildDefaultToolbar();
+            }));
 
     public bool AllowZoom
     {
@@ -244,9 +266,12 @@ public partial class ImageEditor : ContentView
 
     public static readonly BindableProperty DrawStrokeWidthProperty = BindableProperty.Create(
         nameof(DrawStrokeWidth), typeof(double), typeof(ImageEditor), 3.0,
+        BindingMode.TwoWay,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
-                ((ImageEditor)b).drawable.ActiveStrokeWidth = (float)(double)n;
+                var editor = (ImageEditor)b;
+                editor.drawable.ActiveStrokeWidth = (float)(double)n;
+                editor.BuildDefaultToolbar();
             }));
 
     public double DrawStrokeWidth
@@ -339,6 +364,68 @@ public partial class ImageEditor : ContentView
         set => SetValue(ToolbarTemplateProperty, value);
     }
 
+    public static readonly BindableProperty ShowToolLabelsProperty = BindableProperty.Create(
+        nameof(ShowToolLabels), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    /// <summary>
+    /// Shows a caption under each tool icon. Turn this off for a compact icon-only bar.
+    /// </summary>
+    public bool ShowToolLabels
+    {
+        get => (bool)GetValue(ShowToolLabelsProperty);
+        set => SetValue(ShowToolLabelsProperty, value);
+    }
+
+    public static readonly BindableProperty ShowStrokeWidthPickerProperty = BindableProperty.Create(
+        nameof(ShowStrokeWidthPicker), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    /// <summary>Shows the pen-weight presets alongside the colour swatch for the ink tools.</summary>
+    public bool ShowStrokeWidthPicker
+    {
+        get => (bool)GetValue(ShowStrokeWidthPickerProperty);
+        set => SetValue(ShowStrokeWidthPickerProperty, value);
+    }
+
+    public static readonly BindableProperty StrokeWidthPresetsProperty = BindableProperty.Create(
+        nameof(StrokeWidthPresets), typeof(IList<double>), typeof(ImageEditor), null,
+        defaultValueCreator: _ => new List<double> { 2, 4, 8 },
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    /// <summary>Pen weights offered by the stroke-width picker.</summary>
+    public IList<double> StrokeWidthPresets
+    {
+        get => (IList<double>)GetValue(StrokeWidthPresetsProperty);
+        set => SetValue(StrokeWidthPresetsProperty, value);
+    }
+
+    public static readonly BindableProperty ToolbarBackgroundColorProperty = BindableProperty.Create(
+        nameof(ToolbarBackgroundColor), typeof(Color), typeof(ImageEditor), Color.FromRgba(20, 20, 22, 0.86f),
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    /// <summary>
+    /// Background of the default toolbar. It defaults to a dark scrim because the bar floats over
+    /// arbitrary photos and has to stay legible on all of them.
+    /// </summary>
+    public Color ToolbarBackgroundColor
+    {
+        get => (Color)GetValue(ToolbarBackgroundColorProperty);
+        set => SetValue(ToolbarBackgroundColorProperty, value);
+    }
+
     public static readonly BindableProperty ToolbarPositionProperty = BindableProperty.Create(
         nameof(ToolbarPosition), typeof(ToolbarPosition), typeof(ImageEditor), ToolbarPosition.Bottom,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
@@ -362,7 +449,7 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty CropApplyTextProperty = BindableProperty.Create(
-        nameof(CropApplyText), typeof(string), typeof(ImageEditor), "\u2714",
+        nameof(CropApplyText), typeof(string), typeof(ImageEditor), "Apply",
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
                 ((ImageEditor)b).BuildDefaultToolbar();
@@ -375,7 +462,7 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty CropCancelTextProperty = BindableProperty.Create(
-        nameof(CropCancelText), typeof(string), typeof(ImageEditor), "\u2716",
+        nameof(CropCancelText), typeof(string), typeof(ImageEditor), "Cancel",
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
                 ((ImageEditor)b).BuildDefaultToolbar();
@@ -401,7 +488,7 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty SaveTextProperty = BindableProperty.Create(
-        nameof(SaveText), typeof(string), typeof(ImageEditor), "\u2713 Save",
+        nameof(SaveText), typeof(string), typeof(ImageEditor), "Save",
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
                 ((ImageEditor)b).BuildDefaultToolbar();
@@ -514,36 +601,16 @@ public partial class ImageEditor : ContentView
 
         drawable.ToolMode = mode;
 
+        // The crop rect is normalised against the whole image, so entering crop returns to
+        // fit-to-view; every other tool keeps whatever zoom the user set up
         if (mode == ImageEditorToolMode.Crop)
         {
             drawable.ActiveCropRect = new RectF(0.1f, 0.1f, 0.8f, 0.8f);
-            ResetViewTransform(); // Ensure crop overlay draws on unzoomed view
+            ZoomToFit();
         }
         else
         {
             drawable.ActiveCropRect = null;
-        }
-
-        // Enable/disable move gestures and touch interaction
-        if (mode == ImageEditorToolMode.Move)
-        {
-            EnableMoveGestures();
-        }
-        else
-        {
-            DisableMoveGestures();
-
-            // Attach StartInteraction for modes that need direct touch (Draw, Crop, Line, Arrow, Text)
-            if (mode == ImageEditorToolMode.Draw || mode == ImageEditorToolMode.Crop ||
-                mode == ImageEditorToolMode.Line || mode == ImageEditorToolMode.Arrow ||
-                mode == ImageEditorToolMode.Text)
-            {
-                EnableTouchInteraction();
-            }
-            else
-            {
-                DisableTouchInteraction();
-            }
         }
 
         BuildDefaultToolbar();
@@ -554,6 +621,13 @@ public partial class ImageEditor : ContentView
     {
         CanUndo = state.CanUndo;
         CanRedo = state.CanRedo;
+
+        // Toggle in place rather than rebuilding — the toolbar rebuilds on tool changes only,
+        // so drawing a stroke doesn't flicker the whole bar
+        if (undoButton != null) SetButtonEnabled(undoButton, CanUndo);
+        if (redoButton != null) SetButtonEnabled(redoButton, CanRedo);
+        if (resetButton != null) SetButtonEnabled(resetButton, CanUndo);
+
         Invalidate();
     }
 
@@ -578,7 +652,8 @@ public partial class ImageEditor : ContentView
                 {
                     Points = normalized,
                     StrokeColor = DrawStrokeColor,
-                    StrokeWidth = (float)DrawStrokeWidth
+                    StrokeWidth = (float)DrawStrokeWidth,
+                    ReferenceWidth = imageRect.Width
                 });
             }
             drawable.ActiveStrokePoints = null;
@@ -589,17 +664,6 @@ public partial class ImageEditor : ContentView
         {
             CommitCurrentLine();
         }
-    }
-
-    void ResetViewTransform()
-    {
-        // Reset native view transforms (used by Move mode)
-        graphicsView.Scale = 1;
-        graphicsView.TranslationX = 0;
-        graphicsView.TranslationY = 0;
-        currentScale = 1;
-        xOffset = 0;
-        yOffset = 0;
     }
 
     void Invalidate() => graphicsView.Invalidate();
@@ -631,151 +695,373 @@ public partial class ImageEditor : ContentView
             return;
 
         RemoveToolbar();
+        zoomReadout = null;
+        drawColorButton = null;
+        fontPickerButton = null;
+        fontSizePickerButton = null;
+        undoButton = redoButton = resetButton = null;
 
-        // When in crop mode, show a focused crop toolbar
-        if (CurrentToolMode == ImageEditorToolMode.Crop)
-        {
-            toolbarView = BuildCropToolbar();
-            AddToolbarToGrid();
-            return;
-        }
+        // Crop is modal — it gets a focused confirm/cancel bar instead of the full tool set
+        toolbarView = CurrentToolMode == ImageEditorToolMode.Crop
+            ? BuildCropToolbar()
+            : BuildStandardToolbar();
 
-        var toolRow = new HorizontalStackLayout
+        AddToolbarToGrid();
+    }
+
+    View BuildStandardToolbar()
+    {
+        var rows = new VerticalStackLayout { Spacing = 6 };
+
+        rows.Children.Add(BuildToolRow());
+
+        var options = BuildOptionsRow();
+        if (options != null)
+            rows.Children.Add(options);
+
+        rows.Children.Add(BuildActionRow());
+
+        return WrapInChrome(rows);
+    }
+
+    /// <summary>
+    /// The tool picker. It lives in a horizontal scroller because the row grows with every
+    /// enabled tool and used to run straight off the edge of a phone screen.
+    /// </summary>
+    View BuildToolRow()
+    {
+        var tools = new HorizontalStackLayout
         {
-            Spacing = 4,
+            Spacing = 2,
             HorizontalOptions = LayoutOptions.Center
         };
 
-        if (AllowZoom) toolRow.Children.Add(CreateToolButton("\u271B", "Move", ImageEditorToolMode.Move));
-        if (AllowCrop) toolRow.Children.Add(CreateToolButton("\u2702", "Crop", ImageEditorToolMode.Crop));
-        if (AllowRotate) toolRow.Children.Add(CreateActionButton("\u21BB", "Rotate", () => Rotate(90)));
+        if (AllowZoom)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Move, "Move", ImageEditorToolMode.Move));
+
+        if (AllowCrop)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Crop, "Crop", ImageEditorToolMode.Crop));
+
+        if (AllowRotate)
+            tools.Children.Add(CreateChromeButton(ImageEditorIcon.Rotate, "Rotate", false, true, () => Rotate(90)));
+
         if (AllowDraw)
-        {
-            toolRow.Children.Add(CreateToolButton("\u270E", "Draw", ImageEditorToolMode.Draw));
-            toolRow.Children.Add(CreateDrawColorButton());
-        }
-        if (AllowLine) toolRow.Children.Add(CreateToolButton("\u2500", "Line", ImageEditorToolMode.Line));
-        if (AllowArrow) toolRow.Children.Add(CreateToolButton("\u2192", "Arrow", ImageEditorToolMode.Arrow));
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Draw, "Draw", ImageEditorToolMode.Draw));
+
+        if (AllowLine)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Line, "Line", ImageEditorToolMode.Line));
+
+        if (AllowArrow)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Arrow, "Arrow", ImageEditorToolMode.Arrow));
+
         if (AllowTextAnnotation)
-            toolRow.Children.Add(CreateToolButton("\u0054", "Text", ImageEditorToolMode.Text));
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Text, "Text", ImageEditorToolMode.Text));
 
-        // Font pickers on their own row when in Text mode
-        HorizontalStackLayout? fontRow = null;
-        if (AllowTextAnnotation && CurrentToolMode == ImageEditorToolMode.Text)
+        return new ScrollView
         {
-            var hasFontPicker = AllowFontSelection && AvailableFonts is { Count: > 0 };
-            var hasSizePicker = AllowFontSizeSelection && AvailableFontSizes is { Count: > 0 };
-            if (hasFontPicker || hasSizePicker)
-            {
-                fontRow = new HorizontalStackLayout
-                {
-                    Spacing = 8,
-                    HorizontalOptions = LayoutOptions.Center
-                };
-                if (hasFontPicker) fontRow.Children.Add(CreateFontPickerButton());
-                if (hasSizePicker) fontRow.Children.Add(CreateFontSizePickerButton());
-            }
-        }
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = tools
+        };
+    }
 
-        var actionRow = new HorizontalStackLayout
+    /// <summary>Per-tool options — colour, stroke weight, font — shown only when they apply.</summary>
+    View? BuildOptionsRow()
+    {
+        var isInk = CurrentToolMode is ImageEditorToolMode.Draw or ImageEditorToolMode.Line or ImageEditorToolMode.Arrow;
+        var isText = CurrentToolMode == ImageEditorToolMode.Text;
+
+        if (!isInk && !isText)
+            return null;
+
+        var row = new HorizontalStackLayout
         {
-            Spacing = 4,
+            Spacing = 8,
             HorizontalOptions = LayoutOptions.Center
         };
 
-        actionRow.Children.Add(CreateActionButton("\u21A9", "Undo", Undo));
-        actionRow.Children.Add(CreateActionButton("\u21AA", "Redo", Redo));
-        actionRow.Children.Add(CreateActionButton("\u27F2", "Reset", Reset));
+        row.Children.Add(CreateDrawColorButton());
+
+        if (isInk && ShowStrokeWidthPicker)
+        {
+            foreach (var width in StrokeWidthPresets)
+                row.Children.Add(CreateStrokeWidthButton(width));
+        }
+
+        if (isText)
+        {
+            if (AllowFontSelection && AvailableFonts is { Count: > 0 })
+                row.Children.Add(CreateFontPickerButton());
+
+            if (AllowFontSizeSelection && AvailableFontSizes is { Count: > 0 })
+                row.Children.Add(CreateFontSizePickerButton());
+        }
+
+        return new ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = row
+        };
+    }
+
+    /// <summary>History on the left, zoom in the middle, save on the right.</summary>
+    View BuildActionRow()
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            [
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star)
+            ],
+            ColumnSpacing = 6
+        };
+
+        var history = new HorizontalStackLayout
+        {
+            Spacing = 2,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Center
+        };
+        undoButton = CreateChromeButton(ImageEditorIcon.Undo, null, false, CanUndo, Undo);
+        redoButton = CreateChromeButton(ImageEditorIcon.Redo, null, false, CanRedo, Redo);
+        resetButton = CreateChromeButton(ImageEditorIcon.Reset, null, false, CanUndo, Reset);
+        history.Children.Add(undoButton);
+        history.Children.Add(redoButton);
+        history.Children.Add(resetButton);
+        grid.Add(history, 0);
+
+        if (AllowZoom && ShowZoomControls)
+            grid.Add(BuildZoomCluster(), 1);
 
         if (SaveCommand != null)
         {
-            actionRow.Children.Add(new BoxView { WidthRequest = 1, HeightRequest = 30, Color = Colors.Grey, VerticalOptions = LayoutOptions.Center });
-            actionRow.Children.Add(CreateActionButton(SaveText, "Save", ExecuteSave));
+            var save = new Button
+            {
+                Text = SaveText,
+                FontSize = 14,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White),
+                BackgroundColor = AccentColor,
+                CornerRadius = 14,
+                HeightRequest = 40,
+                Padding = new Thickness(16, 0),
+                HorizontalOptions = LayoutOptions.End,
+                VerticalOptions = LayoutOptions.Center
+            };
+            save.Clicked += (_, _) => ExecuteSave();
+            grid.Add(save, 2);
         }
 
-        var toolbar = new VerticalStackLayout
-        {
-            Spacing = 2,
-            HorizontalOptions = LayoutOptions.Center,
-            Padding = new Thickness(8, 4),
-            BackgroundColor = Color.FromRgba(0, 0, 0, 0.6f)
-        };
-        toolbar.Children.Add(toolRow);
-        if (fontRow != null) toolbar.Children.Add(fontRow);
-        toolbar.Children.Add(actionRow);
+        return grid;
+    }
 
-        toolbarView = toolbar;
-        AddToolbarToGrid();
+    View BuildZoomCluster()
+    {
+        var cluster = new HorizontalStackLayout
+        {
+            Spacing = 0,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        zoomReadout = new Label
+        {
+            Text = FormatZoom(zoomScale),
+            FontSize = 11,
+            TextColor = ChromeForeground,
+            WidthRequest = 42,
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center
+        };
+
+        // Tapping the percentage is the fastest way back to fit-to-view
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) => ZoomToFit();
+        zoomReadout.GestureRecognizers.Add(tap);
+
+        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomOut, null, false, true, ZoomOut, 38));
+        cluster.Children.Add(zoomReadout);
+        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomIn, null, false, true, ZoomIn, 38));
+        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomFit, null, false, true, ZoomToFit, 38));
+
+        return cluster;
     }
 
     View BuildCropToolbar()
     {
-        var toolbar = new HorizontalStackLayout
+        var grid = new Grid
         {
-            Spacing = 8,
-            HorizontalOptions = LayoutOptions.Center,
-            Padding = new Thickness(12, 6),
-            BackgroundColor = Color.FromRgba(0, 0, 0, 0.6f)
+            ColumnDefinitions =
+            [
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            ],
+            ColumnSpacing = 8
         };
 
         var cancelBtn = new Button
         {
             Text = CropCancelText,
             FontSize = 14,
-            TextColor = Colors.White,
-            BackgroundColor = ThemeColor(ShinyThemeKeys.Color.Error, Color.FromRgba(255, 59, 48, 200)),
-            CornerRadius = 8,
-            HeightRequest = 40,
-            Padding = new Thickness(16, 0)
+            TextColor = ChromeForeground,
+            BackgroundColor = Color.FromRgba(255, 255, 255, 0.14f),
+            CornerRadius = 14,
+            HeightRequest = 42,
+            MinimumWidthRequest = 64,
+            Padding = new Thickness(16, 0),
+            VerticalOptions = LayoutOptions.Center
         };
         cancelBtn.Clicked += (_, _) => CurrentToolMode = ImageEditorToolMode.Move;
+        grid.Add(cancelBtn, 0);
 
-        var label = new Label
+        grid.Add(new Label
         {
-            Text = "Drag edges to crop",
-            TextColor = Colors.White,
+            Text = "Drag the edges to crop",
+            TextColor = ChromeForeground,
             FontSize = 13,
-            VerticalOptions = LayoutOptions.Center,
-            Opacity = 0.8
-        };
+            HorizontalTextAlignment = TextAlignment.Center,
+            VerticalTextAlignment = TextAlignment.Center
+        }, 1);
 
         var applyBtn = new Button
         {
             Text = CropApplyText,
             FontSize = 14,
-            TextColor = Colors.White,
-            BackgroundColor = ThemeColor(ShinyThemeKeys.Color.Success, Color.FromRgba(52, 199, 89, 200)),
-            CornerRadius = 8,
-            HeightRequest = 40,
-            Padding = new Thickness(16, 0)
+            FontAttributes = FontAttributes.Bold,
+            TextColor = ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White),
+            BackgroundColor = AccentColor,
+            CornerRadius = 14,
+            HeightRequest = 42,
+            MinimumWidthRequest = 64,
+            Padding = new Thickness(16, 0),
+            VerticalOptions = LayoutOptions.Center
         };
         applyBtn.Clicked += (_, _) => ApplyCrop();
+        grid.Add(applyBtn, 2);
 
-        toolbar.Children.Add(cancelBtn);
-        toolbar.Children.Add(label);
-        toolbar.Children.Add(applyBtn);
-
-        return toolbar;
+        return WrapInChrome(grid);
     }
 
-    Button CreateToolButton(string icon, string tooltip, ImageEditorToolMode mode)
+    /// <summary>The shared rounded scrim every default toolbar sits in.</summary>
+    Border WrapInChrome(View content) => new()
     {
-        var btn = CreateBaseButton(icon, tooltip);
-        btn.BackgroundColor = CurrentToolMode == mode
-            ? Color.FromRgba(255, 255, 255, 0.3f)
-            : Colors.Transparent;
-        btn.Clicked += (_, _) =>
+        Content = content,
+        StrokeThickness = 0,
+        BackgroundColor = ToolbarBackgroundColor,
+        StrokeShape = new RoundRectangle { CornerRadius = 22 },
+        Padding = new Thickness(8, 8),
+        Margin = new Thickness(10, 8)
+    };
+
+    View CreateToolButton(ImageEditorIcon icon, string label, ImageEditorToolMode mode)
+    {
+        var selected = CurrentToolMode == mode;
+        return CreateChromeButton(icon, label, selected, true, () =>
         {
-            CurrentToolMode = CurrentToolMode == mode ? ImageEditorToolMode.Move : mode;
-        };
-        return btn;
+            CurrentToolMode = selected ? ImageEditorToolMode.Move : mode;
+        });
     }
 
-    Button CreateActionButton(string icon, string tooltip, Action action)
+    Border CreateChromeButton(ImageEditorIcon icon, string? label, bool selected, bool enabled, Action action, double? width = null)
     {
-        var btn = CreateBaseButton(icon, tooltip);
-        btn.Clicked += (_, _) => action();
-        return btn;
+        var tint = selected
+            ? ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White)
+            : ChromeForeground;
+
+        var showLabel = ShowToolLabels && !string.IsNullOrEmpty(label);
+
+        var content = new VerticalStackLayout
+        {
+            Spacing = 2,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        content.Children.Add(new GraphicsView
+        {
+            Drawable = new ImageEditorIconDrawable { Icon = icon, Color = tint },
+            HeightRequest = 22,
+            WidthRequest = 22,
+            InputTransparent = true,
+            HorizontalOptions = LayoutOptions.Center
+        });
+
+        if (showLabel)
+        {
+            content.Children.Add(new Label
+            {
+                Text = label,
+                FontSize = 9.5,
+                TextColor = tint,
+                LineBreakMode = LineBreakMode.NoWrap,
+                HorizontalTextAlignment = TextAlignment.Center
+            });
+        }
+
+        var button = new Border
+        {
+            Content = content,
+            StrokeThickness = 0,
+            BackgroundColor = selected ? AccentColor : Colors.Transparent,
+            StrokeShape = new RoundRectangle { CornerRadius = 14 },
+            Padding = new Thickness(6, 4),
+            MinimumWidthRequest = width ?? (showLabel ? 54 : 44),
+            HeightRequest = showLabel ? 48 : 40,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        SetButtonEnabled(button, enabled);
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) => action();
+        button.GestureRecognizers.Add(tap);
+
+        return button;
+    }
+
+    static void SetButtonEnabled(View button, bool enabled)
+    {
+        button.IsEnabled = enabled;
+        button.Opacity = enabled ? 1 : 0.3;
+    }
+
+    View CreateStrokeWidthButton(double width)
+    {
+        var selected = Math.Abs(DrawStrokeWidth - width) < 0.01;
+        var diameter = 6 + width * 1.6;
+
+        var dot = new Border
+        {
+            BackgroundColor = selected ? ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White) : ChromeForeground,
+            StrokeThickness = 0,
+            StrokeShape = new RoundRectangle { CornerRadius = (float)(diameter / 2) },
+            WidthRequest = diameter,
+            HeightRequest = diameter,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            InputTransparent = true
+        };
+
+        var button = new Border
+        {
+            Content = dot,
+            StrokeThickness = 0,
+            BackgroundColor = selected ? AccentColor : Colors.Transparent,
+            StrokeShape = new RoundRectangle { CornerRadius = 18 },
+            WidthRequest = 36,
+            HeightRequest = 36,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) => DrawStrokeWidth = width;
+        button.GestureRecognizers.Add(tap);
+
+        return button;
     }
 
     ColorPickerButton CreateDrawColorButton()
@@ -783,7 +1069,7 @@ public partial class ImageEditor : ContentView
         drawColorButton = new ColorPickerButton
         {
             SelectedColor = DrawStrokeColor,
-            CornerRadius = 4,
+            CornerRadius = 18,
             HeightRequest = 36,
             WidthRequest = 36,
             VerticalOptions = LayoutOptions.Center
@@ -798,7 +1084,7 @@ public partial class ImageEditor : ContentView
         {
             AvailableFonts = AvailableFonts,
             SelectedFont = TextFontFamily,
-            CornerRadius = 8,
+            CornerRadius = 12,
             HeightRequest = 36,
             VerticalOptions = LayoutOptions.Center
         };
@@ -812,7 +1098,7 @@ public partial class ImageEditor : ContentView
         {
             AvailableFontSizes = AvailableFontSizes,
             SelectedFontSize = TextFontSize,
-            CornerRadius = 8,
+            CornerRadius = 12,
             HeightRequest = 36,
             VerticalOptions = LayoutOptions.Center
         };
@@ -820,20 +1106,17 @@ public partial class ImageEditor : ContentView
         return fontSizePickerButton;
     }
 
-    static Button CreateBaseButton(string icon, string tooltip)
+    void UpdateZoomReadout()
     {
-        return new Button
-        {
-            Text = icon,
-            FontSize = 12,
-            TextColor = Colors.White,
-            BackgroundColor = Colors.Transparent,
-            MinimumWidthRequest = 44,
-            HeightRequest = 44,
-            CornerRadius = 22,
-            Padding = new Thickness(6, 0)
-        };
+        if (zoomReadout != null)
+            zoomReadout.Text = FormatZoom(zoomScale);
     }
+
+    static string FormatZoom(float scale) => $"{Math.Round(scale * 100)}%";
+
+    Color ChromeForeground => Color.FromRgba(255, 255, 255, 0.88f);
+
+    Color AccentColor => ThemeColor(ShinyThemeKeys.Color.Primary, Color.FromRgba(10, 132, 255, 255));
 
     void AddToolbarToGrid()
     {

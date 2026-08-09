@@ -19,7 +19,8 @@ public partial class ChatView : ContentView
     readonly ObservableCollection<ChatMessage> messages = new();
 
     readonly CollectionView collectionView;
-    readonly ChatInputBar inputBar;
+    readonly ChatEntryView defaultInputBar;
+    ChatEntryView inputBar;
     readonly VerticalStackLayout typingBubbleHost;
     readonly Border toastPill;
     readonly Label toastNewMessagesLabel;
@@ -47,6 +48,7 @@ public partial class ChatView : ContentView
     // paging
     bool isLoadingOlder;
     bool hasMoreOlder = true;
+    bool isReloading;
     CancellationTokenSource? loadCts;
 
     // typing
@@ -61,14 +63,21 @@ public partial class ChatView : ContentView
 
     public ChatView()
     {
+        // ItemsUpdatingScrollMode - not ScrollTo - is what actually keeps a chat pinned to the newest
+        // message: the handler applies it after the layout pass, whereas ScrollTo against an item the
+        // platform has not measured yet is silently dropped. SyncScrollMode flips it to
+        // KeepScrollOffset whenever the user has scrolled away or older history is being prepended.
+        //
+        // RemainingItemsThreshold is deliberately NOT used for paging here. It fires as you approach
+        // the *end* of the list, which in a chat is the newest message - so it loaded older history
+        // every time you reached the bottom. Paging is driven off the scroll position instead.
         this.collectionView = new CollectionView
         {
             ItemsSource = this.messages,
             ItemsLayout = new LinearItemsLayout(ItemsLayoutOrientation.Vertical) { ItemSpacing = 0 },
             ItemTemplate = new ChatBubbleTemplateSelector(this),
-            RemainingItemsThreshold = 5
+            ItemsUpdatingScrollMode = ItemsUpdatingScrollMode.KeepLastItemInView
         };
-        this.collectionView.RemainingItemsThresholdReached += this.OnRemainingItemsThresholdReached;
         this.collectionView.Scrolled += this.OnCollectionViewScrolled;
 
         // Shared toast pill — new messages on top, typing below
@@ -169,12 +178,9 @@ public partial class ChatView : ContentView
 
         this.typingBubbleHost = new VerticalStackLayout { IsVisible = false, Spacing = 0 };
 
-        this.inputBar = new ChatInputBar();
-        this.inputBar.SendRequested += this.OnSendRequested;
-        this.inputBar.AttachRequested += this.OnAttachRequested;
-        this.inputBar.ActionsRequested += this.OnInputActionsRequested;
-        this.inputBar.LinkRequested += this.OnLinkRequested;
-        this.inputBar.EditCancelled += this.OnEditCancelled;
+        this.defaultInputBar = new ChatEntryView();
+        this.inputBar = this.defaultInputBar;
+        this.HookInputBar(this.inputBar);
 
         this.imageViewer = new ImageViewer { OpenViewerOnTap = false };
 
@@ -209,24 +215,57 @@ public partial class ChatView : ContentView
         StyleGuard.MarkReady(this, typeof(ChatView));
     }
 
+    // ------- input bar hosting -------
+
+    void HookInputBar(ChatEntryView bar)
+    {
+        bar.SendRequested += this.OnSendRequested;
+        bar.AttachRequested += this.OnAttachRequested;
+        bar.ActionsRequested += this.OnInputActionsRequested;
+        bar.LinkRequested += this.OnLinkRequested;
+        bar.EditCancelled += this.OnEditCancelled;
+    }
+
+    void UnhookInputBar(ChatEntryView bar)
+    {
+        bar.SendRequested -= this.OnSendRequested;
+        bar.AttachRequested -= this.OnAttachRequested;
+        bar.ActionsRequested -= this.OnInputActionsRequested;
+        bar.LinkRequested -= this.OnLinkRequested;
+        bar.EditCancelled -= this.OnEditCancelled;
+    }
+
+    void SwapInputBar(ChatEntryView? replacement)
+    {
+        var next = replacement ?? this.defaultInputBar;
+        if (ReferenceEquals(next, this.inputBar))
+            return;
+
+        this.UnhookInputBar(this.inputBar);
+        this.rootGrid.Remove(this.inputBar);
+
+        this.inputBar = next;
+        this.HookInputBar(next);
+        this.rootGrid.Add(next, 0, 2);
+
+        // The replacement starts blank, so re-apply everything the session already told us.
+        next.IsVisible = this.IsInputBarVisible;
+        this.ApplyInputBarStyling();
+        this.ApplyInfo();
+        this.UpdateConnectionUi(this.connectionState);
+    }
+
     // ------- public entry helpers -------
 
     /// <summary>Gets or sets the current text in the input bar entry field.</summary>
     public string EntryText
     {
-        get => this.inputBar.EntryText;
-        set => this.inputBar.EntryText = value;
+        get => this.inputBar.Text;
+        set => this.inputBar.Text = value;
     }
 
     /// <summary>Programmatically submits the current entry text as if Send was pressed.</summary>
-    public void SubmitEntry()
-    {
-        var text = this.inputBar.EntryText?.Trim();
-        if (string.IsNullOrEmpty(text))
-            return;
-
-        this.OnSendRequested(text);
-    }
+    public void SubmitEntry() => this.inputBar.Submit();
 
     // ------- internal accessors used by bubbles -------
 
@@ -252,10 +291,28 @@ public partial class ChatView : ContentView
         return null;
     }
 
+    /// <summary>
+    /// Forces every bubble to be rebuilt - the only way to pick up a changed template, font or colour,
+    /// since the bubbles are plain views rather than bound ones.
+    /// </summary>
     internal void RefreshBubbles()
     {
+        // Skipped mid-reload: the initial load re-sources the view anyway, and doing it here would land
+        // between the load and the initial scroll and reset the offset to the top.
+        if (this.isReloading)
+            return;
+
+        var wasNearBottom = this.isNearBottom;
+
         this.collectionView.ItemsSource = null;
-        this.Dispatcher.Dispatch(() => this.collectionView.ItemsSource = this.messages);
+        this.Dispatcher.Dispatch(() =>
+        {
+            this.collectionView.ItemsSource = this.messages;
+
+            // Re-sourcing drops the scroll offset, so put the reader back where they were.
+            if (wasNearBottom)
+                this.ScrollToEnd();
+        });
     }
 
     Page? GetPage()

@@ -20,8 +20,8 @@
             <shiny:TextEntry AutomationId="LastNameEntry" Placeholder="Last Name"
                              Text="{Binding LastName, Mode=TwoWay}" />
 
-            <!-- Floating (Bootstrap .form-floating) -->
-            <Label Text="Floating Label" FontSize="18" FontAttributes="Bold" />
+            <!-- Floating (M3 notched outline) -->
+            <Label Text="Floating Label — M3 notched outline" FontSize="18" FontAttributes="Bold" />
             <shiny:TextEntry Placeholder="Email address" Variant="Floating"
                              Text="{Binding FloatingEmail, Mode=TwoWay}"
                              Keyboard="Email" />
@@ -29,6 +29,63 @@
             <shiny:TextEntry Placeholder="Password" Variant="Floating"
                              IsPassword="True"
                              Text="{Binding FloatingPassword, Mode=TwoWay}" />
+
+            <!-- Floating with inline tools: the label notch shifts past the leading icon -->
+            <shiny:TextEntry Placeholder="Search with a leading icon" Variant="Floating"
+                             Text="{Binding FloatingSearch, Mode=TwoWay}">
+                <shiny:TextEntry.LeftTools>
+                    <shiny:TextEntryTool Text="🔍" />
+                </shiny:TextEntry.LeftTools>
+                <shiny:ClearButtonTool />
+            </shiny:TextEntry>
+
+            <!-- Autocomplete off -->
+            <Label Text="No Autocomplete" FontSize="18" FontAttributes="Bold" />
+            <shiny:TextEntry Placeholder="Serial number"
+                             Text="{Binding Serial, Mode=TwoWay}"
+                             IsAutoCompleteEnabled="False"
+                             HintText="Autofill, autocorrect, prediction and spell check are all off" />
+
+            <!-- Keyboard accessory (iOS + Android) -->
+            <Label Text="Keyboard Accessory" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Focus these and the bar docks to the top of the soft keyboard. iOS/Android only."
+                   FontSize="12" TextColor="Gray" />
+
+            <shiny:TextEntry Placeholder="Amount (numeric — no return key without a bar)"
+                             Text="{Binding AccessoryAmount, Mode=TwoWay}"
+                             Keyboard="Numeric"
+                             AccessoryPreset="NavigationAndDone" />
+
+            <shiny:TextEntry Placeholder="Quantity"
+                             Text="{Binding AccessoryQuantity, Mode=TwoWay}"
+                             Keyboard="Numeric"
+                             AccessoryPreset="NavigationAndDone" />
+
+            <!-- Custom accessory bar -->
+            <shiny:TextEntry Placeholder="Notes (custom accessory)"
+                             Text="{Binding AccessoryNotes, Mode=TwoWay}">
+                <shiny:TextEntry.Accessory>
+                    <shiny:KeyboardAccessoryView>
+                        <shiny:KeyboardNavigationItem Direction="Previous" />
+                        <shiny:KeyboardNavigationItem Direction="Next" />
+                        <shiny:KeyboardAccessorySpacer />
+                        <shiny:KeyboardAccessoryItem Text="#tag" Command="{Binding InsertTagCommand}" />
+                        <shiny:KeyboardDismissItem />
+                    </shiny:KeyboardAccessoryView>
+                </shiny:TextEntry.Accessory>
+            </shiny:TextEntry>
+
+            <!-- Addon tool style (the old Bootstrap input-group look) -->
+            <Label Text="Addon Tool Style (opt-in)" FontSize="18" FontAttributes="Bold" />
+            <shiny:TextEntry Placeholder="Amount"
+                             Text="{Binding AddonAmount, Mode=TwoWay}"
+                             ToolStyle="Addon"
+                             Keyboard="Numeric">
+                <shiny:TextEntry.LeftTools>
+                    <shiny:TextEntryTool Text="$" />
+                </shiny:TextEntry.LeftTools>
+                <shiny:TextEntryTool Text=".00" />
+            </shiny:TextEntry>
 
             <!-- With Clear Button -->
             <Label Text="With Clear Button" FontSize="18" FontAttributes="Bold" />

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Shiny;
 
 namespace Sample.Features.TextEntry;
@@ -21,6 +22,15 @@ public partial class TextEntryViewModel : ObservableObject
     [ObservableProperty] string score = "50";
     [ObservableProperty] string floatingEmail = "";
     [ObservableProperty] string floatingPassword = "";
+    [ObservableProperty] string floatingSearch = "";
+    [ObservableProperty] string serial = "";
+    [ObservableProperty] string addonAmount = "";
+    [ObservableProperty] string accessoryAmount = "";
+    [ObservableProperty] string accessoryQuantity = "";
+    [ObservableProperty] string accessoryNotes = "";
+
+    [RelayCommand]
+    void InsertTag() => AccessoryNotes += "#";
 
     [ObservableProperty] string email = "";
     [ObservableProperty] bool hasEmailError;

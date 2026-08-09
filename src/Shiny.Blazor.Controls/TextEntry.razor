@@ -1,6 +1,6 @@
 @namespace Shiny.Blazor.Controls
 
-<div class="shiny-te @(IsFocused ? "shiny-te--focused" : "") @(HasError ? "shiny-te--error" : "") @CssClass"
+<div class="shiny-te shiny-te--@VariantClass shiny-te--tools-@ToolStyleClass @(IsFocused ? "shiny-te--focused" : "") @(HasError ? "shiny-te--error" : "") @CssClass"
      style="@RootStyle"
      @attributes="AdditionalAttributes">
 
@@ -10,14 +10,15 @@
 
         @if (LeftTools is { Count: > 0 })
         {
-            <div class="shiny-te-tools shiny-te-tools--left" style="--shiny-te-border-color: @CurrentBorderColor;">
+            <div class="shiny-te-tools shiny-te-tools--left">
                 @foreach (var tool in LeftTools)
                 {
                     if (tool.IsVisible)
                     {
                         <button class="shiny-te-tool-btn @tool.CssClass"
                                 type="button"
-                                style="color: @tool.ToolColor;"
+                                tabindex="-1"
+                                style="@ToolStyleFor(tool)"
                                 @onclick="() => OnToolClicked(tool)"
                                 @onclick:stopPropagation>
                             @if (!string.IsNullOrEmpty(tool.Icon))
@@ -35,34 +36,40 @@
         }
 
         <div class="shiny-te-field">
-            <label class="shiny-te-placeholder @(IsPlaceholderUp ? "shiny-te-placeholder--up" : "")"
-                   style="@PlaceholderStyle">
-                @Placeholder
-            </label>
+            @if (Variant == TextEntryVariant.Floating)
+            {
+                <label class="shiny-te-placeholder @(IsPlaceholderUp ? "shiny-te-placeholder--up" : "")"
+                       style="@PlaceholderStyle">
+                    @Placeholder
+                </label>
+            }
             <input @ref="inputRef"
                    class="shiny-te-input"
                    type="@InputType"
                    inputmode="@InputMode"
                    value="@DisplayText"
+                   placeholder="@ClassicPlaceholder"
                    readonly="@IsReadOnly"
                    maxlength="@InputMaxLength"
                    @oninput="OnInput"
                    @onfocus="OnFocusIn"
                    @onblur="OnFocusOut"
                    @onkeydown="OnKeyDown"
-                   style="@InputStyle" />
+                   style="@InputStyle"
+                   @attributes="InputAssistanceAttributes" />
         </div>
 
         @if (RightTools is { Count: > 0 })
         {
-            <div class="shiny-te-tools shiny-te-tools--right" style="--shiny-te-border-color: @CurrentBorderColor;">
+            <div class="shiny-te-tools shiny-te-tools--right">
                 @foreach (var tool in RightTools)
                 {
                     if (tool.IsVisible)
                     {
                         <button class="shiny-te-tool-btn @tool.CssClass"
                                 type="button"
-                                style="color: @tool.ToolColor;"
+                                tabindex="-1"
+                                style="@ToolStyleFor(tool)"
                                 @onclick="() => OnToolClicked(tool)"
                                 @onclick:stopPropagation>
                             @if (!string.IsNullOrEmpty(tool.Icon))

@@ -9,22 +9,24 @@ namespace Shiny.Maui.Controls;
 [ContentProperty(nameof(RightTools))]
 public partial class TextEntry : ContentView
 {
-    // Floating-label animation targets
-    const double PlaceholderTranslationY = -14;
-    const double PlaceholderScaledSize = 0.85;
+    // Floating-label animation. The floated label is an M3 outlined "notch": it rides up onto the
+    // top border line and paints the field background behind itself, so it never shares vertical
+    // space with the text being typed.
+    const double PlaceholderScaledSize = 0.75;
     const uint AnimationDuration = 150;
+    const double NotchHorizontalPadding = 4;
 
     // Focus glow
     const float FocusGlowRadius = 8f;
     const float FocusGlowOpacity = 0.35f;
 
-    // Bootstrap form-control sizing
+    // Sizing
     const double ClassicMinHeight = 38;
-    const double FloatingMinHeight = 58;
+    const double FloatingMinHeight = 56;
     const double EntryHorizontalPadding = 12;
+    const double InlineToolEntryPadding = 4;
     const double ClassicVerticalPadding = 6;
-    const double FloatingVerticalPaddingTop = 18;
-    const double FloatingVerticalPaddingBottom = 6;
+    const double FloatingVerticalPadding = 8;
 
     readonly Border outerBorder;
     readonly Microsoft.Maui.Controls.Shapes.RoundRectangle borderShape;
@@ -40,8 +42,13 @@ public partial class TextEntry : ContentView
     readonly Grid rootGrid;
     readonly Shadow focusGlow;
 
+    NotifyCollectionChangedEventHandler? leftToolsChangedHandler;
+    NotifyCollectionChangedEventHandler? rightToolsChangedHandler;
+
     bool suppressTextChanged;
     bool isPlaceholderUp;
+    double placeholderRestY;
+    double placeholderFloatY;
 
     // Internal event for tools (like ClearButtonTool) to observe text changes
     internal event EventHandler? InternalTextChanged;
@@ -51,10 +58,14 @@ public partial class TextEntry : ContentView
         placeholderLabel = new Label
         {
             FontSize = 16,
-            VerticalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Start,
             HorizontalOptions = LayoutOptions.Start,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            Padding = new Thickness(NotchHorizontalPadding, 0),
             InputTransparent = true,
-            AnchorX = 0 // Scale from left edge
+            IsVisible = false,
+            AnchorX = 0,   // scale from the left edge so the notch stays put horizontally
+            AnchorY = 0.5  // ...and around its own centre so it stays welded to the border line
         };
 
         entry = new BorderlessEntry
@@ -70,27 +81,26 @@ public partial class TextEntry : ContentView
         entry.Focused += OnEntryFocused;
         entry.Unfocused += OnEntryUnfocused;
         entry.Completed += OnEntryCompleted;
+        entry.HandlerChanged += (_, _) => SyncAccessory();
 
         entryArea = new Grid
         {
             Padding = new Thickness(EntryHorizontalPadding, ClassicVerticalPadding),
-            Children = { placeholderLabel, entry }
+            Children = { entry }
         };
 
-        // Tool "addon" surface → surface-container-high token (was #E9ECEF)
         leftToolsLayout = new HorizontalStackLayout
         {
             Spacing = 0,
             VerticalOptions = LayoutOptions.Fill
         };
-        leftToolsLayout.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        leftToolsLayout.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         rightToolsLayout = new HorizontalStackLayout
         {
             Spacing = 0,
             VerticalOptions = LayoutOptions.Fill
         };
-        rightToolsLayout.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
 
         leftSeparator = new BoxView
         {
@@ -143,6 +153,7 @@ public partial class TextEntry : ContentView
             Shadow = focusGlow
         };
         outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        outerBorder.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         hintLabel = new Label
         {
@@ -160,9 +171,18 @@ public partial class TextEntry : ContentView
             }
         };
         rootGrid.Add(outerBorder, 0, 0);
+        // The floating label overlays the border rather than living inside the field, which is what
+        // lets it sit ON the top stroke when floated instead of on top of the text being typed.
+        rootGrid.Add(placeholderLabel, 0, 0);
         rootGrid.Add(hintLabel, 0, 1);
+        placeholderLabel.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         Content = rootGrid;
+
+        // The accessory bar lives outside this control's visual tree (a UIKit input accessory on iOS,
+        // a view in the activity's content frame on Android), so it has to be torn down explicitly
+        // when the field goes away - nothing else would.
+        Unloaded += (_, _) => OnAccessoryFocusChanged(false);
 
         // Initialize tool collections
         LeftTools = new ObservableCollection<TextEntryTool>();
@@ -170,6 +190,7 @@ public partial class TextEntry : ContentView
 
         // Apply default variant (Classic) so the placeholder lives on the native entry.
         ApplyVariant();
+        ApplyToolStyle();
 
         // Seed resting border/separator + placeholder colors (explicit-or-theme-token).
         ApplyBorderState();
@@ -187,6 +208,7 @@ public partial class TextEntry : ContentView
     const string FocusedBorderColorToken = ShinyThemeKeys.Color.Primary;
     const string ErrorColorToken = ShinyThemeKeys.Color.Error;
     const string HintColorToken = ShinyThemeKeys.Color.OnSurfaceVariant;
+    const string ToolAddonColorToken = ShinyThemeKeys.Color.SurfaceContainerHigh;
 
     // Applies an explicit color when set, otherwise binds the theme token, to the border stroke
     // (a Brush, so we drive a SolidColorBrush's Color) and the tool separators.
@@ -226,7 +248,8 @@ public partial class TextEntry : ContentView
             placeholderLabel.SetDynamicResource(Label.TextColorProperty, PlaceholderColorToken);
     }
 
-    // Floated (up) placeholder color — error wins, else focused accent.
+    // Floated (up) placeholder color. M3 only accents the label while the field actually has focus -
+    // a floated-but-unfocused label stays muted, otherwise every filled field on a form shouts.
     void ApplyPlaceholderFloatColor()
     {
         if (HasError)
@@ -236,6 +259,10 @@ public partial class TextEntry : ContentView
             else
                 placeholderLabel.SetDynamicResource(Label.TextColorProperty, ErrorColorToken);
         }
+        else if (!entry.IsFocused)
+        {
+            ApplyPlaceholderRestColor();
+        }
         else if (FocusedPlaceholderColor is Color fc)
         {
             placeholderLabel.TextColor = fc;
@@ -243,6 +270,38 @@ public partial class TextEntry : ContentView
         else
         {
             placeholderLabel.SetDynamicResource(Label.TextColorProperty, FocusedPlaceholderColorToken);
+        }
+    }
+
+    void ApplyPlaceholderStateColor()
+    {
+        if (isPlaceholderUp)
+            ApplyPlaceholderFloatColor();
+        else
+            ApplyPlaceholderRestColor();
+    }
+
+    // The floated label has to mask the border stroke it sits on, so it paints the same colour as the
+    // field. A transparent field background can't mask anything, so fall back to the surface token.
+    // Only the floated state paints - at rest the label is over the field and a fill would be a block
+    // of colour on a field that might be transparent by design.
+    void ApplyNotchBackground()
+    {
+        if (!isPlaceholderUp || Variant != TextEntryVariant.Floating)
+        {
+            placeholderLabel.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+            placeholderLabel.BackgroundColor = Colors.Transparent;
+            return;
+        }
+
+        if (EntryBackgroundColor is Color c && c.Alpha > 0)
+        {
+            placeholderLabel.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+            placeholderLabel.BackgroundColor = c;
+        }
+        else
+        {
+            placeholderLabel.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
         }
     }
 
@@ -268,27 +327,86 @@ public partial class TextEntry : ContentView
 
     void ApplyVariant()
     {
+        ApplyEntryAreaPadding();
+
         if (Variant == TextEntryVariant.Classic)
         {
             placeholderLabel.IsVisible = false;
             entry.Placeholder = Placeholder;
-            entryArea.Padding = new Thickness(EntryHorizontalPadding, ClassicVerticalPadding);
             outerBorder.MinimumHeightRequest = ClassicMinHeight;
+            rootGrid.Padding = 0;
+            ApplyNotchBackground();
         }
         else
         {
             placeholderLabel.IsVisible = true;
+            placeholderLabel.Text = Placeholder;
             entry.Placeholder = string.Empty;
-            entryArea.Padding = new Thickness(EntryHorizontalPadding, FloatingVerticalPaddingTop, EntryHorizontalPadding, FloatingVerticalPaddingBottom);
             outerBorder.MinimumHeightRequest = FloatingMinHeight;
 
             // Snap the placeholder to the correct rest position for the current text.
-            isPlaceholderUp = false;
-            placeholderLabel.TranslationY = 0;
-            placeholderLabel.Scale = 1;
-            if (!string.IsNullOrEmpty(entry.Text) || entry.IsFocused)
-                AnimatePlaceholder(true);
+            isPlaceholderUp = !string.IsNullOrEmpty(entry.Text) || entry.IsFocused;
+            placeholderLabel.Scale = isPlaceholderUp ? PlaceholderScaledSize : 1;
+            ApplyPlaceholderStateColor();
+            ApplyNotchBackground();
+            UpdatePlaceholderGeometry();
         }
+    }
+
+    // In Inline tool mode the icons already provide the visual inset, so the field's own padding
+    // shrinks on that side - otherwise a leading icon sits a full 24pt away from the text.
+    void ApplyEntryAreaPadding()
+    {
+        var vertical = Variant == TextEntryVariant.Classic ? ClassicVerticalPadding : FloatingVerticalPadding;
+        var inline = ToolStyle == TextEntryToolStyle.Inline;
+        var left = inline && leftToolsLayout.IsVisible ? InlineToolEntryPadding : EntryHorizontalPadding;
+        var right = inline && rightToolsLayout.IsVisible ? InlineToolEntryPadding : EntryHorizontalPadding;
+
+        var padding = new Thickness(left, vertical, right, vertical);
+        if (entryArea.Padding != padding)
+            entryArea.Padding = padding;
+    }
+
+    /// <summary>
+    /// Recomputes where the floating label rests and where it floats to. Both depend on measured
+    /// sizes (the label's own height, the field's height, and how much room the leading tools take),
+    /// so this runs on every relevant SizeChanged as well as on variant changes.
+    /// </summary>
+    /// <param name="snap">
+    /// Move the label to the target straight away. False while an animation is about to run - snapping
+    /// first would put the label at its destination and leave nothing to animate.
+    /// </param>
+    void UpdatePlaceholderGeometry(bool snap = true)
+    {
+        if (Variant != TextEntryVariant.Floating)
+            return;
+
+        var labelHeight = placeholderLabel.Height;
+        var fieldHeight = outerBorder.Height;
+        if (labelHeight <= 0 || fieldHeight <= 0)
+            return;
+
+        // Rest: vertically centred in the field. Float: centred on the top border stroke.
+        placeholderRestY = (fieldHeight - labelHeight) / 2;
+        placeholderFloatY = -labelHeight / 2;
+
+        // Reserve the half-label that pokes above the border so the notch is never clipped by an
+        // ancestor and never overlaps whatever sits above this control.
+        var topPadding = labelHeight / 2;
+        if (Math.Abs(rootGrid.Padding.Top - topPadding) > 0.5)
+            rootGrid.Padding = new Thickness(0, topPadding, 0, 0);
+
+        var leftInset = leftToolsLayout.IsVisible ? leftToolsLayout.Width : 0;
+        var left = Math.Max(0, leftInset + entryArea.Padding.Left - NotchHorizontalPadding);
+        if (Math.Abs(placeholderLabel.Margin.Left - left) > 0.5)
+            placeholderLabel.Margin = new Thickness(left, 0, 0, 0);
+
+        var available = outerBorder.Width - left - EntryHorizontalPadding;
+        if (available > 0 && Math.Abs(placeholderLabel.MaximumWidthRequest - available) > 0.5)
+            placeholderLabel.MaximumWidthRequest = available;
+
+        if (snap)
+            placeholderLabel.TranslationY = isPlaceholderUp ? placeholderFloatY : placeholderRestY;
     }
 
     void ApplyPlaceholder(string text)
@@ -355,7 +473,10 @@ public partial class TextEntry : ContentView
     void OnEntryFocused(object? sender, FocusEventArgs e)
     {
         if (Variant == TextEntryVariant.Floating)
+        {
             AnimatePlaceholder(true);
+            ApplyPlaceholderStateColor();
+        }
 
         if (HasError)
             ApplyStroke(ErrorColor, ErrorColorToken);
@@ -367,12 +488,18 @@ public partial class TextEntry : ContentView
             ShowGlow(ErrorColor, ErrorColorToken);
         else
             ShowGlow(FocusedBorderColor, FocusedBorderColorToken);
+
+        OnAccessoryFocusChanged(true);
     }
 
     void OnEntryUnfocused(object? sender, FocusEventArgs e)
     {
-        if (Variant == TextEntryVariant.Floating && string.IsNullOrEmpty(entry.Text))
-            AnimatePlaceholder(false);
+        if (Variant == TextEntryVariant.Floating)
+        {
+            if (string.IsNullOrEmpty(entry.Text))
+                AnimatePlaceholder(false);
+            ApplyPlaceholderStateColor();
+        }
 
         if (HasError)
             ApplyStroke(ErrorColor, ErrorColorToken);
@@ -384,6 +511,8 @@ public partial class TextEntry : ContentView
             ShowGlow(ErrorColor, ErrorColorToken);
         else
             HideGlow();
+
+        OnAccessoryFocusChanged(false);
     }
 
     void OnEntryCompleted(object? sender, EventArgs e)
@@ -399,22 +528,22 @@ public partial class TextEntry : ContentView
         if (up == isPlaceholderUp) return;
         isPlaceholderUp = up;
 
+        // The notch mask goes on before the label leaves the field and only comes off once it is
+        // fully back inside it, so the stroke is never visible through a half-scaled label.
         if (up)
-        {
-            await Task.WhenAll(
-                placeholderLabel.TranslateToAsync(0, PlaceholderTranslationY, AnimationDuration, Easing.CubicOut),
-                placeholderLabel.ScaleToAsync(PlaceholderScaledSize, AnimationDuration, Easing.CubicOut)
-            );
-            ApplyPlaceholderFloatColor();
-        }
-        else
-        {
-            await Task.WhenAll(
-                placeholderLabel.TranslateToAsync(0, 0, AnimationDuration, Easing.CubicOut),
-                placeholderLabel.ScaleToAsync(1, AnimationDuration, Easing.CubicOut)
-            );
-            ApplyPlaceholderRestColor();
-        }
+            ApplyNotchBackground();
+
+        UpdatePlaceholderGeometry(snap: false);
+
+        await Task.WhenAll(
+            placeholderLabel.TranslateToAsync(0, up ? placeholderFloatY : placeholderRestY, AnimationDuration, Easing.CubicOut),
+            placeholderLabel.ScaleToAsync(up ? PlaceholderScaledSize : 1, AnimationDuration, Easing.CubicOut)
+        );
+
+        if (!up && !isPlaceholderUp)
+            ApplyNotchBackground();
+
+        ApplyPlaceholderStateColor();
     }
 
     void UpdateCharacterCount()
@@ -467,51 +596,89 @@ public partial class TextEntry : ContentView
             ShowGlow(FocusedBorderColor, FocusedBorderColorToken);
         else
             HideGlow();
+
+        ApplyPlaceholderStateColor();
     }
 
-    // Tool collection management
+    // ---- Tools ----------------------------------------------------------------------------
+
     void OnToolsChanged(IList<TextEntryTool>? oldTools, IList<TextEntryTool>? newTools, HorizontalStackLayout layout)
     {
-        if (oldTools is INotifyCollectionChanged oldNcc)
-            oldNcc.CollectionChanged -= (_, _) => RebuildTools(newTools, layout);
+        var isLeft = layout == leftToolsLayout;
+        ref var handler = ref isLeft ? ref leftToolsChangedHandler : ref rightToolsChangedHandler;
+
+        if (oldTools is INotifyCollectionChanged oldNcc && handler is not null)
+            oldNcc.CollectionChanged -= handler;
 
         DetachTools(oldTools);
         RebuildTools(newTools, layout);
         AttachTools(newTools);
 
         if (newTools is INotifyCollectionChanged ncc)
-            ncc.CollectionChanged += (_, _) =>
+        {
+            handler = (_, _) =>
             {
                 DetachTools(newTools);
                 RebuildTools(newTools, layout);
                 AttachTools(newTools);
             };
+            ncc.CollectionChanged += handler;
+        }
+        else
+        {
+            handler = null;
+        }
     }
 
     void RebuildTools(IList<TextEntryTool>? tools, HorizontalStackLayout layout)
     {
         layout.Children.Clear();
-        if (tools is null || tools.Count == 0)
+        layout.IsVisible = tools is { Count: > 0 };
+
+        if (layout.IsVisible)
         {
-            layout.IsVisible = false;
-            if (layout == leftToolsLayout)
-                leftSeparator.IsVisible = false;
+            foreach (var tool in tools!)
+            {
+                tool.ParentEntry = this;
+                tool.ApplyToolStyle(ToolStyle);
+                layout.Children.Add(tool);
+            }
+        }
+
+        ApplyToolStyle();
+    }
+
+    // Paints the tool rails for the current ToolStyle. Inline is the default: no addon block, no
+    // separator - the icons sit on the field itself.
+    void ApplyToolStyle()
+    {
+        var addon = ToolStyle == TextEntryToolStyle.Addon;
+
+        foreach (var layout in new[] { leftToolsLayout, rightToolsLayout })
+        {
+            if (addon)
+            {
+                layout.SetDynamicResource(VisualElement.BackgroundColorProperty, ToolAddonColorToken);
+            }
             else
-                rightSeparator.IsVisible = false;
-            return;
+            {
+                // Drop the token binding as well as the colour - leaving it attached would repaint the
+                // addon surface behind inline tools the next time the theme changed.
+                layout.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
+                layout.BackgroundColor = Colors.Transparent;
+            }
         }
 
-        layout.IsVisible = true;
-        if (layout == leftToolsLayout)
-            leftSeparator.IsVisible = true;
-        else
-            rightSeparator.IsVisible = true;
+        leftSeparator.IsVisible = addon && leftToolsLayout.IsVisible;
+        rightSeparator.IsVisible = addon && rightToolsLayout.IsVisible;
 
-        foreach (var tool in tools)
-        {
-            tool.ParentEntry = this;
-            layout.Children.Add(tool);
-        }
+        foreach (var tool in leftToolsLayout.Children.OfType<TextEntryTool>())
+            tool.ApplyToolStyle(ToolStyle);
+        foreach (var tool in rightToolsLayout.Children.OfType<TextEntryTool>())
+            tool.ApplyToolStyle(ToolStyle);
+
+        ApplyEntryAreaPadding();
+        UpdatePlaceholderGeometry();
     }
 
     void AttachTools(IList<TextEntryTool>? tools)
@@ -533,6 +700,8 @@ public partial class TextEntry : ContentView
                 aware.Detach();
         }
     }
+
+    // ---- Mask -----------------------------------------------------------------------------
 
     void OnMaskChanged()
     {
@@ -579,10 +748,71 @@ public partial class TextEntry : ContentView
             AnimatePlaceholder(false);
     }
 
+    // ---- Input assistance -----------------------------------------------------------------
+
+    // Autofill, autocorrect and predictive text are three separate platform switches. Turning
+    // AutoComplete off kills all of them, because the reason anyone reaches for it - serials, codes,
+    // SKUs, usernames - is broken by any one of the three.
+    void ApplyInputAssistance()
+    {
+        var auto = IsAutoCompleteEnabled;
+        entry.IsSpellCheckEnabled = auto && IsSpellCheckEnabled;
+        entry.IsTextPredictionEnabled = auto && IsTextPredictionEnabled;
+        entry.IsAutoCompleteEnabled = auto;
+    }
+
+    // ---- Keyboard accessory ---------------------------------------------------------------
+
+    KeyboardAccessoryView? resolvedAccessory;
+    KeyboardAccessoryView? presetAccessory;
+
+    /// <summary>The accessory bar currently in effect, whether set explicitly or built from a preset.</summary>
+    internal KeyboardAccessoryView? ResolvedAccessory => resolvedAccessory;
+
+    // An explicit Accessory always wins; a preset is materialized once and cached, because on iOS a
+    // UIView can only have one superview and rebuilding the bar per focus would churn it.
+    void SyncAccessory()
+    {
+        var bar = Accessory;
+        if (bar is null && AccessoryPreset != KeyboardAccessoryPreset.None)
+            bar = presetAccessory ??= KeyboardAccessoryView.FromPreset(AccessoryPreset);
+
+        if (!ReferenceEquals(bar, resolvedAccessory))
+        {
+            resolvedAccessory?.DetachOwner(this);
+            resolvedAccessory = bar;
+            resolvedAccessory?.AttachOwner(this);
+        }
+
+        ApplyAccessory(resolvedAccessory);
+    }
+
+    void ResetPresetAccessory()
+    {
+        presetAccessory = null;
+        SyncAccessory();
+    }
+
+    // Implemented per platform (iOS: UIResponder.InputAccessoryView, Android: an inset-tracked bar in
+    // the activity's content view). No implementation on the other heads, which is the no-op.
+    partial void ApplyAccessory(KeyboardAccessoryView? bar);
+    partial void OnAccessoryFocusChangedPlatform(bool focused);
+
+    void OnAccessoryFocusChanged(bool focused)
+    {
+        if (resolvedAccessory is not null)
+            resolvedAccessory.NotifyFocusChanged(this, focused);
+
+        OnAccessoryFocusChangedPlatform(focused);
+    }
+
     // Public API
     public event EventHandler<TextChangedEventArgs>? TextChanged;
     public event EventHandler? Completed;
 
     public new bool Focus() => entry.Focus();
     public new void Unfocus() => entry.Unfocus();
+
+    /// <summary>True while the inner text input holds focus.</summary>
+    public bool IsInputFocused => entry.IsFocused;
 }

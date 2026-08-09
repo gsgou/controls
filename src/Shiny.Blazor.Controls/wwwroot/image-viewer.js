@@ -34,6 +34,13 @@ export function init(root, backdrop, img, dotnetRef, maxZoom) {
     };
     states.set(root, state);
 
+    // Without this the browser starts a native image drag on pointermove and fires
+    // pointercancel, which aborts the pan a few pixels in.
+    img.draggable = false;
+    img.style.touchAction = 'none';
+
+    const onDragStart = (ev) => ev.preventDefault();
+
     const onDown = (ev) => {
         state.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
         img.setPointerCapture(ev.pointerId);
@@ -55,6 +62,9 @@ export function init(root, backdrop, img, dotnetRef, maxZoom) {
             if (now - state.lastTapTime < 300 && Math.hypot(dx, dy) < 30) {
                 onDoubleTap(state, ev);
                 state.lastTapTime = 0;
+                // double tap moved the image, so re-base the pan origin captured above
+                state.panOriginTx = state.tx;
+                state.panOriginTy = state.ty;
             } else {
                 state.lastTapTime = now;
                 state.lastTapX = ev.clientX;
@@ -92,6 +102,7 @@ export function init(root, backdrop, img, dotnetRef, maxZoom) {
         }
     };
 
+    img.addEventListener('dragstart', onDragStart);
     img.addEventListener('pointerdown', onDown);
     img.addEventListener('pointermove', onMove);
     img.addEventListener('pointerup', onUp);
@@ -99,7 +110,7 @@ export function init(root, backdrop, img, dotnetRef, maxZoom) {
 
     backdrop.addEventListener('click', () => state.dotnet.invokeMethodAsync('OnRequestClose'));
 
-    state._handlers = { onDown, onMove, onUp };
+    state._handlers = { onDown, onMove, onUp, onDragStart };
 }
 
 function onDoubleTap(state, ev) {
@@ -135,7 +146,8 @@ export function close(root) {
 export function dispose(root) {
     const state = states.get(root);
     if (!state) return;
-    const { onDown, onMove, onUp } = state._handlers;
+    const { onDown, onMove, onUp, onDragStart } = state._handlers;
+    state.img.removeEventListener('dragstart', onDragStart);
     state.img.removeEventListener('pointerdown', onDown);
     state.img.removeEventListener('pointermove', onMove);
     state.img.removeEventListener('pointerup', onUp);

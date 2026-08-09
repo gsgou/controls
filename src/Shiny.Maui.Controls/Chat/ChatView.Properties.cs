@@ -260,16 +260,61 @@ public partial class ChatView
         nameof(InputBarBorderColor), typeof(Color), typeof(ChatView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
             {
-                // null => leave ChatInputBar's own themed value in place.
+                // null => leave ChatEntryView's own themed value in place.
                 if (n is Color inputBarBorderColor)
-                    ((ChatView)b).inputBar.BarBorderColor = inputBarBorderColor;
+                    ((ChatView)b).inputBar.BorderColor = inputBarBorderColor;
             }));
 
-    /// <summary>Leave unset to follow the active theme.</summary>
+    /// <summary>
+    /// Outline of the rounded composer. (Before the composer was rounded this coloured a hairline rule
+    /// between the message list and the bar; that rule is gone.) Leave unset to follow the active theme.
+    /// </summary>
     public Color? InputBarBorderColor
     {
         get => (Color?)GetValue(InputBarBorderColorProperty);
         set => SetValue(InputBarBorderColorProperty, value);
+    }
+
+    public static readonly BindableProperty InputBarProperty = BindableProperty.Create(
+        nameof(InputBar), typeof(ChatEntryView), typeof(ChatView), null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
+            {
+                ((ChatView)b).SwapInputBar(n as ChatEntryView);
+            }));
+
+    /// <summary>
+    /// The composer hosted at the bottom of the chat. Assign your own <see cref="ChatEntryView"/> to
+    /// replace the built-in one - the view re-wires its events and re-applies the session state. Reads
+    /// back whichever composer is currently in use, so <c>InputBar.MaxLines = 3</c> works without
+    /// supplying one. Setting it to null restores the built-in composer.
+    /// </summary>
+    public ChatEntryView InputBar
+    {
+        get => (ChatEntryView?)GetValue(InputBarProperty) ?? this.defaultInputBar;
+        set => SetValue(InputBarProperty, value);
+    }
+
+    /// <summary>
+    /// Replays the pass-through style properties onto a newly-swapped-in composer. Only values the
+    /// consumer explicitly set on the ChatView are pushed: a supplied ChatEntryView configures itself,
+    /// and copying unconditionally would stamp ChatView's defaults over its own placeholder and labels.
+    /// </summary>
+    void ApplyInputBarStyling()
+    {
+        var bar = this.inputBar;
+
+        if (this.IsSet(PlaceholderTextProperty))
+            bar.PlaceholderText = this.PlaceholderText;
+        if (this.IsSet(SendButtonTextProperty))
+            bar.SendButtonText = this.SendButtonText;
+        if (this.SendButtonBackgroundColor is Color sendBg)
+            bar.SendButtonBackgroundColor = sendBg;
+        if (this.SendButtonTextColor is Color sendFg)
+            bar.SendButtonTextColor = sendFg;
+        if (this.InputBarBackgroundColor is Color barBg)
+            bar.BarBackgroundColor = barBg;
+        if (this.InputBarBorderColor is Color barBorder)
+            bar.BorderColor = barBorder;
     }
 
     public static readonly BindableProperty IsInputBarVisibleProperty = BindableProperty.Create(

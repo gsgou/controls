@@ -232,20 +232,23 @@
     z-index: 1;
 }
 
+/* A short centred pill, not an edge-to-edge rule: a line spanning the block reads as a border on
+   it rather than as something you can grab. Kept in step with the MAUI grip. */
 .shiny-agenda-grip::after {
     content: '';
     position: absolute;
-    left: 14px;
-    right: 14px;
-    top: 50%;
+    left: 50%;
+    width: 26px;
+    margin-left: -13px;
     height: 3px;
     border-radius: 2px;
-    background: rgb(255 255 255 / 0.7);
-    transform: translateY(-50%);
+    background: rgb(255 255 255 / 0.85);
 }
 
 .shiny-agenda-grip--start { top: 0; }
+.shiny-agenda-grip--start::after { top: 3px; }
 .shiny-agenda-grip--end { bottom: 0; }
+.shiny-agenda-grip--end::after { bottom: 3px; }
 
 .shiny-agenda-snapguide {
     position: absolute;

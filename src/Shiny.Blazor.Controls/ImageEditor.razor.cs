@@ -16,6 +16,7 @@ public partial class ImageEditor : IAsyncDisposable
     bool canRedo;
     string currentMode = "none";
     string activeColor = "#ffffff";
+    double zoomLevel = 1;
 
     // Inline text input state
     bool isTextInputVisible;
@@ -24,6 +25,9 @@ public partial class ImageEditor : IAsyncDisposable
     double textInputTop;
     double textInputNormX;
     double textInputNormY;
+    double textInputScale = 1;
+
+    static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
 
     [Parameter] public string? Source { get; set; }
     [Parameter] public byte[]? ImageData { get; set; }
@@ -34,6 +38,23 @@ public partial class ImageEditor : IAsyncDisposable
     [Parameter] public bool AllowLine { get; set; } = true;
     [Parameter] public bool AllowArrow { get; set; } = true;
     [Parameter] public bool AllowZoom { get; set; } = true;
+    /// <summary>Lower zoom bound. 1.0 is fit-to-view.</summary>
+    [Parameter] public double MinZoom { get; set; } = 1;
+    /// <summary>Upper zoom bound. 8x by default, enough for per-pixel touch-ups.</summary>
+    [Parameter] public double MaxZoom { get; set; } = 8;
+    /// <summary>Shows the zoom out / percentage / zoom in / fit cluster in the default toolbar.</summary>
+    [Parameter] public bool ShowZoomControls { get; set; } = true;
+    /// <summary>Shows a caption under each tool icon. Turn off for a compact icon-only bar.</summary>
+    [Parameter] public bool ShowToolLabels { get; set; } = true;
+    /// <summary>Shows the pen-weight presets next to the colour swatch for the ink tools.</summary>
+    [Parameter] public bool ShowStrokeWidthPicker { get; set; } = true;
+    /// <summary>Pen weights offered by the stroke-width picker.</summary>
+    [Parameter] public IEnumerable<double> StrokeWidthPresets { get; set; } = [2, 4, 8];
+    /// <summary>Extra content rendered at the trailing edge of the toolbar (a save button, say).</summary>
+    [Parameter] public RenderFragment? ToolbarActions { get; set; }
+    [Parameter] public string CropApplyText { get; set; } = "Apply";
+    [Parameter] public string CropCancelText { get; set; } = "Cancel";
+    [Parameter] public EventCallback<double> ZoomLevelChanged { get; set; }
     [Parameter] public bool AllowFontSelection { get; set; }
     [Parameter] public bool AllowFontSizeSelection { get; set; }
     [Parameter] public string DrawStrokeColor { get; set; } = "#ffffff";
@@ -74,7 +95,9 @@ public partial class ImageEditor : IAsyncDisposable
                 TextColor = activeColor,
                 TextSize = TextFontSize,
                 TextFont = TextFontFamily,
-                AllowZoom = AllowZoom
+                AllowZoom = AllowZoom,
+                MinZoom = MinZoom,
+                MaxZoom = MaxZoom
             });
 
             initialized = true;
@@ -107,6 +130,7 @@ public partial class ImageEditor : IAsyncDisposable
         await module.InvokeVoidAsync("updateDrawSettings", rootEl, activeColor, DrawStrokeWidth);
         await module.InvokeVoidAsync("updateTextSettings", rootEl, activeColor, TextFontSize, TextFontFamily);
         await module.InvokeVoidAsync("updateAllowZoom", rootEl, AllowZoom);
+        await module.InvokeVoidAsync("updateZoomLimits", rootEl, MinZoom, MaxZoom);
     }
 
     async Task LoadImageAsync()
@@ -161,6 +185,34 @@ public partial class ImageEditor : IAsyncDisposable
             currentMode = mode;
             StateHasChanged();
         }
+    }
+
+    /// <summary>Current zoom factor, where 1.0 is fit-to-view.</summary>
+    public double ZoomLevel => zoomLevel;
+
+    public async ValueTask ZoomInAsync()
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("zoomIn", rootEl);
+    }
+
+    public async ValueTask ZoomOutAsync()
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("zoomOut", rootEl);
+    }
+
+    public async ValueTask ZoomToFitAsync()
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("zoomToFit", rootEl);
+    }
+
+    /// <summary>Sets an explicit zoom factor, anchored on the centre of the view.</summary>
+    public async ValueTask SetZoomAsync(double scale)
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("setZoom", rootEl, scale);
     }
 
     public async ValueTask ApplyCropAsync()
@@ -249,6 +301,43 @@ public partial class ImageEditor : IAsyncDisposable
 
     Task CancelCrop() => SetModeAsync("none").AsTask();
 
+    // Named handlers rather than inline lambdas: the razor attribute delimiter is a double quote,
+    // so a mode string can't be written inline, and returning the Task keeps Blazor awaiting it
+    Task SelectMoveTool() => SetModeAsync("none").AsTask();
+
+    Task RotateClockwise() => RotateAsync(90).AsTask();
+
+    Task ApplyCrop() => ApplyCropAsync().AsTask();
+
+    Task Undo() => UndoAsync().AsTask();
+
+    Task Redo() => RedoAsync().AsTask();
+
+    Task Reset() => ResetAsync().AsTask();
+
+    Task ZoomIn() => ZoomInAsync().AsTask();
+
+    Task ZoomOut() => ZoomOutAsync().AsTask();
+
+    Task ZoomToFit() => ZoomToFitAsync().AsTask();
+
+    async Task SetStrokeWidthAsync(double width)
+    {
+        DrawStrokeWidth = width;
+        if (module != null)
+            await module.InvokeVoidAsync("updateDrawSettings", rootEl, activeColor, width);
+    }
+
+    bool IsSelectedWidth(double width) => Math.Abs(DrawStrokeWidth - width) < 0.01;
+
+    bool IsInkMode => currentMode is "draw" or "line" or "arrow";
+
+    string ToolbarOrderClass => ToolbarPosition == "top" ? "shiny-imgeditor-toolbar--top" : string.Empty;
+
+    string ZoomText => $"{Math.Round(zoomLevel * 100)}%";
+
+    string Active(string mode) => currentMode == mode ? "active" : string.Empty;
+
     // Inline text input
     async Task OnTextInputKeyDown(KeyboardEventArgs e)
     {
@@ -298,16 +387,25 @@ public partial class ImageEditor : IAsyncDisposable
     }
 
     [JSInvokable]
-    public Task OnRequestTextInput(double canvasX, double canvasY, double normX, double normY)
+    public Task OnRequestTextInput(double canvasX, double canvasY, double normX, double normY, double scale)
     {
         textInputLeft = canvasX;
         textInputTop = canvasY;
         textInputNormX = normX;
         textInputNormY = normY;
+        textInputScale = scale;
         textInputValue = "";
         isTextInputVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task OnZoomChanged(double value)
+    {
+        zoomLevel = value;
+        await ZoomLevelChanged.InvokeAsync(value);
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
@@ -332,5 +430,7 @@ public partial class ImageEditor : IAsyncDisposable
         public double TextSize { get; set; }
         public string? TextFont { get; set; }
         public bool AllowZoom { get; set; }
+        public double MinZoom { get; set; }
+        public double MaxZoom { get; set; }
     }
 }

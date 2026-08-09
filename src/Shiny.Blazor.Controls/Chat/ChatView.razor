@@ -82,7 +82,7 @@
                             }
                             else
                             {
-                                <span>@((MarkupString)ChatMarkdown.ToHtml(msg.Body))</span>
+                                <span class="shiny-chat-text">@((MarkupString)ChatMarkdown.ToHtml(msg.Body))</span>
                             }
 
                             @if (HasAnyAction(msg))
@@ -180,55 +180,25 @@
 
     @if (IsInputBarVisible && session is not null && errorMessage is null)
     {
-        @if (BodyPermissions != MessageBodyPermissions.None)
+        @if (InputTemplate is not null)
         {
-            <div class="shiny-chat-mdtoolbar">
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Bold))
-                {
-                    <button type="button" title="Bold" @onclick='() => ApplyMarkdownAsync("**", "**", "bold")'><b>B</b></button>
-                }
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Italics))
-                {
-                    <button type="button" title="Italic" @onclick='() => ApplyMarkdownAsync("*", "*", "italic")'><i>I</i></button>
-                }
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Underline))
-                {
-                    <button type="button" title="Underline" @onclick='() => ApplyMarkdownAsync("++", "++", "underline")'><u>U</u></button>
-                }
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Strikethrough))
-                {
-                    <button type="button" title="Strikethrough" @onclick='() => ApplyMarkdownAsync("~~", "~~", "strike")'><s>S</s></button>
-                }
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Codeblocks))
-                {
-                    <button type="button" title="Code" @onclick='() => ApplyMarkdownAsync("`", "`", "code")'>&lt;/&gt;</button>
-                }
-                @if (BodyPermissions.HasFlag(MessageBodyPermissions.Links))
-                {
-                    <button type="button" title="Link" @onclick="InsertLinkAsync">🔗</button>
-                }
-            </div>
+            @InputTemplate
         }
-
-        <div class="shiny-chat-inputbar">
-            @if (CanSendImages)
-            {
-                <label class="shiny-chat-attach" title="Attach image">
-                    +
-                    <InputFile OnChange="OnImageSelected" accept="image/*" capture="environment" style="display:none;" />
-                </label>
-            }
-            <textarea class="shiny-chat-input"
-                      @ref="inputEl"
-                      placeholder="@PlaceholderText"
-                      rows="1"
-                      disabled="@(!CanSend)"
-                      @bind="inputText"
-                      @bind:event="oninput"
-                      @bind:after="OnInputChanged"
-                      @onkeydown="OnKeyDown"></textarea>
-            <button class="shiny-chat-send" type="button" disabled="@(!CanSend)" @onclick="SendTextAsync">@SendButtonText</button>
-        </div>
+        else
+        {
+            <ChatEntry @bind-Text="inputText"
+                       Placeholder="@PlaceholderText"
+                       SendButtonText="@SendButtonText"
+                       IsEnabled="CanSend"
+                       ShowAttach="CanSendImages"
+                       BodyPermissions="BodyPermissions"
+                       MaxRows="MaxInputRows"
+                       OnSend="SendTextAsync"
+                       OnAttach="OnImageSelected"
+                       OnTyping="OnInputChanged"
+                       LeftToolbar="@InputLeftToolbar"
+                       RightToolbar="@InputRightToolbar" />
+        }
     }
 </div>
 

@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Infrastructure;
+
 namespace Shiny.Maui.Controls;
 
 public interface ITextEntryAwareTool
@@ -7,100 +8,42 @@ public interface ITextEntryAwareTool
     void Detach();
 }
 
-public class TextEntryTool : ContentView
+/// <summary>
+/// A tappable icon/label docked to the left or right edge inside a <see cref="TextEntry"/>.
+/// Painted according to the parent's <see cref="TextEntry.ToolStyle"/>.
+/// </summary>
+public class TextEntryTool : IconTextTool
 {
-    readonly Image iconImage;
-    readonly Label textLabel;
-    readonly TapGestureRecognizer tap;
+    // An inline tool is a bare glyph on the field, so it only needs enough padding to reach a
+    // comfortable tap target. An addon tool is a filled block and wants the Bootstrap gutter.
+    const double InlinePadding = 8;
+    const double AddonPadding = 12;
+    const double MinimumTapTarget = 40;
 
     public TextEntryTool()
     {
-        iconImage = new Image
-        {
-            WidthRequest = 20,
-            HeightRequest = 20,
-            Aspect = Aspect.AspectFit,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Center,
-            IsVisible = false
-        };
-
-        textLabel = new Label
-        {
-            FontSize = 13,
-            FontAttributes = FontAttributes.Bold,
-            VerticalTextAlignment = TextAlignment.Center,
-            VerticalOptions = LayoutOptions.Center,
-            IsVisible = false
-        };
-
-        var layout = new HorizontalStackLayout
-        {
-            Spacing = 4,
-            VerticalOptions = LayoutOptions.Center,
-            Children = { iconImage, textLabel }
-        };
-
-        tap = new TapGestureRecognizer();
-        tap.Tapped += OnTapped;
-        layout.GestureRecognizers.Add(tap);
-
-        Content = layout;
-        Padding = new Thickness(12, 0);
-        VerticalOptions = LayoutOptions.Fill;
+        ApplyToolStyle(TextEntryToolStyle.Inline);
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(TextEntryTool));
     }
 
-    public static readonly BindableProperty IconProperty = BindableProperty.Create(
-        nameof(Icon), typeof(ImageSource), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
-            {
-            var t = (TextEntryTool)b;
-            t.iconImage.Source = n as ImageSource;
-            t.iconImage.IsVisible = n is not null;
-        }));
-    public ImageSource? Icon { get => (ImageSource?)GetValue(IconProperty); set => SetValue(IconProperty, value); }
-
-    public static readonly BindableProperty TextProperty = BindableProperty.Create(
-        nameof(Text), typeof(string), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
-            {
-            var t = (TextEntryTool)b;
-            t.textLabel.Text = n as string;
-            t.textLabel.IsVisible = !string.IsNullOrEmpty(n as string);
-        }));
-    public string? Text { get => (string?)GetValue(TextProperty); set => SetValue(TextProperty, value); }
-
-    public static readonly BindableProperty ToolColorProperty = BindableProperty.Create(
-        nameof(ToolColor), typeof(Color), typeof(TextEntryTool), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntryTool), () =>
-            {
-            if (n is Color c)
-                ((TextEntryTool)b).textLabel.TextColor = c;
-        }));
-    public Color ToolColor { get => (Color)GetValue(ToolColorProperty); set => SetValue(ToolColorProperty, value); }
-
-    public static readonly BindableProperty CommandProperty = BindableProperty.Create(
-        nameof(Command), typeof(System.Windows.Input.ICommand), typeof(TextEntryTool));
-    public System.Windows.Input.ICommand? Command { get => (System.Windows.Input.ICommand?)GetValue(CommandProperty); set => SetValue(CommandProperty, value); }
-
-    public static readonly BindableProperty CommandParameterProperty = BindableProperty.Create(
-        nameof(CommandParameter), typeof(object), typeof(TextEntryTool));
-    public object? CommandParameter { get => GetValue(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
-
-    public event EventHandler? Clicked;
-
     internal TextEntry? ParentEntry { get; set; }
 
-    internal void Invoke()
+    internal void ApplyToolStyle(TextEntryToolStyle style)
     {
-        Clicked?.Invoke(this, EventArgs.Empty);
-        if (Command?.CanExecute(CommandParameter) == true)
-            Command.Execute(CommandParameter);
+        if (style == TextEntryToolStyle.Addon)
+        {
+            Padding = new Thickness(AddonPadding, 0);
+            MinimumWidthRequest = 0;
+            BackgroundColor = Colors.Transparent; // the rail behind it carries the addon surface
+        }
+        else
+        {
+            Padding = new Thickness(InlinePadding, 0);
+            MinimumWidthRequest = MinimumTapTarget;
+            BackgroundColor = Colors.Transparent;
+        }
     }
-
-    void OnTapped(object? sender, TappedEventArgs e) => Invoke();
 }

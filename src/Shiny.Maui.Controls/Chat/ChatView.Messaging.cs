@@ -15,7 +15,7 @@ public partial class ChatView
 
     // ------- sending -------
 
-    async void OnSendRequested(string text)
+    async void OnSendRequested(object? sender, string text)
     {
         if (this.session is null)
             return;
@@ -120,7 +120,7 @@ public partial class ChatView
 
     // ------- image attachment -------
 
-    async void OnAttachRequested()
+    async void OnAttachRequested(object? sender, EventArgs args)
     {
         var page = this.GetPage();
         if (page is null || this.session is null)
@@ -189,7 +189,7 @@ public partial class ChatView
     void SyncInputActionsVisibility()
         => this.inputBar.ShowActionsButton = this.InputActions is { Count: > 0 };
 
-    async void OnInputActionsRequested()
+    async void OnInputActionsRequested(object? sender, EventArgs args)
     {
         var page = this.GetPage();
         var actions = this.InputActions;
@@ -209,7 +209,7 @@ public partial class ChatView
             await match.InvokeAsync(this);
     }
 
-    async void OnLinkRequested()
+    async void OnLinkRequested(object? sender, EventArgs args)
     {
         var page = this.GetPage();
         if (page is null)
@@ -226,7 +226,7 @@ public partial class ChatView
         this.inputBar.InsertLink(text, url);
     }
 
-    void OnEditCancelled()
+    void OnEditCancelled(object? sender, EventArgs args)
     {
         this.editingMessageId = null;
         this.inputBar.ExitEditMode();

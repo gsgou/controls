@@ -8,7 +8,6 @@ public class ClearButtonTool : TextEntryTool
     public ClearButtonTool()
     {
         Text = "\u2715";
-        ToolColor = "#9CA3AF";
         IsVisible = false;
     }
 

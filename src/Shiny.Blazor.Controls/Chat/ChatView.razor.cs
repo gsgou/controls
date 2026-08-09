@@ -18,7 +18,6 @@ public partial class ChatView : IAsyncDisposable
     IJSObjectReference? module;
     DotNetObjectReference<ChatView>? selfRef;
     ElementReference messagesEl;
-    ElementReference inputEl;
 
     IChatSession? session;
     string? boundSessionId;          // tracks the (provider, session) we resolved against
@@ -65,6 +64,22 @@ public partial class ChatView : IAsyncDisposable
     [Parameter] public string SendButtonText { get; set; } = "Send";
     [Parameter] public bool IsInputBarVisible { get; set; } = true;
     [Parameter] public bool ShowTypingIndicator { get; set; } = true;
+
+    /// <summary>How tall the composer may grow before it scrolls internally, in lines of text.</summary>
+    [Parameter] public int MaxInputRows { get; set; } = 6;
+
+    /// <summary>
+    /// Replaces the built-in <see cref="ChatEntry"/> composer entirely. You own wiring your markup up
+    /// to the session - the simplest route is to render a <see cref="ChatEntry"/> of your own with the
+    /// parameters you want.
+    /// </summary>
+    [Parameter] public RenderFragment? InputTemplate { get; set; }
+
+    /// <summary>Markup added to the left of the composer's control row, after the built-in buttons.</summary>
+    [Parameter] public RenderFragment? InputLeftToolbar { get; set; }
+
+    /// <summary>Markup added to the right of the composer's control row, before the send button.</summary>
+    [Parameter] public RenderFragment? InputRightToolbar { get; set; }
 
     // ---- derived ----
     string CurrentUserId => session?.CurrentUserId ?? string.Empty;
@@ -346,19 +361,12 @@ public partial class ChatView : IAsyncDisposable
 
     // ---- sending ----
 
-    async Task OnKeyDown(KeyboardEventArgs e)
+    async Task SendTextAsync(string text)
     {
-        if (e.Key == "Enter" && !e.ShiftKey)
-            await SendTextAsync();
-    }
-
-    async Task SendTextAsync()
-    {
-        var body = inputText?.Trim();
+        var body = text.Trim();
         if (string.IsNullOrEmpty(body) || session is null || !CanSend)
             return;
 
-        inputText = string.Empty;
         await StopTypingAsync();
 
         var clientId = Guid.NewGuid().ToString();
@@ -548,23 +556,6 @@ public partial class ChatView : IAsyncDisposable
         actionsMessageId = null;
         if (module is not null && m.Body is not null)
             await module.InvokeVoidAsync("copyText", m.Body);
-    }
-
-
-    // ---- markdown toolbar ----
-
-    async Task ApplyMarkdownAsync(string before, string after, string placeholder)
-    {
-        if (module is null)
-            return;
-        inputText = await module.InvokeAsync<string>("wrapSelection", inputEl, before, after, placeholder);
-    }
-
-    async Task InsertLinkAsync()
-    {
-        if (module is null)
-            return;
-        inputText = await module.InvokeAsync<string>("insertLink", inputEl);
     }
 
 

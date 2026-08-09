@@ -7,9 +7,9 @@ namespace Shiny.Maui.Controls.Scheduler.Internal;
 /// The whole drag/resize gesture state machine for <see cref="SchedulerAgendaView"/>.
 /// </summary>
 /// <remarks>
-/// The drag is owner-coordinated rather than panel-owned: a cross-day drag has to move an event out
-/// of one <see cref="AgendaTimelinePanel"/> and into a sibling, so the panels detect and forward
-/// while the view (through this controller) decides. Same split as TreeView's pointer drag.
+/// The drag is owner-coordinated rather than panel-owned: a cross-day drag is resolved against the
+/// whole row of <see cref="AgendaTimelinePanel"/>s, so the panels detect and forward while the view
+/// (through this controller) decides. Same split as TreeView's pointer drag.
 /// </remarks>
 class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
 {
@@ -19,8 +19,8 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     const double AutoScrollStep = 12;
 
     AgendaTimelinePanel? sourcePanel;
-    AgendaTimelinePanel? hostPanel;
     View? dragView;
+    DragTouchHook? hook;
     SchedulerEvent? evt;
     SchedulerEventChangeKind kind;
     SchedulerEventChange? candidate;
@@ -32,6 +32,7 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     BoxView? guide;
     bool pending;
     bool committable = true;
+    bool moved;
     double lastTotalX;
     double lastTotalY;
     double startScrollY;
@@ -47,8 +48,17 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     public bool ConsumedLastGesture { get; private set; }
 
 
-    public void Arm(AgendaTimelinePanel panel, View view, SchedulerEvent target, SchedulerEventChangeKind changeKind)
+    /// <summary>
+    /// A touch went down on a draggable view. The long press is timed from here rather than from
+    /// the pan, which does not begin until the finger has already moved.
+    /// </summary>
+    public void Press(AgendaTimelinePanel panel, View view, SchedulerEvent target, SchedulerEventChangeKind changeKind, DragTouchHook? touchHook)
     {
+        // The native hook presses on touch-down and the pan presses again when it finally starts.
+        // Same finger, same view - the first one owns the gesture.
+        if ((this.pending || this.IsDragging) && ReferenceEquals(this.dragView, view))
+            return;
+
         // Relayout would rebuild the panels and orphan the view this gesture just handed us.
         if (this.IsDragging)
             this.Cancel(relayout: false);
@@ -56,12 +66,13 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
         this.StopArmTimer();
 
         this.sourcePanel = panel;
-        this.hostPanel = panel;
         this.dragView = view;
+        this.hook = touchHook;
         this.evt = target;
         this.kind = changeKind;
         this.pending = true;
         this.committable = true;
+        this.moved = false;
         this.candidate = null;
         this.dayDelta = 0;
         this.lastTotalX = 0;
@@ -93,6 +104,7 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
 
         this.lastTotalX = totalX;
         this.lastTotalY = totalY;
+        this.moved |= Math.Abs(totalX) > 0.5 || Math.Abs(totalY) > 0.5;
 
         if (!this.IsDragging)
         {
@@ -120,6 +132,15 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
         // Restore scrolling and visuals *first* so the view is never stuck under a provider that hangs.
         this.RestoreChrome();
         this.IsDragging = false;
+
+        // A long press that never travelled is a slow tap, not a drag: nothing to save, and the
+        // trailing Tapped should still select the event.
+        if (change is not null && change.NewStart == change.OriginalStart && change.NewEnd == change.OriginalEnd)
+        {
+            owner.RelayoutDays();
+            this.Reset();
+            return;
+        }
 
         if (change is null || !accepted)
         {
@@ -159,6 +180,19 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     }
 
 
+    /// <summary>
+    /// The native touch ended. The pan usually ends with it and commits, but a press that armed and
+    /// never moved produces no pan at all - so this is what finishes that gesture.
+    /// </summary>
+    public void Release()
+    {
+        if (this.IsDragging)
+            _ = this.CompleteAsync();
+        else if (this.pending)
+            this.Abandon();
+    }
+
+
     public void Cancel(bool relayout = true)
     {
         var wasDragging = this.IsDragging;
@@ -194,9 +228,12 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
         this.originalBounds = AbsoluteLayout.GetLayoutBounds(this.dragView);
         this.startScrollY = scrollView.ScrollY;
 
-        scrollView.Orientation = ScrollOrientation.Neither;
+        // Not ScrollOrientation.Neither: MauiScrollView never consults it while intercepting, and
+        // on iOS it resets the offset out from under the drag. The hook disables the native
+        // scroller for exactly this one gesture instead.
+        this.hook?.LockScroller(true);
         this.dragView.Opacity = 0.75;
-        this.dragView.ZIndex = 1;
+        DragTouchHook.Raise(this.dragView, true);
 
         if (owner.UseFeedback)
             FeedbackHelper.Execute(owner, "EventDragStarted");
@@ -260,19 +297,20 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     }
 
 
+    /// <summary>
+    /// Repositions the preview against <paramref name="target"/>'s day without ever leaving the
+    /// layer it started in.
+    /// </summary>
+    /// <remarks>
+    /// A cross-day preview used to be reparented into the destination panel. Moving a view between
+    /// layouts mid-gesture detaches its platform view, and on Android that dispatches ACTION_CANCEL
+    /// to the very touch doing the dragging - the drag died the moment it crossed a day boundary.
+    /// A translation costs no reparenting and no layout pass.
+    /// </remarks>
     void MoveTo(AgendaTimelinePanel target, DateTimeOffset newStart, DateTimeOffset newEnd)
     {
-        if (this.dragView is null)
+        if (this.dragView is null || this.sourcePanel is null)
             return;
-
-        if (!ReferenceEquals(target, this.hostPanel))
-        {
-            this.hostPanel?.EventsLayer.Remove(this.dragView);
-            target.EventsLayer.Children.Add(this.dragView);
-            AbsoluteLayout.SetLayoutFlags(this.dragView,
-                AbsoluteLayoutFlags.XProportional | AbsoluteLayoutFlags.WidthProportional);
-            this.hostPanel = target;
-        }
 
         var date = target.BuildDate;
         var localStart = newStart.LocalDateTime;
@@ -284,12 +322,9 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
         var y = AgendaGeometry.MinutesToY(startMinutes, owner.TimeSlotHeight);
         var h = AgendaGeometry.MinutesToY(Math.Max(endMinutes - startMinutes, 15), owner.TimeSlotHeight);
 
-        // A cross-day drop lands in a column whose overlap clustering is not known until the
-        // relayout, so the preview simply takes the full width of the destination day.
-        var x = this.dayDelta == 0 ? this.originalBounds.X : 0;
-        var width = this.dayDelta == 0 ? this.originalBounds.Width : 1;
-
-        AbsoluteLayout.SetLayoutBounds(this.dragView, new Rect(x, y, width, h));
+        AbsoluteLayout.SetLayoutBounds(this.dragView,
+            new Rect(this.originalBounds.X, y, this.originalBounds.Width, h));
+        this.dragView.TranslationX = this.dayDelta * this.sourcePanel.Width;
         this.dragView.Opacity = this.committable ? 0.75 : 0.5;
 
         this.UpdateGuide(target, y);
@@ -303,11 +338,14 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
             ? owner.DragSnapGuideColor ?? Color.FromRgba(120, 120, 120, 153)
             : Color.FromRgba(239, 68, 68, 200);
 
+        // Only the guide crosses into the destination panel - adding a *sibling* to a layer is not
+        // what cancels a touch; detaching the touched view is (see MoveTo).
         if (this.guide.Parent is Layout parent && !ReferenceEquals(parent, target.EventsLayer))
             parent.Remove(this.guide);
 
         if (!target.EventsLayer.Children.Contains(this.guide))
             target.EventsLayer.Children.Add(this.guide);
+
 
         AbsoluteLayout.SetLayoutFlags(this.guide, AbsoluteLayoutFlags.WidthProportional);
         AbsoluteLayout.SetLayoutBounds(this.guide, new Rect(0, y, 1, 1));
@@ -330,7 +368,7 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     /// </summary>
     void AutoScrollTick()
     {
-        if (!this.IsDragging || this.dragView is null || this.hostPanel is null)
+        if (!this.IsDragging || this.dragView is null || this.sourcePanel is null)
             return;
 
         var viewport = scrollView.Height;
@@ -338,7 +376,7 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
             return;
 
         var bounds = AbsoluteLayout.GetLayoutBounds(this.dragView);
-        var contentTop = this.hostPanel.Y + bounds.Y;
+        var contentTop = this.sourcePanel.Y + bounds.Y;
         var contentBottom = contentTop + bounds.Height;
         var top = scrollView.ScrollY;
 
@@ -366,6 +404,7 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
     {
         this.StopArmTimer();
         this.pending = false;
+        this.ConsumedLastGesture = false;
         this.Reset();
     }
 
@@ -375,13 +414,17 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
         this.StopArmTimer();
         this.autoScrollTimer?.Stop();
         this.autoScrollTimer = null;
+        this.hook?.LockScroller(false);
 
-        scrollView.Orientation = owner.AllowPan ? ScrollOrientation.Vertical : ScrollOrientation.Neither;
+        // A press that armed but never travelled is a slow tap; letting it swallow the trailing
+        // Tapped would make events unselectable for anyone who does not stab at the screen.
+        this.ConsumedLastGesture = this.moved;
 
         if (this.dragView is not null)
         {
             this.dragView.Opacity = 1;
-            this.dragView.ZIndex = 0;
+            this.dragView.TranslationX = 0;
+            DragTouchHook.Raise(this.dragView, false);
         }
 
         if (this.guide?.Parent is Layout parent)
@@ -399,12 +442,14 @@ class AgendaDragController(SchedulerAgendaView owner, ScrollView scrollView)
 
     void Reset()
     {
+        this.hook?.LockScroller(false);
+        this.hook = null;
         this.sourcePanel = null;
-        this.hostPanel = null;
         this.dragView = null;
         this.evt = null;
         this.candidate = null;
         this.dayDelta = 0;
+        this.moved = false;
         this.committable = true;
     }
 }

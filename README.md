@@ -248,7 +248,7 @@ Calendar and agenda views for displaying events and appointments, powered by `IS
 | `AllowCrossDayDrag` | `true` | Only meaningful when `DaysToShow > 1`. |
 | `DragSnapGuideColor` | separator colour | The guide line drawn at the snapped position. |
 
-On touch the drag arms on a long press, so a vertical swipe still scrolls the timeline; with a mouse it starts immediately. The change is committed optimistically and reverted if the provider says no. All-day events are not draggable, and timed ↔ all-day conversion is not supported.
+On touch the drag arms on a long press, so a vertical swipe still scrolls the timeline; with a mouse it starts immediately. The long press is measured from the touch itself, and arming disables the enclosing scroller natively for that one gesture — a press that arms and then never moves is still a tap, and still selects the event. The change is committed optimistically and reverted if the provider says no. All-day events are not draggable, and timed ↔ all-day conversion is not supported.
 
 **SchedulerCalendarListView** - Scrollable event list grouped by day with infinite scroll loading and sticky day headers (`StickyDayHeaders`, on by default, pins the current day's header to the top while scrolling).
 
@@ -454,7 +454,9 @@ A full-screen image overlay with pinch-to-zoom, pan, double-tap zoom, and animat
 
 ### ImageEditor
 
-An inline image editor with cropping, rotation, freehand drawing, line and arrow drawing, text annotations with font family and font size selection, and zoom. Includes a built-in undo/redo stack, reset-to-original, and export to PNG/JPEG/WEBP at configurable resolutions. Every feature can be toggled on/off, and the default toolbar can be replaced with a custom template.
+An inline image editor with cropping, rotation, freehand drawing, line and arrow drawing, text annotations with font family and font size selection, and **zoom/pan that stays live in every tool** — pinch (or wheel / zoom buttons) to magnify up to 8x and draw, crop or place text with pixel accuracy, then two-finger drag to pan without leaving the tool. Includes a built-in undo/redo stack, reset-to-original, and export to PNG/JPEG/WEBP at configurable resolutions. Every feature can be toggled on/off, and the default toolbar can be replaced with a custom template.
+
+The default toolbar is a floating rounded bar with vector (not glyph-font) icons, a horizontally scrollable tool row that never clips on narrow screens, a contextual options row for the active tool (colour swatch, pen weights, font pickers), and an action row with undo/redo/reset, a zoom cluster, and save.
 
 | Editor | Crop Mode |
 |:---:|:---:|
@@ -482,11 +484,19 @@ An inline image editor with cropping, rotation, freehand drawing, line and arrow
 | AllowLine | bool | true | Enable/disable line drawing tool |
 | AllowFontSelection | bool | false | Show font picker button in text mode |
 | AllowFontSizeSelection | bool | false | Show font size picker button in text mode |
-| AllowZoom | bool | true | Enable/disable pinch-to-zoom |
+| AllowZoom | bool | true | Enable/disable zoom & pan |
+| ZoomLevel | double | 1 | Current zoom factor where 1.0 is fit-to-view — TwoWay |
+| MinZoom | double | 1 | Lower zoom bound |
+| MaxZoom | double | 8 | Upper zoom bound |
+| ShowZoomControls | bool | true | Show the zoom out / % / zoom in / fit cluster in the toolbar |
+| ShowToolLabels | bool | true | Show captions under the tool icons |
+| ShowStrokeWidthPicker | bool | true | Show pen-weight presets next to the colour swatch |
+| StrokeWidthPresets | IList\<double\> | 2, 4, 8 | Pen weights offered by the stroke-width picker |
+| ToolbarBackgroundColor | Color | dark scrim | Background of the default toolbar |
 | CanUndo | bool | false | Whether undo is available (OneWayToSource) |
 | CanRedo | bool | false | Whether redo is available (OneWayToSource) |
 | DrawStrokeColor | Color | White | Drawing stroke color — TwoWay |
-| DrawStrokeWidth | double | 3 | Drawing stroke width |
+| DrawStrokeWidth | double | 3 | Drawing stroke width — TwoWay |
 | TextFontSize | double | 16 | Text annotation font size |
 | TextFontFamily | string? | null | Font family for text annotations (TwoWay) |
 | AnnotationTextColor | Color | White | Text annotation color |
@@ -494,14 +504,14 @@ An inline image editor with cropping, rotation, freehand drawing, line and arrow
 | AvailableFontSizes | IList\<double\>? | null | Font sizes shown in font size picker |
 | SaveCommand | ICommand? | null | Invoked with `EditedImage` parameter on save |
 | SaveText | string | "Save" | Save button label |
-| CropApplyText | string | "Apply Crop" | Crop apply button label |
+| CropApplyText | string | "Apply" | Crop apply button label |
 | CropCancelText | string | "Cancel" | Crop cancel button label |
 | ToolbarTemplate | DataTemplate? | null | Custom toolbar (replaces default) |
 | ToolbarPosition | ToolbarPosition | Bottom | Toolbar placement (Top or Bottom) |
 | UseFeedback | bool | true | Feedback on actions |
 
 **Features:**
-- Move mode with pinch-to-zoom and pan (origin-aware, double-tap to toggle)
+- Zoom and pan in **every** tool: pinch anywhere (two fingers), two-finger drag to pan, double-tap to toggle, plus toolbar zoom buttons and a live zoom % readout. Blazor adds mouse-wheel zoom about the cursor and middle-button pan. Crop chrome and hit targets keep a constant on-screen size at any zoom.
 - Crop with drag handles, rule-of-thirds grid, dimmed overlay, and dedicated Apply/Cancel toolbar
 - 90° rotation (or arbitrary angles)
 - Freehand drawing with configurable color and stroke width (constrained to image bounds)
@@ -513,10 +523,15 @@ An inline image editor with cropping, rotation, freehand drawing, line and arrow
 - Reset to original image
 - Save via `SaveCommand` with `EditedImage` — call `ToStreamAsync(format)` to get PNG, JPEG, or WEBP
 - Image border showing the drawable surface area
+- Strokes, lines and text record the on-screen image size they were drawn at, so annotations made on a small preview (or while zoomed in) keep their proportions when exported at full resolution
 
-**Commands:** `UndoCommand`, `RedoCommand`, `RotateCommand`, `ResetCommand`, `CropCommand`, `DrawCommand`, `TextCommand`, `LineCommand`, `SaveCommand`
+**Commands:** `UndoCommand`, `RedoCommand`, `RotateCommand`, `ResetCommand`, `CropCommand`, `DrawCommand`, `TextCommand`, `LineCommand`, `SaveCommand`, `ZoomInCommand`, `ZoomOutCommand`, `ZoomToFitCommand`
 
-**Methods:** `Undo()`, `Redo()`, `Rotate(float)`, `Reset()`, `ApplyCrop()`, `GetEditedImage()`
+**Methods:** `Undo()`, `Redo()`, `Rotate(float)`, `Reset()`, `ApplyCrop()`, `GetEditedImage()`, `ZoomIn()`, `ZoomOut()`, `ZoomToFit()`
+
+**Events:** `ZoomChanged`
+
+On Blazor the equivalents are `ZoomInAsync()`, `ZoomOutAsync()`, `ZoomToFitAsync()`, `SetZoomAsync(double)`, the `ZoomLevel` property and the `ZoomLevelChanged` callback, plus a `ToolbarActions` render fragment for host-supplied buttons at the trailing edge of the bar.
 
 ### MediaPickerButton
 
@@ -600,6 +615,13 @@ public interface IChatSessionProvider
 | BubbleCornerRadius | double | 18 | Corner radius for bubbles (tail stays at 4) (MAUI) |
 | PlaceholderText | string | "Type a message..." | Input placeholder |
 | SendButtonText | string | "Send" | Send button label |
+| InputBar | ChatEntryView | built-in | The hosted composer — assign your own to replace it, or read it to tweak (`InputBar.MaxLines = 3`) (MAUI only) |
+| InputBarBackgroundColor | Color? | theme | Area behind the composer |
+| InputBarBorderColor | Color? | theme | Outline of the rounded composer |
+| MaxInputRows | int | 6 | How tall the composer grows before it scrolls (Blazor only) |
+| InputTemplate | RenderFragment? | null | Replaces the built-in composer entirely (Blazor only) |
+| InputLeftToolbar | RenderFragment? | null | Markup added to the left of the composer's control row (Blazor only) |
+| InputRightToolbar | RenderFragment? | null | Markup added right of the control row, before send (Blazor only) |
 | IsInputBarVisible | bool | true | Show/hide the input bar (set false for read-only chats) |
 | ShowTypingIndicator | bool | true | Enable typing indicators |
 | ScrollToFirstUnread | bool | false | Anchor initial scroll at the first unread instead of the end |
@@ -611,6 +633,67 @@ public interface IChatSessionProvider
 | AdjustForKeyboard | bool | true | iOS keyboard padding (set false inside a FloatingPanel) (MAUI only) |
 
 **Methods (MAUI):** `ScrollToEnd(bool animate)`, `ScrollToMessage(string messageId, bool animate)`, `SubmitEntry()`, `EntryText` (get/set), `MessageTapped` event (non-image bubble taps).
+
+#### The composer — `ChatEntryView` (MAUI) / `ChatEntry` (Blazor)
+
+The message composer is its own control, laid out as a single rounded card in the AI-chat idiom —
+the formatting toolbar sits along the top, the **multiline** auto-growing entry spans the full width
+beneath it, and every other control sits on a row below that:
+
+```
+┌────────────────────────────────────────────┐
+│  B  I  U  S  </>  🔗                       │   ← formatting (only if permitted)
+│  How can I help you today?                 │
+│  +  [Chat]                Model  🎤   ↑    │   ← LeftToolbar … RightToolbar + send
+└────────────────────────────────────────────┘
+```
+
+`ChatView` builds and hosts one automatically, so nothing changes for the common case — supply your
+own only when you want a different shape, or use it standalone (an AI prompt box, a comment field)
+and handle `SendRequested` yourself. It knows nothing about `IChatSessionProvider`: `ChatView`
+remains the only thing that talks to the session, pushing state in (`SetBodyPermissions`,
+`ShowAttachButton`, `SetInputEnabled`) and listening to events out.
+
+`LeftToolbar` and `RightToolbar` are the slots on that control row — drop a mode picker, a model
+label or a mic button into either side of the send button:
+
+```xml
+<shiny:ChatView Provider="{Binding Provider}" SessionId="{Binding SessionId}">
+    <shiny:ChatView.InputBar>
+        <shiny:ChatEntryView PlaceholderText="How can I help you today?"
+                             SendButtonText="↑"
+                             MaxLines="5">
+            <shiny:ChatEntryView.LeftToolbar>
+                <Border StrokeShape="RoundRectangle 14" Padding="10,4">
+                    <Label Text="Chat" FontSize="13" />
+                </Border>
+            </shiny:ChatEntryView.LeftToolbar>
+            <shiny:ChatEntryView.RightToolbar>
+                <Label Text="Model" FontSize="13" VerticalOptions="Center" />
+            </shiny:ChatEntryView.RightToolbar>
+        </shiny:ChatEntryView>
+    </shiny:ChatView.InputBar>
+</shiny:ChatView>
+```
+
+`ChatEntryView` properties: `Text`, `PlaceholderText`, `MaxLines` (6), `FontSize`, `FontFamily`,
+`SendButtonText`/`SendButtonBackgroundColor`/`SendButtonTextColor`, `BarBackgroundColor`,
+`ComposerBackgroundColor`, `BorderColor`, `BorderThickness`, `CornerRadius` (24), `ShowAttachButton`,
+`ShowActionsButton`, `LeftToolbar`/`RightToolbar` (`IList<IView>`). Events: `SendRequested`,
+`AttachRequested`, `ActionsRequested`, `LinkRequested`, `EditCancelled`, `TextChanged`. Methods:
+`Submit()`, `ClearText()`, `FocusInput()`, `SetInputEnabled(bool)`,
+`EnterEditMode(string)`/`ExitEditMode()`, `SetBodyPermissions(...)`, `ApplyWrap(...)`,
+`InsertLink(...)`.
+
+Blazor's `ChatEntry` mirrors it as parameters — `@bind-Text`, `Placeholder`, `SendButtonText`,
+`IsEnabled`, `ShowAttach`, `BodyPermissions`, `MaxRows` (6), `SendOnEnter` (true; Shift+Enter inserts
+a newline), `LeftToolbar`/`RightToolbar` (`RenderFragment`), plus `OnSend`, `OnAttach` and
+`OnTyping`. `ChatView` surfaces the two slots directly as `InputLeftToolbar` / `InputRightToolbar`,
+or drop a whole `ChatEntry` into `ChatView.InputTemplate` to replace the built-in composer.
+
+On MAUI the entry is an `Editor`, so **Enter inserts a newline** and sending is the button's job —
+matching how AI chat composers behave. There is no hairline rule between the message list and the
+composer; the rounded outline is the edge.
 
 **Permissions:** every action affordance is derived from `ChatSessionPermissions` on `ChatSessionInfo` + ownership — `CanSendMessages`, `CanEditMessages`, `CanDeleteMessages`, `CanReactToMessages`, `CanInviteUsers`, `CanLeaveSession`, `CanChangeSessionName`, `CanSendImages`. `MessageBodyPermissions` drives the markdown composition toolbar (Bold/Italics/Underline/Strikethrough/Codeblocks/Links).
 
@@ -710,7 +793,9 @@ These controls are also integrated into the **ImageEditor** toolbar when `AllowF
 
 ### TextEntry
 
-A Material Design-inspired text entry control with animated floating placeholder, customizable border, left/right tool slots, hint text for validation errors, character count display, and input masking for formatted data entry.
+A text entry control with a Material 3 floating label, customizable border, left/right tool slots, hint text for validation errors, character count display, input masking, an autofill/autocorrect opt-out, and — on iOS and Android — a bar docked to the top of the soft keyboard.
+
+`Variant="Floating"` is the **M3 outlined notch**: the label rides up onto the top border stroke and sits in a gap cut out of the outline, so it never overlaps the text being typed. Tools are **inline** by default — a tinted glyph on the field with no grey block and no separator; `ToolStyle="Addon"` brings back the Bootstrap input-group look.
 
 ```xml
 <shiny:TextEntry Placeholder="Email"
@@ -725,7 +810,9 @@ A Material Design-inspired text entry control with animated floating placeholder
 | Property | Type | Default | Description |
 |---|---|---|---|
 | Text | string | "" | Current text value (TwoWay). When Mask is set, contains raw digits only |
-| Placeholder | string | "" | Animated floating placeholder |
+| Placeholder | string | "" | Placeholder / floating label |
+| Variant | TextEntryVariant | Classic | `Classic` (native placeholder) or `Floating` (M3 notched outline) |
+| ToolStyle | TextEntryToolStyle | Inline | `Inline` (glyph on the field) or `Addon` (filled block + separator) |
 | PlaceholderColor | Color | Grey | Placeholder color unfocused |
 | FocusedPlaceholderColor | Color | #007AFF | Placeholder color focused |
 | BorderColor | Color | #CCCCCC | Border color unfocused |
@@ -744,6 +831,12 @@ A Material Design-inspired text entry control with animated floating placeholder
 | HasError | bool | false | Error state |
 | ErrorColor | Color | #DC3545 | Error color |
 | ShowCharacterCount | bool | false | Show counter |
+| IsAutoCompleteEnabled | bool | true | False switches off autofill, autocorrect, predictive text and spell check together |
+| IsSpellCheckEnabled | bool | true | Spell check (forced off when IsAutoCompleteEnabled is false) |
+| IsTextPredictionEnabled | bool | true | Suggestion strip (forced off when IsAutoCompleteEnabled is false) |
+| Accessory | KeyboardAccessoryView? | null | Bar docked to the top of the soft keyboard (iOS + Android) |
+| AccessoryPreset | KeyboardAccessoryPreset | None | Stock bar: `Done`, `Navigation`, `NavigationAndDone` |
+| FieldGroup | string? | null | Groups fields for accessory prev/next navigation |
 | LeftTools | IList&lt;TextEntryTool&gt; | empty | Left tool slot |
 | RightTools | IList&lt;TextEntryTool&gt; | empty | Right tool slot (ContentProperty) |
 
@@ -773,6 +866,38 @@ When `Mask` is set, `Text` always contains raw digits (e.g., `"5551234567"`), wh
 ```
 
 `TextEntryStepperTool` increments or decrements the numeric text value by `Step` on each tap. If `Text` is not set, it auto-displays the step value with sign (e.g. "+1", "-5").
+
+**No autocomplete:**
+
+```xml
+<shiny:TextEntry Placeholder="Serial number" Text="{Binding Serial}" IsAutoCompleteEnabled="False" />
+```
+
+Turns off autofill (iOS `TextContentType`, Android autofill hints), autocorrect, predictive text and spell check in one switch — the combination that otherwise rewrites serials, coupon codes and SKUs mid-entry.
+
+**Keyboard accessory (MAUI, iOS + Android only):**
+
+A bar docked to the **top edge of the soft keyboard** while the field has focus — it belongs to the keyboard, not to the entry, and comes and goes with it. The reason it exists: the iOS numeric keypad has no return key, so without a Done button there is no way to dismiss it.
+
+```xml
+<shiny:TextEntry Placeholder="Amount" Keyboard="Numeric"
+                 Text="{Binding Amount}"
+                 AccessoryPreset="NavigationAndDone" />
+
+<shiny:TextEntry Placeholder="Notes" Text="{Binding Notes}">
+    <shiny:TextEntry.Accessory>
+        <shiny:KeyboardAccessoryView>
+            <shiny:KeyboardNavigationItem Direction="Previous" />
+            <shiny:KeyboardNavigationItem Direction="Next" />
+            <shiny:KeyboardAccessorySpacer />
+            <shiny:KeyboardAccessoryItem Text="#tag" Command="{Binding InsertTagCommand}" />
+            <shiny:KeyboardDismissItem />
+        </shiny:KeyboardAccessoryView>
+    </shiny:TextEntry.Accessory>
+</shiny:TextEntry>
+```
+
+iOS uses the real `UIResponder.InputAccessoryView`, so it rides the keyboard animation exactly. Android has no accessory API at all (the IME is a separate process), so the same bar is rendered in the activity's content view and driven by the IME window insets — frame-synced on API 30+, and shown only while the IME is genuinely up, so a hardware keyboard correctly shows no bar. Windows, macOS, Linux and Blazor have no soft keyboard to decorate; the property compiles and does nothing. This is *not* the [on-screen keyboard](#on-screen-keyboard) — that one draws keys; this one decorates the OS keyboard.
 
 ### Slider
 
@@ -1208,6 +1333,14 @@ Wraps a single content view and overlays a small notification badge at any of th
 
 A Material Design-style floating action button, plus an expanding multi-action menu that animates up from the main FAB.
 
+Menu items render as **pills**: the label lives *inside* one capsule with a tinted circular icon chip on
+the edge nearest the main FAB, so the whole row is a single tap target instead of a detached label chip
+plus a circle. Every chip is inset so its centre lands on the main FAB's vertical axis — the items read as
+one column. An item with no `Text` collapses to a plain circle of `Size`. Items fade, rise and scale in
+from that axis with a staggered spring, and the main FAB spins 45° (`IconRotation`) while the menu is open
+— the classic "+" turning into an "×" — unless it carries a `Text` label, where a rotated word would just
+read as broken.
+
 | Closed | Menu Open |
 |:---:|:---:|
 | ![FAB Closed](assets/fab-closed.png) | ![FAB Menu Open](assets/fab-open.png) |
@@ -1272,6 +1405,7 @@ Events: `Clicked`.
 | CloseOnBackdropTap | bool | true | Close when backdrop is tapped |
 | CloseOnItemTap | bool | true | Close after any item is tapped |
 | AnimationDuration | uint | 200 | Open/close animation duration (ms) |
+| IconRotation | double | 45 | Degrees the main FAB rotates while open (0 disables; ignored when the main FAB has `Text`) |
 | UseFeedback | bool | true | Feedback on toggle |
 
 Events: `ItemTapped` — fires the `FabMenuItem` that was tapped.
@@ -1282,21 +1416,42 @@ Methods: `Open()`, `Close()`, `Toggle()`.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| Icon | ImageSource? | null | Circular icon |
-| Text | string? | null | Side label next to the icon |
+| Icon | ImageSource? | null | Icon rendered in the circular chip |
+| Text | string? | null | Label inside the pill; when null the item collapses to a plain circle |
 | Command | ICommand? | null | Invoked when tapped |
 | CommandParameter | object? | null | Parameter for the Command |
-| FabBackgroundColor | Color | #2196F3 | Icon button fill |
-| BorderColor | Color? | null | Icon button outline |
-| BorderThickness | double | 0 | Icon button outline thickness |
-| TextColor | Color | Black | Side-label text color |
-| LabelBackgroundColor | Color | White | Side-label background |
-| FontSize | double | 13 | Side-label font size |
-| Size | double | 44 | Icon button diameter |
+| FabBackgroundColor | Color | theme Primary | Icon chip fill — and the whole pill's fill when the item has no `Text` |
+| BorderColor | Color? | theme OutlineVariant | Pill outline stroke |
+| BorderThickness | double | 1 | Pill outline thickness (0 for a borderless pill) |
+| TextColor | Color | theme OnSurface | Label text color |
+| LabelBackgroundColor | Color | theme SurfaceContainerHigh | Pill body fill behind the label |
+| FontSize | double | 13 | Label font size |
+| FontAttributes | FontAttributes | None | Label font attributes |
+| Size | double | 44 | Pill height (diameter when the item has no `Text`) |
 | IconSize | double | 20 | Icon image size |
+| HasShadow | bool | true | Drop shadow on the pill |
 | UseFeedback | bool | true | Feedback on tap |
 
 **Placement tip**: `FabMenu` should live in a `Grid` that fills the page (the same placement pattern as `ImageViewer`) so the backdrop can cover the page content. Alternatively, use `ShinyContentPage` with `OverlayHost` for easier overlay management.
+
+**Blazor** matches the MAUI look and API. `Items` is a `List<FabMenuItem>` of plain data objects
+(`Icon` is an inline emoji / SVG string or an image URL), and the same knobs are parameters: `FabSize`,
+`HasShadow`, `IconRotation`, and `MenuAlignment` (`"end"` default, `"start"` to grow from the left).
+Colors default to the theme CSS variables (`--shiny-color-primary`, `--shiny-color-surface-container-high`,
+`--shiny-color-on-surface`, `--shiny-color-outline-variant`), the open backdrop adds a 2px blur, and
+`prefers-reduced-motion` collapses every transition.
+
+```razor
+<FabMenu Items="items" Icon="+" ItemTapped="OnItemTapped" />
+
+@code {
+    readonly List<FabMenuItem> items = new()
+    {
+        new FabMenuItem { Text = "New Note",  Icon = "📝", FabBackgroundColor = "#10B981" },
+        new FabMenuItem { Text = "New Photo", Icon = "📷", FabBackgroundColor = "#F59E0B" },
+    };
+}
+```
 
 ### ShinyToolbar & ShinyTabBar (Blazor)
 

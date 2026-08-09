@@ -26,7 +26,10 @@ public partial class ImageEditorViewModel(IDialogs dialogs) : ObservableObject
     Color drawColor = Colors.White;
 
     [ObservableProperty]
-    double drawStrokeWidth = 3;
+    double drawStrokeWidth = 4;
+
+    [ObservableProperty]
+    double zoomLevel = 1;
 
     public IList<string> AvailableFonts { get; } = new List<string>
     {

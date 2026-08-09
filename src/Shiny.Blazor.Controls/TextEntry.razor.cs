@@ -23,24 +23,33 @@ public partial class TextEntry : IDisposable
     [Parameter] public string Text { get; set; } = "";
     [Parameter] public EventCallback<string> TextChanged { get; set; }
     [Parameter] public string Placeholder { get; set; } = "";
-    [Parameter] public string PlaceholderColor { get; set; } = "#9CA3AF";
-    [Parameter] public string FocusedPlaceholderColor { get; set; } = "#007AFF";
-    [Parameter] public string BorderColor { get; set; } = "#CCCCCC";
-    [Parameter] public string FocusedBorderColor { get; set; } = "#007AFF";
+
+    /// <summary>Classic (browser placeholder) or Floating (M3 notched outline). Defaults to Classic, matching MAUI.</summary>
+    [Parameter] public TextEntryVariant Variant { get; set; } = TextEntryVariant.Classic;
+
+    /// <summary>How docked tools are painted. Defaults to Inline.</summary>
+    [Parameter] public TextEntryToolStyle ToolStyle { get; set; } = TextEntryToolStyle.Inline;
+
+    // Colour parameters fall through to theme tokens when unset, rather than the hard-coded greys
+    // they used to default to - a themed app got a text field that ignored its own palette.
+    [Parameter] public string? PlaceholderColor { get; set; }
+    [Parameter] public string? FocusedPlaceholderColor { get; set; }
+    [Parameter] public string? BorderColor { get; set; }
+    [Parameter] public string? FocusedBorderColor { get; set; }
     [Parameter] public double BorderThickness { get; set; } = 1;
     [Parameter] public double FocusedBorderThickness { get; set; } = 2;
     [Parameter] public string CornerRadius { get; set; } = "8px";
-    [Parameter] public string EntryBackgroundColor { get; set; } = "transparent";
+    [Parameter] public string? EntryBackgroundColor { get; set; }
     [Parameter] public double FontSize { get; set; } = 15;
     [Parameter] public string FontFamily { get; set; } = "inherit";
-    [Parameter] public string TextColor { get; set; } = "inherit";
+    [Parameter] public string? TextColor { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
     [Parameter] public bool IsPassword { get; set; }
     [Parameter] public int MaxLength { get; set; }
     [Parameter] public string? HintText { get; set; }
-    [Parameter] public string HintColor { get; set; } = "#9CA3AF";
+    [Parameter] public string? HintColor { get; set; }
     [Parameter] public bool HasError { get; set; }
-    [Parameter] public string ErrorColor { get; set; } = "#DC3545";
+    [Parameter] public string? ErrorColor { get; set; }
     [Parameter] public bool ShowCharacterCount { get; set; }
     [Parameter] public string? Mask { get; set; }
     [Parameter] public string FormattedText { get; set; } = "";
@@ -49,12 +58,83 @@ public partial class TextEntry : IDisposable
     [Parameter] public List<TextEntryTool>? RightTools { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public EventCallback Completed { get; set; }
+
+    /// <summary>
+    /// When false the browser's autofill, autocorrect, auto-capitalisation and spell check are all
+    /// switched off, and the common password managers are told to keep out. Use it for serials,
+    /// coupon codes and anything else the browser has no business rewriting.
+    /// </summary>
+    [Parameter] public bool IsAutoCompleteEnabled { get; set; } = true;
+
+    /// <summary>Spell check. Forced off while <see cref="IsAutoCompleteEnabled"/> is false.</summary>
+    [Parameter] public bool IsSpellCheckEnabled { get; set; } = true;
+
+    /// <summary>Autocorrect / auto-capitalisation. Forced off while <see cref="IsAutoCompleteEnabled"/> is false.</summary>
+    [Parameter] public bool IsTextPredictionEnabled { get; set; } = true;
+
     [Parameter(CaptureUnmatchedValues = true)]
     public IDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    // ---- theme-token fallbacks -------------------------------------------------------------
+    const string OutlineToken = "var(--shiny-color-outline, #CBD5E1)";
+    const string PrimaryToken = "var(--shiny-color-primary, #007AFF)";
+    const string ErrorToken = "var(--shiny-color-error, #DC3545)";
+    const string OnSurfaceToken = "var(--shiny-color-on-surface, inherit)";
+    const string OnSurfaceVariantToken = "var(--shiny-color-on-surface-variant, #6B7280)";
+    const string SurfaceToken = "var(--shiny-color-surface, #FFFFFF)";
+
+    string PlaceholderColorValue => PlaceholderColor ?? OnSurfaceVariantToken;
+    string FocusedPlaceholderColorValue => FocusedPlaceholderColor ?? PrimaryToken;
+    string BorderColorValue => BorderColor ?? OutlineToken;
+    string FocusedBorderColorValue => FocusedBorderColor ?? PrimaryToken;
+    string EntryBackgroundColorValue => EntryBackgroundColor ?? SurfaceToken;
+    string TextColorValue => TextColor ?? OnSurfaceToken;
+    string HintColorValue => HintColor ?? OnSurfaceVariantToken;
+    string ErrorColorValue => ErrorColor ?? ErrorToken;
+
+    string VariantClass => Variant == TextEntryVariant.Floating ? "floating" : "classic";
+    string ToolStyleClass => ToolStyle == TextEntryToolStyle.Addon ? "addon" : "inline";
 
     string InputType => IsPassword ? "password" : "text";
     string? InputMode => !string.IsNullOrEmpty(Mask) ? "numeric" : null;
     int? InputMaxLength => !string.IsNullOrEmpty(Mask) ? Mask.Length : (MaxLength > 0 ? MaxLength : null);
+
+    // Classic hands the placeholder to the browser; Floating draws its own label instead.
+    string? ClassicPlaceholder => Variant == TextEntryVariant.Classic && !string.IsNullOrEmpty(Placeholder)
+        ? Placeholder
+        : null;
+
+    /// <summary>
+    /// autocomplete="off" alone is widely ignored by Chrome and by password managers, so the opt-out
+    /// has to be spelled out: a non-standard token for the browsers that honour one, the autocorrect /
+    /// autocapitalize pair for mobile Safari, and the manager-specific data attributes.
+    /// </summary>
+    Dictionary<string, object> InputAssistanceAttributes
+    {
+        get
+        {
+            var attributes = new Dictionary<string, object>
+            {
+                ["autocorrect"] = IsAutoCompleteEnabled && IsTextPredictionEnabled ? "on" : "off",
+                ["autocapitalize"] = IsAutoCompleteEnabled && IsTextPredictionEnabled ? "sentences" : "off",
+                ["spellcheck"] = IsAutoCompleteEnabled && IsSpellCheckEnabled ? "true" : "false"
+            };
+
+            if (IsAutoCompleteEnabled)
+            {
+                attributes["autocomplete"] = "on";
+            }
+            else
+            {
+                attributes["autocomplete"] = IsPassword ? "new-password" : "off";
+                attributes["data-lpignore"] = "true";   // LastPass
+                attributes["data-1p-ignore"] = "true";  // 1Password
+                attributes["data-form-type"] = "other"; // Dashlane
+            }
+
+            return attributes;
+        }
+    }
 
     string HintDisplay
     {
@@ -70,7 +150,7 @@ public partial class TextEntry : IDisposable
         }
     }
 
-    string CurrentBorderColor => HasError ? ErrorColor : (IsFocused ? FocusedBorderColor : BorderColor);
+    string CurrentBorderColor => HasError ? ErrorColorValue : (IsFocused ? FocusedBorderColorValue : BorderColorValue);
 
     string RootStyle => "";
 
@@ -80,7 +160,8 @@ public partial class TextEntry : IDisposable
         {
             var color = CurrentBorderColor;
             var thickness = IsFocused ? FocusedBorderThickness : BorderThickness;
-            return $"border: {thickness}px solid {color}; border-radius: {CornerRadius}; background: {EntryBackgroundColor}; --shiny-te-border-color: {color};";
+            return $"border: {thickness}px solid {color}; border-radius: {CornerRadius}; background: {EntryBackgroundColorValue};" +
+                   $" --shiny-te-border-color: {color}; --shiny-te-notch-bg: {EntryBackgroundColorValue};";
         }
     }
 
@@ -88,21 +169,22 @@ public partial class TextEntry : IDisposable
     {
         get
         {
-            var color = HasError ? ErrorColor : (IsPlaceholderUp ? FocusedPlaceholderColor : PlaceholderColor);
+            // Match MAUI: only a focused field accents its label. A floated-but-unfocused label on
+            // every filled row of a form is noise.
+            var color = HasError
+                ? ErrorColorValue
+                : IsFocused ? FocusedPlaceholderColorValue : PlaceholderColorValue;
+
             return $"color: {color};";
         }
     }
 
-    string InputStyle => $"font-size: {FontSize}px; font-family: {FontFamily}; color: {TextColor};";
+    string InputStyle => $"font-size: {FontSize}px; font-family: {FontFamily}; color: {TextColorValue};";
 
-    string HintStyle
-    {
-        get
-        {
-            var color = HasError ? ErrorColor : HintColor;
-            return $"color: {color};";
-        }
-    }
+    string ToolStyleFor(TextEntryTool tool)
+        => tool.ToolColor is null ? "" : $"color: {tool.ToolColor};";
+
+    string HintStyle => $"color: {(HasError ? ErrorColorValue : HintColorValue)};";
 
     protected override void OnInitialized()
     {

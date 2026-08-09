@@ -14,7 +14,7 @@
                    @bind:event="oninput"
                    @onkeydown="OnTextInputKeyDown"
                    @onblur="CommitTextInput"
-                   style="left:@(textInputLeft)px;top:@(textInputTop)px;font-size:@(TextFontSize)px;color:@(activeColor);font-family:@(TextFontFamily);" />
+                   style="left:@(textInputLeft.ToString(Culture))px;top:@(textInputTop.ToString(Culture))px;font-size:@((TextFontSize * textInputScale).ToString(Culture))px;color:@(activeColor);font-family:@(TextFontFamily);" />
         }
     </div>
 
@@ -24,76 +24,157 @@
             @ToolbarTemplate
         </div>
     }
+    else if (currentMode == "crop")
+    {
+        @* Crop is modal — a focused confirm/cancel bar rather than the full tool set *@
+        <div class="shiny-imgeditor-toolbar @ToolbarOrderClass">
+            <div class="shiny-imgeditor-bar shiny-imgeditor-bar--crop">
+                <button class="shiny-imgeditor-pill shiny-imgeditor-pill--ghost"
+                        @onclick="CancelCrop">@CropCancelText</button>
+                <span class="shiny-imgeditor-hint">Drag the edges to crop</span>
+                <button class="shiny-imgeditor-pill shiny-imgeditor-pill--accent"
+                        @onclick="ApplyCrop">@CropApplyText</button>
+            </div>
+        </div>
+    }
     else
     {
-        <div class="shiny-imgeditor-toolbar" style="@(ToolbarPosition == "top" ? "order:-1;" : "")">
-            @if (AllowCrop)
-            {
-                <button class="shiny-imgeditor-btn @(currentMode == "crop" ? "active" : "")"
-                        @onclick="ToggleCrop" title="Crop">&#9986;</button>
-            }
-            @if (AllowRotate)
-            {
-                <button class="shiny-imgeditor-btn" @onclick="() => RotateAsync(90)" title="Rotate">&#8635;</button>
-            }
-            @if (AllowDraw)
-            {
-                <button class="shiny-imgeditor-btn @(currentMode == "draw" ? "active" : "")"
-                        @onclick="ToggleDraw" title="Draw">&#9999;</button>
-            }
-            @if (AllowLine)
-            {
-                <button class="shiny-imgeditor-btn @(currentMode == "line" ? "active" : "")"
-                        @onclick="ToggleLine" title="Line">&#x2500;</button>
-            }
-            @if (AllowArrow)
-            {
-                <button class="shiny-imgeditor-btn @(currentMode == "arrow" ? "active" : "")"
-                        @onclick="ToggleArrow" title="Arrow">&#x2192;</button>
-            }
-            @if (AllowTextAnnotation)
-            {
-                <button class="shiny-imgeditor-btn @(currentMode == "text" ? "active" : "")"
-                        @onclick="ToggleText" title="Text">&#x0054;</button>
+        <div class="shiny-imgeditor-toolbar @ToolbarOrderClass">
+            <div class="shiny-imgeditor-bar">
 
-                @if (currentMode == "text" && AllowFontSelection && AvailableFonts != null)
-                {
-                    <select class="shiny-imgeditor-select" @onchange="OnFontFamilySelected" title="Font">
-                        @foreach (var font in AvailableFonts)
+                @* Tools — scrolls horizontally so the row never runs off a narrow screen *@
+                <div class="shiny-imgeditor-scroller">
+                    <div class="shiny-imgeditor-tools">
+                        @if (AllowZoom)
                         {
-                            <option value="@font" selected="@(font == TextFontFamily)" style="font-family:@font">@font</option>
+                            <button class="shiny-imgeditor-tool @Active("none")" @onclick="SelectMoveTool" title="Move">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Move</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Move</span> }
+                            </button>
                         }
-                    </select>
-                }
-                @if (currentMode == "text" && AllowFontSizeSelection && AvailableFontSizes != null)
-                {
-                    <select class="shiny-imgeditor-select" @onchange="OnFontSizeSelected" title="Font size">
-                        @foreach (var size in AvailableFontSizes)
+                        @if (AllowCrop)
                         {
-                            <option value="@size.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                    selected="@(System.Math.Abs(size - TextFontSize) < 0.001)">@size pt</option>
+                            <button class="shiny-imgeditor-tool @Active("crop")" @onclick="ToggleCrop" title="Crop">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Crop</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Crop</span> }
+                            </button>
                         }
-                    </select>
+                        @if (AllowRotate)
+                        {
+                            <button class="shiny-imgeditor-tool" @onclick="RotateClockwise" title="Rotate">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Rotate</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Rotate</span> }
+                            </button>
+                        }
+                        @if (AllowDraw)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("draw")" @onclick="ToggleDraw" title="Draw">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Draw</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Draw</span> }
+                            </button>
+                        }
+                        @if (AllowLine)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("line")" @onclick="ToggleLine" title="Line">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Line</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Line</span> }
+                            </button>
+                        }
+                        @if (AllowArrow)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("arrow")" @onclick="ToggleArrow" title="Arrow">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Arrow</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Arrow</span> }
+                            </button>
+                        }
+                        @if (AllowTextAnnotation)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("text")" @onclick="ToggleText" title="Text">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Text</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Text</span> }
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @* Options for the active tool only *@
+                @if (IsInkMode || currentMode == "text")
+                {
+                    <div class="shiny-imgeditor-scroller">
+                        <div class="shiny-imgeditor-options">
+                            <input type="color" class="shiny-imgeditor-color" value="@activeColor"
+                                   @onchange="OnColorChanged" title="Colour" />
+
+                            @if (IsInkMode && ShowStrokeWidthPicker)
+                            {
+                                @foreach (var width in StrokeWidthPresets)
+                                {
+                                    var w = width;
+                                    <button class="shiny-imgeditor-weight @(IsSelectedWidth(w) ? "active" : "")"
+                                            @onclick="() => SetStrokeWidthAsync(w)" title="@($"{w}px")">
+                                        <span style="width:@((6 + w * 1.6).ToString(Culture))px;height:@((6 + w * 1.6).ToString(Culture))px"></span>
+                                    </button>
+                                }
+                            }
+
+                            @if (currentMode == "text" && AllowFontSelection && AvailableFonts != null)
+                            {
+                                <select class="shiny-imgeditor-select" @onchange="OnFontFamilySelected" title="Font">
+                                    @foreach (var font in AvailableFonts)
+                                    {
+                                        <option value="@font" selected="@(font == TextFontFamily)" style="font-family:@font">@font</option>
+                                    }
+                                </select>
+                            }
+                            @if (currentMode == "text" && AllowFontSizeSelection && AvailableFontSizes != null)
+                            {
+                                <select class="shiny-imgeditor-select" @onchange="OnFontSizeSelected" title="Font size">
+                                    @foreach (var size in AvailableFontSizes)
+                                    {
+                                        <option value="@size.ToString(Culture)"
+                                                selected="@(System.Math.Abs(size - TextFontSize) < 0.001)">@size pt</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                    </div>
                 }
-            }
 
-            <span class="shiny-imgeditor-separator"></span>
+                @* History on the left, zoom in the middle *@
+                <div class="shiny-imgeditor-actions">
+                    <div class="shiny-imgeditor-group">
+                        <button class="shiny-imgeditor-btn" @onclick="Undo" disabled="@(!canUndo)" title="Undo">
+                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Undo</span>
+                        </button>
+                        <button class="shiny-imgeditor-btn" @onclick="Redo" disabled="@(!canRedo)" title="Redo">
+                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Redo</span>
+                        </button>
+                        <button class="shiny-imgeditor-btn" @onclick="Reset" disabled="@(!canUndo)" title="Reset">
+                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Reset</span>
+                        </button>
+                    </div>
 
-            <input type="color" class="shiny-imgeditor-color" value="@activeColor"
-                   @onchange="OnColorChanged" title="Color" />
+                    @if (AllowZoom && ShowZoomControls)
+                    {
+                        <div class="shiny-imgeditor-group shiny-imgeditor-group--zoom">
+                            <button class="shiny-imgeditor-btn" @onclick="ZoomOut" title="Zoom out">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomOut</span>
+                            </button>
+                            <button class="shiny-imgeditor-zoomvalue" @onclick="ZoomToFit" title="Reset zoom">@ZoomText</button>
+                            <button class="shiny-imgeditor-btn" @onclick="ZoomIn" title="Zoom in">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomIn</span>
+                            </button>
+                            <button class="shiny-imgeditor-btn" @onclick="ZoomToFit" title="Fit to view">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomFit</span>
+                            </button>
+                        </div>
+                    }
 
-            <span class="shiny-imgeditor-separator"></span>
-
-            <button class="shiny-imgeditor-btn" @onclick="async () => await UndoAsync()" disabled="@(!canUndo)" title="Undo">&#8630;</button>
-            <button class="shiny-imgeditor-btn" @onclick="async () => await RedoAsync()" disabled="@(!canRedo)" title="Redo">&#8631;</button>
-            <button class="shiny-imgeditor-btn" @onclick="async () => await ResetAsync()" title="Reset">&#8634;</button>
-
-            @if (currentMode == "crop")
-            {
-                <span class="shiny-imgeditor-separator"></span>
-                <button class="shiny-imgeditor-btn" @onclick="async () => await ApplyCropAsync()" title="Apply Crop">&#10003;</button>
-                <button class="shiny-imgeditor-btn" @onclick="CancelCrop" title="Cancel">&#10007;</button>
-            }
+                    <div class="shiny-imgeditor-group shiny-imgeditor-group--end">
+                        @ToolbarActions
+                    </div>
+                </div>
+            </div>
         </div>
     }
 </div>

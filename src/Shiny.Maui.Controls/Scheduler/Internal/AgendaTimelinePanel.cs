@@ -1,4 +1,5 @@
 using Microsoft.Maui.Layouts;
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
@@ -321,14 +322,10 @@ class AgendaTimelinePanel : ContentView
         var host = new Grid();
         host.Add(eventView);
 
+        // Attached to the inner view, not the host: the grips are siblings stacked above it, so a
+        // touch in a grip goes to the grip alone.
         if (AllowEventDrag)
-        {
-            var pan = new PanGestureRecognizer();
-            // Attached to the inner view, not the host: the grips are siblings stacked above it, so
-            // a touch in a grip goes to the grip alone.
-            pan.PanUpdated += (_, e) => HandlePan(e, host, evt, SchedulerEventChangeKind.Move);
-            eventView.GestureRecognizers.Add(pan);
-        }
+            AttachDrag(eventView, host, evt, SchedulerEventChangeKind.Move);
 
         // Too short to hold two grips and still be grabbable in the middle - move only.
         if (AllowEventResize && height >= GripHeight * 3)
@@ -340,18 +337,50 @@ class AgendaTimelinePanel : ContentView
     }
 
 
+    /// <summary>
+    /// Two gesture sources for one drag: a pan for the deltas, and a native touch hook underneath
+    /// it.
+    /// </summary>
+    /// <remarks>
+    /// The hook is not optional. The pan alone cannot start this drag - the enclosing ScrollView
+    /// claims the gesture on both mobile platforms before the pan ever reports anything usable, and
+    /// a pan cannot time the long press either, because it does not begin until the finger has
+    /// already moved. So the press is taken from the raw touch-down and the pan only supplies the
+    /// travel once the drag has armed. See <see cref="DragTouchHook"/>.
+    /// </remarks>
+    void AttachDrag(View source, View host, SchedulerEvent evt, SchedulerEventChangeKind kind)
+    {
+        var hook = new DragTouchHook(source);
+        hook.Pressed = () => DragController?.Press(this, host, evt, kind, hook);
+        hook.Released = () => DragController?.Release();
+
+        var pan = new PanGestureRecognizer();
+        pan.PanUpdated += (_, e) => HandlePan(e, host, evt, kind, hook);
+        source.GestureRecognizers.Add(pan);
+    }
+
+
+    /// <summary>
+    /// A short centred pill, not an edge-to-edge rule: a line spanning the block reads as a border
+    /// on it rather than as something you can grab.
+    /// </summary>
     View CreateGrip(View host, SchedulerEvent evt, bool isStart)
     {
         var bar = new BoxView
         {
+            WidthRequest = 26,
             HeightRequest = 3,
-            Color = Colors.White,
-            Opacity = 0.7,
-            Margin = new Thickness(14, 0),
-            VerticalOptions = LayoutOptions.Center
+            CornerRadius = 1.5,
+            HorizontalOptions = LayoutOptions.Center,
+            // Just clear of the block's own padding, so it sits on the edge it resizes instead of
+            // over the title.
+            VerticalOptions = isStart ? LayoutOptions.Start : LayoutOptions.End,
+            Margin = new Thickness(0, 3),
+            InputTransparent = true
         };
+        TintGrip(bar, evt);
 
-        // A 4px visual bar inside a 16px touch target.
+        // A 3px visual bar inside a 16px touch target.
         var grip = new Grid
         {
             HeightRequest = GripHeight,
@@ -360,23 +389,48 @@ class AgendaTimelinePanel : ContentView
             Children = { bar }
         };
 
-        var pan = new PanGestureRecognizer();
-        var kind = isStart ? SchedulerEventChangeKind.ResizeStart : SchedulerEventChangeKind.ResizeEnd;
-        pan.PanUpdated += (_, e) => HandlePan(e, host, evt, kind);
-        grip.GestureRecognizers.Add(pan);
+        AttachDrag(grip, host, evt,
+            isStart ? SchedulerEventChangeKind.ResizeStart : SchedulerEventChangeKind.ResizeEnd);
         return grip;
     }
 
 
-    void HandlePan(PanUpdatedEventArgs e, View host, SchedulerEvent evt, SchedulerEventChangeKind kind)
+    /// <summary>Whatever the block is filled with, the grip has to be visible against it.</summary>
+    void TintGrip(BoxView bar, SchedulerEvent evt)
+    {
+        var fill = evt.Color ?? defaultEventColor;
+        if (fill is null)
+        {
+            // Same fill the default event view falls back to, so the same foreground token applies.
+            bar.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            bar.Opacity = 0.85;
+            return;
+        }
+
+        // WCAG relative luminance - a white bar on a pale event block is invisible.
+        var luminance = 0.2126 * Linearize(fill.Red)
+                      + 0.7152 * Linearize(fill.Green)
+                      + 0.0722 * Linearize(fill.Blue);
+
+        bar.Color = luminance > 0.4 ? Colors.Black : Colors.White;
+        bar.Opacity = luminance > 0.4 ? 0.45 : 0.85;
+    }
+
+    static double Linearize(float channel)
+        => channel <= 0.03928f ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4);
+
+
+    void HandlePan(PanUpdatedEventArgs e, View host, SchedulerEvent evt, SchedulerEventChangeKind kind, DragTouchHook hook)
     {
         var controller = DragController;
         if (controller == null) return;
 
         switch (e.StatusType)
         {
+            // The hook has normally pressed already, on the touch-down this pan grew out of; the
+            // call is idempotent and this is the fallback for hosts that have no hook.
             case GestureStatus.Started:
-                controller.Arm(this, host, evt, kind);
+                controller.Press(this, host, evt, kind, hook);
                 break;
 
             case GestureStatus.Running:

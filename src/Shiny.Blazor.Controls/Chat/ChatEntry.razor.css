@@ -1,0 +1,146 @@
+.shiny-chat-entry {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px 12px;
+    background: var(--shiny-color-surface, #fff);
+    font-family: inherit;
+}
+
+/* Markdown toolbar - its own row inside the card, above the entry so it stays put as the entry grows */
+.shiny-chat-mdtoolbar {
+    display: flex;
+    gap: 2px;
+    padding: 0 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.shiny-chat-mdtoolbar::-webkit-scrollbar {
+    display: none;
+}
+
+.shiny-chat-mdtoolbar button {
+    flex: 0 0 auto;
+}
+
+.shiny-chat-mdtoolbar button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 30px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--shiny-color-on-surface-variant, #555);
+}
+
+.shiny-chat-mdtoolbar button:hover {
+    background: var(--shiny-color-surface-container-high, #eee);
+}
+
+/* Rounded card holding the entry and its control row. No rule above it - the card is its own edge,
+   and the hairline that used to sit between the message list and the bar read as a stray 1px
+   artefact. */
+.shiny-chat-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px 6px;
+    border: 1px solid var(--shiny-color-outline-variant, #ddd);
+    border-radius: 24px;
+    background: var(--shiny-color-surface-container-lowest, #fff);
+    transition: border-color 0.15s;
+}
+
+.shiny-chat-composer:focus-within {
+    border-color: var(--shiny-color-primary, #007AFF);
+}
+
+.shiny-chat-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    background: transparent;
+    resize: none;
+    overflow-y: hidden;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 6px 4px 2px;
+    color: var(--shiny-color-on-surface, #222);
+}
+
+/* Control row beneath the entry */
+.shiny-chat-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* The left group can outgrow a narrow viewport once a couple of custom tools are in it, so it
+   scrolls sideways rather than pushing send off the edge. */
+.shiny-chat-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.shiny-chat-toolbar-left::-webkit-scrollbar {
+    display: none;
+}
+
+.shiny-chat-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.shiny-chat-input::placeholder {
+    color: var(--shiny-color-on-surface-variant, #999);
+}
+
+.shiny-chat-send {
+    flex: 0 0 auto;
+    background: var(--shiny-color-primary, #007AFF);
+    color: var(--shiny-color-on-primary, white);
+    border: none;
+    border-radius: 18px;
+    min-height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.shiny-chat-send:hover:not(:disabled) {
+    filter: brightness(0.92);
+}
+
+.shiny-chat-attach {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--shiny-color-primary, #007AFF);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.shiny-chat-input:disabled,
+.shiny-chat-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -26,6 +26,11 @@
                        AllowTextAnnotation="True"
                        AllowFontSelection="True"
                        AllowFontSizeSelection="True"
-                       AllowZoom="True" />
+                       AllowZoom="True"
+                       ZoomLevel="{Binding ZoomLevel}"
+                       MaxZoom="8"
+                       ShowZoomControls="True"
+                       ShowToolLabels="True"
+                       ShowStrokeWidthPicker="True" />
 
 </ContentPage>

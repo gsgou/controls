@@ -108,6 +108,13 @@
     border-bottom-left-radius: 4px;
 }
 
+/* Scoped to the text span, not the bubble: the bubble also holds whitespace between elements that
+   pre-wrap would render as blank lines. Now that the composer is multiline, bodies really do arrive
+   with newlines in them. */
+.shiny-chat-text {
+    white-space: pre-wrap;
+}
+
 .shiny-chat-bubble a {
     color: var(--shiny-color-primary, #007AFF);
     text-decoration: underline;
@@ -192,29 +199,8 @@
     30% { transform: translateY(-4px); }
 }
 
-/* Input bar */
-.shiny-chat-inputbar {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: var(--shiny-color-surface, #fff);
-    border-top: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
-}
-
-.shiny-chat-input {
-    flex: 1;
-    border: 1px solid var(--shiny-color-outline-variant, #ddd);
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 15px;
-    outline: none;
-    font-family: inherit;
-}
-
-.shiny-chat-input:focus {
-    border-color: var(--shiny-color-primary, #007AFF);
-}
+/* The composer lives in ChatEntry, which brings its own scoped styles. Nothing here draws a rule
+   between the message list and the bar - that hairline read as a stray 1px artefact. */
 
 .shiny-chat-send {
     background: var(--shiny-color-primary, #007AFF);
@@ -229,18 +215,7 @@
 }
 
 .shiny-chat-send:hover {
-    background: #0066DD;
-}
-
-.shiny-chat-attach {
-    background: transparent;
-    border: none;
-    font-size: 22px;
-    font-weight: bold;
-    color: var(--shiny-color-primary, #007AFF);
-    cursor: pointer;
-    padding: 4px 8px;
-    line-height: 1;
+    filter: brightness(0.92);
 }
 
 /* Acknowledgement badges */
@@ -441,34 +416,24 @@
     justify-content: flex-end;
 }
 
-/* Markdown toolbar */
-.shiny-chat-mdtoolbar {
-    display: flex;
-    gap: 2px;
-    padding: 4px 12px;
-    background: var(--shiny-color-surface, #fff);
-    border-top: 1px solid var(--shiny-color-outline-variant, #eee);
-}
-
-.shiny-chat-mdtoolbar button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    min-width: 30px;
-    height: 28px;
-    border-radius: 6px;
-    color: var(--shiny-color-on-surface-variant, #555);
-}
-
-.shiny-chat-mdtoolbar button:hover {
-    background: var(--shiny-color-surface-container-high, #eee);
-}
-
-/* Textarea input bar adjustments */
+/* The inline edit box inside a bubble - not the composer, which ChatEntry styles. */
 .shiny-chat-input {
+    box-sizing: border-box;
+    width: 100%;
     resize: none;
-    font-family: inherit;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border: 1px solid var(--shiny-color-outline-variant, #ddd);
+    border-radius: 12px;
+    outline: none;
+    background: var(--shiny-color-surface-container-lowest, #fff);
+    color: var(--shiny-color-on-surface, #222);
+}
+
+.shiny-chat-input:focus {
+    border-color: var(--shiny-color-primary, #007AFF);
 }
 
 .shiny-chat-input:disabled,

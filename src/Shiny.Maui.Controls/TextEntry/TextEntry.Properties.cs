@@ -119,6 +119,10 @@ public partial class TextEntry
                 te.outerBorder.BackgroundColor = c;
             else
                 te.outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+
+            // The floating label masks the border stroke with this colour, so it has to follow.
+            if (te.isPlaceholderUp)
+                te.ApplyNotchBackground();
         }));
     public Color? EntryBackgroundColor { get => (Color?)GetValue(EntryBackgroundColorProperty); set => SetValue(EntryBackgroundColorProperty, value); }
 
@@ -250,7 +254,51 @@ public partial class TextEntry
             }));
     public bool ShowCharacterCount { get => (bool)GetValue(ShowCharacterCountProperty); set => SetValue(ShowCharacterCountProperty, value); }
 
+    // Input assistance — autofill / autocorrect / predictive text
+    /// <summary>
+    /// When false, the platform's autofill and suggestion machinery is switched off for this field:
+    /// no autofill dropdown, no autocorrect, no predictive text, no spell check. Use it for serials,
+    /// coupon codes, SKUs, usernames — anything the OS "helpfully" rewrites. Defaults to true.
+    /// </summary>
+    public static readonly BindableProperty IsAutoCompleteEnabledProperty = BindableProperty.Create(
+        nameof(IsAutoCompleteEnabled), typeof(bool), typeof(TextEntry), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).ApplyInputAssistance();
+            }));
+    public bool IsAutoCompleteEnabled { get => (bool)GetValue(IsAutoCompleteEnabledProperty); set => SetValue(IsAutoCompleteEnabledProperty, value); }
+
+    /// <summary>Spell checking. Forced off while <see cref="IsAutoCompleteEnabled"/> is false.</summary>
+    public static readonly BindableProperty IsSpellCheckEnabledProperty = BindableProperty.Create(
+        nameof(IsSpellCheckEnabled), typeof(bool), typeof(TextEntry), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).ApplyInputAssistance();
+            }));
+    public bool IsSpellCheckEnabled { get => (bool)GetValue(IsSpellCheckEnabledProperty); set => SetValue(IsSpellCheckEnabledProperty, value); }
+
+    /// <summary>Predictive text / the keyboard suggestion strip. Forced off while <see cref="IsAutoCompleteEnabled"/> is false.</summary>
+    public static readonly BindableProperty IsTextPredictionEnabledProperty = BindableProperty.Create(
+        nameof(IsTextPredictionEnabled), typeof(bool), typeof(TextEntry), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).ApplyInputAssistance();
+            }));
+    public bool IsTextPredictionEnabled { get => (bool)GetValue(IsTextPredictionEnabledProperty); set => SetValue(IsTextPredictionEnabledProperty, value); }
+
     // Tools
+    /// <summary>
+    /// How docked tools are painted — <see cref="TextEntryToolStyle.Inline"/> (default) puts them on
+    /// the field itself, <see cref="TextEntryToolStyle.Addon"/> restores the Bootstrap input-group block.
+    /// </summary>
+    public static readonly BindableProperty ToolStyleProperty = BindableProperty.Create(
+        nameof(ToolStyle), typeof(TextEntryToolStyle), typeof(TextEntry), TextEntryToolStyle.Inline,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).ApplyToolStyle();
+            }));
+    public TextEntryToolStyle ToolStyle { get => (TextEntryToolStyle)GetValue(ToolStyleProperty); set => SetValue(ToolStyleProperty, value); }
+
     public static readonly BindableProperty LeftToolsProperty = BindableProperty.Create(
         nameof(LeftTools), typeof(IList<TextEntryTool>), typeof(TextEntry), null,
         propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
@@ -285,6 +333,41 @@ public partial class TextEntry
     public static readonly BindableProperty FormattedTextProperty = BindableProperty.Create(
         nameof(FormattedText), typeof(string), typeof(TextEntry), string.Empty);
     public string FormattedText { get => (string)GetValue(FormattedTextProperty); private set => SetValue(FormattedTextProperty, value); }
+
+    // Keyboard accessory
+    /// <summary>
+    /// A bar docked to the top edge of the soft keyboard while this field has focus. iOS uses the
+    /// real <c>UIResponder.InputAccessoryView</c>; Android renders the same bar in-window, driven by
+    /// the IME window insets. No-op on every other head — see the docs for the platform matrix.
+    /// </summary>
+    public static readonly BindableProperty AccessoryProperty = BindableProperty.Create(
+        nameof(Accessory), typeof(KeyboardAccessoryView), typeof(TextEntry), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).SyncAccessory();
+            }));
+    public KeyboardAccessoryView? Accessory { get => (KeyboardAccessoryView?)GetValue(AccessoryProperty); set => SetValue(AccessoryProperty, value); }
+
+    /// <summary>
+    /// A stock accessory bar, used when <see cref="Accessory"/> is not set. The usual reason to set
+    /// this is <see cref="Keyboard.Numeric"/> — the iOS number pad has no return key at all, so
+    /// without a Done button there is no way to dismiss it.
+    /// </summary>
+    public static readonly BindableProperty AccessoryPresetProperty = BindableProperty.Create(
+        nameof(AccessoryPreset), typeof(KeyboardAccessoryPreset), typeof(TextEntry), KeyboardAccessoryPreset.None,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
+            {
+                ((TextEntry)b).ResetPresetAccessory();
+            }));
+    public KeyboardAccessoryPreset AccessoryPreset { get => (KeyboardAccessoryPreset)GetValue(AccessoryPresetProperty); set => SetValue(AccessoryPresetProperty, value); }
+
+    /// <summary>
+    /// Groups fields for accessory prev/next navigation. Fields with the same group navigate to each
+    /// other; ungrouped fields navigate across the whole page.
+    /// </summary>
+    public static readonly BindableProperty FieldGroupProperty = BindableProperty.Create(
+        nameof(FieldGroup), typeof(string), typeof(TextEntry), null);
+    public string? FieldGroup { get => (string?)GetValue(FieldGroupProperty); set => SetValue(FieldGroupProperty, value); }
 
     // Commands
     public static readonly BindableProperty TextChangedCommandProperty = BindableProperty.Create(
