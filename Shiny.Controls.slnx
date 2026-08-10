@@ -43,7 +43,6 @@
     <Project Path="src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Camera/Shiny.Blazor.Controls.Camera.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Camera.Ai/Shiny.Blazor.Controls.Camera.Ai.csproj" />
-    <Project Path="src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Themes.Ocean/Shiny.Blazor.Controls.Themes.Ocean.csproj" />
     <Project Path="src/Shiny.Blazor.Controls.Themes.Material/Shiny.Blazor.Controls.Themes.Material.csproj" />
     <Project Path="tools/ShinyThemeGen/ShinyThemeGen.csproj" />

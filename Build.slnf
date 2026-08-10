@@ -29,7 +29,6 @@
             "src/Shiny.Blazor.Controls.Barcodes/Shiny.Blazor.Controls.Barcodes.csproj",
             "src/Shiny.Blazor.Controls.Camera/Shiny.Blazor.Controls.Camera.csproj",
             "src/Shiny.Blazor.Controls.Camera.Ai/Shiny.Blazor.Controls.Camera.Ai.csproj",
-            "src/Shiny.Blazor.Controls.Kiosk/Shiny.Blazor.Controls.Kiosk.csproj",
             "src/Shiny.Blazor.Controls.MermaidDiagrams/Shiny.Blazor.Controls.MermaidDiagrams.csproj"
         ]
     }

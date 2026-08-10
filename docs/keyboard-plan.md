@@ -64,7 +64,7 @@ targetless command surface, plus the one control (the accessory bar) that needs 
 
 ### What this is NOT
 
-- **Not `OnScreenKeyboard`** (`Shiny.Maui.Controls.Desktop` / `Shiny.Blazor.Controls.Kiosk`). That
+- **Not `OnScreenKeyboard`** (`Shiny.Maui.Controls.Desktop` / `Shiny.Blazor.Controls`). That
   *draws keys* — a replacement keyboard for kiosks. This service *observes and commands the OS
   keyboard* and never draws a key. Opposite problems, and the naming will confuse people unless the
   docs open by saying so.

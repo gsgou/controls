@@ -18,7 +18,6 @@
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Barcodes\Shiny.Blazor.Controls.Barcodes.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Camera\Shiny.Blazor.Controls.Camera.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Camera.Ai\Shiny.Blazor.Controls.Camera.Ai.csproj"/>
-        <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Kiosk\Shiny.Blazor.Controls.Kiosk.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Ocean\Shiny.Blazor.Controls.Themes.Ocean.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Material\Shiny.Blazor.Controls.Themes.Material.csproj"/>
     </ItemGroup>

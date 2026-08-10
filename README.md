@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux), with a companion `Shiny.Blazor.Controls.Kiosk` for the web (docking + OSK).
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -2583,7 +2583,7 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 
 ### Desktop (Tray Icon + Docking + On-Screen Keyboard)
 
-`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines three features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and a touch / kiosk **on-screen keyboard** (US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows on input focus). Blazor gets the docking + on-screen keyboard via `Shiny.Blazor.Controls.Kiosk`.
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines three features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and a touch / kiosk **on-screen keyboard** (US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows on input focus). On the Blazor side there is no equivalent add-on — docking ships in the main `Shiny.Blazor.Controls` package.
 
 ```bash
 dotnet add package Shiny.Maui.Controls.Desktop
@@ -2727,14 +2727,10 @@ The layout schema (`DockRoot`, `DockWindowState`, `DockSplit`, `DockGroup`, `Doc
 
 ##### Blazor
 
-Same shape, same contracts — different host:
-
-```bash
-dotnet add package Shiny.Blazor.Controls.Kiosk
-```
+Same shape, same contracts — different host. No extra package: docking is part of `Shiny.Blazor.Controls`.
 
 ```csharp
-using Shiny.Blazor.Controls.Kiosk.Docking;
+using Shiny.Blazor.Controls.Docking;
 
 builder.Services
     .AddShinyDocking()
@@ -2743,7 +2739,7 @@ builder.Services
 ```
 
 ```razor
-@using Shiny.Blazor.Controls.Kiosk.Docking
+@using Shiny.Blazor.Controls.Docking
 
 <DockHost @ref="host"
           InitialLayout="@layout"
@@ -2785,12 +2781,8 @@ public class MyPageViewModel(IOnScreenKeyboard keyboard)
 
 ##### Blazor
 
-```bash
-dotnet add package Shiny.Blazor.Controls.Kiosk
-```
-
 ```csharp
-using Shiny.Blazor.Controls.Kiosk.OnScreenKeyboard;
+using Shiny.Blazor.Controls.OnScreenKeyboard;
 
 builder.Services.AddShinyOnScreenKeyboard(opts =>
 {
@@ -2801,7 +2793,7 @@ builder.Services.AddShinyOnScreenKeyboard(opts =>
 ```
 
 ```razor
-@using Shiny.Blazor.Controls.Kiosk.OnScreenKeyboard
+@using Shiny.Blazor.Controls.OnScreenKeyboard
 
 @* Place once in MainLayout.razor *@
 <OnScreenKeyboardHost />

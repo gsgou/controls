@@ -1,5 +1,5 @@
 using Microsoft.Maui.Hosting;
-using Platform.Maui.Linux.Gtk4.Platform;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Platform;
 #if DEBUG
 using Microsoft.Maui.DevFlow.Agent.Gtk;
 #endif

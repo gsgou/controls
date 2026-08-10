@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Shiny.Blazor.Controls.Kiosk.Docking;
+namespace Shiny.Blazor.Controls.Docking;
 
 [JsonSourceGenerationOptions(
     WriteIndented = false,

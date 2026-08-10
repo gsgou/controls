@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
-namespace Shiny.Blazor.Controls.Kiosk.Docking;
+namespace Shiny.Blazor.Controls.Docking;
 
 public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
 {
@@ -66,7 +66,7 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
             {
                 lastLocked = IsLocked;
                 module = await JS.InvokeAsync<IJSObjectReference>(
-                    "import", "./_content/Shiny.Blazor.Controls.Kiosk/docking.js");
+                    "import", "./_content/Shiny.Blazor.Controls/docking.js");
                 dotnetRef = DotNetObjectReference.Create(this);
                 // primitives only over interop — anonymous types break trimmed/AOT publish
                 await module.InvokeVoidAsync("init", hostRef, dotnetRef, IsLocked);
@@ -88,7 +88,7 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
             // only drag/resize interactions are unavailable
             module = null;
             Logger.LogError(ex,
-                "Failed to load the docking interaction script (_content/Shiny.Blazor.Controls.Kiosk/docking.js). " +
+                "Failed to load the docking interaction script (_content/Shiny.Blazor.Controls/docking.js). " +
                 "Splitter/tab dragging is disabled. Rebuild the app and hard-refresh the browser — " +
                 "this usually means the running server or browser cache predates the script asset.");
         }

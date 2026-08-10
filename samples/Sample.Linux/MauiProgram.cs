@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Platform.Maui.Linux.Gtk4.Essentials.Hosting;
-using Platform.Maui.Linux.Gtk4.Hosting;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Essentials.Hosting;
+using Microsoft.Maui.Platforms.Linux.Gtk4.Hosting;
 using Shiny;
 #if DEBUG
 using Microsoft.Maui.DevFlow.Agent.Gtk;

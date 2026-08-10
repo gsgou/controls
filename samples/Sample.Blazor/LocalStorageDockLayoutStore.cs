@@ -1,5 +1,5 @@
 using Microsoft.JSInterop;
-using Shiny.Blazor.Controls.Kiosk.Docking;
+using Shiny.Blazor.Controls.Docking;
 
 namespace Sample.Blazor;
 

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Shiny.Blazor.Controls.Kiosk.Docking;
+namespace Shiny.Blazor.Controls.Docking;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$kind")]
 [JsonDerivedType(typeof(DockSplit), "split")]

@@ -70,7 +70,7 @@ If verification fails after integration, switch to `maui-devflow-debug` for conn
 
 Blazor WebView indicators include a `Microsoft.AspNetCore.Components.WebView.Maui` package reference or `AddMauiBlazorWebView()` in `MauiProgram.cs`.
 
-GTK indicators include package references such as `Maui.Gtk`, `Platform.Maui.Linux.Gtk4`, `GirCore.Gtk-4.0`, or `Platform.Maui.Linux.Gtk4.BlazorWebView`.
+GTK indicators include package references such as `Maui.Gtk`, `Microsoft.Maui.Platforms.Linux.Gtk4`, `GirCore.Gtk-4.0`, or `Microsoft.Maui.Platforms.Linux.Gtk4.BlazorWebView` (older projects may still reference the pre-rename `Platform.Maui.Linux.Gtk4*` ids).
 
 ## Central Package Management
 
