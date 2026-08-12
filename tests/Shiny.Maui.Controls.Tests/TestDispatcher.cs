@@ -23,9 +23,21 @@ sealed class TestDispatcher : IDispatcher
         return true;
     }
 
-    public IDispatcherTimer CreateTimer() => new InertTimer();
+    /// <summary>Every timer this dispatcher has handed out, newest last.</summary>
+    public List<ControllableTimer> Timers { get; } = [];
 
-    sealed class InertTimer : IDispatcherTimer
+    public IDispatcherTimer CreateTimer()
+    {
+        var timer = new ControllableTimer();
+        this.Timers.Add(timer);
+        return timer;
+    }
+
+    /// <summary>
+    /// A timer that never ticks on its own, so a test that needs one to fire drives it explicitly
+    /// rather than racing the clock.
+    /// </summary>
+    public sealed class ControllableTimer : IDispatcherTimer
     {
         public TimeSpan Interval { get; set; }
         public bool IsRepeating { get; set; }
@@ -35,10 +47,15 @@ sealed class TestDispatcher : IDispatcher
 
         public void Start() => this.IsRunning = true;
 
-        public void Stop()
+        public void Stop() => this.IsRunning = false;
+
+        /// <summary>Fires the timer as the real dispatcher would once <see cref="Interval"/> elapsed.</summary>
+        public void Fire()
         {
-            this.IsRunning = false;
-            _ = this.Tick;   // the event exists for the interface; nothing here raises it
+            if (!this.IsRepeating)
+                this.IsRunning = false;
+
+            this.Tick?.Invoke(this, EventArgs.Empty);
         }
     }
 }
@@ -46,7 +63,8 @@ sealed class TestDispatcher : IDispatcher
 
 sealed class TestDispatcherProvider : IDispatcherProvider
 {
-    static readonly TestDispatcher Instance = new();
+    /// <summary>The single dispatcher every test shares, so a test can reach the timers it created.</summary>
+    public static readonly TestDispatcher Instance = new();
 
     public IDispatcher? GetForCurrentThread() => Instance;
 

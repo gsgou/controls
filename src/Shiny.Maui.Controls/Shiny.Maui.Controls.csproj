@@ -15,6 +15,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The icon artwork and motion definitions, shared verbatim with the Blazor package so the
+		     two hosts cannot drift apart. Nothing in it touches a platform SDK or MAUI itself. -->
+		<ProjectReference Include="..\Shiny.Controls.MotionIcons.Shared\Shiny.Controls.MotionIcons.Shared.csproj" />
+		<!-- Motion icons run on the repo's one animation engine rather than carrying a second one:
+		     KeyframeScene draws them and Player owns playback. -->
+		<ProjectReference Include="..\Shiny.Controls.Keyframe.Shared\Shiny.Controls.Keyframe.Shared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<InternalsVisibleTo Include="Shiny.Maui.Controls.Tests" />
 	</ItemGroup>
 

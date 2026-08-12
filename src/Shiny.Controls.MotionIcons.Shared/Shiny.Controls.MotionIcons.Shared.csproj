@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- Deliberately dependency-free. This package is the single source of truth for what a
+             motion icon *is*, and both hosts compile it into something completely different — MAUI
+             into a keyframe scene, Blazor into CSS @keyframes. Taking a dependency on
+             Microsoft.Maui.Graphics here would push it into every Blazor WASM payload for the sake
+             of a couple of structs, so the geometry types are declared locally instead. -->
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <EnableAotAnalyzer>true</EnableAotAnalyzer>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <!-- The repo uses two feeds (nuget.org + dotnet10) without source mapping; NU1507 is a
+             restore-config warning, not a code-quality one, so it must not fail these builds. -->
+        <NoWarn>$(NoWarn);NU1507</NoWarn>
+        <RootNamespace>Shiny.Controls.MotionIcons</RootNamespace>
+        <Description>Host-neutral motion icon library — animated icon artwork plus a declarative motion spec (channels, keyframes, easing) that the .NET MAUI and Blazor packages each compile to their own animation model.</Description>
+        <PackageTags>maui blazor shiny icons animation motion svg</PackageTags>
+    </PropertyGroup>
+
+</Project>

@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -19,6 +19,7 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![MAUI MediaElement Linux NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MediaElement.Linux.svg?label=Shiny.Maui.Controls.MediaElement.Linux)](https://www.nuget.org/packages/Shiny.Maui.Controls.MediaElement.Linux)
 [![Blazor MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MediaElement.svg?label=Shiny.Blazor.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MediaElement)
 [![Keyframe Export NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Keyframe.Export.svg?label=Shiny.Maui.Controls.Keyframe.Export)](https://www.nuget.org/packages/Shiny.Maui.Controls.Keyframe.Export)
+[![Motion Icons NuGet](https://img.shields.io/nuget/v/Shiny.Controls.MotionIcons.Shared.svg?label=Shiny.Controls.MotionIcons.Shared)](https://www.nuget.org/packages/Shiny.Controls.MotionIcons.Shared)
 
 ## Getting Started
 
@@ -1401,6 +1402,76 @@ Wraps a single content view and overlays a small notification badge at any of th
 - Configurable show/hide scale animation and optional continuous pulse for attention-grabbing badges
 - Blazor honors `prefers-reduced-motion` and disables both animations when set
 
+### ShinyButton
+
+A button that knows what it is doing: a leading and a trailing icon slot, a real working state, and
+success/error states, all wired to the theme and — on MAUI — to its `Command`.
+
+`Microsoft.Maui.Controls.Button` renders text and one image and nothing else, so "submit, spin, tick"
+ends up hand-assembled on every page out of a `Grid`, an `ActivityIndicator` and a swapped label.
+This is that assembly, done once and at parity on both hosts.
+
+- **State machine** — `ButtonState.Normal` / `Busy` / `Success` / `Error`, with `BusyText` /
+  `SuccessText` / `ErrorText` standing in for `Text`, per-state icons, and a `StateRevertDelay` that
+  drops Success and Error back to Normal on their own (`TimeSpan.Zero` holds).
+- **`IsBusy` shorthand** for the common view model that only has an `IsSaving` flag. Clearing it
+  unwinds Busy but will *not* cut a Success or Error short — a view model clearing its flag in a
+  `finally` is exactly when the outcome is on screen.
+- **Three busy modes** — `ReplaceLeftIcon` (the default; the spinner and the icon are the same size,
+  so the button cannot change width), `ReplaceContent` (content fades but keeps its layout space, so
+  the button holds the width it had), and `KeepContent`.
+- **Icon slots, three ways each** — `LeftIcon` (`ImageSource`), `LeftMotionIcon` (the name of a
+  [motion icon](#motion-icons), coloured and played by the button), or `LeftIconView` for any `View`
+  at all. Same trio on the right.
+- **Command state (MAUI)** — the button follows its command's `CanExecuteChanged`, and if the command
+  is an async one (`AsyncRelayCommand` and friends) it drives its own `Busy` for exactly as long as
+  the command runs. Nothing binds `IsBusy`. It does this through MAUI's own `IsEnabledCore`, so a
+  button you explicitly set `IsEnabled="False"` on **stays** disabled when the command becomes
+  executable again.
+- **Appearance × Type** — `Filled` / `Tonal` / `Outlined` / `Text` / `Elevated` crossed with
+  `Primary` / `Secondary` / `Success` / `Warning` / `Critical` / `Info`, all resolved from the theme
+  tokens. Any explicit colour property wins over both.
+
+```xml
+<!-- The whole point: nothing here binds IsBusy. SaveCommand is an AsyncRelayCommand. -->
+<shiny:ShinyButton Text="Save"
+                   BusyText="Saving..."
+                   LeftMotionIcon="download"
+                   Command="{Binding SaveCommand}" />
+
+<!-- Submit, spin, tick. The command sets State=Success itself; the button respects it. -->
+<shiny:ShinyButton Text="Submit"
+                   State="{Binding SubmitState}"
+                   BusyText="Submitting..."
+                   SuccessText="Submitted"
+                   StateRevertDelay="0:0:2"
+                   Command="{Binding SubmitCommand}" />
+
+<!-- Appearance and type are orthogonal; explicit colours still win -->
+<shiny:ShinyButton Text="Delete" Appearance="Outlined" Type="Critical" LeftMotionIcon="trash" />
+<shiny:ShinyButton Text="Cancel" Appearance="Text" />
+<shiny:ShinyButton Text="Brand"  ButtonBackgroundColor="#E91E63" TextColor="White" />
+```
+
+Blazor mirrors the parameters one-for-one. There is no `ICommand` on the web, so the command-state
+integration is MAUI-only; its equivalent is that `Clicked` is awaited — an `async` handler holds the
+button busy for as long as it runs, and a synchronous one never flickers.
+
+```razor
+<ShinyButton Text="Save" BusyText="Saving..." LeftMotionIcon="download" Clicked="SaveAsync" />
+
+<ShinyButton Text="Delete" Appearance="ButtonAppearance.Outlined"
+             Type="ButtonType.Critical" LeftMotionIcon="trash" Clicked="DeleteAsync" />
+
+@code {
+    async Task SaveAsync() => await http.PostAsJsonAsync("/api/save", model);
+}
+```
+
+Motion icons in the slots play a cycle on tap and take their colour from the button's foreground, so
+a disabled or hovered button carries its icons with it. Clearing `BusyMotionIcon` falls back to a
+platform `ActivityIndicator` on MAUI and a CSS spinner on Blazor.
+
 ### Fab & FabMenu
 
 A Material Design-style floating action button, plus an expanding multi-action menu that animates up from the main FAB.
@@ -2398,6 +2469,40 @@ GifEncoder.EncodeToFile("out.gif", exporter.Frames(options), options.Fps);
 - GIF stores delays in hundredths of a second, so only divisors of 100 are exact: **25 or 50fps** when timing matters. 30fps writes 3cs and actually plays at 33.3fps, and most browsers promote 0–1cs delays to 10cs, so anything above 50fps plays far slower than asked.
 - `IFrameRenderer` is an interface — swap `SkiaFrameRenderer` for your own rasterizer if you'd rather not take the Skia dependency.
 - MP4/video export is out of scope (it needs a real codec); pipe `FrameExporter.Frames()` to ffmpeg's stdin. APNG/WebP aren't implemented, and there's no Lottie parser yet — though `KeyframeScene` is the scene graph one would need.
+
+### Motion Icons
+
+42 hand-drawn animated icons that run **on a timer, on hover, on tap, when they scroll into view, or on command** — a bell that rings from its crown, a hamburger that morphs into a cross, a tick that draws itself on. `MotionIconView` on MAUI, `<MotionIcon>` on Blazor, both in the core packages; the artwork and the motion live in `Shiny.Controls.MotionIcons.Shared` so the two hosts render the same drawing running the same curves.
+
+```xml
+<!-- MAUI — the standard shiny xmlns, no extra prefix -->
+<shiny:MotionIconView Icon="bell"
+                      Trigger="Loop"
+                      Interval="0:0:1.5"
+                      Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}"
+                      WidthRequest="32"
+                      HeightRequest="32" />
+```
+
+```razor
+@* Blazor — Color defaults to currentColor, so it inherits the text around it *@
+<MotionIcon Icon="bell" Trigger="MotionTrigger.Loop" Interval="TimeSpan.FromSeconds(1.5)" Size="32" />
+```
+
+**Triggers** are a `[Flags]` enum and combine: `Loop`, `Hover`, `Press`, `Appear`, or `Manual` for `Play()` / `Stop()` / binding `IsPlaying` to a busy flag. `Interval` rests the icon between cycles.
+
+**Presets** work on any icon, including your own artwork — `Pulse`, `Beat`, `Spin`, `Shake`, `Wobble`, `Bounce`, `Float`, `Pop`, `Tada`, `Flip`, `Swing`, `Blink`, `Draw`, `Nudge`, `Jiggle`. `Default` plays the motion drawn for that icon and falls back to `Pulse` for artwork that has none.
+
+**Bring your own artwork** with `PathData="M12 2 3 20h18z"` for a quick glyph, a `MotionIconDefinition` for something split into moving parts, or `MotionIconLibrary.Register(...)` to replace a built-in across the whole app.
+
+**Notes:**
+- The two hosts run the *same* spec through different machinery: on MAUI it compiles to a `KeyframeScene` driven by the [Keyframe](#keyframe-animation) engine's `Player`, so motion icons and hand-written timelines share one animation engine, one clock per window and one set of easing curves. On Blazor it compiles to `@keyframes` once and the browser composites it, so no C# runs per frame and the animation keeps going while WebAssembly is busy.
+- Because nothing touches a platform SDK, the MAUI side works on every head — including AppKit and GTK4.
+- Playback never starts before the view is loaded, so an implicit `<Style TargetType="MotionIconView">` that sets `IsPlaying` cannot reach for a dispatcher from inside a constructor.
+- Unset `Color` follows the theme pack's on-surface token via `SetDynamicResource`, so icons restyle with a live `SetTheme`.
+- Every generic preset works on artwork the library has never seen; only `Draw` needs to know the parts, so it can stagger them.
+- `prefers-reduced-motion` is honoured on the web: the icon renders and still responds, it just holds its resting pose.
+- **Write path data with explicit `L` commands.** `Microsoft.Maui.Graphics` does not implement SVG's implicit-lineto rule (`M6 6 18 18` becomes two *movetos*, not a line) and cannot read run-together decimals (`l.06.06`). Browsers handle both, so artwork copied from a design tool can look perfect on Blazor and draw nothing on MAUI. Unit tests guard the built-in set against both.
 
 ### CarouselGallery
 

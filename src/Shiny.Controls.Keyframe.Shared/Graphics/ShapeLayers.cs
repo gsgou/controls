@@ -111,6 +111,22 @@ public sealed class PathLayer : ShapeLayer
     /// <summary>How overlapping subpaths decide what is inside the shape.</summary>
     public WindingMode WindingMode { get; set; } = WindingMode.NonZero;
 
+    /// <summary>
+    /// Where the drawn stroke begins, as a fraction of the path's own length.
+    /// </summary>
+    public float TrimStart { get; set; }
+
+    /// <summary>
+    /// Where the drawn stroke ends, as a fraction of the path's own length. Animate this from 0 to
+    /// 1 for a "draw on" reveal.
+    /// </summary>
+    /// <remarks>
+    /// Trimming applies to the stroke only — the fill always uses the whole path, because a
+    /// partially drawn outline filled in would read as a mistake rather than an effect. This
+    /// matches how trim paths behave in Lottie and every design tool that has them.
+    /// </remarks>
+    public float TrimEnd { get; set; } = 1f;
+
     /// <inheritdoc />
     protected override void OnDraw(ICanvas canvas, float effectiveOpacity)
     {
@@ -120,8 +136,15 @@ public sealed class PathLayer : ShapeLayer
         if (PrepareFill(canvas))
             canvas.FillPath(Data, WindingMode);
 
-        if (PrepareStroke(canvas))
-            canvas.DrawPath(Data);
+        if (!PrepareStroke(canvas))
+            return;
+
+        // Measuring and rebuilding is only paid for while a trim is actually in flight; an
+        // untrimmed path is handed straight back.
+        var geometry = PathTrimmer.Trim(Data, TrimStart, TrimEnd);
+
+        if (geometry.OperationCount > 0)
+            canvas.DrawPath(geometry);
     }
 }
 

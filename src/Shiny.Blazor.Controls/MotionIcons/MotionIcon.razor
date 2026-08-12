@@ -1,0 +1,23 @@
+@namespace Shiny.Blazor.Controls
+
+<span @ref="element"
+      class="shiny-motion-icon @plan?.Scope @(playing ? "shiny-motion-icon--playing" : null) @CssClass"
+      style="@RootStyle"
+      role="@(string.IsNullOrEmpty(Title) ? null : "img")"
+      aria-label="@(string.IsNullOrEmpty(Title) ? null : Title)"
+      aria-hidden="@(string.IsNullOrEmpty(Title) ? "true" : null)"
+      @onmouseenter="OnPointerEnter"
+      @onmouseleave="OnPointerLeave"
+      @onclick="OnClicked"
+      @attributes="AdditionalAttributes">
+    @if (icon is not null && plan is not null)
+    {
+        <svg viewBox="@ViewBox" width="100%" height="100%" focusable="false">
+            @* Emitted per instance rather than hoisted into a stylesheet: a component cannot reach
+               the document head from inside a render tree without interop, and duplicate copies of
+               an identical @@keyframes block cost bytes and nothing else. *@
+            <style>@((MarkupString)plan.Css)</style>
+            @((MarkupString)plan.Markup)
+        </svg>
+    }
+</span>

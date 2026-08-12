@@ -1,0 +1,258 @@
+/* The appearance and type classes never name a colour: the type sets four custom properties and the
+   appearance decides which of them to paint with. That is what keeps the matrix additive - a new
+   semantic type is four lines, not five new rules - and it is also how an explicit colour parameter
+   wins, since it overrides --shiny-btn-bg / -fg / -stroke inline. */
+
+.shiny-btn {
+    --shiny-btn-radius: 10px;
+    --shiny-btn-gap: 8px;
+    --shiny-btn-icon: 20px;
+    --shiny-btn-stroke-width: 0px;
+
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 44px;
+    border: var(--shiny-btn-stroke-width) solid var(--shiny-btn-stroke, transparent);
+    border-radius: var(--shiny-btn-radius);
+    background: var(--shiny-btn-bg, transparent);
+    color: var(--shiny-btn-fg, inherit);
+    font-family: inherit;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease, filter 120ms ease;
+}
+
+.shiny-btn--full {
+    display: flex;
+    width: 100%;
+}
+
+.shiny-btn:focus-visible {
+    outline: 2px solid var(--shiny-btn-focus, var(--shiny-color-primary, #0055D9));
+    outline-offset: 2px;
+}
+
+.shiny-btn:disabled {
+    /* Matches the MAUI side's DisabledOpacity, which is the Material 3 disabled value. */
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+/* Hover and press are a filter rather than a colour, so they work for every appearance and every
+   type without a rule per combination - including a caller's explicit background, which no token
+   rule could have anticipated. */
+.shiny-btn:not(:disabled):hover {
+    filter: brightness(1.08);
+}
+
+.shiny-btn:not(:disabled):active {
+    filter: brightness(0.94);
+}
+
+/* A busy button is disabled by default, so :active never fires - the cursor is the only cue left
+   that it is working rather than broken. */
+.shiny-btn--busy {
+    cursor: progress;
+}
+
+
+/* ===== Types: the four colour roles ===== */
+
+.shiny-btn--primary {
+    --shiny-btn-base: var(--shiny-color-primary, #0055D9);
+    --shiny-btn-on-base: var(--shiny-color-on-primary, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-primary-container, #C2D6FF);
+    --shiny-btn-on-container: var(--shiny-color-on-primary-container, #001886);
+}
+
+.shiny-btn--secondary {
+    --shiny-btn-base: var(--shiny-color-secondary, #565F6D);
+    --shiny-btn-on-base: var(--shiny-color-on-secondary, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-secondary-container, #D9E3F3);
+    --shiny-btn-on-container: var(--shiny-color-on-secondary-container, #131C28);
+}
+
+.shiny-btn--success {
+    --shiny-btn-base: var(--shiny-color-success, #00711C);
+    --shiny-btn-on-base: var(--shiny-color-on-success, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-success-container, #81FB9A);
+    --shiny-btn-on-container: var(--shiny-color-on-success-container, #002A00);
+}
+
+.shiny-btn--warning {
+    --shiny-btn-base: var(--shiny-color-warning, #9C4500);
+    --shiny-btn-on-base: var(--shiny-color-on-warning, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-warning-container, #FFC862);
+    --shiny-btn-on-container: var(--shiny-color-on-warning-container, #4D0000);
+}
+
+.shiny-btn--critical {
+    --shiny-btn-base: var(--shiny-color-critical, #C20014);
+    --shiny-btn-on-base: var(--shiny-color-on-critical, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-critical-container, #FFA78D);
+    --shiny-btn-on-container: var(--shiny-color-on-critical-container, #670000);
+}
+
+.shiny-btn--info {
+    --shiny-btn-base: var(--shiny-color-info, #0055D9);
+    --shiny-btn-on-base: var(--shiny-color-on-info, #FFFFFF);
+    --shiny-btn-container: var(--shiny-color-info-container, #C2D6FF);
+    --shiny-btn-on-container: var(--shiny-color-on-info-container, #001886);
+}
+
+
+/* ===== Appearances: which roles get painted ===== */
+
+.shiny-btn--filled {
+    --shiny-btn-bg: var(--shiny-btn-base);
+    --shiny-btn-fg: var(--shiny-btn-on-base);
+}
+
+.shiny-btn--tonal {
+    --shiny-btn-bg: var(--shiny-btn-container);
+    --shiny-btn-fg: var(--shiny-btn-on-container);
+}
+
+.shiny-btn--outlined {
+    --shiny-btn-bg: transparent;
+    --shiny-btn-fg: var(--shiny-btn-base);
+    --shiny-btn-stroke: var(--shiny-color-outline, #6C788D);
+    --shiny-btn-stroke-width: 1px;
+}
+
+.shiny-btn--text {
+    --shiny-btn-bg: transparent;
+    --shiny-btn-fg: var(--shiny-btn-base);
+}
+
+.shiny-btn--elevated {
+    --shiny-btn-bg: var(--shiny-color-surface-container-low, #EFF4FB);
+    --shiny-btn-fg: var(--shiny-btn-base);
+}
+
+/* The two transparent appearances have no fill to brighten, so they get a tint of their own colour
+   instead - the Material state-layer idea, done with colour-mix so it works over any background. */
+.shiny-btn--outlined:not(:disabled):hover,
+.shiny-btn--text:not(:disabled):hover {
+    filter: none;
+    background: color-mix(in srgb, var(--shiny-btn-base) 8%, transparent);
+}
+
+.shiny-btn--outlined:not(:disabled):active,
+.shiny-btn--text:not(:disabled):active {
+    filter: none;
+    background: color-mix(in srgb, var(--shiny-btn-base) 14%, transparent);
+}
+
+.shiny-btn--shadow {
+    box-shadow: var(--shiny-elevation-1, 0 1px 3px rgba(0, 0, 0, 0.2));
+}
+
+.shiny-btn--shadow:not(:disabled):hover {
+    box-shadow: var(--shiny-elevation-2, 0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+
+/* ===== Content ===== */
+
+.shiny-btn__content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--shiny-btn-gap);
+    transition: opacity 120ms ease;
+}
+
+/* Opacity rather than display:none, so the content keeps its layout space and the button holds the
+   width it had before it went busy - no width pinning needed. Same trick as the MAUI side. */
+.shiny-btn--hide-content .shiny-btn__content {
+    opacity: 0;
+}
+
+/* Stacked layouts put both icons in one row above or below the label. The icons are wrapped in
+   .shiny-btn__icons by the markup for exactly this reason - flexing .shiny-btn__content into a
+   column would otherwise stack [left, text, right] literally and sandwich the label between the two
+   icons, which is not what Top/Bottom mean. The MAUI side shares the icons' grid row for the same
+   reason. */
+.shiny-btn--stack-top .shiny-btn__content,
+.shiny-btn--stack-bottom .shiny-btn__content {
+    flex-direction: column;
+    gap: calc(var(--shiny-btn-gap) / 2);
+}
+
+.shiny-btn--stack-bottom .shiny-btn__content {
+    flex-direction: column-reverse;
+}
+
+.shiny-btn__icons {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--shiny-btn-gap);
+}
+
+.shiny-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: var(--shiny-btn-icon);
+    height: var(--shiny-btn-icon);
+}
+
+/* ::deep is required, not stylistic. CSS isolation appends the scope attribute to the *rightmost*
+   selector, so a plain `.shiny-btn__icon img` compiles to `.shiny-btn__icon img[b-hash]` — and the
+   img here is either emitted by RenderTreeBuilder (no scope attribute) or owned by the MotionIcon
+   component (a different scope). ::deep moves the attribute onto the ancestor instead. */
+.shiny-btn__icon ::deep img,
+.shiny-btn__icon ::deep svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.shiny-btn__text {
+    white-space: nowrap;
+}
+
+/* ReplaceContent: the content stays laid out but invisible, and the indicator is absolutely centred
+   over it. */
+.shiny-btn__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+
+/* ===== Fallback spinner (BusyMotionIcon cleared) ===== */
+
+.shiny-btn__spinner {
+    display: inline-block;
+    box-sizing: border-box;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: shiny-btn-spin 700ms linear infinite;
+}
+
+@keyframes shiny-btn-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-btn__spinner {
+        animation-duration: 2s;
+    }
+
+    .shiny-btn {
+        transition: none;
+    }
+}

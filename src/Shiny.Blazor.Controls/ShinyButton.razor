@@ -1,0 +1,100 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    Every piece of markup lives here rather than in RenderTreeBuilder code, for one non-obvious
+    reason: CSS isolation stamps its scope attribute at compile time onto elements that appear in
+    .razor *markup* only, and it appends that attribute to the *rightmost* selector. An element
+    created in C# never gets it, so a rule like `.shiny-btn__spinner` compiles to
+    `.shiny-btn__spinner[b-xxx]` and then never matches - the span renders as an unstyled,
+    invisible box.
+*@
+@{
+    RenderFragment fallbackSpinner = @<span class="shiny-btn__spinner" style="@SpinnerStyle"></span>;
+    var busy = ResolveBusyIndicator(fallbackSpinner);
+
+    RenderFragment leftSlot =
+        @<span class="shiny-btn__icon shiny-btn__icon--left">
+            @if (CurrentState is ButtonState.Busy && BusyMode is ButtonBusyMode.ReplaceLeftIcon)
+            {
+                @busy
+            }
+            else if (StateIndicator is not null)
+            {
+                @StateIndicator
+            }
+            else
+            {
+                @LeftSlot
+            }
+        </span>;
+
+    RenderFragment rightSlot = @<span class="shiny-btn__icon shiny-btn__icon--right">@RightSlot</span>;
+    RenderFragment busySlot = @<span class="shiny-btn__icon shiny-btn__icon--busy">@busy</span>;
+    RenderFragment label = @<span class="shiny-btn__text">@EffectiveText</span>;
+
+    var showBusySlot = CurrentState is ButtonState.Busy && BusyMode is ButtonBusyMode.KeepContent;
+    var showLabel = !string.IsNullOrEmpty(EffectiveText);
+}
+
+<button type="button"
+        class="@ButtonCssClass"
+        style="@InlineStyle"
+        disabled="@IsDisabled"
+        aria-busy="@(CurrentState == ButtonState.Busy ? "true" : null)"
+        aria-label="@AriaLabel"
+        @onclick="HandleClick"
+        @attributes="AdditionalAttributes">
+
+    @* The inner wrapper is what ReplaceContent fades, so the button keeps the width it measured. *@
+    <span class="shiny-btn__content">
+        @if (ContentLayout is ButtonContentLayout.Sides)
+        {
+            @if (ShowLeftSlot)
+            {
+                @leftSlot
+            }
+            @if (showLabel)
+            {
+                @label
+            }
+            @if (ShowRightSlot)
+            {
+                @rightSlot
+            }
+            @if (showBusySlot)
+            {
+                @busySlot
+            }
+        }
+        else
+        {
+            @* Both icons share one row so the label sits wholly above or below them. *@
+            @if (ShowLeftSlot || ShowRightSlot || showBusySlot)
+            {
+                <span class="shiny-btn__icons">
+                    @if (ShowLeftSlot)
+                    {
+                        @leftSlot
+                    }
+                    @if (ShowRightSlot)
+                    {
+                        @rightSlot
+                    }
+                    @if (showBusySlot)
+                    {
+                        @busySlot
+                    }
+                </span>
+            }
+            @if (showLabel)
+            {
+                @label
+            }
+        }
+    </span>
+
+    @if (CurrentState is ButtonState.Busy && BusyMode is ButtonBusyMode.ReplaceContent)
+    {
+        <span class="shiny-btn__overlay">@busy</span>
+    }
+</button>

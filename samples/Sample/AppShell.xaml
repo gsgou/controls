@@ -17,6 +17,7 @@
                   xmlns:markdown="clr-namespace:Sample.Features.Markdown"
                   xmlns:securitypin="clr-namespace:Sample.Features.SecurityPin"
                   xmlns:fab="clr-namespace:Sample.Features.Fab"
+                  xmlns:buttons="clr-namespace:Sample.Features.Buttons"
                   xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker"
                   xmlns:autocomplete="clr-namespace:Sample.Features.AutoComplete"
                   xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress"
@@ -31,6 +32,7 @@
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
                   xmlns:keyframe="clr-namespace:Sample.Features.Keyframe"
+                  xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
                   xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
@@ -573,6 +575,14 @@
         </MenuItem.IconImageSource>
     </MenuItem>
 
+    <FlyoutItem Title="ShinyButton">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F518;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate buttons:ButtonsPage}" Route="buttons" />
+    </FlyoutItem>
+
     <FlyoutItem Title="FAB &amp; FabMenu">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2795;" Size="20"
@@ -665,6 +675,14 @@
                              Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate keyframe:KeyframePage}" Route="keyframe" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Motion Icons">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2726;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate motionicons:MotionIconsPage}" Route="motionicons" />
     </FlyoutItem>
 
     <!-- ============================================================ -->

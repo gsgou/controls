@@ -1,0 +1,132 @@
+@page "/motionicons"
+@using Shiny.Controls.MotionIcons
+
+<PageTitle>Motion Icons</PageTitle>
+
+<h1>Motion Icons</h1>
+<p>
+    The same icon artwork and the same motion definitions the MAUI package draws, compiled to CSS
+    <code>@@keyframes</code> instead. The browser composites them — no C# runs per frame.
+</p>
+
+<section class="demo-section">
+    <h2>Triggers</h2>
+    <p>Hover, click, loop with a resting interval, or play once as it scrolls into view.</p>
+
+    <div class="mi-row">
+        <div class="mi-cell">
+            <MotionIcon Icon="bell" Trigger="MotionTrigger.Loop" Interval="TimeSpan.FromSeconds(1.5)"
+                        Size="44" Color="#2563EB" Title="Loop" />
+            <span>Loop</span>
+        </div>
+        <div class="mi-cell">
+            <MotionIcon Icon="settings" Trigger="MotionTrigger.Hover" Size="44" Color="#7C3AED" Title="Hover" />
+            <span>Hover</span>
+        </div>
+        <div class="mi-cell">
+            <MotionIcon Icon="heart" Trigger="MotionTrigger.Press" Size="44" Color="#DB2777" Title="Press" />
+            <span>Click</span>
+        </div>
+        <div class="mi-cell">
+            <MotionIcon Icon="check" Trigger="MotionTrigger.Appear" Size="44" Color="#059669" Title="Appear" />
+            <span>Appear</span>
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Driven from code</h2>
+    <p>Bind <code>IsPlaying</code> to a busy flag, or call <code>Play()</code> on a reference.</p>
+
+    <div class="mi-row">
+        <MotionIcon Icon="loader" Trigger="MotionTrigger.Manual" IsPlaying="@busy" Size="40" Color="#0891B2" />
+        <button class="btn btn-primary" @onclick="() => busy = !busy">
+            @(busy ? "Stop" : "Start") busy state
+        </button>
+
+        <MotionIcon @ref="downloader" Icon="download" Trigger="MotionTrigger.Manual"
+                    RepeatCount="2" Size="40" Color="#CA8A04" />
+        <button class="btn btn-primary" @onclick="() => downloader?.Play()">Play twice</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Colour comes from the text around it</h2>
+    <p>
+        <code>Color</code> defaults to <code>currentColor</code>, so an icon inherits whatever the
+        surrounding text is — including hover and disabled states, with nothing to wire up.
+    </p>
+
+    <div class="mi-row">
+        <button class="mi-inherit" style="color:#DC2626;">
+            <MotionIcon Icon="trash" Trigger="MotionTrigger.Hover" Size="20" /> Delete
+        </button>
+        <button class="mi-inherit" style="color:#2563EB;">
+            <MotionIcon Icon="upload" Trigger="MotionTrigger.Hover" Size="20" /> Upload
+        </button>
+        <button class="mi-inherit" style="color:#6B7280;" disabled>
+            <MotionIcon Icon="lock" Trigger="MotionTrigger.Hover" Size="20" /> Locked
+        </button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Presets on any icon</h2>
+    <p>
+        <code>Default</code> plays the motion drawn for that icon. Everything else overrides it, and
+        works just as well on artwork the library has never seen.
+    </p>
+
+    <select class="form-select mi-select" @bind="preset">
+        @foreach (var value in Enum.GetValues<MotionPreset>())
+        {
+            <option value="@value">@value</option>
+        }
+    </select>
+
+    <div class="mi-row">
+        <MotionIcon Icon="star" Motion="preset" Trigger="MotionTrigger.Loop"
+                    Interval="TimeSpan.FromSeconds(0.6)" Size="56" Color="#EA580C" />
+
+        <MotionIcon PathData="M12 2 L3 20 L21 20 Z" Motion="preset" Trigger="MotionTrigger.Loop"
+                    Interval="TimeSpan.FromSeconds(0.6)" Size="56" StrokeWidth="2.5" Color="#0F766E" />
+
+        <span class="mi-note">The second is raw path data — your own artwork gets the same presets.</span>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Size and weight</h2>
+    <p>Stroke width is expressed in the icon's own 24-unit space, so it scales with the icon.</p>
+
+    <div class="mi-row">
+        <MotionIcon Icon="wifi" Trigger="MotionTrigger.Loop" Size="24" StrokeWidth="1.5" Color="#0F172A" />
+        <MotionIcon Icon="wifi" Trigger="MotionTrigger.Loop" Size="40" StrokeWidth="2" Color="#0F172A" />
+        <MotionIcon Icon="wifi" Trigger="MotionTrigger.Loop" Size="64" StrokeWidth="2.5" Color="#0F172A" />
+        <MotionIcon Icon="wifi" Trigger="MotionTrigger.Loop" Size="88" StrokeWidth="3" Color="#0F172A" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>The whole set</h2>
+    <p>Hover or click any of them. @MotionIconLibrary.Names.Count icons, each with its own motion.</p>
+
+    <div class="mi-gallery">
+        @foreach (var name in names)
+        {
+            <div class="mi-cell">
+                <MotionIcon Icon="@name" Trigger="MotionTrigger.Hover | MotionTrigger.Press"
+                            Size="34" Title="@name" />
+                <span>@name</span>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    readonly List<string> names = MotionIconLibrary.Names.OrderBy(x => x, StringComparer.Ordinal).ToList();
+
+    MotionIcon? downloader;
+    MotionPreset preset = MotionPreset.Default;
+    bool busy;
+}

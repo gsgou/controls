@@ -1,0 +1,152 @@
+@page "/button"
+
+<PageTitle>ShinyButton</PageTitle>
+
+<h1>ShinyButton</h1>
+
+<p>Status: <strong>@status</strong></p>
+
+<section class="demo-section">
+    <h2>Appearance &times; Type</h2>
+    <p>Every combination resolves from the theme tokens, so the theme switcher restyles all of them.</p>
+    <div class="row">
+        <ShinyButton Text="Filled" Appearance="ButtonAppearance.Filled" Clicked="@(() => Note("Filled"))" />
+        <ShinyButton Text="Tonal" Appearance="ButtonAppearance.Tonal" Clicked="@(() => Note("Tonal"))" />
+        <ShinyButton Text="Outlined" Appearance="ButtonAppearance.Outlined" Clicked="@(() => Note("Outlined"))" />
+        <ShinyButton Text="Text" Appearance="ButtonAppearance.Text" Clicked="@(() => Note("Text"))" />
+        <ShinyButton Text="Elevated" Appearance="ButtonAppearance.Elevated" Clicked="@(() => Note("Elevated"))" />
+    </div>
+    <div class="row">
+        <ShinyButton Text="Success" Type="ButtonType.Success" LeftMotionIcon="check" Clicked="@(() => Note("Success"))" />
+        <ShinyButton Text="Warning" Type="ButtonType.Warning" LeftMotionIcon="warning" Clicked="@(() => Note("Warning"))" />
+        <ShinyButton Text="Delete" Type="ButtonType.Critical" Appearance="ButtonAppearance.Outlined"
+                     LeftMotionIcon="trash" Clicked="@(() => Note("Delete"))" />
+        <ShinyButton Text="Info" Type="ButtonType.Info" Appearance="ButtonAppearance.Tonal"
+                     LeftMotionIcon="info" Clicked="@(() => Note("Info"))" />
+        <ShinyButton Text="Brand" ButtonBackgroundColor="#E91E63" TextColor="#FFFFFF"
+                     Clicked="@(() => Note("Brand"))" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Motion icons in the slots</h2>
+    <p>Click one: the icon plays a cycle and the button still raises <code>Clicked</code>. The icon
+       inherits <code>currentColor</code>, so it follows the button through hover and disabled.</p>
+    <div class="row">
+        <ShinyButton Text="Notifications" LeftMotionIcon="bell" Appearance="ButtonAppearance.Tonal"
+                     Clicked="@(() => Note("Bell"))" />
+        <ShinyButton Text="Continue" RightMotionIcon="arrow-right" Clicked="@(() => Note("Continue"))" />
+        <ShinyButton Text="Refresh feed" LeftMotionIcon="refresh" RightMotionIcon="chevron-down"
+                     Appearance="ButtonAppearance.Outlined" Clicked="@(() => Note("Refresh"))" />
+        <ShinyButton Text="Upload" LeftMotionIcon="upload" ContentLayout="ButtonContentLayout.Top"
+                     Appearance="ButtonAppearance.Elevated" IconSize="28" Clicked="@(() => Note("Upload"))" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Busy modes</h2>
+    <p>Nothing here binds <code>IsBusy</code>. Each handler is <code>async</code>, and the button holds
+       itself busy for exactly as long as the handler runs.</p>
+    <div class="row">
+        <ShinyButton Text="Save (ReplaceLeftIcon)"
+                     LeftMotionIcon="download"
+                     BusyText="Saving..."
+                     BusyMode="ButtonBusyMode.ReplaceLeftIcon"
+                     Clicked="SaveAsync" />
+        <ShinyButton Text="Save (ReplaceContent)"
+                     BusyMode="ButtonBusyMode.ReplaceContent"
+                     Appearance="ButtonAppearance.Tonal"
+                     Clicked="SaveAsync" />
+        <ShinyButton Text="Save (KeepContent)"
+                     LeftMotionIcon="cloud"
+                     BusyMode="ButtonBusyMode.KeepContent"
+                     Appearance="ButtonAppearance.Outlined"
+                     Clicked="SaveAsync" />
+        <ShinyButton Text="Save (CSS spinner)"
+                     BusyMotionIcon=""
+                     BusyText="Saving..."
+                     Appearance="ButtonAppearance.Elevated"
+                     Clicked="SaveAsync" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Success &amp; error states</h2>
+    <p>The first handler reports its own outcome; the button respects it rather than resetting to
+       normal. The second throws, and <code>ShowErrorOnFault</code> catches that on the way past.</p>
+    <div class="row">
+        <ShinyButton Text="Submit"
+                     @bind-State="submitState"
+                     BusyText="Submitting..."
+                     SuccessText="Submitted"
+                     StateRevertDelay="@TimeSpan.FromSeconds(2)"
+                     Clicked="SubmitAsync" />
+        <ShinyButton Text="This will fail"
+                     Appearance="ButtonAppearance.Outlined"
+                     Type="ButtonType.Critical"
+                     BusyText="Trying..."
+                     ErrorText="Failed"
+                     Clicked="FailAsync" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Disabled</h2>
+    <div class="row">
+        <ShinyButton Text="@(locked ? "Locked" : "Unlocked")"
+                     LeftMotionIcon="lock"
+                     Disabled="@locked"
+                     Clicked="@(() => Note("Unlocked action"))" />
+        <ShinyButton Text="Toggle"
+                     Appearance="ButtonAppearance.Text"
+                     Clicked="@(() => locked = !locked)" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Shapes &amp; sizes</h2>
+    <div class="row">
+        <ShinyButton Text="Pill" CornerRadius="24" Clicked="@(() => Note("Pill"))" />
+        <ShinyButton Text="Square" CornerRadius="0" Clicked="@(() => Note("Square"))" />
+        <ShinyButton Text="Small" FontSize="12" IconSize="14" LeftMotionIcon="star"
+                     ContentPadding="6px 10px" CornerRadius="6" Clicked="@(() => Note("Small"))" />
+        <ShinyButton Text="Large" FontSize="19" IconSize="26" LeftMotionIcon="heart"
+                     ContentPadding="14px 24px" CornerRadius="14" Clicked="@(() => Note("Large"))" />
+        <ShinyButton LeftMotionIcon="settings" CornerRadius="22" ContentPadding="11px"
+                     aria-label="Settings" Clicked="@(() => Note("Settings"))" />
+    </div>
+    <div class="row">
+        <ShinyButton Text="Full width" LeftMotionIcon="share" FullWidth="true"
+                     Clicked="@(() => Note("Full width"))" />
+    </div>
+</section>
+
+@code {
+    string status = "Nothing has happened yet";
+    ButtonState submitState = ButtonState.Normal;
+    bool locked = true;
+
+    void Note(string which) => status = $"{which} clicked";
+
+    async Task SaveAsync()
+    {
+        status = "Saving...";
+        await Task.Delay(1800);
+        status = "Saved";
+    }
+
+    async Task SubmitAsync()
+    {
+        await Task.Delay(1500);
+        submitState = ButtonState.Success;
+        status = "Submitted";
+    }
+
+    async Task FailAsync()
+    {
+        status = "Trying...";
+        await Task.Delay(1200);
+        status = "It failed";
+        throw new InvalidOperationException("This failed on purpose.");
+    }
+}

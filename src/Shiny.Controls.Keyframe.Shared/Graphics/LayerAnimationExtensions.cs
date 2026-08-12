@@ -41,6 +41,54 @@ public static class LayerAnimationExtensions
         => Require(builder).Animate(layer, static (l, v) => l.Scale = v, SizeFInterpolator.Instance, keys,
             static l => l.Scale, $"{layer.Id ?? "layer"}.Scale");
 
+    /// <summary>
+    /// Animates only the horizontal component of a layer's position, leaving the vertical one to
+    /// whatever else is driving it.
+    /// </summary>
+    /// <remarks>
+    /// Two tracks on the same property would normally fight, with the last one evaluated winning.
+    /// These read the component they are not driving straight off the layer, so an X track and a Y
+    /// track compose instead — which is what lets two independently authored curves move one layer
+    /// on two axes.
+    /// </remarks>
+    public static TimelineBuilder AnimatePositionX(
+        this TimelineBuilder builder, SceneLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.Position = new PointF(v, l.Position.Y),
+            SingleInterpolator.Instance, keys, static l => l.Position.X, $"{layer.Id ?? "layer"}.PositionX");
+
+    /// <summary>Animates only the vertical component of a layer's position.</summary>
+    public static TimelineBuilder AnimatePositionY(
+        this TimelineBuilder builder, SceneLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.Position = new PointF(l.Position.X, v),
+            SingleInterpolator.Instance, keys, static l => l.Position.Y, $"{layer.Id ?? "layer"}.PositionY");
+
+    /// <summary>Animates only the horizontal component of a layer's scale.</summary>
+    public static TimelineBuilder AnimateScaleX(
+        this TimelineBuilder builder, SceneLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.Scale = new SizeF(v, l.Scale.Height),
+            SingleInterpolator.Instance, keys, static l => l.Scale.Width, $"{layer.Id ?? "layer"}.ScaleX");
+
+    /// <summary>Animates only the vertical component of a layer's scale.</summary>
+    public static TimelineBuilder AnimateScaleY(
+        this TimelineBuilder builder, SceneLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.Scale = new SizeF(l.Scale.Width, v),
+            SingleInterpolator.Instance, keys, static l => l.Scale.Height, $"{layer.Id ?? "layer"}.ScaleY");
+
+    /// <summary>
+    /// Animates where a path's stroke stops, as a fraction of its length. Run it from 0 to 1 for a
+    /// "draw on" reveal.
+    /// </summary>
+    public static TimelineBuilder AnimateTrimEnd(
+        this TimelineBuilder builder, PathLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.TrimEnd = v, SingleInterpolator.Instance, keys,
+            static l => l.TrimEnd, $"{layer.Id ?? "layer"}.TrimEnd");
+
+    /// <summary>Animates where a path's stroke starts, as a fraction of its length.</summary>
+    public static TimelineBuilder AnimateTrimStart(
+        this TimelineBuilder builder, PathLayer layer, Action<TrackBuilder<float>> keys)
+        => Require(builder).Animate(layer, static (l, v) => l.TrimStart = v, SingleInterpolator.Instance, keys,
+            static l => l.TrimStart, $"{layer.Id ?? "layer"}.TrimStart");
+
     /// <summary>Animates a layer's size.</summary>
     public static TimelineBuilder AnimateSize(
         this TimelineBuilder builder, SceneLayer layer, Action<TrackBuilder<SizeF>> keys)

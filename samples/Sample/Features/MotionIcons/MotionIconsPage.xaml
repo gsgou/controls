@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             x:Class="Sample.Features.MotionIcons.MotionIconsPage"
+             Title="Motion Icons"
+             AutomationId="MotionIconsPage">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="32">
+
+            <Label Text="Icons that animate on a timer, on hover, or on tap"
+                   FontSize="20"
+                   FontAttributes="Bold" />
+
+            <!-- ============================================================ -->
+            <!--  TRIGGERS -->
+            <!-- ============================================================ -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Triggers" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Hover works with a mouse; tap works everywhere. Loop rests between cycles."
+                       FontSize="12" TextColor="Gray" />
+
+                <HorizontalStackLayout Spacing="28">
+
+                    <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <shiny:MotionIconView Icon="bell"
+                                              Trigger="Loop"
+                                              Interval="0:0:1.5"
+                                              WidthRequest="44"
+                                              HeightRequest="44"
+                                              Color="{AppThemeBinding Light=#2563EB, Dark=#60A5FA}"
+                                              AutomationId="LoopIcon" />
+                        <Label Text="Loop" FontSize="11" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <shiny:MotionIconView Icon="settings"
+                                              Trigger="Hover"
+                                              WidthRequest="44"
+                                              HeightRequest="44"
+                                              Color="{AppThemeBinding Light=#7C3AED, Dark=#A78BFA}"
+                                              AutomationId="HoverIcon" />
+                        <Label Text="Hover" FontSize="11" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <shiny:MotionIconView Icon="heart"
+                                              Trigger="Press"
+                                              WidthRequest="44"
+                                              HeightRequest="44"
+                                              Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}"
+                                              AutomationId="PressIcon" />
+                        <Label Text="Press" FontSize="11" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6" HorizontalOptions="Center">
+                        <shiny:MotionIconView Icon="check"
+                                              Trigger="Appear"
+                                              WidthRequest="44"
+                                              HeightRequest="44"
+                                              Color="{AppThemeBinding Light=#059669, Dark=#34D399}"
+                                              AutomationId="AppearIcon" />
+                        <Label Text="Appear" FontSize="11" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- ============================================================ -->
+            <!--  BUSY STATE -->
+            <!-- ============================================================ -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Driven from code" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Bind IsPlaying to a busy flag, or call Play/Stop directly."
+                       FontSize="12" TextColor="Gray" />
+
+                <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
+                    <shiny:MotionIconView x:Name="Spinner"
+                                          Icon="loader"
+                                          Trigger="Manual"
+                                          WidthRequest="40"
+                                          HeightRequest="40"
+                                          Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}"
+                                          AutomationId="BusySpinner" />
+
+                    <Button Text="Toggle busy"
+                            Clicked="OnToggleBusy"
+                            AutomationId="ToggleBusyButton" />
+
+                    <shiny:MotionIconView x:Name="Downloader"
+                                          Icon="download"
+                                          Trigger="Manual"
+                                          WidthRequest="40"
+                                          HeightRequest="40"
+                                          RepeatCount="2"
+                                          Color="{AppThemeBinding Light=#CA8A04, Dark=#FACC15}"
+                                          AutomationId="PlayOnceIcon" />
+
+                    <Button Text="Play twice"
+                            Clicked="OnPlayOnce"
+                            AutomationId="PlayOnceButton" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- ============================================================ -->
+            <!--  PRESETS -->
+            <!-- ============================================================ -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Presets on any icon" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Default plays the motion drawn for the icon. Everything else overrides it."
+                       FontSize="12" TextColor="Gray" />
+
+                <Picker x:Name="PresetPicker"
+                        ItemsSource="{Binding PresetNames}"
+                        SelectedIndex="0"
+                        SelectedIndexChanged="OnPresetChanged"
+                        AutomationId="PresetPicker" />
+
+                <HorizontalStackLayout Spacing="24" VerticalOptions="Center">
+                    <shiny:MotionIconView x:Name="PresetSample"
+                                          Icon="star"
+                                          Trigger="Loop"
+                                          Interval="0:0:0.6"
+                                          WidthRequest="56"
+                                          HeightRequest="56"
+                                          Color="{AppThemeBinding Light=#EA580C, Dark=#FB923C}"
+                                          AutomationId="PresetSample" />
+
+                    <shiny:MotionIconView x:Name="PresetCustom"
+                                          PathData="M12 2 L3 20 L21 20 Z"
+                                          Trigger="Loop"
+                                          Interval="0:0:0.6"
+                                          WidthRequest="56"
+                                          HeightRequest="56"
+                                          StrokeWidth="2.5"
+                                          Color="{AppThemeBinding Light=#0F766E, Dark=#2DD4BF}"
+                                          AutomationId="PresetCustom" />
+
+                    <Label Text="The second one is raw path data — presets work on your own artwork too."
+                           FontSize="11"
+                           TextColor="Gray"
+                           VerticalOptions="Center"
+                           LineBreakMode="WordWrap"
+                           MaximumWidthRequest="220" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- ============================================================ -->
+            <!--  SCRUBBING -->
+            <!-- ============================================================ -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="Scrub it" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Evaluation is a pure function of progress, so a slider can drive it."
+                       FontSize="12" TextColor="Gray" />
+
+                <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
+                    <shiny:MotionIconView x:Name="Scrubbed"
+                                          Icon="menu"
+                                          Trigger="Manual"
+                                          WidthRequest="48"
+                                          HeightRequest="48"
+                                          Progress="{Binding Source={x:Reference Scrubber}, Path=Value}"
+                                          AutomationId="ScrubbedIcon" />
+
+                    <Slider x:Name="Scrubber"
+                            Minimum="0"
+                            Maximum="1"
+                            WidthRequest="240"
+                            AutomationId="Scrubber" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- ============================================================ -->
+            <!--  THE WHOLE SET -->
+            <!-- ============================================================ -->
+            <VerticalStackLayout Spacing="12">
+                <Label Text="The whole set" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Hover or tap any of them."
+                       FontSize="12" TextColor="Gray" />
+
+                <FlexLayout BindableLayout.ItemsSource="{Binding IconNames}"
+                            Wrap="Wrap"
+                            JustifyContent="Start"
+                            AutomationId="IconGallery">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <VerticalStackLayout Spacing="4"
+                                                 Margin="6,8"
+                                                 WidthRequest="82"
+                                                 HorizontalOptions="Center">
+                                <shiny:MotionIconView Icon="{Binding .}"
+                                                      Trigger="Hover,Press"
+                                                      WidthRequest="34"
+                                                      HeightRequest="34"
+                                                      HorizontalOptions="Center" />
+                                <Label Text="{Binding .}"
+                                       FontSize="10"
+                                       TextColor="Gray"
+                                       HorizontalOptions="Center"
+                                       HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </FlexLayout>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

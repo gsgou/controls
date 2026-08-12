@@ -1,0 +1,24 @@
+.shiny-motion-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--shiny-mi-size, 24px);
+    height: var(--shiny-mi-size, 24px);
+    flex: 0 0 auto;
+    line-height: 0;
+    color: inherit;
+    vertical-align: middle;
+}
+
+.shiny-motion-icon svg {
+    display: block;
+    overflow: visible;
+}
+
+/* Respect the user's motion preference. The icon still renders and still responds to clicks — it
+   simply holds its resting pose, which is what "reduced" is asking for. */
+@media (prefers-reduced-motion: reduce) {
+    .shiny-motion-icon.shiny-motion-icon--playing :global(.mi-a) {
+        animation: none !important;
+    }
+}
