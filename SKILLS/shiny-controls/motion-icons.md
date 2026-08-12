@@ -76,7 +76,9 @@ Methods on both: `Play()`, `Stop()`, `StopAtCycleEnd()`. MAUI adds `PlayAsync()`
 
 - **`Loop`** — runs continuously, resting for `Interval` between cycles.
 - **`Hover`** — runs while the pointer is over it, then **finishes the cycle in progress** so it never snaps back mid-pose. Mouse only; pair it with `Press` for touch.
-- **`Press`** — one play per tap or click.
+- **`Press`** — one play per tap or click. **Only presses that land on the icon itself count** — an
+  icon sitting inside a larger tap target (a button, a row) should be `Manual` and played by its
+  host, which is what `ShinyButton` does with its slot icons on both hosts.
 - **`Appear`** — plays once when it first becomes visible. On the web this is an `IntersectionObserver`.
 - **`Manual`** — nothing automatic; drive it with `Play()` or by binding `IsPlaying`.
 

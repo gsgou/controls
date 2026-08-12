@@ -1469,8 +1469,10 @@ button busy for as long as it runs, and a synchronous one never flickers.
 ```
 
 Motion icons in the slots play a cycle on tap and take their colour from the button's foreground, so
-a disabled or hovered button carries its icons with it. Clearing `BusyMotionIcon` falls back to a
-platform `ActivityIndicator` on MAUI and a CSS spinner on Blazor.
+a disabled or hovered button carries its icons with it. The button owns that playback on both hosts —
+the icons sit on the `Manual` trigger and the button plays them from its own tap — so a tap anywhere
+on the button animates them, not only one that lands on the glyph. Clearing `BusyMotionIcon` falls
+back to a platform `ActivityIndicator` on MAUI and a CSS spinner on Blazor.
 
 ### Fab & FabMenu
 

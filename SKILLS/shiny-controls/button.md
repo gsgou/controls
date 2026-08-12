@@ -230,6 +230,9 @@ Blazor-side differences worth knowing:
   properties, which win with no specificity fight.
 - Motion icons default to `currentColor`, so they follow the button through hover and disabled for
   free — do not set `IconColor` unless you want to break that.
+- The button plays its slot icons itself, exactly as MAUI does: they are on `MotionTrigger.Manual`
+  and the button calls `Play()` from its own click, so a click anywhere on the button animates them
+  rather than only one that lands on the 20px glyph. `MotionIconPlayOnClick="false"` turns it off.
 - `ContentPadding` is a CSS `padding` string (`"10px 16px"`), not a `Thickness`.
 - `FullWidth` stretches the button to its container; `HasShadow` is a `bool?`.
 - `LeftIcon` accepts an image URL **or** raw SVG/HTML markup; `LeftIconContent` is a

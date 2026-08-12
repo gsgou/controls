@@ -34,6 +34,11 @@ public partial class MotionIcon : IAsyncDisposable
     bool pendingStop;
     bool attached;
 
+    // A host that drives Play() from a captured reference can outlive the icon it captured — the
+    // slot swapped to a busy indicator, say. Rendering a component the renderer has already removed
+    // throws, so playback goes quiet once the icon is gone.
+    bool disposed;
+
     [Inject]
     IJSRuntime JS { get; set; } = null!;
 
@@ -179,12 +184,13 @@ public partial class MotionIcon : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // A loop never needs to know when a cycle ends, so an icon that only ever loops skips the
-        // interop entirely. Everything that can stop needs the callbacks.
+        // A loop never ends, so an icon carrying MotionTrigger.Loop skips the interop entirely.
+        // Everything else can stop, and stopping is what needs the callbacks: without them `playing`
+        // is never cleared, so the icon runs its one cycle and then sits in the playing state
+        // forever, ignoring every subsequent Play. That includes MotionTrigger.Manual — the trigger
+        // the host controls use precisely because they drive Play() themselves.
         var needsAppear = Trigger.HasFlag(MotionTrigger.Appear);
-        var needsCallbacks = needsAppear
-            || Trigger.HasFlag(MotionTrigger.Press)
-            || Trigger.HasFlag(MotionTrigger.Hover);
+        var needsCallbacks = !Trigger.HasFlag(MotionTrigger.Loop);
 
         if (attached || !needsCallbacks || plan is null)
             return;
@@ -307,6 +313,9 @@ public partial class MotionIcon : IAsyncDisposable
 
     void SetPlaying(bool value)
     {
+        if (disposed)
+            return;
+
         var changed = playing != value;
         playing = value;
 
@@ -327,6 +336,8 @@ public partial class MotionIcon : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        disposed = true;
+
         if (module is not null)
         {
             try

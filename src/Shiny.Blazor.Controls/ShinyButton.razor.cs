@@ -29,6 +29,11 @@ public partial class ShinyButton : IDisposable
     ButtonState lastStateParameter;
     bool lastIsBusyParameter;
 
+    // The slot icons the button drives on click. See PlaySlotMotionIcons for why the button holds
+    // these rather than letting the icons trigger themselves.
+    MotionIcon? leftMotion;
+    MotionIcon? rightMotion;
+
     CancellationTokenSource? revertCts;
 
 
@@ -356,7 +361,12 @@ public partial class ShinyButton : IDisposable
 
     async Task HandleClick(MouseEventArgs e)
     {
-        if (this.IsDisabled || !this.Clicked.HasDelegate)
+        if (this.IsDisabled)
+            return;
+
+        this.PlaySlotMotionIcons();
+
+        if (!this.Clicked.HasDelegate)
             return;
 
         var work = this.Clicked.InvokeAsync(e);
@@ -441,10 +451,45 @@ public partial class ShinyButton : IDisposable
     bool ShowRightSlot => this.HasOwnRightSlot;
 
     RenderFragment? LeftSlot
-        => this.BuildSlot(this.LeftIconContent, this.LeftMotionIcon, this.LeftIcon);
+        => this.BuildSlot(this.LeftIconContent, this.LeftMotionIcon, this.LeftIcon,
+            icon => this.leftMotion = icon);
 
     RenderFragment? RightSlot
-        => this.BuildSlot(this.RightIconContent, this.RightMotionIcon, this.RightIcon);
+        => this.BuildSlot(this.RightIconContent, this.RightMotionIcon, this.RightIcon,
+            icon => this.rightMotion = icon);
+
+    /// <summary>
+    /// Whether the leading slot is currently showing the caller's own icon rather than the busy or
+    /// state indicator — the same condition the markup branches on. A captured reference outlives
+    /// the render that replaced it, so playback has to check that the icon it holds is still the one
+    /// on screen.
+    /// </summary>
+    bool LeftSlotShowsOwnIcon
+        => !(this.currentState is ButtonState.Busy && this.BusyMode is ButtonBusyMode.ReplaceLeftIcon)
+            && this.StateIndicator is null;
+
+    /// <summary>
+    /// Runs one cycle of the leading and trailing icons on click.
+    /// </summary>
+    /// <remarks>
+    /// <para>The button owns playback rather than letting the icons trigger themselves, which is what
+    /// the MAUI side does for the same reason: an icon that listens for its own press only hears the
+    /// clicks that land on the glyph, so clicking the label — most of the button — animated nothing.
+    /// Every icon the button builds is therefore <see cref="MotionTrigger.Manual"/>, and the button
+    /// plays it from its own click.</para>
+    /// <para>Deliberately not the busy indicator or the state icons: those are driven by
+    /// <see cref="State"/> and a click must not restart them mid-cycle.</para>
+    /// </remarks>
+    void PlaySlotMotionIcons()
+    {
+        if (!this.MotionIconPlayOnClick)
+            return;
+
+        if (this.LeftSlotShowsOwnIcon)
+            this.leftMotion?.Play();
+
+        this.rightMotion?.Play();
+    }
 
     /// <summary>The success/error glyph, or null in any other state (or if the caller cleared it).</summary>
     RenderFragment? StateIndicator
@@ -488,19 +533,15 @@ public partial class ShinyButton : IDisposable
 
     string SpinnerStyle => Invariant($"width:{this.IconSize}px;height:{this.IconSize}px;");
 
-    RenderFragment? BuildSlot(RenderFragment? content, string? motionIcon, string? icon)
+    RenderFragment? BuildSlot(
+        RenderFragment? content, string? motionIcon, string? icon, Action<MotionIcon> capture)
     {
         if (content is not null)
             return content;
 
         if (!string.IsNullOrWhiteSpace(motionIcon))
-        {
-            // Press rather than Manual: MotionIcon does not stop propagation, so the icon plays its
-            // own cycle and the click still reaches the button. That removes the need for an
-            // ElementReference per slot.
-            var trigger = this.MotionIconPlayOnClick ? MotionTrigger.Press : MotionTrigger.Manual;
-            return this.MotionIconFragment(motionIcon!, trigger, loop: false);
-        }
+            // Manual, with the instance captured: the button plays it. See PlaySlotMotionIcons.
+            return this.MotionIconFragment(motionIcon!, MotionTrigger.Manual, loop: false, capture);
 
         if (string.IsNullOrWhiteSpace(icon))
             return null;
@@ -522,7 +563,8 @@ public partial class ShinyButton : IDisposable
         };
     }
 
-    RenderFragment MotionIconFragment(string name, MotionTrigger trigger, bool loop) => builder =>
+    RenderFragment MotionIconFragment(
+        string name, MotionTrigger trigger, bool loop, Action<MotionIcon>? capture = null) => builder =>
     {
         builder.OpenComponent<MotionIcon>(0);
         builder.AddComponentParameter(1, nameof(MotionIcon.Icon), name);
@@ -534,6 +576,10 @@ public partial class ShinyButton : IDisposable
         builder.AddComponentParameter(5, nameof(MotionIcon.Color), this.IconColor ?? "currentColor");
         // Zero or less repeats forever.
         builder.AddComponentParameter(6, nameof(MotionIcon.RepeatCount), loop ? 0 : 1);
+
+        if (capture is not null)
+            builder.AddComponentReferenceCapture(7, instance => capture((MotionIcon)instance));
+
         builder.CloseComponent();
     };
 
