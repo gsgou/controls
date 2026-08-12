@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!--
+            Plain net10.0, and deliberately NOT UseMaui: there is no Linux target framework, so the GTK4
+            head builds against the base TFM. That's also why this backend can't live in the main
+            MediaElement package — referencing GirCore there would drag GTK into every non-platform
+            consumer (unit tests, tooling) of that package's net10.0 target.
+        -->
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Media.Gtk</RootNamespace>
+        <AssemblyName>Shiny.Maui.Controls.MediaElement.Linux</AssemblyName>
+        <Description>Linux GTK4 backend for the Shiny .NET MAUI MediaElement, built on GtkMediaFile/GtkPicture. Pairs with Shiny.Maui.Controls.MediaElement and the Microsoft.Maui.Platforms.Linux.Gtk4 host from dotnet/maui-labs.</Description>
+        <PackageTags>maui mediaelement linux gtk gtk4 video audio player gstreamer</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls.MediaElement\Shiny.Maui.Controls.MediaElement.csproj" />
+    </ItemGroup>
+</Project>

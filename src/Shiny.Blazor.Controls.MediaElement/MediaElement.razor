@@ -1,0 +1,147 @@
+@namespace Shiny.Blazor.Controls.Media
+@implements IAsyncDisposable
+
+<div @ref="containerEl"
+     class="shiny-media @(IsFullScreen ? "shiny-media-fullscreen" : null) @CssClass"
+     style="@Style"
+     @onmousemove="KeepTransportBarAwake"
+     @onmouseleave="OnPointerLeft">
+
+    <video @ref="mediaEl"
+           class="shiny-media-video"
+           playsinline
+           preload="metadata"
+           poster="@Poster"
+           @onclick="ToggleTransportBar"></video>
+
+    @if (CurrentState is MediaElementState.Opening or MediaElementState.Buffering)
+    {
+        <div class="shiny-media-busy" aria-hidden="true"><div class="shiny-media-spinner"></div></div>
+    }
+
+    @if (errorMessage is not null)
+    {
+        <div class="shiny-media-error" role="alert">@errorMessage</div>
+    }
+
+    @if (ShowTransportBar && isTransportBarShown)
+    {
+        <div class="shiny-media-bar">
+            @if (ShowPlayPauseButton)
+            {
+                <button type="button"
+                        class="shiny-media-btn"
+                        title="@PlayPauseLabel"
+                        aria-label="@PlayPauseLabel"
+                        @onclick="TogglePlayPauseAsync">
+                    @if (CurrentState == MediaElementState.Playing)
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h4v15H6zM14 4.5h4v15h-4z" /></svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5 19 12 7 19.5z" /></svg>
+                    }
+                </button>
+            }
+
+            @if (ShowTimeLabels)
+            {
+                <span class="shiny-media-time">@ElapsedText</span>
+            }
+
+            @if (ShowSeekBar)
+            {
+                <input type="range"
+                       class="shiny-media-seek"
+                       style="@SeekBarStyle"
+                       min="0"
+                       max="@SeekMax.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                       step="0.01"
+                       aria-label="Seek"
+                       value="@SeekValue.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                       disabled="@(Duration <= TimeSpan.Zero)"
+                       @oninput="OnScrubbing"
+                       @onchange="OnScrubCommittedAsync"
+                       @onpointerdown="OnScrubStart" />
+            }
+
+            @if (ShowTimeLabels)
+            {
+                <span class="shiny-media-time">@DurationText</span>
+            }
+
+            @if (ShowVolumeControl)
+            {
+                <button type="button"
+                        class="shiny-media-btn"
+                        title="@MuteLabel"
+                        aria-label="@MuteLabel"
+                        @onclick="ToggleMuteAsync">
+                    @if (IsMuted)
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 9h3.5L11 5v14l-4.5-4H3z" />
+                            <path d="M14.5 9.5 20.5 15M20.5 9.5 14.5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 9h3.5L11 5v14l-4.5-4H3z" />
+                            <path d="M13.6 8.6a4.6 4.6 0 0 1 0 6.8M16.2 6a8.2 8.2 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        </svg>
+                    }
+                </button>
+
+                @if (capabilities.Volume)
+                {
+                    <input type="range"
+                           class="shiny-media-volume"
+                           min="0"
+                           max="1"
+                           step="0.01"
+                           aria-label="Volume"
+                           value="@Volume.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                           @oninput="OnVolumeChangedAsync" />
+                }
+            }
+
+            @if (ShowPictureInPictureButton && capabilities.PictureInPicture)
+            {
+                <button type="button"
+                        class="shiny-media-btn"
+                        title="Picture in picture"
+                        aria-label="Picture in picture"
+                        @onclick="TryEnterPictureInPictureAsync">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                        <rect x="11.5" y="11" width="8" height="6.5" rx="1.2" />
+                    </svg>
+                </button>
+            }
+
+            @if (ShowFullScreenButton && capabilities.Fullscreen)
+            {
+                <button type="button"
+                        class="shiny-media-btn"
+                        title="@FullScreenLabel"
+                        aria-label="@FullScreenLabel"
+                        @onclick="ToggleFullScreenAsync">
+                    @if (IsFullScreen)
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                            <path d="M9 4v5H4M15 9h5M15 9V4M15 20v-5M15 15h5M9 15H4M9 15v5" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                            <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+                        </svg>
+                    }
+                </button>
+            }
+        </div>
+    }
+</div>

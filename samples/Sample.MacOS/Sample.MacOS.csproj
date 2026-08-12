@@ -41,6 +41,8 @@
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Desktop\Shiny.Maui.Controls.Desktop.csproj" />
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MediaElement\Shiny.Maui.Controls.MediaElement.csproj" />
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Keyframe\Shiny.Maui.Controls.Keyframe.csproj" />
         <!-- SpeechAddins is mobile-only (android/ios/maccatalyst) — Chat & speech pages are excluded below -->
     </ItemGroup>
 

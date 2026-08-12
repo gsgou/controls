@@ -29,6 +29,8 @@
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Desktop\Shiny.Maui.Controls.Desktop.csproj" />
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.Markdown\Shiny.Maui.Controls.Markdown.csproj" />
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
+        <!-- The GTK4 backend is its own package: there is no Linux TFM, so it can't live in the main one. -->
+        <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MediaElement.Linux\Shiny.Maui.Controls.MediaElement.Linux.csproj" />
         <!-- SpeechAddins is mobile-only — Chat & speech pages are excluded below -->
     </ItemGroup>
 

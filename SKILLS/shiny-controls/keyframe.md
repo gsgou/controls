@@ -4,6 +4,8 @@ Declarative keyframe animation for .NET MAUI — the CSS `@keyframes` model in X
 
 **MAUI only.** There is no Blazor counterpart — the web already has `@keyframes` natively.
 
+**Every MAUI head.** Nothing in the package touches a platform SDK — the clock is an `IDispatcherTimer` and `KeyframeView` is a `GraphicsView` — so it ships a single `net10.0` target that iOS, Android, Windows, MacCatalyst, macOS AppKit and Linux GTK4 heads all consume. Never gate keyframe code behind a platform check.
+
 ## Packages
 
 | Package | What it is | Depends on |

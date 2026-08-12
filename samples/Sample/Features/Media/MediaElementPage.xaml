@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shiny:ShinyContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:media="http://shiny.net/maui/media"
+             x:Class="Sample.Features.Media.MediaElementPage"
+             Title="Media Element">
+
+    <shiny:ShinyContentPage.PageContent>
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <Label Text="MediaElement"
+                       FontSize="22"
+                       FontAttributes="Bold" />
+                <Label Text="Local and remote audio/video with a transport bar you can take apart piece by piece. Every toggle below is a bindable property on the control."
+                       FontSize="13"
+                       TextColor="Gray" />
+
+                <!-- ── the player ─────────────────────────────────────────────────────── -->
+                <media:MediaElement x:Name="Player"
+                                    Source="https://media.w3.org/2010/05/sintel/trailer.mp4"
+                                    HeightRequest="220"
+                                    Aspect="AspectFit"
+                                    ShowPictureInPictureButton="True" />
+
+                <!-- ── live state ─────────────────────────────────────────────────────── -->
+                <Border Padding="12"
+                        StrokeThickness="0"
+                        BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#1E293B}"
+                        StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout Spacing="4">
+                        <Label FontSize="12">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="State: " FontAttributes="Bold" />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=CurrentState}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label FontSize="12">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Position: " FontAttributes="Bold" />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=Position, StringFormat='{0:mm\\:ss}'}" />
+                                    <Span Text="  /  " />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=Duration, StringFormat='{0:mm\\:ss}'}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label FontSize="12">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Platform can: " FontAttributes="Bold" />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=Capabilities}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- ── commands ───────────────────────────────────────────────────────── -->
+                <Label Text="Commands" FontAttributes="Bold" FontSize="15" />
+                <Label Text="The same operations the transport bar uses, bound straight from XAML."
+                       FontSize="12"
+                       TextColor="Gray" />
+
+                <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                    <Button Text="Play"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=PlayCommand}" />
+                    <Button Text="Pause"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=PauseCommand}" />
+                    <Button Text="Stop"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=StopCommand}" />
+                    <Button Text="Seek 30s"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=SeekCommand}"
+                            CommandParameter="30" />
+                    <Button Text="Seek 1:30"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=SeekCommand}"
+                            CommandParameter="00:01:30" />
+                    <Button Text="Mute"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=MuteCommand}" />
+                    <Button Text="Full screen"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=ToggleFullScreenCommand}" />
+                    <Button Text="PiP"
+                            Margin="0,0,8,8"
+                            Command="{Binding Source={x:Reference Player}, Path=PictureInPictureCommand}" />
+                </FlexLayout>
+
+                <!-- ── which controls show ────────────────────────────────────────────── -->
+                <Label Text="Show / hide controls" FontAttributes="Bold" FontSize="15" />
+                <Label Text="Native transport UI is all-or-nothing on every platform but Windows. Shiny draws its own, so each piece toggles on its own and looks the same everywhere."
+                       FontSize="12"
+                       TextColor="Gray" />
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="2">
+                    <Label Text="Transport bar" VerticalOptions="Center" />
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowTransportBar, Mode=TwoWay}" />
+
+                    <Label Grid.Row="1" Text="Play / pause button" VerticalOptions="Center" />
+                    <Switch Grid.Row="1" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowPlayPauseButton, Mode=TwoWay}" />
+
+                    <Label Grid.Row="2" Text="Seek bar" VerticalOptions="Center" />
+                    <Switch Grid.Row="2" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowSeekBar, Mode=TwoWay}" />
+
+                    <Label Grid.Row="3" Text="Volume control" VerticalOptions="Center" />
+                    <Switch Grid.Row="3" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowVolumeControl, Mode=TwoWay}" />
+
+                    <Label Grid.Row="4" Text="Full-screen toggle" VerticalOptions="Center" />
+                    <Switch Grid.Row="4" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowFullScreenButton, Mode=TwoWay}" />
+
+                    <Label Grid.Row="5" Text="Time labels" VerticalOptions="Center" />
+                    <Switch Grid.Row="5" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=ShowTimeLabels, Mode=TwoWay}" />
+
+                    <Label Grid.Row="6" Text="Auto-hide while playing" VerticalOptions="Center" />
+                    <Switch Grid.Row="6" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=AutoHideTransportBar, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- ── playback options ───────────────────────────────────────────────── -->
+                <Label Text="Playback" FontAttributes="Bold" FontSize="15" />
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2">
+                    <Label Text="Loop" VerticalOptions="Center" />
+                    <Switch Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=IsLooping, Mode=TwoWay}" />
+
+                    <Label Grid.Row="1" Text="Keep screen on" VerticalOptions="Center" />
+                    <Switch Grid.Row="1" Grid.Column="1"
+                            IsToggled="{Binding Source={x:Reference Player}, Path=KeepScreenOn, Mode=TwoWay}" />
+                </Grid>
+
+                <Label Text="Aspect" FontSize="13" />
+                <Picker x:Name="AspectPicker" SelectedIndexChanged="OnAspectChanged">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>AspectFit</x:String>
+                            <x:String>AspectFill</x:String>
+                            <x:String>Fill</x:String>
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+
+                <Label Text="Speed" FontSize="13" />
+                <Picker x:Name="RatePicker" SelectedIndexChanged="OnRateChanged">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>0.5x</x:String>
+                            <x:String>1x</x:String>
+                            <x:String>1.5x</x:String>
+                            <x:String>2x</x:String>
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+
+                <!-- ── audio + background playback ────────────────────────────────────── -->
+                <Label Text="Audio with background playback"
+                       FontAttributes="Bold"
+                       FontSize="15"
+                       Margin="0,10,0,0" />
+                <Label Text="Audio-only source, so the transport bar is pinned open. Start it, then background the app or lock the device — playback continues and the OS transport controls show the metadata below."
+                       FontSize="12"
+                       TextColor="Gray" />
+
+                <media:MediaElement x:Name="AudioPlayer"
+                                    Source="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                                    HeightRequest="72"
+                                    AutoHideTransportBar="False"
+                                    ShowFullScreenButton="False"
+                                    EnableBackgroundPlayback="True"
+                                    VideoBackgroundColor="{AppThemeBinding Light=#334155, Dark=#0F172A}" />
+
+                <Label Text="iOS needs the 'audio' UIBackgroundModes entry and Android needs the POST_NOTIFICATIONS grant — both are app-level manifest opt-ins a library cannot add for you."
+                       FontSize="11"
+                       TextColor="Gray" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </shiny:ShinyContentPage.PageContent>
+</shiny:ShinyContentPage>

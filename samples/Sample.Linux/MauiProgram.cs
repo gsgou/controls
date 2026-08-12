@@ -19,6 +19,7 @@ public static class MauiProgram
             .UseShinyControls(cfg => cfg.AddDefaultMauiControlFeedback())
             .UseShinyShell(x => x.AddGeneratedMaps())
             .UseTrayIcon()
+            .UseShinyMediaElementGtk()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

@@ -22,6 +22,7 @@
        xmlns:overlay="clr-namespace:Sample.Features.Overlay;assembly=Sample.MacOS"
        xmlns:treeview="clr-namespace:Sample.Features.TreeView;assembly=Sample.MacOS"
        xmlns:markdown="clr-namespace:Sample.Features.Markdown;assembly=Sample.MacOS"
+       xmlns:keyframe="clr-namespace:Sample.Features.Keyframe;assembly=Sample.MacOS"
        x:Class="Sample.MacOS.AppShell"
        Title="Shiny Controls (macOS)"
        FlyoutBehavior="Locked"
@@ -112,5 +113,11 @@
     </FlyoutItem>
     <FlyoutItem Title="Markdown Editor">
         <ShellContent ContentTemplate="{DataTemplate markdown:MarkdownEditorPage}" Route="markdowneditor" />
+    </FlyoutItem>
+
+    <MenuItem Text="ANIMATION" IsEnabled="False" />
+
+    <FlyoutItem Title="Keyframe">
+        <ShellContent ContentTemplate="{DataTemplate keyframe:KeyframePage}" Route="keyframe" />
     </FlyoutItem>
 </shiny:ShinyShell>

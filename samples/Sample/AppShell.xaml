@@ -43,6 +43,7 @@
                   xmlns:treeview="clr-namespace:Sample.Features.TreeView"
                   xmlns:barcodes="clr-namespace:Sample.Features.Barcodes"
                   xmlns:camera="clr-namespace:Sample.Features.Camera"
+                  xmlns:mediaelement="clr-namespace:Sample.Features.Media"
                   xmlns:docking="clr-namespace:Sample.Features.Docking"
                   Title="Shiny Controls"
                   FlyoutBackgroundColor="{AppThemeBinding Light=#F5F3FF, Dark=#0F0D1A}"
@@ -683,6 +684,14 @@
                              Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate camera:CameraPage}" Route="camera" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Media Element">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25B6;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate mediaelement:MediaElementPage}" Route="mediaelement" />
     </FlyoutItem>
 
     <FlyoutItem Title="Scanned Documents">

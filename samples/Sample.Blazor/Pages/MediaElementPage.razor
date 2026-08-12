@@ -1,0 +1,146 @@
+@page "/mediaelement"
+@using Shiny.Blazor.Controls.Media
+@using Shiny.Controls.Media
+
+<PageTitle>Media Element</PageTitle>
+
+<h1>Media Element</h1>
+
+<div class="demo-section">
+    <p>
+        HTML5 audio/video behind the same API as the MAUI <code>MediaElement</code>. The transport bar is
+        drawn by Shiny rather than handed to the browser, because <code>&lt;video controls&gt;</code> is
+        all-or-nothing — so each piece below toggles on its own.
+    </p>
+
+    <MediaElement @ref="player"
+                  Source="https://media.w3.org/2010/05/sintel/trailer.mp4"
+                  Style="max-width:640px;aspect-ratio:16/9;"
+                  Aspect="MediaAspect.AspectFit"
+                  ShowTransportBar="@showBar"
+                  ShowPlayPauseButton="@showPlayPause"
+                  ShowSeekBar="@showSeek"
+                  ShowVolumeControl="@showVolume"
+                  ShowFullScreenButton="@showFullScreen"
+                  ShowTimeLabels="@showTimes"
+                  ShowPictureInPictureButton="true"
+                  AutoHideTransportBar="@autoHide"
+                  IsLooping="@looping"
+                  PlaybackRate="@rate"
+                  OnStateChanged="OnStateChanged"
+                  OnPositionChanged="OnPositionChanged"
+                  OnMediaFailed="OnFailed" />
+
+    <div class="demo-readout">
+        <div><strong>State:</strong> @state</div>
+        <div><strong>Position:</strong> @MediaTimeFormatter.Format(position) / @MediaTimeFormatter.Format(player?.Duration ?? TimeSpan.Zero)</div>
+        @if (failure is not null)
+        {
+            <div class="demo-error"><strong>Error:</strong> @failure</div>
+        }
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Methods</h2>
+    <p>Blazor gets methods where MAUI gets commands — the same operations the transport bar runs.</p>
+
+    <div class="demo-buttons">
+        <button class="btn" @onclick="() => player!.PlayAsync()">Play</button>
+        <button class="btn" @onclick="() => player!.PauseAsync()">Pause</button>
+        <button class="btn" @onclick="() => player!.StopAsync()">Stop</button>
+        <button class="btn" @onclick="() => player!.SeekAsync(TimeSpan.FromSeconds(30))">Seek 30s</button>
+        <button class="btn" @onclick="() => player!.ToggleMuteAsync()">Mute</button>
+        <button class="btn" @onclick="() => player!.ToggleFullScreenAsync()">Full screen</button>
+        <button class="btn" @onclick="() => player!.TryEnterPictureInPictureAsync()">Picture in picture</button>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Show / hide controls</h2>
+
+    <label class="demo-check"><input type="checkbox" @bind="showBar" /> Transport bar</label>
+    <label class="demo-check"><input type="checkbox" @bind="showPlayPause" /> Play / pause button</label>
+    <label class="demo-check"><input type="checkbox" @bind="showSeek" /> Seek bar</label>
+    <label class="demo-check"><input type="checkbox" @bind="showVolume" /> Volume control</label>
+    <label class="demo-check"><input type="checkbox" @bind="showFullScreen" /> Full-screen toggle</label>
+    <label class="demo-check"><input type="checkbox" @bind="showTimes" /> Time labels</label>
+    <label class="demo-check"><input type="checkbox" @bind="autoHide" /> Auto-hide while playing</label>
+    <label class="demo-check"><input type="checkbox" @bind="looping" /> Loop</label>
+
+    <label class="demo-check">
+        Speed
+        <select @bind="rate">
+            <option value="0.5">0.5x</option>
+            <option value="1">1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+        </select>
+    </label>
+
+    @if (player is not null)
+    {
+        <p class="demo-note">
+            This browser reports: volume @(player.Capabilities.Volume ? "settable" : "read-only"),
+            picture-in-picture @(player.Capabilities.PictureInPicture ? "available" : "unavailable"),
+            fullscreen @(player.Capabilities.Fullscreen ? "available" : "unavailable").
+            Controls the browser can't honour are hidden rather than left dead — iOS Safari, for one,
+            refuses programmatic volume.
+        </p>
+    }
+</div>
+
+<div class="demo-section">
+    <h2>Audio with Media Session</h2>
+    <p>
+        Audio-only, so the bar stays pinned open. <code>EnableBackgroundPlayback</code> publishes the
+        metadata to <code>navigator.mediaSession</code>, which puts it in the OS media widget (macOS Now
+        Playing, the Android notification, the Windows SMTC flyout) and routes those buttons back to the
+        player. Whether audio survives the tab being hidden is the browser's call — most keep audio and
+        throttle video, and no web API can force it.
+    </p>
+
+    <MediaElement Source="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                  Style="max-width:640px;"
+                  ShowFullScreenButton="false"
+                  AutoHideTransportBar="false"
+                  EnableBackgroundPlayback="true"
+                  Metadata="audioMetadata" />
+</div>
+
+@code {
+    MediaElement? player;
+
+    MediaElementState state = MediaElementState.None;
+    TimeSpan position;
+    string? failure;
+
+    bool showBar = true;
+    bool showPlayPause = true;
+    bool showSeek = true;
+    bool showVolume = true;
+    bool showFullScreen = true;
+    bool showTimes = true;
+    bool autoHide = true;
+    bool looping;
+    double rate = 1d;
+
+    readonly MediaMetadata audioMetadata = new()
+    {
+        Title = "SoundHelix Song 1",
+        Artist = "T. Schürger",
+        Album = "Shiny Controls Sample"
+    };
+
+    void OnStateChanged(MediaElementState value)
+    {
+        this.state = value;
+
+        if (value != MediaElementState.Failed)
+            this.failure = null;
+    }
+
+    void OnPositionChanged(TimeSpan value) => this.position = value;
+
+    void OnFailed(string message) => this.failure = message;
+}

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Controls.Media</RootNamespace>
+        <Description>Shared contracts for the Shiny MediaElement (MediaElementState, MediaAspect, MediaMetadata, MediaPlaybackCapabilities) used by both the .NET MAUI and Blazor media packages.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.MediaElement" />
+        <InternalsVisibleTo Include="Shiny.Blazor.Controls.MediaElement" />
+    </ItemGroup>
+</Project>

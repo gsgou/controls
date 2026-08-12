@@ -1,0 +1,19 @@
+.glass-backdrop {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+    min-height: 420px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+}
+
+.glass-scroller {
+    position: relative;
+    height: 360px;
+    overflow-y: auto;
+    border-radius: 12px;
+    background-image: linear-gradient(160deg, #4C1D95, #0891B2 55%, #F472B6);
+}

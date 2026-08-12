@@ -27,6 +27,7 @@ public static class MauiProgram
                 cfg.AddDefaultMauiControlFeedback();
             })
             .UseShinyCamera()
+            .UseShinyMediaElement()
             .UseTrayIcon()
             .UseShinyDocking()
             .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")

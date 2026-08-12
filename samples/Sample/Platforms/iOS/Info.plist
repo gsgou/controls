@@ -32,6 +32,12 @@
 	<string>This app uses the microphone for speech recognition</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app uses the camera for the CameraView preview, capture and frame analysis demos</string>
+	<!-- Required for the MediaElement background-playback and Picture-in-Picture demos: without it iOS
+	     silences the session the moment the app leaves the foreground. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
 </dict>

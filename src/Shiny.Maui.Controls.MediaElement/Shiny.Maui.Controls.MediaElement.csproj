@@ -1,0 +1,111 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-macos</TargetFrameworks>
+        <!--
+            Windows packaging (MakePri.exe) is a Windows-only binary, so the Windows TFM is normally added
+            only on Windows and the solution still builds on macOS/Linux.
+
+            ForceWindowsTfm=true adds it anyway, which is how the Windows backend gets *compile*-verified
+            from a Mac — otherwise nothing type-checks Platforms/Windows until someone opens the repo on
+            Windows, and it silently rots. Pair it with -t:Compile, which stops before packaging:
+
+                dotnet build -p:ForceWindowsTfm=true -f net10.0-windows10.0.19041.0 -t:Compile
+
+            A full build (packaging included) still requires Windows.
+        -->
+        <TargetFrameworks Condition="'$(ForceWindowsTfm)' == 'true' Or $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <SingleProject>true</SingleProject>
+        <RootNamespace>Shiny.Maui.Controls.Media</RootNamespace>
+        <AssemblyName>Shiny.Maui.Controls.MediaElement</AssemblyName>
+        <!-- Media3 (androidx.media3.exoplayer) requires Android API 23+ -->
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+        <Description>Cross-platform .NET MAUI MediaElement (iOS, Android, Windows, macOS AppKit; Linux GTK4 via the companion .Linux package) playing local and remote audio/video with a themed, per-element-toggleable transport bar (play/pause, seek scrubber, volume, fullscreen), background audio with OS lock-screen controls, and Picture-in-Picture.</Description>
+        <PackageTags>maui mediaelement video audio player avplayer exoplayer media3 background-audio picture-in-picture</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.MediaElement.Tests" />
+        <!-- The GTK4 head lives in its own assembly (no Linux TFM exists) but drives the same session. -->
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.MediaElement.Linux" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.MediaElement.Shared\Shiny.Controls.MediaElement.Shared.csproj" />
+        <!-- The transport bar is built from Shiny's own Slider and theme tokens so it matches the rest of the suite. -->
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+    <!--
+        Manage Platforms/** includes ourselves so we can (a) share one AppleShared folder across iOS,
+        MacCatalyst and macOS and (b) support net10.0-macos AppKit, which MAUI's SingleProject strips.
+        Mirrors src/Shiny.Maui.Controls.Camera.
+    -->
+    <ItemGroup>
+        <Compile Remove="Platforms/**/*.cs" />
+        <None Include="Platforms/**/*.cs" />
+    </ItemGroup>
+
+    <!-- AppleShared: AVFoundation/MediaPlayer helpers shared by iOS, MacCatalyst and macOS -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst' Or '$(TargetPlatformIdentifier)' == 'macos'">
+        <Compile Include="Platforms/AppleShared/**/*.cs" />
+    </ItemGroup>
+
+    <!-- Apple: UIKit surface + AVKit Picture-in-Picture (iOS + MacCatalyst) -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+        <Compile Include="Platforms/Apple/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+        <Compile Include="Platforms/MacOS/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <Compile Include="Platforms/Android/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
+        <Compile Include="Platforms/Windows/**/*.cs" />
+    </ItemGroup>
+
+    <!-- Media3 (ExoPlayer + MediaSession for the background foreground-service) — Android TFM only -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <PackageReference Include="Xamarin.AndroidX.Media3.Common" />
+        <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" />
+        <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Dash" />
+        <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Hls" />
+        <PackageReference Include="Xamarin.AndroidX.Media3.Session" />
+        <PackageReference Include="Xamarin.AndroidX.Media3.UI" />
+    </ItemGroup>
+
+    <!--
+        MAUI's SingleProject targets tag every Platforms/**/*.cs file with
+        ExcludeFromCurrentConfiguration=true and only re-enable folders named after known platforms
+        (Android, iOS, MacCatalyst, Windows, Tizen). Our shared "Apple"/"AppleShared" folders and the
+        AppKit "MacOS" folder aren't in that list, so re-enable them before removal.
+    -->
+    <Target Name="_ReincludeNonMauiPlatforms"
+            BeforeTargets="_MauiRemovePlatformCompileItems"
+            Condition="'$(SingleProject)' == 'true'">
+        <ItemGroup>
+            <Compile Update="Platforms/Apple/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/AppleShared/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst' Or '$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/MacOS/**/*.cs"
+                     Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+        </ItemGroup>
+    </Target>
+</Project>

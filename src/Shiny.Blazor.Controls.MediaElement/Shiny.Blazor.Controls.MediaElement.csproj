@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Media</RootNamespace>
+        <AssemblyName>Shiny.Blazor.Controls.MediaElement</AssemblyName>
+        <Description>Blazor media player component (HTML5 audio/video) with a themed, per-element-toggleable transport bar (play/pause, seek scrubber, volume, fullscreen), Picture-in-Picture, and Media Session metadata for OS/browser transport controls. Mirrors the .NET MAUI Shiny MediaElement API.</Description>
+        <PackageTags>blazor mediaelement video audio player picture-in-picture mediasession</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Blazor.Controls.MediaElement.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.MediaElement.Shared\Shiny.Controls.MediaElement.Shared.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,128 @@
+@page "/frostedglass"
+
+<PageTitle>Frosted Glass</PageTitle>
+
+<h1>Frosted Glass</h1>
+
+<section class="demo-section">
+    <h2>Glass Cards</h2>
+    <p>
+        <code>FrostedGlass</code> blurs whatever sits <strong>behind</strong> it via CSS
+        <code>backdrop-filter</code>. Its children render crisply on top. It needs something
+        to blur &mdash; over a flat colour it just looks like a tinted rectangle.
+    </p>
+
+    <div class="glass-backdrop" style="background-image:url('https://picsum.photos/seed/glass1/1200/900');">
+        <FrostedGlass CornerRadius="16" BlurRadius="20" TintColor="rgba(255,255,255,0.6)">
+            <div style="padding:20px;">
+                <h3 style="margin:0 0 8px;color:#111827;">Frosted Glass Card</h3>
+                <p style="margin:0;font-size:14px;color:#333333;">
+                    This card blurs the photo behind it.
+                </p>
+            </div>
+        </FrostedGlass>
+
+        <FrostedGlass CornerRadius="12" BlurRadius="30" TintColor="rgba(0,0,0,0.5)">
+            <div style="padding:16px;">
+                <h3 style="margin:0 0 6px;color:white;">Dark Glass</h3>
+                <p style="margin:0;font-size:13px;color:#DDDDDD;">
+                    A darker tint for contrast against light backgrounds.
+                </p>
+            </div>
+        </FrostedGlass>
+
+        <FrostedGlass CornerRadius="20" BlurRadius="15" TintColor="rgba(124,58,237,0.45)">
+            <div style="padding:16px;display:flex;gap:12px;align-items:center;">
+                <span style="font-size:24px;">&#x2728;</span>
+                <div>
+                    <div style="font-weight:600;color:white;">Purple Tinted</div>
+                    <div style="font-size:12px;color:#EEEEEE;">Custom colour tint</div>
+                </div>
+            </div>
+        </FrostedGlass>
+
+        <FrostedGlass CornerRadius="24" BlurRadius="25" TintColor="rgba(255,255,255,0.75)"
+                      Style="align-self:center;">
+            <div style="padding:12px 24px;font-weight:600;color:#111827;">Glass Button</div>
+        </FrostedGlass>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Live Tuning</h2>
+    <p>Adjust the blur, corner radius, and tint and watch the same card update.</p>
+
+    <div class="row" style="margin-bottom:12px;">
+        <label>Blur: <strong>@blurRadius px</strong></label>
+        <input type="range" min="0" max="40" step="1" @bind="blurRadius" @bind:event="oninput" />
+
+        <label>Corners: <strong>@cornerRadius px</strong></label>
+        <input type="range" min="0" max="40" step="1" @bind="cornerRadius" @bind:event="oninput" />
+    </div>
+
+    <div class="row" style="margin-bottom:12px;">
+        @foreach (var tint in tints)
+        {
+            <button class="btn @(tint.Value == tintColor ? "btn-primary" : "")"
+                    @onclick="@(() => tintColor = tint.Value)">
+                @tint.Key
+            </button>
+        }
+    </div>
+
+    <div class="glass-backdrop" style="background-image:url('https://picsum.photos/seed/glass2/1200/900');">
+        <FrostedGlass BlurRadius="@blurRadius" CornerRadius="@cornerRadius" TintColor="@tintColor">
+            <div style="padding:20px;">
+                <h3 style="margin:0 0 8px;color:@textColor;">Blur @blurRadius &middot; Radius @cornerRadius</h3>
+                <p style="margin:0;font-size:14px;color:@textColor;opacity:0.85;">
+                    The blur samples the pixels behind the element every frame, so it stays
+                    correct while the backdrop scrolls or animates.
+                </p>
+            </div>
+        </FrostedGlass>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Glass Header Over Scrolling Content</h2>
+    <p>A sticky glass bar over a scroll container &mdash; scroll the list to see the blur update live.</p>
+
+    <div class="glass-scroller">
+        <FrostedGlass BlurRadius="18" TintColor="rgba(255,255,255,0.55)"
+                      Style="position:sticky;top:0;z-index:2;">
+            <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;">
+                <strong style="color:#111827;">Sticky Glass Header</strong>
+                <span style="font-size:12px;color:#4B5563;">@items.Length items</span>
+            </div>
+        </FrostedGlass>
+
+        @foreach (var item in items)
+        {
+            <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.35);color:white;">
+                <div style="font-weight:600;">@item</div>
+                <div style="font-size:12px;opacity:0.8;">Scroll me under the glass</div>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    double blurRadius = 20;
+    double cornerRadius = 16;
+    string tintColor = "rgba(255,255,255,0.6)";
+
+    readonly Dictionary<string, string> tints = new()
+    {
+        ["Light"] = "rgba(255,255,255,0.6)",
+        ["Dark"] = "rgba(0,0,0,0.5)",
+        ["Purple"] = "rgba(124,58,237,0.45)",
+        ["Clear"] = "rgba(255,255,255,0.15)"
+    };
+
+    string textColor => tintColor == tints["Light"] ? "#111827" : "white";
+
+    readonly string[] items = Enumerable
+        .Range(1, 20)
+        .Select(x => $"List Item {x}")
+        .ToArray();
+}

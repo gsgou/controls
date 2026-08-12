@@ -18,6 +18,12 @@
         <PackageVersion Include="Xamarin.AndroidX.Camera.View" Version="1.6.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Camera.Video" Version="1.6.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Camera.Effects" Version="1.6.1"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.Common" Version="1.10.1.1"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.10.1.1"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.ExoPlayer.Dash" Version="1.10.1.1"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.ExoPlayer.Hls" Version="1.10.1.1"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.Session" Version="1.10.1.2"/>
+        <PackageVersion Include="Xamarin.AndroidX.Media3.UI" Version="1.10.1.1"/>
         <PackageVersion Include="Xamarin.Google.MLKit.BarcodeScanning" Version="117.3.0.7"/>
         <PackageVersion Include="Xamarin.Google.MLKit.FaceDetection" Version="116.1.7.7"/>
         <PackageVersion Include="Xamarin.Google.MLKit.TextRecognition" Version="116.0.1.7"/>
