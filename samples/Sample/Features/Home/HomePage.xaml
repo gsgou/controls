@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:Sample.Features.Home"
+             xmlns:sample="clr-namespace:Sample"
              xmlns:shiny="http://shiny.net/maui/controls"
              x:Class="Sample.Features.Home.HomePage"
              x:DataType="local:HomeViewModel"
@@ -33,102 +34,197 @@
                  Margin="-40,0,0,-40" />
 
         <!-- Content -->
-        <VerticalStackLayout VerticalOptions="Center"
-                             HorizontalOptions="Center"
-                             Spacing="16"
-                             Padding="32">
+        <ScrollView>
+            <VerticalStackLayout Spacing="16" Padding="32,40">
 
-            <!-- Logo with glow -->
-            <Border StrokeThickness="0"
-                    BackgroundColor="Transparent"
-                    HorizontalOptions="Center"
-                    WidthRequest="120" HeightRequest="120">
-                <Border.Shadow>
-                    <Shadow Brush="#8B5CF6"
-                            Offset="0,6"
-                            Radius="30"
-                            Opacity="0.5" />
-                </Border.Shadow>
-                <Image Source="shiny_logo.png"
-                       HeightRequest="120"
-                       WidthRequest="120" />
-            </Border>
+                <!-- Logo with glow -->
+                <Border StrokeThickness="0"
+                        BackgroundColor="Transparent"
+                        HorizontalOptions="Center"
+                        WidthRequest="120" HeightRequest="120">
+                    <Border.Shadow>
+                        <Shadow Brush="#8B5CF6"
+                                Offset="0,6"
+                                Radius="30"
+                                Opacity="0.5" />
+                    </Border.Shadow>
+                    <Image Source="shiny_logo.png"
+                           HeightRequest="120"
+                           WidthRequest="120" />
+                </Border>
 
-            <!-- Title -->
-            <Label Text="Shiny Controls"
-                   FontSize="32"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}"
-                   HorizontalTextAlignment="Center">
-                <Label.Shadow>
-                    <Shadow Brush="{AppThemeBinding Light=#7C3AED, Dark=#000000}"
-                            Offset="0,2"
-                            Radius="12"
-                            Opacity="0.15" />
-                </Label.Shadow>
-            </Label>
+                <!-- Title -->
+                <Label Text="Shiny Controls"
+                       FontSize="32"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}"
+                       HorizontalTextAlignment="Center">
+                    <Label.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#7C3AED, Dark=#000000}"
+                                Offset="0,2"
+                                Radius="12"
+                                Opacity="0.15" />
+                    </Label.Shadow>
+                </Label>
 
-            <!-- Accent line -->
-            <Border BackgroundColor="{AppThemeBinding Light=#7C3AED, Dark=#6D28D9}"
-                    Opacity="0.4"
-                    StrokeThickness="0"
-                    HeightRequest="2"
-                    WidthRequest="80"
-                    HorizontalOptions="Center">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="1" />
-                </Border.StrokeShape>
-            </Border>
+                <!-- Accent line -->
+                <Border BackgroundColor="{AppThemeBinding Light=#7C3AED, Dark=#6D28D9}"
+                        Opacity="0.4"
+                        StrokeThickness="0"
+                        HeightRequest="2"
+                        WidthRequest="80"
+                        HorizontalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="1" />
+                    </Border.StrokeShape>
+                </Border>
 
-            <!-- Subtitle -->
-            <Label Text="MAUI &amp; Blazor Component Gallery"
-                   FontSize="14"
-                   TextColor="{AppThemeBinding Light=#6D28D9, Dark=#A78BFA}"
-                   HorizontalTextAlignment="Center"
-                   CharacterSpacing="0.5" />
+                <!-- Subtitle -->
+                <Label Text="MAUI &amp; Blazor Component Gallery"
+                       FontSize="14"
+                       TextColor="{AppThemeBinding Light=#6D28D9, Dark=#A78BFA}"
+                       HorizontalTextAlignment="Center"
+                       CharacterSpacing="0.5" />
 
-            <!-- Description -->
-            <Label Text="Explore the full suite of controls using the menu."
-                   FontSize="13"
-                   TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
-                   HorizontalTextAlignment="Center"
-                   Margin="0,8,0,0" />
+                <!-- Description -->
+                <Label FontSize="13"
+                       TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
+                       HorizontalTextAlignment="Center"
+                       Margin="0,8,0,0">
+                    <Label.Text>
+                        <MultiBinding StringFormat="{}{0} live demos across {1} categories — browse below or use the menu.">
+                            <Binding Path="TotalControls" />
+                            <Binding Path="TotalSections" />
+                        </MultiBinding>
+                    </Label.Text>
+                </Label>
 
-            <!-- Theme switcher (demo of the central theme packs) -->
-            <Border Margin="0,20,0,0"
-                    Padding="18"
-                    StrokeThickness="0"
-                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1B4B}"
-                    HorizontalOptions="Center">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="18" />
-                </Border.StrokeShape>
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="Live theme preview"
-                           FontAttributes="Bold"
-                           HorizontalTextAlignment="Center"
-                           TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}" />
+                <!-- Theme switcher (demo of the central theme packs) -->
+                <Border Margin="0,20,0,0"
+                        Padding="18"
+                        StrokeThickness="0"
+                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1B4B}"
+                        HorizontalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="18" />
+                    </Border.StrokeShape>
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="Live theme preview"
+                               FontAttributes="Bold"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}" />
 
-                    <!-- Semantic pills + a primary FAB react to the theme picked in the menu -->
-                    <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                        <shiny:PillView Type="Success" Text="Success" />
-                        <shiny:PillView Type="Info" Text="Info" />
-                        <shiny:PillView Type="Warning" Text="Warning" />
-                        <shiny:PillView Type="Critical" Text="Critical" />
-                    </HorizontalStackLayout>
+                        <!-- Semantic pills + a primary FAB react to the theme picked in the menu -->
+                        <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                            <shiny:PillView Type="Success" Text="Success" />
+                            <shiny:PillView Type="Info" Text="Info" />
+                            <shiny:PillView Type="Warning" Text="Warning" />
+                            <shiny:PillView Type="Critical" Text="Critical" />
+                        </HorizontalStackLayout>
 
-                    <shiny:Fab Text="Primary"
-                               HasShadow="False"
-                               HorizontalOptions="Center" />
+                        <shiny:Fab Text="Primary"
+                                   HasShadow="False"
+                                   HorizontalOptions="Center" />
 
-                    <Label Text="Switch Basic / Ocean / Material / Terminal / Aurora &amp; dark mode from the flyout menu."
-                           FontSize="12"
-                           HorizontalTextAlignment="Center"
-                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                        <Label Text="Switch Basic / Ocean / Material / Terminal / Aurora &amp; dark mode from the flyout menu."
+                               FontSize="12"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Catalogue: the same sectioned, colour-coded browse grid as the Blazor sample -->
+                <VerticalStackLayout Spacing="28"
+                                     Margin="0,32,0,0"
+                                     BindableLayout.ItemsSource="{Binding Sections}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="sample:CatalogSection">
+                            <VerticalStackLayout Spacing="12">
+
+                                <!-- Section heading: swatch, title, count -->
+                                <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                                    <Border BackgroundColor="{Binding AccentColor}"
+                                            StrokeThickness="0"
+                                            WidthRequest="4"
+                                            HeightRequest="18"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="2" />
+                                        </Border.StrokeShape>
+                                    </Border>
+
+                                    <Label Text="{Binding Title}"
+                                           FontSize="17"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}" />
+
+                                    <Border Padding="7,1"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{AppThemeBinding Light=#10000000, Dark=#14FFFFFF}">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="9" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding Items.Length}"
+                                               FontSize="11"
+                                               TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <!-- Cards. FlexLayout has no Spacing, so the gap is the cards' own margin. -->
+                                <FlexLayout Wrap="Wrap"
+                                            Direction="Row"
+                                            JustifyContent="Start"
+                                            AlignItems="Start"
+                                            BindableLayout.ItemsSource="{Binding Items}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="sample:CatalogItem">
+                                            <Border Margin="0,0,10,10"
+                                                    Padding="14"
+                                                    WidthRequest="164"
+                                                    HeightRequest="126"
+                                                    StrokeThickness="1"
+                                                    Stroke="{AppThemeBinding Light=#12000000, Dark=#1AFFFFFF}"
+                                                    BackgroundColor="{AppThemeBinding Light=#CCFFFFFF, Dark=#AA1E1B4B}"
+                                                    AutomationId="{Binding Route}">
+                                                <Border.StrokeShape>
+                                                    <RoundRectangle CornerRadius="14" />
+                                                </Border.StrokeShape>
+
+                                                <Border.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type local:HomeViewModel}}, Path=NavigateCommand}"
+                                                        CommandParameter="{Binding Route}" />
+                                                </Border.GestureRecognizers>
+
+                                                <VerticalStackLayout Spacing="6">
+                                                    <Label Text="{Binding Icon}"
+                                                           FontSize="22"
+                                                           TextColor="{Binding Source={RelativeSource AncestorType={x:Type sample:CatalogSection}}, Path=AccentColor}" />
+
+                                                    <Label Text="{Binding Label}"
+                                                           FontSize="14"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{AppThemeBinding Light=#1E1B4B, Dark=#E0E7FF}" />
+
+                                                    <Label Text="{Binding Blurb}"
+                                                           FontSize="11"
+                                                           MaxLines="3"
+                                                           LineBreakMode="TailTruncation"
+                                                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                                                </VerticalStackLayout>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
-            </Border>
 
-        </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
     </Grid>
 
 </ContentPage>
