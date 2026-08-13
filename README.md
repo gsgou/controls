@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -2600,6 +2600,66 @@ A Netflix-style horizontal carousel with snap-to-center behavior, configurable s
 - Autoplay with scroll-position progress bar, or continuous auto-scroll marquee
 - Counter, dot indicators (per snap), and a thumbnail navigation strip
 - Full keyboard support (arrows / Home / End) and lazy item loading
+
+### Layout & AppLayout (Blazor)
+
+Layout primitives and an application shell, Blazor only — MAUI already has `VerticalStackLayout`, `HorizontalStackLayout` and `Grid` in the box.
+
+**`VStack` / `HStack`** — flexbox stacks with `Spacing` (px), `Align`, `Justify`, `Wrap`, `Reverse`, `Grow`, `Padding`, `Background` and `Scrollable`. Everything is an inline style, so there is no stylesheet to load.
+
+```razor
+<VStack Spacing="12" Align="StackAlign.Start" Padding="16">
+    <h3>Title</h3>
+    <HStack Spacing="8" Justify="StackJustify.SpaceBetween" Align="StackAlign.Center">
+        <span>Label</span>
+        <ShinyButton Text="Save" />
+    </HStack>
+</VStack>
+```
+
+**`Grid` / `Row` / `Column`** — a responsive 12-column grid. Each `Column` takes a span per breakpoint (`Xs` &lt; 576px, `Sm` ≥ 576, `Md` ≥ 768, `Lg` ≥ 992, `Xl` ≥ 1200, `Xxl` ≥ 1400) that cascades upwards, so `Md="6"` alone means full width on phones and half from 768px up. `OffsetXs…OffsetXxl` and `OrderXs…OrderXxl` are per-breakpoint too; a `Column` with no span shares the row equally with its siblings, and `Fit` shrinks to its content. `Columns`, `Gutter`/`GutterX`/`GutterY` and `MaxWidth` are configurable on the `Grid` and overridable per `Row`.
+
+```razor
+<Grid Gutter="16" MaxWidth="1200">
+    <Row>
+        <Column Md="8"><Article /></Column>
+        <Column Md="4" OrderXs="1" OrderMd="2"><Sidebar /></Column>
+    </Row>
+</Grid>
+```
+
+**`AppLayout`** — an application shell of a header, footer, left and right panels and the content between them. Regions are placed by CSS grid areas, so they can appear in any order in the markup, and each owns its own scroll region.
+
+```razor
+<AppLayout Height="100dvh" HeaderSpan="LayoutSpan.Full" BorderWidth="1">
+    <AppLayoutHeader Height="56" Padding="0 16">…</AppLayoutHeader>
+
+    <AppLayoutPanel Side="PanelSide.Left"
+                    @bind-State="leftState"
+                    @bind-Size="leftWidth"
+                    MinSize="180" MaxSize="420"
+                    ToolbarSize="56"
+                    CollapseBelow="900"
+                    CollapsedState="PanelState.Toolbar"
+                    PersistKey="nav">
+        <HeaderContent>…</HeaderContent>
+        <ToolbarContent>…</ToolbarContent>
+        <ChildContent>…</ChildContent>
+        <FooterContent>…</FooterContent>
+    </AppLayoutPanel>
+
+    <AppLayoutContent Padding="20">@Body</AppLayoutContent>
+    <AppLayoutFooter Height="36">…</AppLayoutFooter>
+</AppLayout>
+```
+
+- **Three panel states** — `PanelState.Hidden`, `Toolbar` (a narrow rail rendering `ToolbarContent`, configurable to whatever you want) and `Shown`. Two-way bindable via `@bind-State`, or driven from code with `SetStateAsync` / `ToggleAsync` on a `@ref`
+- **Resizing** — drag the handle on the panel's inner edge; the width is clamped to `MinSize`/`MaxSize` and reported back through `@bind-Size`. Set `Resizable="false"` to pin it
+- **Scroll regions** — the panel body, the toolbar rail and the content each scroll on their own, while `HeaderContent`/`FooterContent`, the shell header and the shell footer stay pinned
+- **Borders** — `BorderWidth`/`BorderColor` on the `AppLayout` set the default for every region; each region overrides them or turns its divider off with `Border="false"`. Unset values resolve through CSS variables, so theme tokens still apply
+- **Responsive** — under `CollapseBelow` (measured on the shell, not the window) an expanded panel drops to `CollapsedState`, and re-expanding it there floats it over the content as a drawer with a scrim
+- **Persistence** — set `PersistKey` and the panel's state and width are saved to localStorage and restored on load
+- **`HeaderSpan`/`FooterSpan`** — `LayoutSpan.Full` runs the header/footer the full width, `LayoutSpan.Content` insets it between the panels so they run the full height
 
 ### StaggeredGrid
 

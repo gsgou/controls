@@ -1,0 +1,91 @@
+/* Spans cascade through chained var() fallbacks rather than 72 generated classes:
+   --sc-lg falls back to --sc-md, then --sc-sm, then --sc-xs, then --sc-base (a full-width span).
+   The component only writes the vars for the breakpoints the consumer actually set. */
+.shiny-col {
+    --sc-base: var(--shiny-grid-cols, 12);
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-left: calc(var(--shiny-grid-gutter-x, 16px) / 2);
+    padding-right: calc(var(--shiny-grid-gutter-x, 16px) / 2);
+    width: calc(100% * var(--sc-xs, var(--sc-base)) / var(--shiny-grid-cols, 12));
+    margin-left: calc(100% * var(--so-xs, 0) / var(--shiny-grid-cols, 12));
+    order: var(--sr-xs, 0);
+}
+
+/* No span given: share the row equally with the other auto columns. */
+.shiny-col--auto {
+    flex: 1 1 0;
+    width: auto;
+}
+
+/* Shrink to content. */
+.shiny-col--fit {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+@media (min-width: 576px) {
+    .shiny-col {
+        width: calc(100% * var(--sc-sm, var(--sc-xs, var(--sc-base))) / var(--shiny-grid-cols, 12));
+        margin-left: calc(100% * var(--so-sm, var(--so-xs, 0)) / var(--shiny-grid-cols, 12));
+        order: var(--sr-sm, var(--sr-xs, 0));
+    }
+
+    .shiny-col--auto,
+    .shiny-col--fit {
+        width: auto;
+    }
+}
+
+@media (min-width: 768px) {
+    .shiny-col {
+        width: calc(100% * var(--sc-md, var(--sc-sm, var(--sc-xs, var(--sc-base)))) / var(--shiny-grid-cols, 12));
+        margin-left: calc(100% * var(--so-md, var(--so-sm, var(--so-xs, 0))) / var(--shiny-grid-cols, 12));
+        order: var(--sr-md, var(--sr-sm, var(--sr-xs, 0)));
+    }
+
+    .shiny-col--auto,
+    .shiny-col--fit {
+        width: auto;
+    }
+}
+
+@media (min-width: 992px) {
+    .shiny-col {
+        width: calc(100% * var(--sc-lg, var(--sc-md, var(--sc-sm, var(--sc-xs, var(--sc-base))))) / var(--shiny-grid-cols, 12));
+        margin-left: calc(100% * var(--so-lg, var(--so-md, var(--so-sm, var(--so-xs, 0)))) / var(--shiny-grid-cols, 12));
+        order: var(--sr-lg, var(--sr-md, var(--sr-sm, var(--sr-xs, 0))));
+    }
+
+    .shiny-col--auto,
+    .shiny-col--fit {
+        width: auto;
+    }
+}
+
+@media (min-width: 1200px) {
+    .shiny-col {
+        width: calc(100% * var(--sc-xl, var(--sc-lg, var(--sc-md, var(--sc-sm, var(--sc-xs, var(--sc-base)))))) / var(--shiny-grid-cols, 12));
+        margin-left: calc(100% * var(--so-xl, var(--so-lg, var(--so-md, var(--so-sm, var(--so-xs, 0))))) / var(--shiny-grid-cols, 12));
+        order: var(--sr-xl, var(--sr-lg, var(--sr-md, var(--sr-sm, var(--sr-xs, 0)))));
+    }
+
+    .shiny-col--auto,
+    .shiny-col--fit {
+        width: auto;
+    }
+}
+
+@media (min-width: 1400px) {
+    .shiny-col {
+        width: calc(100% * var(--sc-xxl, var(--sc-xl, var(--sc-lg, var(--sc-md, var(--sc-sm, var(--sc-xs, var(--sc-base))))))) / var(--shiny-grid-cols, 12));
+        margin-left: calc(100% * var(--so-xxl, var(--so-xl, var(--so-lg, var(--so-md, var(--so-sm, var(--so-xs, 0)))))) / var(--shiny-grid-cols, 12));
+        order: var(--sr-xxl, var(--sr-xl, var(--sr-lg, var(--sr-md, var(--sr-sm, var(--sr-xs, 0))))));
+    }
+
+    .shiny-col--auto,
+    .shiny-col--fit {
+        width: auto;
+    }
+}

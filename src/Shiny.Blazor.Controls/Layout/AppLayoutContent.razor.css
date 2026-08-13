@@ -1,0 +1,10 @@
+.shiny-applayout-content {
+    grid-area: content;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+}
+
+.shiny-applayout-content.is-scrollable {
+    overflow: auto;
+}

@@ -1,0 +1,23 @@
+@namespace Shiny.Blazor.Controls
+@inherits AppLayoutBorderedRegionBase
+
+<div class="shiny-applayout-footer @UserClass" style="@FooterStyle" @attributes="ExtraAttributes">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Fixed height in pixels. Null (the default) sizes to the content.</summary>
+    [Parameter] public double? Height { get; set; }
+
+    string FooterStyle
+    {
+        get
+        {
+            var css = this.BorderCss("top") + this.CommonCss();
+            if (this.Height is > 0)
+                css += $"height:{LayoutAttributes.Px(this.Height.Value)};";
+
+            return LayoutAttributes.Append(css, this.UserStyle);
+        }
+    }
+}

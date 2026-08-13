@@ -1,0 +1,100 @@
+@page "/layout"
+
+<PageTitle>Layout</PageTitle>
+
+<h1>Layout</h1>
+<p>Stacks and a responsive 12-column grid. Resize the browser to watch the columns reflow.</p>
+
+<section class="demo-section">
+    <h2>VStack</h2>
+    <VStack Spacing="8" Align="StackAlign.Start" Padding="12" Background="var(--shiny-color-surface-container)"
+            style="border-radius:12px;">
+        <div style="@BoxStyle("#7C3AED")">First</div>
+        <div style="@BoxStyle("#2563EB")">Second</div>
+        <div style="@BoxStyle("#0891B2")">Third</div>
+    </VStack>
+</section>
+
+<section class="demo-section">
+    <h2>HStack</h2>
+
+    <div style="margin-bottom:12px;">
+        <label>Justify: </label>
+        <select @bind="justify">
+            @foreach (var value in Enum.GetValues<StackJustify>())
+            {
+                <option value="@value">@value</option>
+            }
+        </select>
+
+        <label style="margin-left:12px;">Align: </label>
+        <select @bind="align">
+            @foreach (var value in Enum.GetValues<StackAlign>())
+            {
+                <option value="@value">@value</option>
+            }
+        </select>
+
+        <label style="margin-left:12px;">Spacing: @spacing px</label>
+        <input type="range" min="0" max="40" @bind="spacing" @bind:event="oninput" />
+    </div>
+
+    <HStack Spacing="@spacing" Justify="@justify" Align="@align" Wrap="true" Padding="12"
+            Background="var(--shiny-color-surface-container)"
+            style="border-radius:12px;height:120px;">
+        <div style="@BoxStyle("#7C3AED")">A</div>
+        <div style="@BoxStyle("#2563EB");height:56px;">B</div>
+        <div style="@BoxStyle("#0891B2")">C</div>
+        <div style="@BoxStyle("#059669");height:80px;">D</div>
+    </HStack>
+</section>
+
+<section class="demo-section">
+    <h2>Responsive Grid</h2>
+    <p>
+        Each column takes a span per breakpoint and cascades upwards — <code>Md="6"</code> alone means
+        full width on phones and half from 768px up.
+    </p>
+
+    <Grid Gutter="12">
+        <Row>
+            <Column Xs="12" Md="6" Lg="3"><div style="@CellStyle">Xs 12 · Md 6 · Lg 3</div></Column>
+            <Column Xs="12" Md="6" Lg="3"><div style="@CellStyle">Xs 12 · Md 6 · Lg 3</div></Column>
+            <Column Xs="12" Md="6" Lg="3"><div style="@CellStyle">Xs 12 · Md 6 · Lg 3</div></Column>
+            <Column Xs="12" Md="6" Lg="3"><div style="@CellStyle">Xs 12 · Md 6 · Lg 3</div></Column>
+        </Row>
+
+        <Row style="margin-top:12px;">
+            <Column Md="8"><div style="@CellStyle">Md 8</div></Column>
+            <Column Md="4"><div style="@CellStyle">Md 4</div></Column>
+        </Row>
+
+        <Row style="margin-top:12px;">
+            <Column Md="6" OffsetMd="3"><div style="@CellStyle">Md 6, offset 3</div></Column>
+        </Row>
+
+        <Row style="margin-top:12px;">
+            <Column Fit><div style="@CellStyle">Fit</div></Column>
+            <Column><div style="@CellStyle">auto — shares what's left</div></Column>
+            <Column><div style="@CellStyle">auto</div></Column>
+        </Row>
+
+        <Row style="margin-top:12px;">
+            <Column Md="4" OrderXs="2" OrderMd="1"><div style="@CellStyle">Sidebar — last on phones, first from md</div></Column>
+            <Column Md="8" OrderXs="1" OrderMd="2"><div style="@CellStyle">Content</div></Column>
+        </Row>
+    </Grid>
+</section>
+
+@code {
+    StackJustify justify = StackJustify.Start;
+    StackAlign align = StackAlign.Center;
+    double spacing = 12;
+
+    const string CellStyle =
+        "padding:14px;border-radius:10px;background:var(--shiny-color-primary-container);" +
+        "color:var(--shiny-color-on-primary-container);font-size:13px;text-align:center;";
+
+    static string BoxStyle(string color)
+        => $"padding:12px 18px;border-radius:10px;background:{color};color:#fff;font-weight:600;";
+}

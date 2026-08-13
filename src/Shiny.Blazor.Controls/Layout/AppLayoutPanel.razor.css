@@ -1,0 +1,132 @@
+.shiny-applayout-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-height: 0;
+    overflow: hidden;
+    transition: width 180ms cubic-bezier(.2, .8, .2, 1);
+}
+
+/* JS drives the width directly while dragging — the transition would lag the pointer. */
+.shiny-applayout-panel.is-resizing {
+    transition: none;
+    user-select: none;
+}
+
+.shiny-applayout-panel--left {
+    grid-area: left;
+}
+
+.shiny-applayout-panel--right {
+    grid-area: right;
+}
+
+.shiny-applayout-panel.is-hidden {
+    border-left-width: 0;
+    border-right-width: 0;
+}
+
+/* Compact drawer: out of the grid flow entirely, so the track it lived in collapses to zero.
+   grid-area must go back to auto — an absolutely positioned grid item with a definite grid
+   position is positioned against its (now zero-width) grid area instead of the whole layout. */
+.shiny-applayout-panel.is-overlay {
+    position: absolute;
+    grid-area: auto;
+    top: 0;
+    bottom: 0;
+    z-index: 30;
+    box-shadow: 0 0 28px rgba(0, 0, 0, .28);
+    background: var(--shiny-color-surface, #fff);
+}
+
+.shiny-applayout-panel--left.is-overlay {
+    left: 0;
+}
+
+.shiny-applayout-panel--right.is-overlay {
+    right: 0;
+}
+
+.shiny-applayout-panel__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    background: var(--shiny-color-scrim, #000);
+    opacity: .38;
+}
+
+.shiny-applayout-panel__header,
+.shiny-applayout-panel__footer {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.shiny-applayout-panel__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.shiny-applayout-panel__body.is-scrollable {
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.shiny-applayout-panel__rail {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+/* Sits inside the panel: the panel clips its overflow for the width transition, so a handle
+   straddling the edge would be cut in half. */
+.shiny-applayout-panel__resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    z-index: 5;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.shiny-applayout-panel--left .shiny-applayout-panel__resizer {
+    right: 0;
+}
+
+.shiny-applayout-panel--right .shiny-applayout-panel__resizer {
+    left: 0;
+}
+
+.shiny-applayout-panel__resizer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--shiny-color-primary, #0055d9);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.shiny-applayout-panel--left .shiny-applayout-panel__resizer::after {
+    right: 0;
+}
+
+.shiny-applayout-panel--right .shiny-applayout-panel__resizer::after {
+    left: 0;
+}
+
+.shiny-applayout-panel__resizer:hover::after,
+.shiny-applayout-panel.is-resizing .shiny-applayout-panel__resizer::after {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-applayout-panel {
+        transition: none;
+    }
+}

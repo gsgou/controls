@@ -1,0 +1,6 @@
+.shiny-applayout-header {
+    grid-area: header;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: hidden;
+}

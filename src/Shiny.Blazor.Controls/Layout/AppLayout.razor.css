@@ -1,0 +1,14 @@
+.shiny-applayout {
+    /* Region defaults — every child region reads these unless it overrides them. */
+    --shiny-layout-border-width: 1px;
+    --shiny-layout-border-color: var(--shiny-color-outline-variant, #d5d9e0);
+
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: var(--shiny-color-on-surface, inherit);
+}

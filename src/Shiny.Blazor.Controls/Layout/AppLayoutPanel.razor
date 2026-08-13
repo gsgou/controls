@@ -1,0 +1,55 @@
+@namespace Shiny.Blazor.Controls
+@inherits AppLayoutBorderedRegionBase
+
+@if (IsOverlay)
+{
+    <div class="shiny-applayout-panel__scrim" @onclick="DismissOverlayAsync"></div>
+}
+
+<div class="shiny-applayout-panel shiny-applayout-panel--@SideKey @StateClass @(IsOverlay ? "is-overlay" : null) @UserClass"
+     style="@PanelStyle"
+     data-side="@SideKey"
+     data-min="@LayoutAttributes.Num(MinSize)"
+     data-max="@LayoutAttributes.Num(MaxSize)"
+     inert="@(CurrentState == PanelState.Hidden)"
+     aria-hidden="@(CurrentState == PanelState.Hidden ? "true" : null)"
+     @ref="panelRef"
+     @attributes="ExtraAttributes">
+
+    @if (CurrentState == PanelState.Toolbar)
+    {
+        <div class="shiny-applayout-panel__rail">
+            @ToolbarContent
+        </div>
+    }
+    else if (CurrentState == PanelState.Shown)
+    {
+        @if (HeaderContent is not null)
+        {
+            <div class="shiny-applayout-panel__header">
+                @HeaderContent
+            </div>
+        }
+
+        <div class="shiny-applayout-panel__body @(Scrollable ? "is-scrollable" : null)" style="@BodyStyle">
+            @ChildContent
+        </div>
+
+        @if (FooterContent is not null)
+        {
+            <div class="shiny-applayout-panel__footer">
+                @FooterContent
+            </div>
+        }
+
+        @if (Resizable)
+        {
+            <div class="shiny-applayout-panel__resizer"
+                 data-shiny-panel-resizer
+                 role="separator"
+                 aria-orientation="vertical"
+                 aria-label="Resize panel"
+                 title="Drag to resize"></div>
+        }
+    }
+</div>

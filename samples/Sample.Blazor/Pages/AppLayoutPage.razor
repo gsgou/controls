@@ -1,0 +1,166 @@
+@page "/applayout"
+
+<PageTitle>App Layout</PageTitle>
+
+<h1>App Layout</h1>
+<p>
+    A shell with a header, footer and two panels. Each panel cycles hidden → toolbar → shown, drags
+    to resize between its min and max, and scrolls its own body. Narrow the browser below 900px and
+    the left panel compacts to its rail; opening it there floats it over the content.
+</p>
+
+<section class="demo-section">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <button @onclick="() => Cycle(l => leftState = l, leftState)">Left: @leftState</button>
+        <button @onclick="() => Cycle(r => rightState = r, rightState)">Right: @rightState</button>
+        <label>
+            Header span:
+            <select @bind="headerSpan">
+                <option value="@LayoutSpan.Full">Full</option>
+                <option value="@LayoutSpan.Content">Content</option>
+            </select>
+        </label>
+        <label>
+            Borders:
+            <input type="checkbox" @bind="borders" />
+        </label>
+        <span style="align-self:center;font-size:13px;opacity:.7;">
+            left @leftWidth.ToString("0")px · right @rightWidth.ToString("0")px
+        </span>
+    </div>
+
+    <div style="height:520px;border-radius:12px;overflow:hidden;border:1px solid var(--shiny-color-outline-variant);">
+        <AppLayout HeaderSpan="@headerSpan"
+                   BorderWidth="@(borders ? 1 : 0)"
+                   Background="var(--shiny-color-surface)">
+
+            <AppLayoutHeader Height="52"
+                             Background="var(--shiny-color-surface-container-high)"
+                             Padding="0 16px"
+                             style="display:flex;align-items:center;gap:12px;">
+                <button @onclick="() => Cycle(l => leftState = l, leftState)" title="Toggle the left panel">☰</button>
+                <strong>Workspace</strong>
+                <span style="flex:1;"></span>
+                <button @onclick="() => Cycle(r => rightState = r, rightState)" title="Toggle the right panel">⋮</button>
+            </AppLayoutHeader>
+
+            <AppLayoutPanel Side="PanelSide.Left"
+                            @bind-State="leftState"
+                            @bind-Size="leftWidth"
+                            MinSize="180"
+                            MaxSize="420"
+                            ToolbarSize="52"
+                            CollapseBelow="900"
+                            PersistKey="sample-left"
+                            Background="var(--shiny-color-surface-container)">
+                <HeaderContent>
+                    <div style="padding:12px 14px;font-weight:600;border-bottom:1px solid var(--shiny-color-outline-variant);">
+                        Explorer
+                    </div>
+                </HeaderContent>
+                <ToolbarContent>
+                    <VStack Spacing="4" Align="StackAlign.Center" Padding="8 0">
+                        @foreach (var (icon, name) in railItems)
+                        {
+                            <button title="@name" style="@RailButtonStyle">@icon</button>
+                        }
+                    </VStack>
+                </ToolbarContent>
+                <ChildContent>
+                    <VStack Spacing="2" Padding="8">
+                        @foreach (var file in files)
+                        {
+                            <div style="padding:7px 10px;border-radius:8px;font-size:13px;white-space:nowrap;">@file</div>
+                        }
+                    </VStack>
+                </ChildContent>
+                <FooterContent>
+                    <div style="padding:10px 14px;font-size:12px;opacity:.7;border-top:1px solid var(--shiny-color-outline-variant);">
+                        @files.Count items
+                    </div>
+                </FooterContent>
+            </AppLayoutPanel>
+
+            <AppLayoutContent Padding="20">
+                <h3 style="margin-top:0;">Content</h3>
+                <p>
+                    The content region owns its own scroll region, so the header, footer and both
+                    panels stay put while this scrolls.
+                </p>
+                @foreach (var i in Enumerable.Range(1, 24))
+                {
+                    <p style="opacity:.75;">Paragraph @i — scroll me.</p>
+                }
+            </AppLayoutContent>
+
+            <AppLayoutPanel Side="PanelSide.Right"
+                            @bind-State="rightState"
+                            @bind-Size="rightWidth"
+                            MinSize="200"
+                            MaxSize="480"
+                            ToolbarSize="52"
+                            CollapsedState="PanelState.Hidden"
+                            PersistKey="sample-right"
+                            Padding="14"
+                            Background="var(--shiny-color-surface-container)">
+                <ToolbarContent>
+                    <VStack Spacing="4" Align="StackAlign.Center" Padding="8 0">
+                        <button title="Properties" style="@RailButtonStyle">⚙</button>
+                        <button title="History" style="@RailButtonStyle">↺</button>
+                    </VStack>
+                </ToolbarContent>
+                <ChildContent>
+                    <h4 style="margin-top:0;">Properties</h4>
+                    @foreach (var i in Enumerable.Range(1, 20))
+                    {
+                        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;">
+                            <span style="opacity:.7;">Property @i</span>
+                            <span>Value</span>
+                        </div>
+                    }
+                </ChildContent>
+            </AppLayoutPanel>
+
+            <AppLayoutFooter Height="36"
+                             Padding="0 16px"
+                             Background="var(--shiny-color-surface-container-high)"
+                             style="display:flex;align-items:center;font-size:12px;opacity:.8;">
+                Ready
+            </AppLayoutFooter>
+        </AppLayout>
+    </div>
+</section>
+
+@code {
+    PanelState leftState = PanelState.Shown;
+    PanelState rightState = PanelState.Toolbar;
+    double leftWidth = 240;
+    double rightWidth = 280;
+    LayoutSpan headerSpan = LayoutSpan.Full;
+    bool borders = true;
+
+    const string RailButtonStyle =
+        "width:36px;height:36px;border-radius:9px;border:none;background:transparent;" +
+        "cursor:pointer;font-size:16px;color:inherit;";
+
+    static void Cycle(Action<PanelState> set, PanelState current)
+        => set(current switch
+        {
+            PanelState.Hidden => PanelState.Toolbar,
+            PanelState.Toolbar => PanelState.Shown,
+            _ => PanelState.Hidden
+        });
+
+    readonly List<string> files = Enumerable
+        .Range(1, 30)
+        .Select(i => $"📄 document-{i:00}.md")
+        .ToList();
+
+    readonly (string Icon, string Name)[] railItems =
+    {
+        ("🗂", "Files"),
+        ("🔍", "Search"),
+        ("⎇", "Source control"),
+        ("🐞", "Debug")
+    };
+}

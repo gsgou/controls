@@ -1,0 +1,14 @@
+/* Padding gutters (not `gap`) so a percentage-width column plus its gutter still adds up to
+   exactly 100% and does not wrap a 6/6 pair onto two lines. */
+.shiny-row {
+    display: flex;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    margin-left: calc(var(--shiny-grid-gutter-x, 16px) / -2);
+    margin-right: calc(var(--shiny-grid-gutter-x, 16px) / -2);
+    row-gap: var(--shiny-grid-gutter-y, 16px);
+}
+
+.shiny-row--nowrap {
+    flex-wrap: nowrap;
+}

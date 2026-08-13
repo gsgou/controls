@@ -1,0 +1,10 @@
+@namespace Shiny.Blazor.Controls
+@inherits StackBase
+
+<div class="shiny-vstack @UserClass" style="@LayoutStyle" @attributes="ExtraAttributes">
+    @ChildContent
+</div>
+
+@code {
+    protected override bool IsVertical => true;
+}

@@ -1,0 +1,57 @@
+@namespace Shiny.Blazor.Controls
+
+<div class="shiny-grid @UserClass" style="@GridStyle" @attributes="ExtraAttributes">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Number of columns a <see cref="Row"/> is divided into. Defaults to 12.</summary>
+    [Parameter] public int Columns { get; set; } = 12;
+
+    /// <summary>Sets both <see cref="GutterX"/> and <see cref="GutterY"/>, in pixels.</summary>
+    [Parameter] public double? Gutter { get; set; }
+
+    /// <summary>Horizontal spacing between columns, in pixels.</summary>
+    [Parameter] public double GutterX { get; set; } = 16;
+
+    /// <summary>Vertical spacing between wrapped rows of columns, in pixels.</summary>
+    [Parameter] public double GutterY { get; set; } = 16;
+
+    /// <summary>Caps the grid width and centres it. Null (the default) fills the parent.</summary>
+    [Parameter] public double? MaxWidth { get; set; }
+
+    /// <summary>CSS padding shorthand applied to the grid.</summary>
+    [Parameter] public string? Padding { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    IDictionary<string, object>? ExtraAttributes;
+    string? UserClass;
+    string GridStyle = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        this.ExtraAttributes = LayoutAttributes.Split(this.AdditionalAttributes, out var userClass, out var userStyle);
+        this.UserClass = userClass;
+
+        var cols = Math.Max(1, this.Columns);
+        var gx = this.Gutter ?? this.GutterX;
+        var gy = this.Gutter ?? this.GutterY;
+
+        var style =
+            $"--shiny-grid-cols:{LayoutAttributes.Num(cols)};" +
+            $"--shiny-grid-gutter-x:{LayoutAttributes.Px(gx)};" +
+            $"--shiny-grid-gutter-y:{LayoutAttributes.Px(gy)};";
+
+        if (this.MaxWidth is > 0)
+            style += $"max-width:{LayoutAttributes.Px(this.MaxWidth.Value)};margin-left:auto;margin-right:auto;";
+
+        if (!string.IsNullOrWhiteSpace(this.Padding))
+            style += $"padding:{LayoutAttributes.Spacing(this.Padding)};";
+
+        this.GridStyle = LayoutAttributes.Append(style, userStyle);
+    }
+}

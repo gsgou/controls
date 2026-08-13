@@ -1,0 +1,7 @@
+@namespace Shiny.Blazor.Controls
+
+<CascadingValue Value="this" IsFixed="true">
+    <div class="shiny-applayout @UserClass" style="@RootStyle" @ref="rootRef" @attributes="ExtraAttributes">
+        @ChildContent
+    </div>
+</CascadingValue>

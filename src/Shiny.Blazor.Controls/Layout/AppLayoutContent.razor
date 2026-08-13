@@ -1,0 +1,18 @@
+@namespace Shiny.Blazor.Controls
+@inherits AppLayoutRegionBase
+
+<div class="shiny-applayout-content @(Scrollable ? "is-scrollable" : null) @UserClass"
+     style="@ContentStyle"
+     @attributes="ExtraAttributes">
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Give the content its own scroll region. Defaults to true.</summary>
+    [Parameter] public bool Scrollable { get; set; } = true;
+
+    // No border parameters: the content sits between the header, footer and panels, and each of
+    // those draws the divider on its own edge.
+    string ContentStyle
+        => LayoutAttributes.Append(this.CommonCss(), this.UserStyle);
+}
