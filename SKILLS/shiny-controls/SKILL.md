@@ -1151,7 +1151,9 @@ When generating code with Shiny.Maui.Controls:
 - **Geometry and type are tokens, same as colour.** Never write a literal for chrome geometry:
   - Blazor `.razor.css` — `border-radius: var(--shiny-shape-corner-medium, 10px)`,
     `font-size: var(--shiny-type-body-medium-size, 14px)` when the value is exactly on the type
-    scale, otherwise `calc(13px * var(--shiny-type-scale, 1))`. Same idea for
+    scale, otherwise `calc(13px * var(--shiny-type-scale, 1))` — but never wrap an `em` size that
+    way, since `em` already inherits an ancestor the theme scaled; scale once on the control root
+    (`font-size: calc(1em * var(--shiny-type-scale, 1))`) and leave the `em` children alone. Same idea for
     `var(--shiny-spacing-N, …)` / `calc(… * var(--shiny-density-scale, 1))` and
     `var(--shiny-border-thin, 1px)`. Leave `border-radius: 50%` alone — a circular avatar or spinner
     is intrinsic geometry.

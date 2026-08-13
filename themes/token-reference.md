@@ -80,6 +80,18 @@ font-size: calc(13px * var(--shiny-type-scale, 1));       /* 13 is not */
 padding: var(--shiny-spacing-2, 8px) calc(10px * var(--shiny-density-scale, 1));
 ```
 
+**Never wrap an `em` size in that calc.** `em` already resolves against an ancestor the theme has
+scaled, so multiplying again applies the scale twice. Apply it once at the control's root instead and
+let the `em` children inherit — this is how Wizard's type scales:
+
+```css
+.shiny-wizard { font-size: calc(1em * var(--shiny-type-scale, 1)); }   /* identity at scale 1 */
+.shiny-wizard__step-label { font-size: 0.8125em; }                     /* left alone */
+```
+
+`rem` is the opposite case: it resolves against the document root, which no token touches, so it
+does need the calc.
+
 Corner radii snap to the nearest bucket rather than using `calc()` — a 2px radius shift is
 imperceptible where a 2px type shift is not. Leave `border-radius: 50%` alone: a circular avatar or
 spinner is intrinsic geometry, not themeable chrome. Pill shapes (`999px`) do map to `corner-full`,
