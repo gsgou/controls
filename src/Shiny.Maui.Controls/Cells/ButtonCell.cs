@@ -78,6 +78,8 @@ public class ButtonCell : CellBase
         Content = buttonLabel;
     }
 
+    protected override void ApplyAccentStyles() => this.UpdateButtonColor();
+
     void UpdateButtonColor()
     {
         Tint(buttonLabel, Label.TextColorProperty,

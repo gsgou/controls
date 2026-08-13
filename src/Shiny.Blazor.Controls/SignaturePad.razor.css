@@ -1,25 +1,25 @@
 .shiny-sigpad {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--shiny-spacing-3, 12px);
     padding: 0;
     max-height: calc(var(--sheet-visible-height, 50vh) - 62px);
 }
 
 .shiny-sigpad-title {
     text-align: center;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
     color: var(--shiny-color-on-surface-variant, #6B7280);
-    padding: 4px 0 0;
+    padding: var(--shiny-spacing-1, 4px) 0 0;
 }
 
 .shiny-sigpad-canvas-host {
     position: relative;
     flex: 1 1 auto;
     min-height: 120px;
-    border-radius: 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
     overflow: hidden;
-    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-sigpad-canvas {
@@ -36,9 +36,9 @@
     right: 6px;
     background: rgba(0,0,0,0.05);
     border: none;
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-size: 12px;
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
+    padding: var(--shiny-spacing-1, 4px) calc(10px * var(--shiny-density-scale, 1));
+    font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #6B7280);
     cursor: pointer;
 }
@@ -49,9 +49,9 @@
 
 .shiny-sigpad-buttons {
     display: flex;
-    gap: 10px;
+    gap: calc(10px * var(--shiny-density-scale, 1));
     flex: 0 0 auto;
-    padding-bottom: 8px;
+    padding-bottom: var(--shiny-spacing-2, 8px);
 }
 
 .shiny-sigpad-btn {
@@ -59,10 +59,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 0;
+    padding: var(--shiny-spacing-3, 12px) 0;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    font-size: var(--shiny-type-body-large-size, 16px);
     font-weight: 600;
     color: var(--shiny-color-on-primary, white);
     cursor: pointer;

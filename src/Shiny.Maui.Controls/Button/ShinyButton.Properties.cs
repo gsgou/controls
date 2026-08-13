@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -31,8 +32,8 @@ public partial class ShinyButton
     }
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
-        nameof(FontSize), typeof(double), typeof(ShinyButton), DefaultFontSize,
-        propertyChanged: (b, _, n) => Ready(b, x => x.textLabel.FontSize = (double)n));
+        nameof(FontSize), typeof(double), typeof(ShinyButton), ThemeTokens.Unset,
+        propertyChanged: (b, _, n) => Ready(b, x => x.ApplyFontSize()));
     [System.ComponentModel.TypeConverter(typeof(FontSizeConverter))]
     public double FontSize
     {
@@ -138,7 +139,7 @@ public partial class ShinyButton
     }
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
-        nameof(CornerRadius), typeof(double), typeof(ShinyButton), DefaultCornerRadius,
+        nameof(CornerRadius), typeof(double), typeof(ShinyButton), ThemeTokens.Unset,
         propertyChanged: (b, _, _) => Ready(b, x => x.ApplyCornerRadius()));
     public double CornerRadius
     {

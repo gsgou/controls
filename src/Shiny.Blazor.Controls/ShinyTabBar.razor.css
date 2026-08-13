@@ -2,16 +2,16 @@
     display: block;
     width: 100%;
     box-sizing: border-box;
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
     overflow: hidden;
 }
 
 .shiny-tabbar--shadow.shiny-tabbar--bottom {
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shiny-elevation-3, 0 -2px 10px rgba(0, 0, 0, 0.12));
 }
 
 .shiny-tabbar--shadow.shiny-tabbar--top {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shiny-elevation-3, 0 2px 10px rgba(0, 0, 0, 0.12));
 }
 
 .shiny-tabbar-inner {
@@ -28,8 +28,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    padding: 6px 4px;
+    gap: calc(3px * var(--shiny-density-scale, 1));
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-1, 4px);
     border: none;
     background: transparent;
     cursor: pointer;
@@ -70,7 +70,7 @@
 }
 
 .shiny-tabbar-item-label {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     line-height: 1;
     white-space: nowrap;
 }
@@ -81,15 +81,15 @@
     left: 60%;
     min-width: 16px;
     height: 16px;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
     background: var(--shiny-color-error, #EF4444);
     color: var(--shiny-color-on-error, #fff);
-    font-size: 10px;
+    font-size: calc(10px * var(--shiny-type-scale, 1));
     font-weight: 600;
     line-height: 1;
 }

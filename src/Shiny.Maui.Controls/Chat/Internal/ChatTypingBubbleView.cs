@@ -30,26 +30,24 @@ class ChatTypingBubbleView : ContentView
         };
         this.avatarLabel = new Label
         {
-            FontSize = 12,
             TextColor = Colors.White,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.avatarBorder = new Border
         {
             WidthRequest = 32,
             HeightRequest = 32,
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Padding = 0,
             VerticalOptions = LayoutOptions.Center
         };
         this.nameLabel = new Label
         {
-            FontSize = 12,
             Margin = new Thickness(4, 0, 0, 2),
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.nameLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         this.avatarNameRow = new Grid
@@ -79,7 +77,7 @@ class ChatTypingBubbleView : ContentView
         {
             Padding = new Thickness(14, 10),
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 18 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Content = dotsLayout,
             HorizontalOptions = LayoutOptions.Start
         };

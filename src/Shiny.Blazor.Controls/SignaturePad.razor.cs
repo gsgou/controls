@@ -28,11 +28,11 @@ public partial class SignaturePad : IAsyncDisposable
 
     [Parameter] public string SignButtonText { get; set; } = "Sign";
     [Parameter] public string CancelButtonText { get; set; } = "Cancel";
-    [Parameter] public string SignButtonColor { get; set; } = "#6C63FF";
-    [Parameter] public string CancelButtonColor { get; set; } = "#94A3B8";
+    [Parameter] public string SignButtonColor { get; set; } = "var(--shiny-color-primary, #6C63FF)";
+    [Parameter] public string CancelButtonColor { get; set; } = "var(--shiny-color-on-surface-variant, #94A3B8)";
     [Parameter] public bool ShowCancelButton { get; set; } = true;
 
-    [Parameter] public string PanelBackgroundColor { get; set; } = "#FFFFFF";
+    [Parameter] public string PanelBackgroundColor { get; set; } = "var(--shiny-color-surface, #FFFFFF)";
     [Parameter] public double PanelCornerRadius { get; set; } = 16;
     [Parameter] public bool HasBackdrop { get; set; } = true;
 

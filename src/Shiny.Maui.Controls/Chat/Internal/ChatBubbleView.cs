@@ -37,26 +37,24 @@ partial class ChatBubbleView : ContentView
         };
         this.avatarLabel = new Label
         {
-            FontSize = 12,
             TextColor = Colors.White,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.avatarBorder = new Border
         {
             WidthRequest = 32,
             HeightRequest = 32,
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Padding = 0,
             VerticalOptions = LayoutOptions.Center
         };
         this.nameLabel = new Label
         {
-            FontSize = 12,
             Margin = new Thickness(4, 0, 0, 2),
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.nameLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         this.avatarNameRow = new Grid
@@ -104,13 +102,12 @@ partial class ChatBubbleView : ContentView
         this.actionsButton = new Button
         {
             Text = "⋮",
-            FontSize = 16,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 28,
             HeightRequest = 28,
             Padding = 0,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         this.actionsButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.actionsButton.Clicked += this.OnActionsButtonClicked;
 
@@ -128,17 +125,15 @@ partial class ChatBubbleView : ContentView
 
         this.timestampLabel = new Label
         {
-            FontSize = 11,
             Margin = new Thickness(4, 2, 4, 0)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         this.timestampLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         this.statusLabel = new Label
         {
-            FontSize = 11,
             Margin = new Thickness(4, 0, 4, 0),
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         this.statusLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         var statusTap = new TapGestureRecognizer();
         statusTap.Tapped += this.OnActionsButtonClicked;
@@ -412,23 +407,22 @@ partial class ChatBubbleView : ContentView
             var countLabel = new Label
             {
                 Text = count > 1 ? count.ToString() : string.Empty,
-                FontSize = 11,
                 VerticalTextAlignment = TextAlignment.Center,
                 IsVisible = count > 1
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
             countLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
             var badge = new Border
             {
                 StrokeThickness = 0,
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
                 Padding = new Thickness(6, 2),
                 Content = new HorizontalStackLayout
                 {
                     Spacing = 2,
                     Children =
                     {
-                        new Label { Text = group.Key, FontSize = 12, VerticalTextAlignment = TextAlignment.Center },
+                        new Label { Text = group.Key, VerticalTextAlignment = TextAlignment.Center }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize),
                         countLabel
                     }
                 }

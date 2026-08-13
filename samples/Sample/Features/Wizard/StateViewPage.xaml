@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:local="clr-namespace:Sample.Features.Wizard"
+             x:Class="Sample.Features.Wizard.StateViewPage"
+             x:DataType="local:StateViewViewModel"
+             Title="State View"
+             AutomationId="StateViewPage">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="20">
+
+            <Label Text="StateView swaps between named branches from one string. Bind CurrentState and the matching StateViewState is what is on screen."
+                   LineBreakMode="WordWrap" />
+
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Empty" AutomationId="StateEmptyButton"
+                        Command="{Binding GoCommand}" CommandParameter="Empty" />
+                <Button Text="Load" AutomationId="StateLoadButton" Command="{Binding LoadCommand}" />
+                <Button Text="Fail" AutomationId="StateFailButton" Command="{Binding FailCommand}" />
+            </HorizontalStackLayout>
+
+            <Label Text="{Binding LastChange}" AutomationId="StateChangeLabel" FontSize="12" />
+
+            <Border StrokeThickness="1" Padding="16" StrokeShape="RoundRectangle 12" HeightRequest="180">
+                <shiny:StateView CurrentState="{Binding CurrentState}"
+                                 Transition="Slide"
+                                 AutomationId="DemoStateView">
+
+                    <shiny:StateViewState Name="Empty">
+                        <VerticalStackLayout Spacing="6" VerticalOptions="Center">
+                            <Label Text="Nothing loaded" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Label Text="Press Load or Fail to move the state along." HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </shiny:StateViewState>
+
+                    <shiny:StateViewState Name="Loading">
+                        <VerticalStackLayout Spacing="10" VerticalOptions="Center">
+                            <ActivityIndicator IsRunning="True" HorizontalOptions="Center" />
+                            <Label Text="Loading…" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </shiny:StateViewState>
+
+                    <!-- ContentTemplate is built the first time the state is reached, then cached. -->
+                    <shiny:StateViewState Name="Loaded">
+                        <shiny:StateViewState.ContentTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Spacing="6" VerticalOptions="Center">
+                                    <Label Text="Loaded" FontAttributes="Bold" HorizontalOptions="Center" />
+                                    <Label Text="This branch came from a ContentTemplate, so nothing was built until you got here."
+                                           HorizontalTextAlignment="Center" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </shiny:StateViewState.ContentTemplate>
+                    </shiny:StateViewState>
+
+                    <shiny:StateViewState Name="Error">
+                        <VerticalStackLayout Spacing="6" VerticalOptions="Center">
+                            <Label Text="Something went wrong" FontAttributes="Bold" HorizontalOptions="Center" />
+                            <Button Text="Try again" Command="{Binding LoadCommand}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </shiny:StateViewState>
+                </shiny:StateView>
+            </Border>
+
+            <Label Text="An unmatched name falls back to DefaultState, then to the first declared state — so a typo shows something rather than nothing."
+                   FontSize="12" LineBreakMode="WordWrap" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

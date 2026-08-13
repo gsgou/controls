@@ -88,26 +88,24 @@ class CalendarSheetPicker : ContentView
         prevButton = new Button
         {
             Text = "<",
-            FontSize = 16,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 40,
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         prevButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
         nextButton = new Button
         {
             Text = ">",
-            FontSize = 16,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 40,
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         nextButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         nextButton.Clicked += (_, _) => NavigateMonth(1);
 
@@ -175,7 +173,7 @@ class CalendarSheetPicker : ContentView
             {
                 Content = cellContent,
                 StrokeThickness = 0,
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
                 BackgroundColor = Colors.Transparent,
                 WidthRequest = 32,
                 HeightRequest = 32,
@@ -297,10 +295,9 @@ class CalendarSheetPicker : ContentView
             var header = new Label
             {
                 Text = names[idx].ToUpperInvariant()[..2],
-                FontSize = 11,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
             header.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             dayHeaderGrid.Add(header, i);
         }

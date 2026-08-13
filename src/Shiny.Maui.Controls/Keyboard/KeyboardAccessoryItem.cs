@@ -72,7 +72,7 @@ public class KeyboardNavigationItem : KeyboardAccessoryItem
             return;
 
         Text = Direction == KeyboardNavigationDirection.Previous ? "‹" : "›";
-        FontSize = 22;
+        this.SetDynamicResource(FontSizeProperty, Themes.ShinyThemeKeys.Type.TitleLargeSize);
         textSetByUser = false;
     }
 
@@ -101,7 +101,7 @@ public class KeyboardDismissItem : KeyboardAccessoryItem
     public KeyboardDismissItem()
     {
         Text = "Done";
-        FontSize = 16;
+        this.SetDynamicResource(FontSizeProperty, Themes.ShinyThemeKeys.Type.BodyLargeSize);
         SetDynamicResource(ToolColorProperty, Themes.ShinyThemeKeys.Color.Primary);
         Clicked += OnClicked;
 

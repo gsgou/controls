@@ -17,6 +17,11 @@
     <label>
         <input type="checkbox" @bind="multiSelect" /> Multi-select
     </label>
+    @if (multiSelect)
+    {
+        <button @onclick="SelectAll">Select all</button>
+        <button @onclick="DeselectAll">Deselect all</button>
+    }
 </div>
 
 <TreeView TItem="FileNode"
@@ -28,6 +33,7 @@
           CanExpandSelector="@(n => n.IsFolder)"
           CanSelectSelector="@(n => !n.IsLocked)"
           SelectionMode="@(multiSelect ? BlazorTreeSelectionMode.Multiple : BlazorTreeSelectionMode.Single)"
+          SelectedItems="selectedItems"
           EnableDragDrop="true"
           ShowGuideLines="true"
           IndentSize="22"
@@ -58,6 +64,7 @@
 @code {
     TreeView<FileNode>? tree;
     bool multiSelect;
+    readonly List<FileNode> selectedItems = new();
     string status = "Tap or arrow-key through the tree.";
 
     readonly List<FileNode> rootItems = new()
@@ -95,6 +102,18 @@
         if (!parent.LazyLoad)
             return Array.Empty<FileNode>();
         await Task.Delay(900);
+
+        // "shared" is a second lazy level so the demo shows nested loading, but it returns
+        // leaves — an endlessly generated branch would never finish expanding.
+        if (parent.Name == "shared")
+        {
+            return new[]
+            {
+                new FileNode { Name = "team-notes.md", Icon = "📄" },
+                new FileNode { Name = "budget.xlsx", Icon = "📊" }
+            };
+        }
+
         return new[]
         {
             new FileNode { Name = "remote-backup.zip", Icon = "💾" },
@@ -105,13 +124,29 @@
 
     async Task ExpandAll() { if (tree != null) await tree.ExpandAllAsync(); }
     void CollapseAll() => tree?.CollapseAll();
+    async Task SelectAll()
+    {
+        if (tree == null) return;
+        await tree.SelectAllAsync();
+        status = $"{selectedItems.Count} checked";
+    }
+
+    async Task DeselectAll()
+    {
+        if (tree == null) return;
+        await tree.DeselectAllAsync();
+        status = "Selection cleared";
+    }
+
     async Task RefreshCloud()
     {
         var cloud = rootItems.First(r => r.LazyLoad);
         if (tree != null) await tree.RefreshAsync(cloud);
     }
 
-    void OnSelected(TreeItemEventArgs<FileNode> e) => status = $"Selected: {e.Item.Name}";
+    void OnSelected(TreeItemEventArgs<FileNode> e) => status = multiSelect
+        ? $"{selectedItems.Count} checked (last: {e.Item.Name})"
+        : $"Selected: {e.Item.Name}";
     void OnExpanded(TreeItemEventArgs<FileNode> e) => status = $"Expanded: {e.Item.Name}";
     void OnCollapsed(TreeItemEventArgs<FileNode> e) => status = $"Collapsed: {e.Item.Name}";
     void OnLoadFailed(TreeLoadFailedEventArgs<FileNode> e) => status = $"Load failed: {e.Exception.Message}";

@@ -4,8 +4,12 @@ namespace Shiny.Maui.Controls.Tree.Internal;
 
 internal class TreeNodeView : Grid
 {
+    internal const string CheckBoxAutomationId = "ShinyTreeNodeCheckBox";
+
     readonly TreeView owner;
     readonly Grid chevronHost;
+    readonly Border? checkBox;
+    readonly Label? checkGlyph;
     readonly ContentView contentHost;
     readonly Border background;
     readonly Grid dropIndicatorAbove;
@@ -39,6 +43,7 @@ internal class TreeNodeView : Grid
             {
                 new ColumnDefinition(GridLength.Auto), // indent + guide lines
                 new ColumnDefinition(GridLength.Auto), // chevron
+                new ColumnDefinition(GridLength.Auto), // multi-select checkbox
                 new ColumnDefinition(GridLength.Star)  // user content
             },
             ColumnSpacing = 4,
@@ -62,6 +67,35 @@ internal class TreeNodeView : Grid
         chevronTap.Tapped += OnChevronTapped;
         chevronHost.GestureRecognizers.Add(chevronTap);
         inner.Add(chevronHost, 1, 0);
+
+        // Multi-select checkbox. Drawn rather than a native CheckBox: the row tap owns
+        // selection, and a native control would either swallow the touch (double-toggling
+        // through the row gesture) or render greyed once made InputTransparent, which
+        // Android implements by disabling the platform view.
+        if (owner.SelectionMode == TreeSelectionMode.Multiple && owner.ShowSelectionCheckBoxes)
+        {
+            checkGlyph = new Label
+            {
+                Text = "✓",
+                FontSize = 13,
+                FontAttributes = FontAttributes.Bold,
+                HorizontalTextAlignment = TextAlignment.Center,
+                VerticalTextAlignment = TextAlignment.Center,
+                Margin = new Thickness(0, -2, 0, 0)
+            };
+            checkBox = new Border
+            {
+                AutomationId = CheckBoxAutomationId,
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Padding = 0,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
+                VerticalOptions = LayoutOptions.Center,
+                Opacity = owner.CanSelect(node.Item) ? 1.0 : 0.35,
+                Content = checkGlyph
+            }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
+            inner.Add(checkBox, 2, 0);
+        }
 
         // Content host
         contentHost = new ContentView
@@ -87,7 +121,7 @@ internal class TreeNodeView : Grid
                 VerticalTextAlignment = TextAlignment.Center
             };
         }
-        inner.Add(contentHost, 2, 0);
+        inner.Add(contentHost, 3, 0);
 
         background.Content = inner;
 
@@ -234,6 +268,8 @@ internal class TreeNodeView : Grid
 
     public void RefreshSelection()
     {
+        RefreshCheckBox();
+
         if (Node.IsSelected)
         {
             if (owner.SelectedBackgroundColor is Color selected)
@@ -248,6 +284,25 @@ internal class TreeNodeView : Grid
             background.BackgroundColor = owner.RowBackgroundColor;
         }
     }
+
+    // The box is painted from resolved token values rather than dynamic resources: a colour
+    // token can't reach Border.Stroke (it's a Brush), so both ends are resolved together.
+    void RefreshCheckBox()
+    {
+        if (checkBox == null)
+            return;
+
+        var accent = owner.CheckBoxColor ?? ResolveColor(ShinyThemeKeys.Color.Primary, Color.FromArgb("#7C3AED"));
+        checkBox.Stroke = new SolidColorBrush(Node.IsSelected
+            ? accent
+            : ResolveColor(ShinyThemeKeys.Color.OnSurfaceVariant, Color.FromArgb("#666666")));
+        checkBox.BackgroundColor = Node.IsSelected ? accent : Colors.Transparent;
+        checkGlyph!.TextColor = ResolveColor(ShinyThemeKeys.Color.OnPrimary, Colors.White);
+        checkGlyph.IsVisible = Node.IsSelected;
+    }
+
+    static Color ResolveColor(string key, Color fallback)
+        => Application.Current?.Resources.TryGetValue(key, out var v) == true && v is Color c ? c : fallback;
 
     void OnChevronTapped(object? sender, EventArgs e)
     {

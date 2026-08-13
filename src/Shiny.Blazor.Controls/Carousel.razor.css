@@ -5,13 +5,13 @@
 }
 
 .shiny-carousel:focus-visible {
-    outline: 2px solid var(--shiny-color-primary, #0055D9);
+    outline: var(--shiny-border-medium, 2px) solid var(--shiny-color-primary, #0055D9);
     outline-offset: 2px;
     border-radius: var(--shiny-shape-corner-medium, 12px);
 }
 
 .shiny-carousel-empty {
-    padding: 24px;
+    padding: var(--shiny-spacing-5, 24px);
     text-align: center;
     color: var(--shiny-color-on-surface-variant, #6b7280);
 }
@@ -144,10 +144,10 @@
     border-radius: var(--shiny-shape-corner-full, 9999px);
     background: var(--shiny-color-surface, rgba(255, 255, 255, 0.92));
     color: var(--shiny-color-on-surface, #1f2937);
-    font-size: 24px;
+    font-size: var(--shiny-type-headline-small-size, 24px);
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0, 0, 0, 0.18));
     transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
     z-index: 3;
 }
@@ -203,14 +203,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 12px 0 4px;
+    gap: var(--shiny-spacing-4, 16px);
+    padding: var(--shiny-spacing-3, 12px) 0 var(--shiny-spacing-1, 4px);
 }
 
 .shiny-carousel-indicators {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
 }
 
 .shiny-carousel-dot {
@@ -230,7 +230,7 @@
 }
 
 .shiny-carousel-counter {
-    font-size: 13px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     font-variant-numeric: tabular-nums;
     color: var(--shiny-color-on-surface-variant, #6b7280);
 }
@@ -239,9 +239,9 @@
 
 .shiny-carousel-thumbs {
     display: flex;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
     overflow-x: auto;
-    padding: 12px 2px 4px;
+    padding: var(--shiny-spacing-3, 12px) calc(2px * var(--shiny-density-scale, 1)) var(--shiny-spacing-1, 4px);
     scrollbar-width: thin;
 }
 
@@ -250,7 +250,7 @@
     width: 64px;
     height: 44px;
     padding: 0;
-    border: 2px solid transparent;
+    border: var(--shiny-border-medium, 2px) solid transparent;
     border-radius: var(--shiny-shape-corner-small, 8px);
     background: var(--shiny-color-surface-variant, #e5e7eb);
     color: var(--shiny-color-on-surface-variant, #6b7280);

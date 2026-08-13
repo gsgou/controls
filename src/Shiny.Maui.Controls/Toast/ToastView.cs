@@ -70,7 +70,6 @@ sealed class ToastView : ContentView
         {
             Text = config.Text,
             TextColor = textColor,
-            FontSize = 14,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Fill,
             LineBreakMode = config.TextOverflow switch
@@ -79,7 +78,7 @@ sealed class ToastView : ContentView
                 _ => LineBreakMode.TailTruncation
             },
             MaxLines = config.TextOverflow == ToastTextOverflow.MultiLine ? int.MaxValue : 1
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
 
         // Content layout — use Grid so the label column is width-constrained
         // (HorizontalStackLayout gives unlimited width, breaking truncation/wrap)
@@ -190,16 +189,11 @@ sealed class ToastView : ContentView
             {
                 CornerRadius = isPill ? config.CornerRadius : 0
             },
-            Shadow = isPill
-                ? new Shadow
-                {
-                    Brush = Colors.Black,
-                    Offset = new Point(0, 2),
-                    Radius = 8,
-                    Opacity = 0.3f
-                }
-                : null
         };
+
+        // A pill floats above the page, an edge-anchored bar does not.
+        if (isPill)
+            border.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level2);
 
         // Apply theme tokens via dynamic resources for any color the consumer did not set
         // explicitly. This keeps runtime theme/appearance switches live.

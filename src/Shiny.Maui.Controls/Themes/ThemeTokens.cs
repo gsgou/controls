@@ -1,0 +1,87 @@
+using Microsoft.Maui.Controls.Shapes;
+
+namespace Shiny.Maui.Controls.Themes;
+
+/// <summary>
+/// Helpers for the "theme unless the consumer said otherwise" pattern.
+/// </summary>
+/// <remarks>
+/// A control's internal children are painted from the theme with <c>SetDynamicResource</c>, which is
+/// what lets a theme swap restyle them live. Writing a literal to the same property clears that
+/// binding, so an explicit value from the consumer keeps winning — but a <em>default</em> literal
+/// would silently win too, which is why the numeric appearance properties use a negative sentinel
+/// for "unset" rather than baking their old default into the property.
+/// </remarks>
+static class ThemeTokens
+{
+    /// <summary>The value a numeric appearance property carries when the consumer has not set one.</summary>
+    public const double Unset = -1d;
+
+    public static bool IsSet(double value) => value >= 0d && !double.IsNaN(value);
+
+    /// <summary>Apply an explicit value, or fall back to the theme token when unset.</summary>
+    public static void SetTokenOrValue(this Element element, BindableProperty property, double value, string themeKey)
+    {
+        if (IsSet(value))
+            element.SetValue(property, value);
+        else
+            element.SetDynamicResource(property, themeKey);
+    }
+
+    /// <summary>
+    /// Corner radius twin of <see cref="SetTokenOrValue"/>. <see cref="RoundRectangle.CornerRadius"/>
+    /// is typed <see cref="CornerRadius"/> and a dynamic resource is assigned with no conversion, so
+    /// callers pass a <c>ShinyThemeKeys.Shape.…Radius</c> key, not the plain double one.
+    /// </summary>
+    public static void SetCornerTokenOrValue(this RoundRectangle shape, double value, string radiusThemeKey)
+    {
+        if (IsSet(value))
+            shape.CornerRadius = new CornerRadius(value);
+        else
+            shape.SetDynamicResource(RoundRectangle.CornerRadiusProperty, radiusThemeKey);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Chainable forms, for the common case of an internal child built in an object initializer.
+    // An object initializer cannot call SetDynamicResource, so setting a size inside one bakes it in
+    // permanently; chaining a WithX(token) call after the initializer keeps it on the theme.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Bind a font size to a <c>ShinyThemeKeys.Type.…Size</c> token.</summary>
+    public static T WithFontSize<T>(this T element, string themeKey) where T : Element
+    {
+        // Every MAUI type that has a font size shares FontElement's single BindableProperty instance,
+        // so Label's is the right one to hand to any of them.
+        element.SetDynamicResource(Label.FontSizeProperty, themeKey);
+        return element;
+    }
+
+    /// <summary>Bind a corner radius to a <c>ShinyThemeKeys.Shape.…Radius</c> token.</summary>
+    public static RoundRectangle WithCornerRadius(this RoundRectangle shape, string radiusThemeKey)
+    {
+        shape.SetDynamicResource(RoundRectangle.CornerRadiusProperty, radiusThemeKey);
+        return shape;
+    }
+
+    /// <summary>Bind a stroke width to a <c>ShinyThemeKeys.Border.…</c> token.</summary>
+    public static Border WithStrokeThickness(this Border border, string themeKey)
+    {
+        border.SetDynamicResource(Border.StrokeThicknessProperty, themeKey);
+        return border;
+    }
+
+    /// <summary>Bind a drop shadow to a <c>ShinyThemeKeys.Elevation.Level…</c> token.</summary>
+    public static T WithElevation<T>(this T element, string themeKey) where T : VisualElement
+    {
+        element.SetDynamicResource(VisualElement.ShadowProperty, themeKey);
+        return element;
+    }
+
+    /// <summary>Drive a brush's colour from a token so theme swaps reach Stroke/Background properties.</summary>
+    public static SolidColorBrush TokenBrush(string colorThemeKey)
+    {
+        var brush = new SolidColorBrush();
+        brush.SetDynamicResource(SolidColorBrush.ColorProperty, colorThemeKey);
+        return brush;
+    }
+}

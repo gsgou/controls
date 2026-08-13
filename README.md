@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, and VirtualizedGrid. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -20,6 +20,10 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![Blazor MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MediaElement.svg?label=Shiny.Blazor.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MediaElement)
 [![Keyframe Export NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Keyframe.Export.svg?label=Shiny.Maui.Controls.Keyframe.Export)](https://www.nuget.org/packages/Shiny.Maui.Controls.Keyframe.Export)
 [![Motion Icons NuGet](https://img.shields.io/nuget/v/Shiny.Controls.MotionIcons.Shared.svg?label=Shiny.Controls.MotionIcons.Shared)](https://www.nuget.org/packages/Shiny.Controls.MotionIcons.Shared)
+[![MAUI Terminal Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Terminal.svg?label=Shiny.Maui.Controls.Themes.Terminal)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Terminal)
+[![Blazor Terminal Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Terminal.svg?label=Shiny.Blazor.Controls.Themes.Terminal)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Terminal)
+[![MAUI Aurora Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Aurora.svg?label=Shiny.Maui.Controls.Themes.Aurora)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Aurora)
+[![Blazor Aurora Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Aurora.svg?label=Shiny.Blazor.Controls.Themes.Aurora)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Aurora)
 
 ## Getting Started
 
@@ -205,12 +209,20 @@ No DI registration is required — drop the components into any `.razor` page.
 > `MyBubbleColor="#DCF8C6"` keeps that green through every `ShinyThemeManager.SetTheme` call, so omit
 > the property unless you mean to pin it.
 >
-> **What visibly changes when you swap theme packs.** The accent roles —
-> `Primary`/`Secondary`/`Tertiary`/`Info` and their containers — differ substantially between packs
-> (`Primary` is `#0055D9` in Basic, `#006783` in Ocean, `#6750A4` in Material). The neutral ramp
-> cannot: `Surface` is nearly identical across packs because a tone-98 near-white has no room to
-> carry a hue. Controls whose themed parts are all `Surface`/`OnSurface`/`Outline` will therefore
-> look much the same in every pack, by design.
+> **What visibly changes when you swap theme packs.** A theme is not just a palette. Alongside the
+> colour seeds it can define its own **shape** (corner geometry), **typography** (family, scale,
+> weight, tracking), **elevation** (`shadow` / `flat` / `outline` / `glow`, with separate intensity
+> and softness), **density** (spacing ramp and control metrics) and **border widths** — so a pack
+> restyles the geometry and type of every control, not only its hue. Terminal is square, monospace
+> and dense with hairline rings instead of shadows; Ocean is soft, roomy and barely-shadowed; Aurora
+> glows instead of casting shadows. Colour alone would not carry that: the neutral ramp is nearly
+> identical between packs because a tone-98 near-white has no room to hold a hue, which is why a
+> palette-only theme used to leave most controls looking the same.
+>
+> Numeric appearance properties that a theme owns (`CornerRadius`, `FontSize`, stroke widths)
+> default to `-1`, meaning *unset — let the theme decide*. A literal default would have been written
+> to the control at construction and beaten the theme permanently rather than merely by default.
+> Setting one to a real value still pins it, as before.
 >
 > **Watch out for implicit `BoxView` styles.** The .NET MAUI project template ships
 > `<Style TargetType="BoxView">` with a setter for **`BackgroundColor`** — which paints an opaque
@@ -429,6 +441,128 @@ A standalone duration picker control that opens a FloatingPanel for selection wi
 | `MinuteInterval` | `int` | `5` | Minute increment step |
 | `Format` | `string` | `@"h\:mm"` | Display format string |
 | `Placeholder` | `string` | `"Select duration"` | Text shown when no duration selected |
+
+### ShinyImage
+
+A remote image that always shows *something* — placeholder artwork, a loading ring, the image, or
+error artwork — with the download itself under your control on MAUI.
+
+<!-- TODO: capture screenshots for shiny-image -->
+
+```xml
+<shiny:ShinyImage Uri="{Binding PhotoUrl}"
+                  PlaceholderImage="placeholder.png"
+                  ErrorImage="broken_image.png"
+                  Aspect="AspectFill"
+                  HeightRequest="220" />
+```
+
+```razor
+<ShinyImage Uri="@PhotoUrl"
+            PlaceholderUri="/images/placeholder.svg"
+            Alt="Profile photo"
+            ObjectFit="cover" />
+```
+
+**The loading ring picks its own mode.** When the response carries a `Content-Length` the ring fills
+to a real percentage; when it does not — a chunked response, or a request still waiting for a
+download slot — the same ring spins instead. There is nothing to configure: `Percent` is null in
+exactly the cases where a percentage would be a lie.
+
+| Property | Type | Description |
+|---|---|---|
+| Uri | string? | The image to load. `http`/`https` goes through `IImageService`; anything else loads as a local file |
+| Source | ImageSource? | An explicit source (MAUI). Takes precedence over `Uri` and skips the service entirely |
+| PlaceholderImage / PlaceholderUri | ImageSource? / string? | Artwork shown before and during the load, **behind** the ring |
+| ErrorImage / ErrorUri | ImageSource? / string? | Artwork shown when the load fails |
+| LoadingTemplate / LoadingContent | DataTemplate? / RenderFragment&lt;ImageLoadProgress&gt;? | Replaces the ring entirely; context is the live progress |
+| ErrorTemplate / ErrorContent | DataTemplate? / RenderFragment&lt;ImageLoadProgress&gt;? | Replaces the error artwork |
+| Aspect / ObjectFit | Aspect / string | How the image scales (default `AspectFit` / `contain`) |
+| FadeInDuration | uint / int | Fade-in milliseconds once loaded (default 150) |
+| RingSize, RingColor, RingTrackColor, ProgressTextColor, ShowProgressText | — | Ring appearance; colours fall back to theme tokens |
+| CacheEnabled, CacheDuration | bool, TimeSpan? | Per-image cache participation and expiry override (MAUI) |
+| DisableProgress | bool | Blazor: skip the streamed fetch and let the browser load the URL directly |
+| State, Progress, IsLoading, LoadError | read-only | The live load state |
+| ImageLoaded / ImageFailed | event / EventCallback | Completion callbacks (plus `ImageLoadedCommand` / `ImageFailedCommand` on MAUI) |
+| ReloadAsync() | method | Re-fetch, skipping the cache |
+
+#### ImageService (MAUI)
+
+Downloads go through `IImageService`, which caches to memory and disk, caps concurrency, and
+collapses concurrent requests for the same URI into a single download — the difference between a
+scrolling list issuing one request per unique image and one per visible cell.
+
+```csharp
+builder.UseShinyControls(cfg => cfg
+    .ConfigureImages(o =>
+    {
+        o.MaxConcurrentDownloads = 4;                 // requests past this report Queued
+        o.DiskCacheDuration      = TimeSpan.FromDays(7);
+        o.MaxDiskCacheBytes      = 100 * 1024 * 1024; // LRU-trimmed
+        o.MemoryCacheEnabled     = true;
+        o.MaxMemoryCacheBytes    = 32 * 1024 * 1024;
+        o.MaxMemoryItemBytes     = 2 * 1024 * 1024;   // bigger images stay disk-only
+    })
+);
+```
+
+```csharp
+// Clear cached images — e.g. from a "free up space" setting
+await imageService.ClearCacheAsync();
+await imageService.ClearCacheAsync(oneUrl);
+var bytes = await imageService.GetCacheSizeAsync();
+await imageService.PrefetchAsync(nextPageUrls);
+```
+
+**Bring your own `HttpClient`.** For authenticated images — the one thing a plain `Image` or `<img>`
+genuinely cannot do — replace `IImageDownloader`, not the whole service. Caching, queueing and
+de-duplication stay where they are:
+
+```csharp
+class AuthenticatedDownloader(HttpClient client, ITokenStore tokens) : IImageDownloader
+{
+    public async Task<ImageDownloadResult> DownloadAsync(ImageRequest request, CancellationToken ct)
+    {
+        var msg = new HttpRequestMessage(HttpMethod.Get, request.Uri);
+        msg.Headers.Authorization = new("Bearer", await tokens.GetAsync(ct));
+
+        var response = await client.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+
+        return new ImageDownloadResult(
+            await response.Content.ReadAsStreamAsync(ct),
+            response.Content.Headers.ContentLength   // this is what makes the ring determinate
+        );
+    }
+}
+
+// builder.UseShinyControls(cfg => cfg.SetCustomImageDownloader<AuthenticatedDownloader>());
+// cfg.SetCustomImageService<T>() replaces the whole pipeline, caching included.
+```
+
+The memory tier caches **encoded bytes, not `ImageSource` objects** — a stream-backed `ImageSource`
+is consumed once and platform image handles are bound to the view that realized them, so sharing one
+across cells renders blank. Each control builds a fresh `ImageSource.FromStream` from the cached
+bytes, which is free; the network round-trip is what was skipped.
+
+#### Blazor
+
+There is no cache layer on Blazor and that is deliberate — the browser already has a well-tuned HTTP
+cache, shared across tabs and persisted between sessions. What Blazor *does* add is progress:
+`ShinyImage` streams remote images through `fetch` and a `ReadableStream` reader so the ring can show
+a genuine percentage, which no `<img>` element can report.
+
+> **CORS caveat.** A plain `<img>` may load a cross-origin image with no server cooperation; `fetch`
+> may not. When the streamed load is blocked, the component silently falls back to letting the
+> browser load the URL directly — the image still appears, the ring just stays indeterminate. Set
+> `DisableProgress="true"` to take that path deliberately.
+
+For authenticated images, register a downloader:
+
+```csharp
+builder.Services.AddShinyImages();                          // uses the registered HttpClient
+builder.Services.AddShinyImages<AuthenticatedDownloader>(); // or your own
+```
 
 ### ImageViewer
 
@@ -1598,6 +1732,117 @@ Colors default to the theme CSS variables (`--shiny-color-primary`, `--shiny-col
 }
 ```
 
+### StateView & Wizard
+
+Two related controls on both hosts. **`StateView`** shows exactly one of several named branches, chosen by
+a string — the declarative form of the `IsVisible` (MAUI) / `@if/else` (Blazor) ladder every app grows.
+**`Wizard`** builds on it: the same named branches, plus an order, a progress indicator, a Back/Next bar
+that knows where it is, and a gate on leaving a step.
+
+**StateView** — bind `CurrentState` and the matching `StateViewState` is what is on screen. An unmatched
+name falls back to `DefaultState`, then to the first declared state, so a typo shows something rather than
+a blank rectangle. Content declared inline is built with the rest of the markup; content declared as a
+`ContentTemplate` (MAUI) is built the first time the branch is reached and then cached — turn `CacheContent`
+off to rebuild, and reset, on every visit. On Blazor the branches are lazy by construction: a
+`StateViewState` renders nothing itself and hands its `ChildContent` to the state view.
+
+`Transition` animates the swap — `None`, `Fade`, `Slide` (direction taken from the move, so a later state
+enters from the right and an earlier one from the left), `SlideLeft`/`SlideRight`/`SlideUp`/`SlideDown`, or
+`Scale`.
+
+```xml
+<shiny:StateView CurrentState="{Binding CurrentState}" Transition="Slide">
+    <shiny:StateViewState Name="Loading">
+        <ActivityIndicator IsRunning="True" />
+    </shiny:StateViewState>
+    <shiny:StateViewState Name="Loaded">
+        <shiny:StateViewState.ContentTemplate>
+            <DataTemplate><local:ReportView /></DataTemplate>
+        </shiny:StateViewState.ContentTemplate>
+    </shiny:StateViewState>
+    <shiny:StateViewState Name="Error">
+        <Label Text="Something went wrong" />
+    </shiny:StateViewState>
+</shiny:StateView>
+```
+
+```razor
+<StateView @bind-CurrentState="state" Transition="StateTransition.Slide">
+    <States>
+        <StateViewState Name="Loading"><Spinner /></StateViewState>
+        <StateViewState Name="Loaded"><Report /></StateViewState>
+        <StateViewState Name="Error"><p>Something went wrong</p></StateViewState>
+    </States>
+</StateView>
+```
+
+**Wizard** — steps are `WizardStep`s (a `StateViewState` with a title and a few rules). The default
+progress indicator is the pointed breadcrumb: one chevron per step, completed / current / upcoming taken
+from the theme, with `ProgressStyle="Dots"` and `"Bar"` as alternatives and `Progress` to replace it with
+your own view entirely. On MAUI it is drawn on a `GraphicsView`, so it renders identically on every head
+including AppKit and GTK4; on Blazor the same shape is a `clip-path`.
+
+What the wizard adds beyond switching views:
+
+- **Validity gates.** `WizardStep.IsValid` blocks Next; `IsOptional` bypasses it. `ValidateCommand` (MAUI)
+  runs *before* `IsValid` is read, so a view-model that validates inside the command and sets the flag is
+  enough — no event wiring. Blazor's `Validate` is an `async Func<Task<bool>>`, so a server round-trip is a
+  first-class validator. `StepChanging` is cancellable for anything neither can express.
+- **Conditional branches.** `IsVisible="False"` takes a step out of the run entirely: skipped by Next/Back,
+  dropped from the progress bar, and excluded from `StepCount`. Bind it and the wizard reshapes itself.
+  `IsEnabled="False"` keeps the step on the indicator but unreachable.
+- **Built-in commands.** `GoNextCommand`, `GoBackCommand`, `FinishCommand`, `CancelCommand` and
+  `GoToStepCommand` are on the wizard, so a button inside a step reaches them with `x:Reference` rather
+  than the view-model re-implementing navigation. `CanGoBack`/`CanGoNext` remain yours — they are ANDed
+  with the wizard's own boundary and validity checks.
+- **Position, read-only and bindable.** `StepNumber`, `StepCount`, `IsFirstStep`, `IsLastStep` and
+  `ProgressFraction`, plus two-way `CurrentStep` and `CurrentStepIndex`. Assigning an unknown or disabled
+  step is reverted rather than blanking the wizard.
+- **Review without skipping ahead.** `AllowStepSelection` makes the indicator clickable;
+  `LinearNavigation` (on by default) limits that to steps already completed.
+- **Finish that can fail.** `Finishing` is cancellable, so a submit rejected server-side leaves the user on
+  the last step with their input intact.
+
+```xml
+<shiny:Wizard x:Name="Checkout"
+              CurrentStep="{Binding CurrentStep}"
+              ShowCancel="True"
+              AllowStepSelection="True"
+              FinishedCommand="{Binding SubmitCommand}">
+
+    <shiny:WizardStep Name="Account" Title="Account" IsValid="{Binding EmailIsValid}">
+        <shiny:TextEntry Text="{Binding Email}" Placeholder="you@example.com" />
+    </shiny:WizardStep>
+
+    <!-- Turn delivery off and this step leaves the run entirely -->
+    <shiny:WizardStep Name="Delivery" Title="Delivery" IsVisible="{Binding WantsDelivery}">
+        <shiny:TextEntry Text="{Binding Address}" />
+    </shiny:WizardStep>
+
+    <shiny:WizardStep Name="Review" Title="Review" NextText="Place order">
+        <Button Text="Start over"
+                Command="{Binding Source={x:Reference Checkout}, Path=GoToStepCommand}"
+                CommandParameter="Account" />
+    </shiny:WizardStep>
+</shiny:Wizard>
+```
+
+```razor
+<Wizard @bind-CurrentStep="step" ShowCancel="true" Finished="SubmitAsync">
+    <Steps>
+        <WizardStep Name="Account" Title="Account" IsValid="@emailIsValid">…</WizardStep>
+        <WizardStep Name="Delivery" Title="Delivery" IsVisible="@wantsDelivery">…</WizardStep>
+        <WizardStep Name="Review" Title="Review" NextText="Place order" Validate="ConfirmAsync">…</WizardStep>
+    </Steps>
+    <Progress>
+        <!-- optional: replaces the built-in pointed progress bar -->
+    </Progress>
+</Wizard>
+```
+
+Turn `ShowNavigationBar` off when each step carries its own buttons; `NavigationBar` (MAUI) /
+`<NavigationBar>` (Blazor) replaces the built-in bar while keeping the wizard's own navigation logic.
+
 ### ShinyToolbar & ShinyTabBar (Blazor)
 
 Two screen-docked navigation chromes for Blazor. **`ShinyToolbar`** docks to the top or bottom of its
@@ -2130,7 +2375,7 @@ work), with native hooks on iOS and Android that stop the enclosing scroller fro
 
 ### TreeView
 
-Hierarchical tree control with lazy-loaded branches, configurable expand/collapse icons, single or multi-selection, per-item `CanExpand`/`CanSelect` predicates, retry on load failure, optional guide lines, and drag/drop reorder. Available on both MAUI and Blazor.
+Hierarchical tree control with lazy-loaded branches, configurable expand/collapse icons, single or multi-selection (checkbox per row), per-item `CanExpand`/`CanSelect` predicates, retry on load failure, optional guide lines, and drag/drop reorder. Available on both MAUI and Blazor.
 
 | Initial | Expanded | Multi-level | Lazy loading | Multi-select |
 |:---:|:---:|:---:|:---:|:---:|
@@ -2176,7 +2421,9 @@ Tree.CanSelectSelector   = item => item is FileNode f && !f.IsLocked;
 | HasChildrenSelector | `Func<object, bool>` | Render chevron only when true |
 | CanExpandSelector | `Func<object, bool>` | Gate expand gesture (dimmed chevron when false) |
 | CanSelectSelector | `Func<object, bool>` | Gate selection per item |
-| SelectionMode | TreeSelectionMode | `None` / `Single` / `Multiple` |
+| SelectionMode | TreeSelectionMode | `None` / `Single` / `Multiple` (switching modes clears the current selection) |
+| ShowSelectionCheckBoxes | bool | Checkbox on every row while `SelectionMode` is `Multiple` (default true) |
+| CheckBoxColor | Color? | Checkbox tint (MAUI); Blazor uses the `--shiny-color-primary` token |
 | SelectedItem | object? | Two-way (Single mode) |
 | SelectedItems | IList\<object\>? | Two-way (Multiple mode) |
 | ExpandedIcon / CollapsedIcon / RetryIcon | ImageSource? | Fall back to ▼ / ▶ / ↻ glyphs |
@@ -2188,7 +2435,11 @@ Tree.CanSelectSelector   = item => item is FileNode f && !f.IsLocked;
 
 `ItemDropped` reports `Source`, `Target`, and `Position` (`Above` / `Below` reorder among siblings, `Into` drops into a folder) — your handler moves the data, then rebinds `ItemsSource` (MAUI) or calls `ReloadAsync()` (Blazor, which preserves expansion/selection state). Blazor drag/drop runs on native HTML5 drag events via a small JS module (required for Safari/Firefox `dataTransfer` support); MAUI uses platform drag gestures with a pan-gesture fallback on Mac Catalyst, AppKit, and GTK4 where those are broken or missing.
 
-**Public methods:** `ExpandAll`, `ExpandAllAsync`, `CollapseAll`, `Expand(item)`, `Collapse(item)`, `Refresh(item)`, `ReloadAsync`, `FindNode(item)` — Blazor mirrors these as `ExpandAsync` / `CollapseAsync` / `ExpandAllAsync` / `CollapseAll` / `RefreshAsync` / `ReloadAsync` / `FindNode`.
+**Multi-select:** `SelectionMode="Multiple"` puts a checkbox on every row. The whole row is the hit target — tapping the row or its checkbox toggles it — and rows failing `CanSelectSelector` show a disabled box. Set `ShowSelectionCheckBoxes="False"` for the older highlight-only look.
+
+**Public methods:** `ExpandAll(maxDepth)`, `ExpandAllAsync(maxDepth)`, `CollapseAll`, `Expand(item)`, `Collapse(item)`, `SelectAll()`, `DeselectAll()`, `SetBranchSelected(item, selected)`, `Refresh(item)`, `ReloadAsync`, `FindNode(item)` — Blazor mirrors these as `ExpandAsync` / `CollapseAsync` / `ExpandAllAsync` / `CollapseAll` / `SelectAllAsync` / `DeselectAllAsync` / `SetBranchSelectedAsync` / `RefreshAsync` / `ReloadAsync` / `FindNode`.
+
+`ExpandAll` materializes everything `ChildrenSelector` can supply — it only leaves branches that need `ChildrenLoader`, which `ExpandAllAsync` awaits. Both stop at `maxDepth` (default 32) so a self-referencing or endlessly generated hierarchy can't expand forever. `SelectAll` / `SetBranchSelected` cover collapsed branches too, but only nodes that have been loaded — call `ExpandAllAsync()` first to check a lazy tree in full.
 
 ### Markdown Controls
 

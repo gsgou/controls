@@ -91,15 +91,14 @@ public partial class ChatView : ContentView
         };
         this.toastTypingLabel = new Label
         {
-            FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.toastPill = new Border
         {
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Padding = new Thickness(16, 8),
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.End,
@@ -123,10 +122,9 @@ public partial class ChatView : ContentView
         // connection banner (top)
         this.connectionBannerLabel = new Label
         {
-            FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.connectionBanner = new Border
         {
             StrokeThickness = 0,
@@ -359,7 +357,7 @@ public partial class ChatView : ContentView
         var container = new Border
         {
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Padding = 4,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
@@ -387,10 +385,9 @@ public partial class ChatView : ContentView
             var label = new Label
             {
                 Text = glyph,
-                FontSize = 28,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.HeadlineMediumSize);
             var cell = new Border
             {
                 StrokeThickness = 0,

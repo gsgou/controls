@@ -1,7 +1,7 @@
 .shiny-tv {
     --shiny-tv-sep-color: var(--shiny-color-outline-variant, #E5E7EB);
     --shiny-tv-sep-height: 1px;
-    --shiny-tv-sep-padding: 16px;
+    --shiny-tv-sep-padding: var(--shiny-spacing-4, 16px);
     --shiny-tv-section-sep-color: transparent;
     --shiny-tv-section-sep-height: 8px;
     --shiny-tv-cell-bg: var(--shiny-color-surface, #FFFFFF);
@@ -9,7 +9,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-family: var(--shiny-type-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif);
     color: var(--shiny-color-on-surface, #111827);
     background: transparent;
 }
@@ -21,8 +21,8 @@
 }
 
 ::deep .shiny-tv-section-header {
-    padding: 12px 16px 6px;
-    font-size: 12px;
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px) calc(6px * var(--shiny-density-scale, 1));
+    font-size: var(--shiny-type-body-small-size, 12px);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -30,8 +30,8 @@
 }
 
 ::deep .shiny-tv-section-footer {
-    padding: 6px 16px 12px;
-    font-size: 12px;
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px) var(--shiny-spacing-3, 12px);
+    font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #6B7280);
 }
 
@@ -54,13 +54,13 @@
 ::deep .shiny-tv-cell {
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--shiny-spacing-3, 12px);
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px);
     align-items: center;
     cursor: pointer;
     user-select: none;
     transition: background-color 120ms ease;
-    border-bottom: 1px solid var(--shiny-color-outline-variant, #F1F5F9);
+    border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #F1F5F9);
 }
 
 ::deep .shiny-tv-cell:last-child {
@@ -86,7 +86,7 @@
 ::deep .shiny-tv-cell-body {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     min-width: 0;
 }
 
@@ -94,12 +94,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
     min-width: 0;
 }
 
 ::deep .shiny-tv-cell-title {
-    font-size: 16px;
+    font-size: var(--shiny-type-body-large-size, 16px);
     color: var(--shiny-color-on-surface, #111827);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -109,13 +109,13 @@
 }
 
 ::deep .shiny-tv-cell-hint {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #6B7280);
     flex-shrink: 0;
 }
 
 ::deep .shiny-tv-cell-description {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #6B7280);
     line-height: 1.4;
 }
@@ -123,9 +123,9 @@
 ::deep .shiny-tv-cell-accessory {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
     color: var(--shiny-color-on-surface-variant, #6B7280);
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
 }
 
 /* button cell */
@@ -136,10 +136,10 @@
     background: transparent;
     color: var(--shiny-color-primary, #2196F3);
     font-weight: 600;
-    padding: 12px 16px;
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px);
     cursor: pointer;
-    font-family: inherit;
-    font-size: 16px;
+    font-family: var(--shiny-type-font-family, inherit);
+    font-size: var(--shiny-type-body-large-size, 16px);
 }
 
 ::deep .shiny-tv-button:hover {
@@ -174,7 +174,7 @@
     position: absolute;
     inset: 0;
     background: var(--shiny-color-outline-variant, #D1D5DB);
-    border-radius: 13px;
+    border-radius: var(--shiny-shape-corner-medium, 13px);
     transition: background-color 200ms ease;
     cursor: pointer;
 }
@@ -189,7 +189,7 @@
     background: var(--shiny-color-surface, white);
     border-radius: 50%;
     transition: transform 200ms ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: var(--shiny-elevation-2, 0 2px 4px rgba(0,0,0,0.2));
 }
 
 ::deep .shiny-tv-switch input:checked + .shiny-tv-switch-slider {

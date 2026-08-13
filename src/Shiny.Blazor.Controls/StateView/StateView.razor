@@ -1,0 +1,26 @@
+@namespace Shiny.Blazor.Controls
+@implements IStateViewHost
+
+<div class="shiny-stateview @CssClass @UserClass" style="@RootStyle" @attributes="ExtraAttributes">
+
+    @* Children register here and render nothing of their own; the winner's content is rendered below. *@
+    <CascadingValue TValue="IStateViewHost" Value="this" IsFixed="true">
+        @(States ?? ChildContent)
+    </CascadingValue>
+
+    @if (Current is not null)
+    {
+        @* Keyed on the state instance so entering a branch rebuilds the pane - which is what makes
+           the CSS enter animation replay. Without the key Blazor patches the existing DOM and the
+           animation only ever runs once. *@
+        <div class="shiny-stateview__pane @PaneClass" @key="Current">
+            @Current.ChildContent
+        </div>
+    }
+    else if (EmptyContent is not null)
+    {
+        <div class="shiny-stateview__pane">
+            @EmptyContent
+        </div>
+    }
+</div>

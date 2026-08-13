@@ -21,5 +21,7 @@
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.MediaElement\Shiny.Blazor.Controls.MediaElement.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Ocean\Shiny.Blazor.Controls.Themes.Ocean.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Material\Shiny.Blazor.Controls.Themes.Material.csproj"/>
+        <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Terminal\Shiny.Blazor.Controls.Themes.Terminal.csproj"/>
+        <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Aurora\Shiny.Blazor.Controls.Themes.Aurora.csproj"/>
     </ItemGroup>
 </Project>

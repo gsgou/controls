@@ -10,6 +10,7 @@
                   xmlns:scheduler="clr-namespace:Sample.Features.Scheduler"
                   xmlns:diagrams="clr-namespace:Sample.Features.Diagrams"
                   xmlns:imgviewer="clr-namespace:Sample.Features.ImageViewer"
+                  xmlns:images="clr-namespace:Sample.Features.Images"
                   xmlns:imgeditor="clr-namespace:Sample.Features.ImageEditor"
                   xmlns:mediapicker="clr-namespace:Sample.Features.Media"
                   xmlns:chat="clr-namespace:Sample.Features.Chat"
@@ -31,6 +32,7 @@
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
+                  xmlns:wizard="clr-namespace:Sample.Features.Wizard"
                   xmlns:keyframe="clr-namespace:Sample.Features.Keyframe"
                   xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
@@ -208,9 +210,13 @@
                        HorizontalTextAlignment="Center"
                        TextColor="{AppThemeBinding Light=#9CA3AF, Dark=#6B7280}" />
                 <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                    <Button x:Name="basicThemeButton" Text="Basic" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnBasicTheme" />
-                    <Button x:Name="oceanThemeButton" Text="Ocean" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnOceanTheme" />
-                    <Button x:Name="materialThemeButton" Text="Material" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnMaterialTheme" />
+                    <Button x:Name="basicThemeButton" Text="Basic" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnBasicTheme" AutomationId="theme-basic" />
+                    <Button x:Name="oceanThemeButton" Text="Ocean" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnOceanTheme" AutomationId="theme-ocean" />
+                    <Button x:Name="materialThemeButton" Text="Material" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnMaterialTheme" AutomationId="theme-material" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
+                    <Button x:Name="terminalThemeButton" Text="Terminal" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnTerminalTheme" AutomationId="theme-terminal" />
+                    <Button x:Name="auroraThemeButton" Text="Aurora" FontSize="11" Padding="10,4" HeightRequest="32" Clicked="OnAuroraTheme" AutomationId="theme-aurora" />
                 </HorizontalStackLayout>
                 <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
                     <Label Text="Dark mode"
@@ -591,6 +597,22 @@
         <ShellContent ContentTemplate="{DataTemplate fab:FabPage}" Route="fab" />
     </FlyoutItem>
 
+    <FlyoutItem Title="State View">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x21C4;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate wizard:StateViewPage}" Route="stateview" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Wizard">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x27A4;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate wizard:WizardPage}" Route="wizard" />
+    </FlyoutItem>
+
     <!-- ============================================================ -->
     <!--  STATUS &amp; FEEDBACK -->
     <!-- ============================================================ -->
@@ -718,6 +740,14 @@
                              Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate camera:DocumentSessionPage}" Route="documentsession" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Shiny Image">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F5BC;" Size="20"
+                             Color="{AppThemeBinding Light=#9333EA, Dark=#C084FC}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate images:ImagesPage}" Route="shinyimage" />
     </FlyoutItem>
 
     <FlyoutItem Title="Image Viewer">

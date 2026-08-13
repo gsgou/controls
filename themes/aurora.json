@@ -1,0 +1,36 @@
+{
+    "$schema": "./shiny-theme.schema.json",
+    "name": "Aurora",
+    "slug": "aurora",
+    "description": "A vivid violet/cyan theme where depth is light rather than shadow — rounded, bold-weighted, and everything raised glows.",
+    "seeds": {
+        "primary": "#8B5CF6",
+        "secondary": "#EC4899",
+        "tertiary": "#22D3EE",
+        "neutral": "#6B7280",
+        "neutralVariant": "#6D6A80",
+        "error": "#F43F5E",
+        "success": "#10B981",
+        "info": "#38BDF8",
+        "warning": "#FBBF24",
+        "caution": "#FB923C",
+        "critical": "#F43F5E"
+    },
+    "shape": {
+        "scale": 1.4
+    },
+    "typography": {
+        "weightOffset": 200,
+        "trackingOffset": -0.1
+    },
+    "elevation": {
+        "style": "glow",
+        "intensity": 1.3,
+        "softness": 1.5
+    },
+    "border": {
+        "thin": 1,
+        "medium": 2,
+        "thick": 4
+    }
+}

@@ -71,6 +71,8 @@ public class SimpleCheckCell : CellBase
         checkLabel.IsVisible = Checked;
     }
 
+    protected override void ApplyAccentStyles() => this.UpdateCheckColor();
+
     void UpdateCheckColor()
     {
         Tint(checkLabel, Label.TextColorProperty,

@@ -14,6 +14,10 @@ public class DurationPickerCell : CellBase
     [Parameter] public int MinHours { get; set; }
     [Parameter] public int MaxHours { get; set; } = 999;
 
+    /// <summary>The "hrs"/"min" suffixes. Tokenised so the theme's palette and type scale reach them.</summary>
+    const string UnitLabelStyle =
+        "color:var(--shiny-color-on-surface-variant, #6B7280);font-size:var(--shiny-type-body-medium-size, 14px);";
+
     protected override Task OnTapped() => Task.CompletedTask;
 
     async Task SetHours(ChangeEventArgs e)
@@ -51,7 +55,7 @@ public class DurationPickerCell : CellBase
         builder.CloseElement();
 
         builder.OpenElement(sequence + 8, "span");
-        builder.AddAttribute(sequence + 9, "style", "color:#6B7280;font-size:14px;");
+        builder.AddAttribute(sequence + 9, "style", UnitLabelStyle);
         builder.AddContent(sequence + 10, "h");
         builder.CloseElement();
 
@@ -66,7 +70,7 @@ public class DurationPickerCell : CellBase
         builder.CloseElement();
 
         builder.OpenElement(sequence + 19, "span");
-        builder.AddAttribute(sequence + 20, "style", "color:#6B7280;font-size:14px;");
+        builder.AddAttribute(sequence + 20, "style", UnitLabelStyle);
         builder.AddContent(sequence + 21, "m");
         builder.CloseElement();
     }

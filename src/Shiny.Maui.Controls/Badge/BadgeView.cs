@@ -39,7 +39,7 @@ public partial class BadgeView : Grid, IDisposable
             StrokeThickness = 1.5,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
-            StrokeShape = new RoundRectangle { CornerRadius = 999 },
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerFullRadius),
             InputTransparent = true,
             IsVisible = false,
             Scale = 0,

@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using TvTableView = Shiny.Maui.Controls.TableView;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -54,12 +55,25 @@ public class SwitchCell : CellBase
         return switchControl;
     }
 
+    protected override void ApplyAccentStyles() => this.UpdateSwitchColor();
+
     void UpdateSwitchColor()
+        => Tint(switchControl, Switch.OnColorProperty, OnColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
     {
-        var color = OnColor ?? ParentTableView?.CellAccentColor;
-        if (color != null)
-            switchControl.OnColor = color;
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
+
 
     protected override void OnTapped()
     {

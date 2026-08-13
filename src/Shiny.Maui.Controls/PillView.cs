@@ -21,24 +21,20 @@ public class PillView : ContentView
     {
         label = new Label
         {
-            FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             LineBreakMode = LineBreakMode.NoWrap
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         border = new Border
         {
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = 12
-            },
-            StrokeThickness = 1,
+().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Padding = new Thickness(12, 4),
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center,
             Content = label
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
 
         Content = border;
 
@@ -156,10 +152,10 @@ public class PillView : ContentView
         nameof(FontSize),
         typeof(double),
         typeof(PillView),
-        12.0,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(PillView), () =>
             {
-                ((PillView)b).label.FontSize = (double)n;
+                ((PillView)b).label.SetTokenOrValue(Label.FontSizeProperty, (double)n, ShinyThemeKeys.Type.BodySmallSize);
             }));
 
     public double FontSize
@@ -172,16 +168,14 @@ public class PillView : ContentView
         nameof(CornerRadius),
         typeof(double),
         typeof(PillView),
-        12.0,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(PillView), () =>
             {
-            var pill = (PillView)b;
-            var r = (double)n;
-            pill.border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = new CornerRadius(r)
-            };
-        }));
+                var pill = (PillView)b;
+                var shape = new Microsoft.Maui.Controls.Shapes.RoundRectangle();
+                shape.SetCornerTokenOrValue((double)n, ShinyThemeKeys.Shape.CornerMediumRadius);
+                pill.border.StrokeShape = shape;
+            }));
 
     public double CornerRadius
     {

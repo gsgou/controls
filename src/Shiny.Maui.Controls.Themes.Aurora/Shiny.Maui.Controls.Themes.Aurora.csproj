@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Themes.Aurora</RootNamespace>
+        <Description>Aurora theme pack for Shiny.Maui.Controls — a vivid violet/cyan palette where depth is expressed as a coloured glow rather than a shadow.</Description>
+        <PackageTags>maui shiny controls theme aurora glow</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+</Project>

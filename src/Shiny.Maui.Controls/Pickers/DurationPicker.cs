@@ -118,10 +118,9 @@ public class DurationPicker : ContentView
     {
         valueLabel = new Label
         {
-            FontSize = 16,
             VerticalOptions = LayoutOptions.Center,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
 
         var chevron = new Label
         {
@@ -142,10 +141,9 @@ public class DurationPicker : ContentView
         {
             Content = layout,
             Padding = new Thickness(12, 8),
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             BackgroundColor = Colors.Transparent
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         tapArea.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.Outline);
 
         var tap = new TapGestureRecognizer();

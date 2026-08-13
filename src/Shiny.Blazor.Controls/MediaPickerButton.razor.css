@@ -1,20 +1,20 @@
 .shiny-mediapicker {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
 }
 
 .shiny-mediapicker-empty {
     text-align: center;
-    padding: 24px 0;
+    padding: var(--shiny-spacing-5, 24px) 0;
     color: var(--shiny-color-on-surface-variant, #6b7280);
 }
 
 .shiny-mediapicker-strip {
     display: flex;
-    gap: 12px;
+    gap: var(--shiny-spacing-3, 12px);
     overflow-x: auto;
-    padding-bottom: 4px;
+    padding-bottom: var(--shiny-spacing-1, 4px);
     scroll-snap-type: x mandatory;
 }
 
@@ -23,7 +23,7 @@
     flex: 0 0 auto;
     width: 160px;
     height: 200px;
-    border-radius: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     overflow: hidden;
     cursor: pointer;
     scroll-snap-align: start;
@@ -47,7 +47,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
     color: #fff;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
     line-height: 1;
     cursor: pointer;
 }
@@ -56,7 +56,7 @@
     position: relative;
     width: 120px;
     height: 120px;
-    border-radius: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     overflow: hidden;
     cursor: pointer;
     background: var(--shiny-color-surface-variant, #e5e7eb);
@@ -73,27 +73,27 @@
     position: absolute;
     right: 6px;
     bottom: 6px;
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: calc(2px * var(--shiny-density-scale, 1)) var(--shiny-spacing-2, 8px);
+    border-radius: var(--shiny-shape-corner-medium, 10px);
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
 }
 
 .shiny-mediapicker-add {
-    padding: 12px 16px;
-    border: 1px dashed var(--shiny-color-outline-variant, #9ca3af);
-    border-radius: 12px;
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px);
+    border: var(--shiny-border-thin, 1px) dashed var(--shiny-color-outline-variant, #9ca3af);
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     background: transparent;
     color: var(--shiny-color-on-surface-variant, #6b7280);
     cursor: pointer;
-    font-size: 15px;
+    font-size: calc(15px * var(--shiny-type-scale, 1));
 }
 
 .shiny-mediapicker-denied {
     text-align: center;
     color: var(--shiny-color-error, #dc2626);
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
 }
 
 .shiny-mediapicker-input {
@@ -115,17 +115,17 @@
     max-width: 480px;
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    padding: 12px;
+    gap: calc(1px * var(--shiny-density-scale, 1));
+    padding: var(--shiny-spacing-3, 12px);
 }
 
 .shiny-mediapicker-sheet button {
-    padding: 16px;
+    padding: var(--shiny-spacing-4, 16px);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     background: var(--shiny-color-surface, #fff);
     color: var(--shiny-color-on-surface, #111827);
-    font-size: 16px;
+    font-size: var(--shiny-type-body-large-size, 16px);
     cursor: pointer;
 }
 
@@ -137,8 +137,8 @@
 .shiny-mediapicker-nav {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 50px 16px 0;
+    gap: var(--shiny-spacing-3, 12px);
+    padding: calc(50px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px) 0;
     color: #fff;
 }
 
@@ -149,19 +149,19 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
     color: #fff;
-    font-size: 22px;
+    font-size: var(--shiny-type-title-large-size, 22px);
     cursor: pointer;
 }
 
 .shiny-mediapicker-editbtn {
     margin-bottom: 40px;
-    padding: 0 20px;
+    padding: 0 calc(20px * var(--shiny-density-scale, 1));
     height: 44px;
     border: none;
-    border-radius: 22px;
+    border-radius: var(--shiny-shape-corner-extra-large, 22px);
     background: var(--shiny-color-primary, #6750a4);
     color: var(--shiny-color-on-primary, #fff);
-    font-size: 15px;
+    font-size: calc(15px * var(--shiny-type-scale, 1));
     cursor: pointer;
 }
 
@@ -182,15 +182,15 @@
 .shiny-mediapicker-editor-actions {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    padding: 12px;
+    gap: var(--shiny-spacing-3, 12px);
+    padding: var(--shiny-spacing-3, 12px);
 }
 
 .shiny-mediapicker-editor-actions button {
-    padding: 10px 24px;
+    padding: calc(10px * var(--shiny-density-scale, 1)) var(--shiny-spacing-5, 24px);
     border: none;
-    border-radius: 22px;
-    font-size: 15px;
+    border-radius: var(--shiny-shape-corner-extra-large, 22px);
+    font-size: calc(15px * var(--shiny-type-scale, 1));
     cursor: pointer;
 }
 

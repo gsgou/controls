@@ -57,7 +57,6 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
     {
         placeholderLabel = new Label
         {
-            FontSize = 16,
             VerticalOptions = LayoutOptions.Start,
             HorizontalOptions = LayoutOptions.Start,
             LineBreakMode = LineBreakMode.TailTruncation,
@@ -66,15 +65,14 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
             IsVisible = false,
             AnchorX = 0,   // scale from the left edge so the notch stays put horizontally
             AnchorY = 0.5  // ...and around its own centre so it stays welded to the border line
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
 
         entry = new BorderlessEntry
         {
-            FontSize = 16,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Fill,
             BackgroundColor = Colors.Transparent
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         entry.SetDynamicResource(Entry.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
         entry.SetDynamicResource(Entry.PlaceholderColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         entry.TextChanged += OnEntryTextChanged;
@@ -134,7 +132,7 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
         contentGrid.Add(rightSeparator, 3, 0);
         contentGrid.Add(rightToolsLayout, 4, 0);
 
-        borderShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 };
+        borderShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius);
         focusGlow = new Shadow
         {
             Brush = new SolidColorBrush(Colors.Transparent),
@@ -145,21 +143,19 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
         outerBorder = new Border
         {
             StrokeShape = borderShape,
-            StrokeThickness = 1,
             Padding = 0,
             Content = contentGrid,
             MinimumHeightRequest = ClassicMinHeight,
             Shadow = focusGlow
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
         outerBorder.SizeChanged += (_, _) => UpdatePlaceholderGeometry();
 
         hintLabel = new Label
         {
-            FontSize = 12,
             Margin = new Thickness(2, 4, 2, 0),
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         rootGrid = new Grid
         {

@@ -1,0 +1,56 @@
+.shiny-img {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    /* Without a stacking context the absolutely-positioned layers below would resolve against
+       whatever ancestor happens to be positioned, and the ring would drift off the image. */
+    isolation: isolate;
+}
+
+.shiny-img-el {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: var(--shiny-img-fit, contain);
+}
+
+.shiny-img-placeholder,
+.shiny-img-target,
+.shiny-img-error {
+    position: absolute;
+    inset: 0;
+}
+
+.shiny-img-target {
+    opacity: 0;
+    transition-property: opacity;
+    transition-timing-function: ease-out;
+}
+
+.shiny-img-target.is-ready {
+    opacity: 1;
+}
+
+.shiny-img-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The loading and error layers are decoration over the image; letting them eat clicks would
+       break a ShinyImage used inside a link or a card. */
+    pointer-events: none;
+}
+
+.shiny-img-error-glyph {
+    font-size: calc(2rem * var(--shiny-type-scale, 1));
+    line-height: 1;
+    opacity: 0.45;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-img-target {
+        transition: none;
+    }
+}

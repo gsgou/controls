@@ -62,7 +62,7 @@ public abstract class CellBase : ComponentBase
         => ParentTableView?.CellValueTextColor ?? "";
 
     protected string ResolveAccentColor()
-        => ParentTableView?.CellAccentColor ?? "#2196F3";
+        => ParentTableView?.CellAccentColor ?? "var(--shiny-color-primary, #2196F3)";
 
     protected double ResolveDouble(double cellValue, double globalValue, double fallback)
     {
@@ -89,6 +89,7 @@ public abstract class CellBase : ComponentBase
             var br = ResolveDouble(BorderRadius, ParentTableView?.CellBorderRadius ?? -1, 0);
             if (bw > 0 && !string.IsNullOrEmpty(bc))
                 sb.Append("border:").Append(bw).Append("px solid ").Append(bc).Append(';');
+
             if (br > 0)
                 sb.Append("border-radius:").Append(br).Append("px;");
 
@@ -103,8 +104,10 @@ public abstract class CellBase : ComponentBase
             var sb = new System.Text.StringBuilder();
             var color = ResolveTitleColor();
             if (!string.IsNullOrEmpty(color)) sb.Append("color:").Append(color).Append(';');
-            var size = ResolveDouble(TitleFontSize, ParentTableView?.CellTitleFontSize ?? -1, 16);
-            sb.Append("font-size:").Append(size).Append("px;");
+            var size = ResolveDouble(TitleFontSize, ParentTableView?.CellTitleFontSize ?? -1, -1);
+            sb.Append("font-size:")
+              .Append(size >= 0 ? FormattableString.Invariant($"{size}px") : "var(--shiny-type-body-large-size, 16px)")
+              .Append(';');
             if (!string.IsNullOrEmpty(TitleFontFamily)) sb.Append("font-family:").Append(TitleFontFamily).Append(';');
             if (TitleBold) sb.Append("font-weight:600;");
             return sb.ToString();
@@ -118,8 +121,10 @@ public abstract class CellBase : ComponentBase
             var sb = new System.Text.StringBuilder();
             var color = ResolveDescriptionColor();
             if (!string.IsNullOrEmpty(color)) sb.Append("color:").Append(color).Append(';');
-            var size = ResolveDouble(DescriptionFontSize, ParentTableView?.CellDescriptionFontSize ?? -1, 12);
-            sb.Append("font-size:").Append(size).Append("px;");
+            var size = ResolveDouble(DescriptionFontSize, ParentTableView?.CellDescriptionFontSize ?? -1, -1);
+            sb.Append("font-size:")
+              .Append(size >= 0 ? FormattableString.Invariant($"{size}px") : "var(--shiny-type-body-small-size, 12px)")
+              .Append(';');
             if (!string.IsNullOrEmpty(DescriptionFontFamily)) sb.Append("font-family:").Append(DescriptionFontFamily).Append(';');
             return sb.ToString();
         }

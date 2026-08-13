@@ -58,12 +58,11 @@ public class MediaPickerButton : ContentView
         this.addTrigger = new Border
         {
             Padding = new Thickness(16, 12),
-            StrokeThickness = 1,
             StrokeDashArray = new DoubleCollection { 4, 2 },
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(12) },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Content = this.addTriggerLabel,
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         this.addTrigger.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
         var addTap = new TapGestureRecognizer();
         addTap.Tapped += (_, _) => _ = OnAddTappedAsync();
@@ -471,7 +470,6 @@ public class MediaPickerButton : ContentView
         var removeButton = new Button
         {
             Text = "✕",
-            FontSize = 14,
             Padding = 0,
             WidthRequest = 28,
             HeightRequest = 28,
@@ -481,7 +479,7 @@ public class MediaPickerButton : ContentView
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(6)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         removeButton.Clicked += (s, _) =>
         {
             if (((BindableObject)s!).BindingContext is MediaPickerItem item)
@@ -491,7 +489,7 @@ public class MediaPickerButton : ContentView
         var border = new Border
         {
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(12) },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Content = new Grid { Children = { image, removeButton } }
         };
         return border;
@@ -514,20 +512,20 @@ public class MediaPickerButton : ContentView
         {
             Padding = new Thickness(8, 2),
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(10) },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             BackgroundColor = Color.FromRgba(0, 0, 0, 0.6),
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.End,
             Margin = new Thickness(6),
             IsVisible = count > 1,
-            Content = new Label { Text = $"+{count - 1}", TextColor = Colors.White, FontSize = 12 }
+            Content = new Label { Text = $"+{count - 1}", TextColor = Colors.White}.WithFontSize(ShinyThemeKeys.Type.BodySmallSize)
         };
 
         var border = new Border
         {
             StrokeThickness = 0,
             HorizontalOptions = LayoutOptions.Start,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(12) },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Content = new Grid { Children = { image, countBadge } }
         };
         var tap = new TapGestureRecognizer();
@@ -612,17 +610,16 @@ public class MediaPickerButton : ContentView
             this.navLabel.Text = $"{this.currentIndex + 1} / {this.Photos.Count}";
     }
 
-    static Button MakeChromeButton(string text) => new()
+    static Button MakeChromeButton(string text) => new Button
     {
         Text = text,
-        FontSize = 22,
         WidthRequest = 44,
         HeightRequest = 44,
         Padding = 0,
         CornerRadius = 22,
         BackgroundColor = Color.FromRgba(0, 0, 0, 0.5),
         TextColor = Colors.White
-    };
+    }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
 
     void OpenEditor(int index)
     {

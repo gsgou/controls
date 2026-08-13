@@ -1,5 +1,5 @@
 .shiny-treeview {
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
     outline: none;
     user-select: none;
 }
@@ -17,11 +17,11 @@
 .shiny-treeview-row {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 8px;
+    gap: var(--shiny-spacing-1, 4px);
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-2, 8px);
     cursor: pointer;
     position: relative;
-    border-radius: 4px;
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
     transition: background-color 0.12s ease;
 }
 
@@ -34,7 +34,7 @@
 }
 
 .shiny-treeview-row.focused {
-    outline: 2px solid rgba(0, 120, 215, 0.5);
+    outline: var(--shiny-border-medium, 2px) solid rgba(0, 120, 215, 0.5);
     outline-offset: -2px;
 }
 
@@ -60,7 +60,7 @@
 
 .shiny-treeview-row.drop-into {
     background-color: rgba(0, 120, 215, 0.15);
-    outline: 1px solid var(--shiny-color-primary, #0078D7);
+    outline: var(--shiny-border-thin, 1px) solid var(--shiny-color-primary, #0078D7);
     outline-offset: -1px;
 }
 
@@ -74,6 +74,18 @@
 
 .shiny-treeview-leaf {
     display: inline-block;
+}
+
+.shiny-treeview-check {
+    flex: 0 0 auto;
+    margin: 0 var(--shiny-spacing-1, 4px) 0 0;
+    cursor: pointer;
+    accent-color: var(--shiny-color-primary, #6750A4);
+}
+
+.shiny-treeview-check:disabled {
+    cursor: default;
+    opacity: 0.4;
 }
 
 .shiny-treeview-content {
@@ -99,14 +111,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: var(--shiny-spacing-5, 24px);
 }
 
 .shiny-treeview-spinner {
     display: inline-block;
     width: 14px;
     height: 14px;
-    border: 2px solid currentColor;
+    border: var(--shiny-border-medium, 2px) solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
     animation: shiny-treeview-spin 0.8s linear infinite;
@@ -118,14 +130,14 @@
 }
 
 .shiny-treeview-error {
-    padding: 16px;
+    padding: var(--shiny-spacing-4, 16px);
     color: var(--shiny-color-error, #B00020);
     text-align: center;
     cursor: pointer;
 }
 
 .shiny-treeview-retry {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     text-decoration: underline;
     margin-top: 4px;
     display: inline-block;

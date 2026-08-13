@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://shinylib.net/controls/shiny-theme.schema.json",
     "title": "Shiny Controls Theme",
-    "description": "Canonical definition of a Shiny Controls theme. A theme is described by a small set of seed colors; the generator (tools/ShinyThemeGen) derives the full Material-3 tonal role set (light + dark) plus shape, elevation, state, type and spacing tokens. This same file format drives the docs-site theme creator.",
+    "description": "Canonical definition of a Shiny Controls theme. A theme is described by a set of seed colors plus optional 'personality' blocks — shape, typography, elevation, density, border and state. The generator (tools/ShinyThemeGen) derives the full Material-3 tonal role set (light + dark) and the complete token contract from them. Every block except 'seeds' is optional; omitting one keeps the shared defaults, so a theme only states the axes it wants to differ on. This same file format drives the docs-site theme creator.",
     "type": "object",
     "required": ["name", "slug", "seeds"],
     "additionalProperties": false,
@@ -43,8 +43,118 @@
         },
         "shape": {
             "type": "object",
-            "description": "Optional override of the default corner-radius scale (px). Omit to use generator defaults.",
-            "additionalProperties": { "type": "number" }
+            "description": "Corner geometry. The single biggest visual lever: a scale of 0 gives square, brutalist edges, 1.75 gives soft pillowy cards.",
+            "additionalProperties": false,
+            "properties": {
+                "scale": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Multiplier applied to every corner radius except CornerFull. Default 1."
+                },
+                "corners": {
+                    "type": "object",
+                    "description": "Absolute per-corner overrides (px), applied instead of the scale. Keys: CornerNone, CornerExtraSmall, CornerSmall, CornerMedium, CornerLarge, CornerExtraLarge, CornerFull.",
+                    "additionalProperties": { "type": "number" }
+                }
+            }
+        },
+        "typography": {
+            "type": "object",
+            "description": "Type personality. Font families are CSS font stacks on Blazor; on MAUI they are font aliases the host app must register with ConfigureFonts (an unregistered name falls back to the system font).",
+            "additionalProperties": false,
+            "properties": {
+                "fontFamily": {
+                    "type": "string",
+                    "description": "Body/UI font. Omit to inherit the host app's font, which is the historical behaviour."
+                },
+                "displayFamily": {
+                    "type": "string",
+                    "description": "Font for display/headline roles. Defaults to fontFamily."
+                },
+                "monoFamily": {
+                    "type": "string",
+                    "description": "Monospace font for code. Defaults to the platform mono stack."
+                },
+                "scale": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Multiplier on every size and line height in the type scale. Default 1."
+                },
+                "weightOffset": {
+                    "type": "number",
+                    "description": "Added to every role's weight, clamped to 100..900. Roles landing at 600+ render bold on MAUI. Default 0."
+                },
+                "trackingOffset": {
+                    "type": "number",
+                    "description": "Letter spacing in px added to every role. Negative tightens. Default 0."
+                },
+                "lineHeightScale": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Extra multiplier on line height only — raise for airy themes, lower for dense ones. Default 1."
+                }
+            }
+        },
+        "elevation": {
+            "type": "object",
+            "description": "How the theme expresses depth.",
+            "additionalProperties": false,
+            "properties": {
+                "style": {
+                    "enum": ["shadow", "flat", "outline", "glow"],
+                    "description": "shadow = Material drop shadows; flat = none at all; outline = a hairline ring instead of a shadow; glow = a soft primary-coloured halo. Default shadow. On MAUI, 'outline' resolves to no shadow — outline themes get their character from the border widths, which controls apply to StrokeThickness."
+                },
+                "intensity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Multiplier on shadow opacity — how dark the shadow is. Default 1."
+                },
+                "softness": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Multiplier on shadow offset, blur and spread — how large and diffuse the shadow is. Pair a high softness with a low intensity for a big, barely-there halo. Default 1."
+                },
+                "tint": {
+                    "enum": ["neutral", "primary"],
+                    "description": "neutral = black shadows; primary = shadows tinted by the theme's shadow/primary role. Default neutral."
+                }
+            }
+        },
+        "density": {
+            "type": "object",
+            "description": "How tightly the UI is packed. Scales the spacing ramp and the default control metrics.",
+            "additionalProperties": false,
+            "properties": {
+                "scale": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "description": "Multiplier on the spacing ramp and control heights. 0.85 = compact, 1.25 = spacious. Default 1. The touch-target token is deliberately never scaled."
+                },
+                "controlHeight": { "type": "number", "description": "Absolute default control height in px (overrides the scaled default of 44)." },
+                "controlHeightSmall": { "type": "number", "description": "Absolute compact control height in px (overrides the scaled default of 32)." },
+                "rowHeight": { "type": "number", "description": "Absolute list/table row height in px (overrides the scaled default of 48)." }
+            }
+        },
+        "border": {
+            "type": "object",
+            "description": "Border/stroke width ramp in px. A theme with thin 2 reads as hand-drawn or brutalist; 0.5 reads as delicate.",
+            "additionalProperties": false,
+            "properties": {
+                "thin": { "type": "number", "minimum": 0, "description": "Default 1." },
+                "medium": { "type": "number", "minimum": 0, "description": "Default 2." },
+                "thick": { "type": "number", "minimum": 0, "description": "Default 4." }
+            }
+        },
+        "state": {
+            "type": "object",
+            "description": "State-layer opacities (0..1) for hover, focus, press and drag.",
+            "additionalProperties": false,
+            "properties": {
+                "hover": { "$ref": "#/$defs/opacity", "description": "Default 0.08." },
+                "focus": { "$ref": "#/$defs/opacity", "description": "Default 0.10." },
+                "pressed": { "$ref": "#/$defs/opacity", "description": "Default 0.10." },
+                "dragged": { "$ref": "#/$defs/opacity", "description": "Default 0.16." }
+            }
         }
     },
     "$defs": {
@@ -52,6 +162,11 @@
             "type": "string",
             "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
             "description": "sRGB hex color, #RRGGBB or #RRGGBBAA."
+        },
+        "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
         }
     }
 }

@@ -64,7 +64,7 @@
         var radius = CellCornerRadius.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var border = isCurrent && CellFocusedBorderColor is not null
             ? CellFocusedBorderColor
-            : (CellBorderColor ?? "#D1D5DB");
+            : (CellBorderColor ?? "var(--shiny-color-outline-variant, #D1D5DB)");
         var bg = CellBackgroundColor ?? "white";
         return $"width:{size}px;height:{size}px;border-radius:{radius}px;border:1px solid {border};background:{bg};";
     }

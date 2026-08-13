@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:local="clr-namespace:Sample.Features.Images"
+             xmlns:sys="clr-namespace:System;assembly=netstandard"
+             x:Class="Sample.Features.Images.ImagesPage"
+             x:DataType="local:ImagesViewModel"
+             Title="ShinyImage"
+             AutomationId="ImagesPage">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="24">
+
+            <!-- Determinate: picsum sends a Content-Length, so the ring fills and counts -->
+            <Label Text="Download progress" FontSize="18" FontAttributes="Bold" />
+            <Label Text="A large photo from a server that sends Content-Length. The ring fills to a real percentage." />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="0">
+                <shiny:ShinyImage AutomationId="LargeImage"
+                                  Uri="{Binding ReloadKey}"
+                                  Aspect="AspectFill"
+                                  HeightRequest="220"
+                                  ImageLoaded="OnImageLoaded" />
+            </Border>
+
+            <Label Text="{Binding LastLoad, StringFormat='Last load: {0}'}" TextColor="#6B7280" />
+
+            <!-- Error artwork -->
+            <Label Text="Error artwork" FontSize="18" FontAttributes="Bold" />
+            <Label Text="A URL that 404s. ErrorImage takes over; the download is never retried on its own." />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="0">
+                <shiny:ShinyImage AutomationId="BrokenImage"
+                                  Uri="{Binding BrokenImageUri}"
+                                  ErrorImage="dotnet_bot.png"
+                                  Aspect="AspectFit"
+                                  HeightRequest="160" />
+            </Border>
+
+            <!-- Placeholder behind the ring -->
+            <Label Text="Placeholder + ring" FontSize="18" FontAttributes="Bold" />
+            <Label Text="PlaceholderImage stays behind the loading ring rather than being swapped out for it." />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="0">
+                <shiny:ShinyImage AutomationId="PlaceholderImage"
+                                  Uri="https://picsum.photos/seed/shiny-placeholder/1200/800"
+                                  PlaceholderImage="dotnet_bot.png"
+                                  CacheEnabled="False"
+                                  Aspect="AspectFill"
+                                  HeightRequest="180" />
+            </Border>
+
+            <!-- Custom loading template, bound to the live ImageLoadProgress -->
+            <Label Text="Custom loading template" FontSize="18" FontAttributes="Bold" />
+            <Label Text="LoadingTemplate replaces the ring entirely. Its BindingContext is the live ImageLoadProgress." />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="0">
+                <shiny:ShinyImage AutomationId="TemplatedImage"
+                                  Uri="https://picsum.photos/seed/shiny-template/1200/800"
+                                  CacheEnabled="False"
+                                  Aspect="AspectFill"
+                                  HeightRequest="180">
+                    <shiny:ShinyImage.LoadingTemplate>
+                        <DataTemplate x:DataType="shiny:ImageLoadProgress">
+                            <VerticalStackLayout Spacing="6" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label Text="{Binding State}" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                                <shiny:ProgressBar Value="{Binding PercentDisplay}"
+                                                   IsIndeterminate="{Binding IsIndeterminate}"
+                                                   WidthRequest="160" />
+                                <Label Text="{Binding BytesRead, StringFormat='{0:N0} bytes'}"
+                                       FontSize="11"
+                                       TextColor="#6B7280"
+                                       HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </shiny:ShinyImage.LoadingTemplate>
+                </shiny:ShinyImage>
+            </Border>
+
+            <!-- Cache controls -->
+            <Label Text="Cache" FontSize="18" FontAttributes="Bold" />
+            <Label Text="{Binding CacheSize, StringFormat='Disk cache: {0}'}" />
+            <HorizontalStackLayout Spacing="12">
+                <Button AutomationId="RefreshCacheButton" Text="Refresh size" Command="{Binding RefreshCacheSizeCommand}" />
+                <Button AutomationId="ClearCacheButton" Text="Clear cache" Command="{Binding ClearCacheCommand}" />
+            </HorizontalStackLayout>
+
+            <!-- Queueing: the grid asks for 30 images at once and only a few slots exist -->
+            <Label Text="Queued downloads" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Thirty images requested at once against a small download budget. Cells waiting for a slot show an indeterminate ring - there is nothing to measure yet - and switch to a percentage the moment their download starts." />
+
+            <CollectionView ItemsSource="{Binding Photos}"
+                            AutomationId="PhotoGrid"
+                            HeightRequest="620">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="3" HorizontalItemSpacing="6" VerticalItemSpacing="6" />
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="sys:String">
+                        <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 8" Padding="0">
+                            <shiny:ShinyImage Uri="{Binding .}"
+                                              Aspect="AspectFill"
+                                              RingSize="32"
+                                              ShowProgressText="False"
+                                              HeightRequest="110" />
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

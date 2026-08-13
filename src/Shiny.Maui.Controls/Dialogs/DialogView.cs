@@ -97,9 +97,7 @@ sealed class DialogView : ContentView
         {
             var message = new Label
             {
-                Text = this.config.Message,
-                FontSize = 14
-            };
+                Text = this.config.Message}.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
             ApplyColor(message, Label.TextColorProperty, this.config.MessageColor, ShinyThemeKeys.Color.OnSurfaceVariant, FallbackOnSurfaceVariant);
             stack.Add(message);
         }
@@ -159,15 +157,9 @@ sealed class DialogView : ContentView
             Padding = new Thickness(20),
             StrokeThickness = 0,
             MaximumWidthRequest = this.config.MaxWidth,
-            StrokeShape = new RoundRectangle { CornerRadius = this.config.CornerRadius },
-            Shadow = new Shadow
-            {
-                Brush = Colors.Black,
-                Offset = new Point(0, 6),
-                Radius = 16,
-                Opacity = 0.3f
-            }
-        };
+            StrokeShape = new RoundRectangle { CornerRadius = this.config.CornerRadius }
+        }
+        .WithElevation(ShinyThemeKeys.Elevation.Level5);
         ApplyColor(border, VisualElement.BackgroundColorProperty, this.config.BackgroundColor, ShinyThemeKeys.Color.Surface, FallbackSurface);
         return border;
     }
@@ -219,11 +211,10 @@ sealed class DialogView : ContentView
         var button = new Button
         {
             Text = text,
-            FontSize = 14,
             FontAttributes = FontAttributes.Bold,
             Padding = new Thickness(16, 9),
             CornerRadius = 8
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         ApplyColor(button, Button.BackgroundColorProperty, overrideBg, bgToken, bgFallback);
         ApplyColor(button, Button.TextColorProperty, overrideText, textToken, textFallback);
         return button;

@@ -1,0 +1,146 @@
+@namespace Shiny.Blazor.Controls
+@implements IStateViewHost
+
+@*
+    Every piece of the indicator and the nav bar lives in markup rather than RenderTreeBuilder code,
+    because CSS isolation only stamps its scope attribute onto elements that appear in .razor markup -
+    an element built in C# never gets it and the rule silently never matches.
+*@
+@{
+    var visible = this.VisibleSteps;
+    var index = this.CurrentStepIndex;
+
+    RenderFragment progressBlock =
+        @<div class="shiny-wizard__progress">
+            @if (Progress is not null)
+            {
+                @Progress
+            }
+            else if (ProgressStyle is WizardProgressStyle.Chevron)
+            {
+                <ol class="shiny-wizard__chevrons" aria-label="Progress">
+                    @for (var i = 0; i < visible.Count; i++)
+                    {
+                        var position = i;
+                        var step = visible[position];
+                        <li class="shiny-wizard__chev @StateClass(step, position)">
+                            <button type="button"
+                                    class="shiny-wizard__chev-btn"
+                                    disabled="@(!IsSelectable(step, position))"
+                                    aria-current="@(position == index ? "step" : null)"
+                                    @onclick="() => SelectAsync(position)">
+                                @if (ShowStepTitles)
+                                {
+                                    <span class="shiny-wizard__chev-text">@step.DisplayTitle</span>
+                                }
+                                else
+                                {
+                                    <span class="shiny-wizard__chev-text">@(position + 1)</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ol>
+            }
+            else if (ProgressStyle is WizardProgressStyle.Dots)
+            {
+                <ol class="shiny-wizard__dots" aria-label="Progress">
+                    @for (var i = 0; i < visible.Count; i++)
+                    {
+                        var position = i;
+                        var step = visible[position];
+                        <li class="shiny-wizard__dot @StateClass(step, position)">
+                            <button type="button"
+                                    class="shiny-wizard__dot-btn"
+                                    disabled="@(!IsSelectable(step, position))"
+                                    aria-current="@(position == index ? "step" : null)"
+                                    @onclick="() => SelectAsync(position)">
+                                <span class="shiny-wizard__dot-marker">@(step.Completed ? "✓" : (position + 1).ToString())</span>
+                                @if (ShowStepTitles)
+                                {
+                                    <span class="shiny-wizard__dot-text">@step.DisplayTitle</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ol>
+            }
+            else if (ProgressStyle is WizardProgressStyle.Bar)
+            {
+                <div class="shiny-wizard__bar-caption">@Caption</div>
+                <div class="shiny-wizard__bar-track"
+                     role="progressbar"
+                     aria-valuemin="0"
+                     aria-valuemax="@visible.Count"
+                     aria-valuenow="@(index + 1)">
+                    <div class="shiny-wizard__bar-fill" style="width:@(ProgressPercent)%"></div>
+                </div>
+            }
+        </div>;
+}
+
+<div class="shiny-wizard @CssClass @UserClass" style="@RootStyle" @attributes="ExtraAttributes">
+
+    @* Steps register here and render nothing of their own. *@
+    <CascadingValue TValue="IStateViewHost" Value="this" IsFixed="true">
+        @(Steps ?? ChildContent)
+    </CascadingValue>
+
+    @if (ShowProgress && ProgressPosition is WizardProgressPosition.Top)
+    {
+        @progressBlock
+    }
+
+    <div class="shiny-wizard__content">
+        @if (CurrentStepItem is not null)
+        {
+            @* Keyed on the step so entering it rebuilds the pane, which is what replays the animation. *@
+            <div class="shiny-wizard__pane @PaneClass" @key="CurrentStepItem">
+                @CurrentStepItem.ChildContent
+            </div>
+        }
+    </div>
+
+    @if (ShowProgress && ProgressPosition is WizardProgressPosition.Bottom)
+    {
+        @progressBlock
+    }
+
+    @if (ShowNavigationBar)
+    {
+        <div class="shiny-wizard__nav">
+            @if (NavigationBar is not null)
+            {
+                @NavigationBar
+            }
+            else
+            {
+                <div class="shiny-wizard__nav-start">
+                    @if (ShowCancel)
+                    {
+                        <ShinyButton Text="@CancelText"
+                                     Appearance="ButtonAppearance.Text"
+                                     Type="ButtonType.Secondary"
+                                     Disabled="@(!CanCancel)"
+                                     Clicked="@(_ => CancelAsync())" />
+                    }
+                </div>
+                <div class="shiny-wizard__nav-end">
+                    @if (ShowBackOnFirstStep || index > 0)
+                    {
+                        <ShinyButton Text="@BackLabel"
+                                     Appearance="ButtonAppearance.Outlined"
+                                     Type="ButtonType.Secondary"
+                                     Disabled="@(!IsBackEnabled)"
+                                     Clicked="@(_ => GoBackAsync())" />
+                    }
+                    <ShinyButton Text="@NextLabel"
+                                 Appearance="ButtonAppearance.Filled"
+                                 Type="ButtonType.Primary"
+                                 Disabled="@(!IsNextEnabled)"
+                                 Clicked="@(_ => GoNextAsync())" />
+                </div>
+            }
+        </div>
+    }
+</div>

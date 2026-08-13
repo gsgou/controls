@@ -1,0 +1,313 @@
+.shiny-wizard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--shiny-spacing-4, 16px);
+    min-width: 0;
+    /* The sizes inside are em, so they scale off whatever this root resolves to. Applying the theme's
+       type scale once here is what lets them respond at all - multiplying each em child individually
+       would apply the scale twice, since em already inherits an ancestor the theme has scaled. The
+       calc is identity at scale 1, so the default rendering is unchanged. */
+    font-family: var(--shiny-type-font-family, inherit);
+    font-size: calc(1em * var(--shiny-type-scale, 1));
+}
+
+.shiny-wizard__content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.shiny-wizard__pane {
+    min-width: 0;
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+   Chevron indicator - the pointed breadcrumb. The notch and the point are one clip-path, so the
+   segments tile without any overlapping backgrounds to get wrong at the seams.
+   --------------------------------------------------------------------------------------------- */
+
+.shiny-wizard__chevrons {
+    display: flex;
+    gap: calc(3px * var(--shiny-density-scale, 1));
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.shiny-wizard__chev {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.shiny-wizard__chev-btn {
+    display: block;
+    width: 100%;
+    border: 0;
+    margin: 0;
+    padding: calc(10px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px) calc(10px * var(--shiny-density-scale, 1)) calc(26px * var(--shiny-density-scale, 1));
+    font: inherit;
+    font-size: 0.875em;
+    line-height: 1.2;
+    text-align: center;
+    cursor: default;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%);
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.shiny-wizard__chev:first-child .shiny-wizard__chev-btn {
+    padding-left: var(--shiny-spacing-4, 16px);
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+}
+
+.shiny-wizard__chev:last-child .shiny-wizard__chev-btn {
+    padding-right: var(--shiny-spacing-4, 16px);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%);
+}
+
+.shiny-wizard__chev:only-child .shiny-wizard__chev-btn {
+    clip-path: none;
+}
+
+.shiny-wizard__chev-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shiny-wizard__chev.is-current .shiny-wizard__chev-btn {
+    background: var(--shiny-color-primary, #0055D9);
+    color: var(--shiny-color-on-primary, #FFFFFF);
+    font-weight: 600;
+}
+
+.shiny-wizard__chev.is-complete .shiny-wizard__chev-btn {
+    background: var(--shiny-color-primary-container, #C2D6FF);
+    color: var(--shiny-color-on-primary-container, #001A41);
+}
+
+.shiny-wizard__chev.is-upcoming .shiny-wizard__chev-btn {
+    background: var(--shiny-color-surface-container-highest, #E2E2E9);
+    color: var(--shiny-color-on-surface-variant, #44464F);
+}
+
+.shiny-wizard__chev.is-disabled .shiny-wizard__chev-btn {
+    opacity: 0.5;
+}
+
+.shiny-wizard__chev-btn:not(:disabled) {
+    cursor: pointer;
+}
+
+.shiny-wizard__chev-btn:not(:disabled):hover {
+    filter: brightness(0.95);
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+   Marker indicator
+   --------------------------------------------------------------------------------------------- */
+
+.shiny-wizard__dots {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.shiny-wizard__dot {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Connector, drawn behind the marker and stopping short of the next one. */
+.shiny-wizard__dot:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: calc(50% + 18px);
+    right: calc(-50% + 18px);
+    height: 2px;
+    background: var(--shiny-color-surface-container-highest, #E2E2E9);
+}
+
+.shiny-wizard__dot.is-complete:not(:last-child)::after {
+    background: var(--shiny-color-primary-container, #C2D6FF);
+}
+
+.shiny-wizard__dot-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(6px * var(--shiny-density-scale, 1));
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    cursor: default;
+}
+
+.shiny-wizard__dot-btn:not(:disabled) {
+    cursor: pointer;
+}
+
+.shiny-wizard__dot-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.8125em;
+    font-weight: 600;
+    background: var(--shiny-color-surface-container-highest, #E2E2E9);
+    color: var(--shiny-color-on-surface-variant, #44464F);
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.shiny-wizard__dot.is-current .shiny-wizard__dot-marker {
+    background: var(--shiny-color-primary, #0055D9);
+    color: var(--shiny-color-on-primary, #FFFFFF);
+}
+
+.shiny-wizard__dot.is-complete .shiny-wizard__dot-marker {
+    background: var(--shiny-color-primary-container, #C2D6FF);
+    color: var(--shiny-color-on-primary-container, #001A41);
+}
+
+.shiny-wizard__dot.is-disabled {
+    opacity: 0.5;
+}
+
+.shiny-wizard__dot-text {
+    font-size: 0.8125em;
+    color: var(--shiny-color-on-surface-variant, #44464F);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.shiny-wizard__dot.is-current .shiny-wizard__dot-text {
+    color: var(--shiny-color-primary, #0055D9);
+    font-weight: 600;
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+   Bar indicator
+   --------------------------------------------------------------------------------------------- */
+
+.shiny-wizard__bar-caption {
+    font-size: 0.8125em;
+    margin-bottom: 6px;
+    color: var(--shiny-color-on-surface-variant, #44464F);
+}
+
+.shiny-wizard__bar-track {
+    width: 100%;
+    height: 8px;
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
+    overflow: hidden;
+    background: var(--shiny-color-surface-container-highest, #E2E2E9);
+}
+
+.shiny-wizard__bar-fill {
+    height: 100%;
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
+    background: var(--shiny-color-primary, #0055D9);
+    transition: width 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+   Navigation bar
+   --------------------------------------------------------------------------------------------- */
+
+.shiny-wizard__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--shiny-spacing-2, 8px);
+}
+
+.shiny-wizard__nav-start,
+.shiny-wizard__nav-end {
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-2, 8px);
+}
+
+.shiny-wizard__nav-end {
+    margin-left: auto;
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+   Step transitions - enter only, for the same reason as StateView.
+   --------------------------------------------------------------------------------------------- */
+
+.shiny-wizard__pane.is-fade {
+    animation: shiny-wizard-fade var(--shiny-wizard-duration, 220ms) ease-out both;
+}
+
+.shiny-wizard__pane.is-slide-left {
+    animation: shiny-wizard-slide-left var(--shiny-wizard-duration, 220ms) cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.shiny-wizard__pane.is-slide-right {
+    animation: shiny-wizard-slide-right var(--shiny-wizard-duration, 220ms) cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.shiny-wizard__pane.is-slide-up {
+    animation: shiny-wizard-slide-up var(--shiny-wizard-duration, 220ms) cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.shiny-wizard__pane.is-slide-down {
+    animation: shiny-wizard-slide-down var(--shiny-wizard-duration, 220ms) cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.shiny-wizard__pane.is-scale {
+    animation: shiny-wizard-scale var(--shiny-wizard-duration, 220ms) cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes shiny-wizard-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes shiny-wizard-slide-left {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shiny-wizard-slide-right {
+    from { opacity: 0; transform: translateX(-24px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shiny-wizard-slide-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shiny-wizard-slide-down {
+    from { opacity: 0; transform: translateY(-24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shiny-wizard-scale {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-wizard__pane {
+        animation: none !important;
+    }
+}

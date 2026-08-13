@@ -48,7 +48,7 @@
     border: 0;
     background: rgba(0,0,0,0.5);
     color: white;
-    font-size: 20px;
+    font-size: calc(20px * var(--shiny-type-scale, 1));
     cursor: pointer;
     z-index: 2;
 }

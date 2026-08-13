@@ -10,7 +10,7 @@
     scroll-snap-type: var(--carousel-snap, x mandatory);
     scroll-behavior: smooth;
     gap: var(--carousel-spacing, 16px);
-    padding: 16px var(--carousel-peek, 40px);
+    padding: var(--shiny-spacing-4, 16px) var(--carousel-peek, 40px);
     -ms-overflow-style: none;
     scrollbar-width: none;
     align-items: center;
@@ -23,7 +23,7 @@
 .shiny-carousel-item {
     flex: 0 0 auto;
     scroll-snap-align: center;
-    border-radius: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     overflow: hidden;
     cursor: pointer;
     transform-origin: center center;
@@ -36,8 +36,8 @@
 .shiny-carousel-indicators {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    padding: 12px 0;
+    gap: var(--shiny-spacing-2, 8px);
+    padding: var(--shiny-spacing-3, 12px) 0;
 }
 
 .shiny-carousel-dot {

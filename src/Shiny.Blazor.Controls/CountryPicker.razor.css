@@ -1,12 +1,12 @@
 .shiny-country-picker {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     width: 100%;
 }
 
 .shiny-country-flag {
-    font-size: 22px;
+    font-size: var(--shiny-type-title-large-size, 22px);
     line-height: 1;
     flex-shrink: 0;
 }
@@ -14,17 +14,17 @@
 .shiny-country-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 2px 0;
+    gap: var(--shiny-spacing-2, 8px);
+    padding: calc(2px * var(--shiny-density-scale, 1)) 0;
 }
 
 .shiny-country-item-flag {
-    font-size: 20px;
+    font-size: calc(20px * var(--shiny-type-scale, 1));
     line-height: 1;
     flex-shrink: 0;
 }
 
 .shiny-country-item-name {
     flex: 1;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
 }

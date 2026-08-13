@@ -11,5 +11,5 @@
 .shiny-staggered-empty {
     column-span: all;
     text-align: center;
-    padding: 32px;
+    padding: var(--shiny-spacing-6, 32px);
 }

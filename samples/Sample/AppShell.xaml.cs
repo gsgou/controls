@@ -17,6 +17,8 @@ public partial class AppShell : ShinyShell
     void OnBasicTheme(object? sender, EventArgs e) => this.SelectTheme("basic");
     void OnOceanTheme(object? sender, EventArgs e) => this.SelectTheme("ocean");
     void OnMaterialTheme(object? sender, EventArgs e) => this.SelectTheme("material");
+    void OnTerminalTheme(object? sender, EventArgs e) => this.SelectTheme("terminal");
+    void OnAuroraTheme(object? sender, EventArgs e) => this.SelectTheme("aurora");
 
     void OnDarkToggled(object? sender, ToggledEventArgs e)
     {
@@ -41,6 +43,8 @@ public partial class AppShell : ShinyShell
     {
         "ocean" => new OceanTheme(),
         "material" => new MaterialTheme(),
+        "terminal" => new TerminalTheme(),
+        "aurora" => new AuroraTheme(),
         _ => new BasicTheme()
     };
 
@@ -62,6 +66,8 @@ public partial class AppShell : ShinyShell
         Mark(this.basicThemeButton, key == "basic");
         Mark(this.oceanThemeButton, key == "ocean");
         Mark(this.materialThemeButton, key == "material");
+        Mark(this.terminalThemeButton, key == "terminal");
+        Mark(this.auroraThemeButton, key == "aurora");
 
         static void Mark(Button button, bool selected)
         {

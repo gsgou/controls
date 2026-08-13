@@ -9,8 +9,6 @@ public class AutoCompleteEntry : ContentView
 {
     const int DefaultDebounceMs = 500;
     const double DefaultMaxDropDownHeight = 200;
-    const double DefaultFontSize = 14;
-    const double DefaultCornerRadius = 4;
 
     readonly BorderlessEntry entry;
     readonly ActivityIndicator spinner;
@@ -47,9 +45,8 @@ public class AutoCompleteEntry : ContentView
         entry = new BorderlessEntry
         {
             HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Center,
-            FontSize = DefaultFontSize
-        };
+            VerticalOptions = LayoutOptions.Center
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         entry.TextChanged += OnEntryTextChanged;
         entry.Focused += (_, _) => OnEntryFocused();
         entry.Unfocused += (_, _) =>
@@ -91,27 +88,19 @@ public class AutoCompleteEntry : ContentView
             VerticalScrollBarVisibility = ScrollBarVisibility.Default
         };
 
-        dropDownShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-        {
-            CornerRadius = new CornerRadius(DefaultCornerRadius)
-        };
+        dropDownShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle()
+            .WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius);
 
         dropDownBorder = new Border
         {
             IsVisible = false,
-            StrokeThickness = 1,
             Padding = 0,
             StrokeShape = dropDownShape,
             MaximumHeightRequest = DefaultMaxDropDownHeight,
-            Content = dropDownScroll,
-            Shadow = new Shadow
-            {
-                Brush = Brush.Black,
-                Opacity = 0.15f,
-                Radius = 6,
-                Offset = new Point(0, 3)
-            }
-        };
+            Content = dropDownScroll
+        }
+        .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
+        .WithElevation(ShinyThemeKeys.Elevation.Level2);
 
         rootGrid = new Grid
         {
@@ -386,8 +375,10 @@ public class AutoCompleteEntry : ContentView
         nameof(FontSize),
         typeof(double),
         typeof(AutoCompleteEntry),
-        DefaultFontSize,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.entry.FontSize = (double)n));
+        ThemeTokens.Unset,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(
+            b,
+            ctrl => ctrl.entry.SetTokenOrValue(Entry.FontSizeProperty, (double)n, ShinyThemeKeys.Type.BodyMediumSize)));
     public double FontSize
     {
         get => (double)GetValue(FontSizeProperty);
@@ -433,8 +424,10 @@ public class AutoCompleteEntry : ContentView
         nameof(CornerRadius),
         typeof(double),
         typeof(AutoCompleteEntry),
-        DefaultCornerRadius,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => ctrl.dropDownShape.CornerRadius = new CornerRadius((double)n)));
+        ThemeTokens.Unset,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(
+            b,
+            ctrl => ctrl.dropDownShape.SetCornerTokenOrValue((double)n, ShinyThemeKeys.Shape.CornerExtraSmallRadius)));
     public double CornerRadius
     {
         get => (double)GetValue(CornerRadiusProperty);
@@ -607,9 +600,8 @@ public class AutoCompleteEntry : ContentView
         {
             Text = GetDisplayText(item),
             Padding = new Thickness(10, 8),
-            FontSize = 14,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         return label;
     }
 

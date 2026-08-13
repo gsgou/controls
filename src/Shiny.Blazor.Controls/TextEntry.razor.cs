@@ -36,12 +36,15 @@ public partial class TextEntry : IDisposable
     [Parameter] public string? FocusedPlaceholderColor { get; set; }
     [Parameter] public string? BorderColor { get; set; }
     [Parameter] public string? FocusedBorderColor { get; set; }
-    [Parameter] public double BorderThickness { get; set; } = 1;
-    [Parameter] public double FocusedBorderThickness { get; set; } = 2;
-    [Parameter] public string CornerRadius { get; set; } = "8px";
+    /// <summary>Resting border width in px. The default, <c>-1</c>, follows the theme border scale.</summary>
+    [Parameter] public double BorderThickness { get; set; } = -1;
+    /// <summary>Focused border width in px. The default, <c>-1</c>, follows the theme border scale.</summary>
+    [Parameter] public double FocusedBorderThickness { get; set; } = -1;
+    [Parameter] public string CornerRadius { get; set; } = "var(--shiny-shape-corner-small, 8px)";
     [Parameter] public string? EntryBackgroundColor { get; set; }
-    [Parameter] public double FontSize { get; set; } = 15;
-    [Parameter] public string FontFamily { get; set; } = "inherit";
+    /// <summary>Input text size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
+    [Parameter] public double FontSize { get; set; } = -1;
+    [Parameter] public string FontFamily { get; set; } = "var(--shiny-type-font-family, inherit)";
     [Parameter] public string? TextColor { get; set; }
     [Parameter] public bool IsReadOnly { get; set; }
     [Parameter] public bool IsPassword { get; set; }
@@ -160,7 +163,10 @@ public partial class TextEntry : IDisposable
         {
             var color = CurrentBorderColor;
             var thickness = IsFocused ? FocusedBorderThickness : BorderThickness;
-            return $"border: {thickness}px solid {color}; border-radius: {CornerRadius}; background: {EntryBackgroundColorValue};" +
+            var width = thickness >= 0
+                ? $"{thickness}px"
+                : IsFocused ? "var(--shiny-border-medium, 2px)" : "var(--shiny-border-thin, 1px)";
+            return $"border: {width} solid {color}; border-radius: {CornerRadius}; background: {EntryBackgroundColorValue};" +
                    $" --shiny-te-border-color: {color}; --shiny-te-notch-bg: {EntryBackgroundColorValue};";
         }
     }
@@ -179,7 +185,9 @@ public partial class TextEntry : IDisposable
         }
     }
 
-    string InputStyle => $"font-size: {FontSize}px; font-family: {FontFamily}; color: {TextColorValue};";
+    string InputStyle
+        => $"font-size: {(FontSize >= 0 ? $"{FontSize}px" : "calc(15px * var(--shiny-type-scale, 1))")};"
+         + $" font-family: {FontFamily}; color: {TextColorValue};";
 
     string ToolStyleFor(TextEntryTool tool)
         => tool.ToolColor is null ? "" : $"color: {tool.ToolColor};";

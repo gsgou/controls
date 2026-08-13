@@ -7,7 +7,7 @@ using Microsoft.Maui.Controls;
 
 namespace Shiny.Maui.Controls.Themes;
 
-/// <summary>A cool, calm teal/cyan palette inspired by deep water and Nordic tones.</summary>
+/// <summary>A cool, calm teal/cyan palette inspired by deep water and Nordic tones — soft pillowy corners, airy spacing and shadows you have to look for.</summary>
 public sealed class OceanTheme : IShinyTheme
 {
     public string Name => "Ocean";

@@ -414,11 +414,10 @@ public class SchedulerCalendarView : ContentView
             var lbl = new Label
             {
                 Text = names[idx],
-                FontSize = 11,
                 FontAttributes = FontAttributes.Bold,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
             lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             dayHeaderGrid.Add(lbl, i);
         }

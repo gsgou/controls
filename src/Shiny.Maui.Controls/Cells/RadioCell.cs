@@ -3,6 +3,7 @@ using Microsoft.Maui.Graphics;
 using TvTableView = Shiny.Maui.Controls.TableView;
 using TvTableSection = Shiny.Maui.Controls.Sections.TableSection;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -105,12 +106,25 @@ public class RadioCell : CellBase
         }
     }
 
+    protected override void ApplyAccentStyles() => this.UpdateAccentColor();
+
     void UpdateAccentColor()
+        => Tint(radioButton, RadioButton.BorderColorProperty, AccentColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
+
+    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
+    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
     {
-        var color = AccentColor ?? ParentTableView?.CellAccentColor;
-        if (color != null)
-            radioButton.BorderColor = color;
+        if (explicitColor is null)
+        {
+            target.SetDynamicResource(property, themeKey);
+        }
+        else
+        {
+            target.RemoveDynamicResource(property);
+            target.SetValue(property, explicitColor);
+        }
     }
+
 
     protected override void OnTapped()
     {

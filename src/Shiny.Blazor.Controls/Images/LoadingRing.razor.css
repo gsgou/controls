@@ -1,0 +1,56 @@
+.shiny-ring {
+    position: relative;
+    width: var(--ring-size, 48px);
+    height: var(--ring-size, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.shiny-ring-svg {
+    width: 100%;
+    height: 100%;
+    /* The arc is drawn from 3 o'clock by SVG convention; every spinner a user has ever seen starts
+       at 12. */
+    transform: rotate(-90deg);
+}
+
+.shiny-ring-track {
+    stroke: var(--ring-track, var(--shiny-color-surface-container-highest, #e5e7eb));
+}
+
+.shiny-ring-arc {
+    stroke: var(--ring-color, var(--shiny-color-primary, #3b82f6));
+    transition: stroke-dashoffset 120ms linear;
+}
+
+.shiny-ring.is-indeterminate .shiny-ring-svg {
+    animation: shiny-ring-spin 1.1s linear infinite;
+}
+
+/* A determinate ring animates its dash offset; an indeterminate one must not, or every frame of the
+   rotation would also be easing a dash that never changes. */
+.shiny-ring.is-indeterminate .shiny-ring-arc {
+    transition: none;
+}
+
+.shiny-ring-label {
+    position: absolute;
+    font-size: var(--ring-label-size, var(--shiny-type-body-small-size, 12px));
+    font-weight: 600;
+    color: var(--ring-text, var(--shiny-color-on-surface, #111827));
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes shiny-ring-spin {
+    from { transform: rotate(-90deg); }
+    to   { transform: rotate(270deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-ring.is-indeterminate .shiny-ring-svg {
+        animation-duration: 2.4s;
+    }
+}

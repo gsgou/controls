@@ -17,7 +17,6 @@ public class FabMenuItem : ContentView
 {
     const double DefaultSize = 44;
     const double DefaultIconSize = 20;
-    const double DefaultFontSize = 13;
     const double DefaultFabSize = 56;
 
     // Gap between the pill edge and the icon chip. The chip is inset by this on every side, which
@@ -43,13 +42,12 @@ public class FabMenuItem : ContentView
     {
         label = new Label
         {
-            FontSize = DefaultFontSize,
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalTextAlignment = TextAlignment.Center,
             LineBreakMode = LineBreakMode.NoWrap,
             VerticalOptions = LayoutOptions.Center,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         iconImage = new Image
         {
@@ -83,7 +81,6 @@ public class FabMenuItem : ContentView
         pill = new Border
         {
             Padding = 0,
-            StrokeThickness = 1,
             StrokeShape = new RoundRectangle
             {
                 CornerRadius = new CornerRadius(DefaultSize / 2)
@@ -91,7 +88,7 @@ public class FabMenuItem : ContentView
             Content = pillContent,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
 
         // Theme defaults - overridden if the consumer sets the explicit color properties.
         pill.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
@@ -265,10 +262,10 @@ public class FabMenuItem : ContentView
         nameof(FontSize),
         typeof(double),
         typeof(FabMenuItem),
-        DefaultFontSize,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
         {
-            ((FabMenuItem)b).label.FontSize = (double)n;
+            ((FabMenuItem)b).label.SetTokenOrValue(Label.FontSizeProperty, (double)n, ShinyThemeKeys.Type.BodySmallSize);
         }));
     public double FontSize
     {
@@ -489,7 +486,10 @@ public class FabMenuItem : ContentView
     }
 
     void ApplyShadow()
-        => pill.Shadow = HasShadow
-            ? new Shadow { Brush = Brush.Black, Opacity = 0.18f, Radius = 10, Offset = new Point(0, 4) }
-            : null!;
+    {
+        if (HasShadow)
+            pill.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
+        else
+            pill.Shadow = null;
+    }
 }

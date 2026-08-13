@@ -63,7 +63,9 @@ public static class Catalog
             new("fab", "Fab", "➕", "Floating action button with positioning"),
             new("fab-menu", "Fab Menu", "✦", "Expanding menu of action buttons"),
             new("toolbar", "Toolbar", "☰", "Docked app bar with overflow and frosted glass"),
-            new("tabbar", "Tab Bar", "☷", "Bottom tab navigation with badges")
+            new("tabbar", "Tab Bar", "☷", "Bottom tab navigation with badges"),
+            new("stateview", "State View", "⇄", "Named branches switched by one string"),
+            new("wizard", "Wizard", "➤", "Multi-step flow with a pointed progress bar")
         ]),
 
         new("Status & Feedback", "#F472B6",
@@ -82,6 +84,7 @@ public static class Catalog
         [
             new("camera", "Camera", "◉", "Preview, capture and pluggable frame analysis"),
             new("mediaelement", "Media Element", "▶", "Audio and video with a themed transport bar"),
+            new("shinyimage", "Shiny Image", "🖼", "Placeholder, download progress and error artwork"),
             new("imageviewer", "Image Viewer", "▣", "Pinch, pan and double-tap zoom"),
             new("imageeditor", "Image Editor", "✎", "Crop, rotate, draw, text, undo and export"),
             new("mediapicker", "Media Picker", "📷", "Pick or capture photos and video")

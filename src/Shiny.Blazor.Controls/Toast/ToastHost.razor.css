@@ -19,9 +19,9 @@
     flex-direction: column;
     background-color: var(--shiny-color-inverse-surface, #323232);
     color: var(--shiny-color-inverse-on-surface, #fff);
-    font-size: 14px;
-    padding: 10px 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-size: var(--shiny-type-body-medium-size, 14px);
+    padding: calc(10px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0, 0, 0, 0.3));
     cursor: pointer;
     transition: transform 0.25s cubic-bezier(0.33, 1, 0.68, 1),
                 opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1),
@@ -45,7 +45,7 @@
     transform: translateX(-50%);
     width: fit-content;
     max-width: min(400px, calc(100% - 48px));
-    border-radius: 20px;
+    border-radius: var(--shiny-shape-corner-extra-large, 20px);
 }
 
 .shiny-toast-pill.shiny-toast-bottom {
@@ -143,7 +143,7 @@
 .shiny-toast-content {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: calc(10px * var(--shiny-density-scale, 1));
 }
 
 .shiny-toast-text {
@@ -178,7 +178,7 @@
 
 .shiny-toast-icon {
     flex-shrink: 0;
-    font-size: 18px;
+    font-size: calc(18px * var(--shiny-type-scale, 1));
     line-height: 1;
 }
 
@@ -186,7 +186,7 @@
 .shiny-toast-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    border: var(--shiny-border-medium, 2px) solid rgba(255, 255, 255, 0.3);
     border-top-color: var(--shiny-color-inverse-on-surface, #fff);
     border-radius: 50%;
     animation: shiny-toast-spin 0.7s linear infinite;

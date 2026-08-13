@@ -2,13 +2,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
+    gap: var(--shiny-spacing-2, 8px);
+    padding: 0 calc(20px * var(--shiny-density-scale, 1));
     border: none;
     cursor: pointer;
     user-select: none;
     transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
     line-height: 1;
 }
 

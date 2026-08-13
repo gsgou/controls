@@ -34,10 +34,10 @@ class AllDayEventsSection : ContentView
             }
             else
             {
-                var chipLabel = new Label { Text = evt.Title, FontSize = 11 };
+                var chipLabel = new Label { Text = evt.Title}.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
                 var chip = new Border
                 {
-                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+                    StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
                     Stroke = Colors.Transparent,
                     Padding = new Thickness(8, 2),
                     Content = chipLabel

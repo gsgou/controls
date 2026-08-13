@@ -24,9 +24,21 @@ public partial class TreeViewPage : ContentPage
     async Task<IEnumerable<object>> LoadCloudChildrenAsync(object parent)
     {
         // Only the "Cloud" branch is lazy. Other folders use the sync selector.
-        if (parent is FileNode { LazyLoad: true })
+        if (parent is FileNode { LazyLoad: true } folder)
         {
             await Task.Delay(900); // simulate network
+
+            // "shared" is a second lazy level so the demo shows nested loading, but it
+            // returns leaves — an endlessly generated branch would never finish expanding.
+            if (folder.Name == "shared")
+            {
+                return new object[]
+                {
+                    new FileNode { Name = "team-notes.md", Icon = "📄" },
+                    new FileNode { Name = "budget.xlsx", Icon = "📊" }
+                };
+            }
+
             return new object[]
             {
                 new FileNode { Name = "remote-backup.zip", Icon = "💾" },
@@ -38,7 +50,7 @@ public partial class TreeViewPage : ContentPage
         return Array.Empty<object>();
     }
 
-    void OnExpandAllClicked(object? sender, EventArgs e) => Tree.ExpandAll();
+    async void OnExpandAllClicked(object? sender, EventArgs e) => await Tree.ExpandAllAsync();
 
     void OnCollapseAllClicked(object? sender, EventArgs e) => Tree.CollapseAll();
 
@@ -52,13 +64,31 @@ public partial class TreeViewPage : ContentPage
     void OnMultiSelectToggled(object? sender, ToggledEventArgs e)
     {
         Tree.SelectionMode = e.Value ? TreeSelectionMode.Multiple : TreeSelectionMode.Single;
+        SelectAllButton.IsVisible = e.Value;
+        DeselectAllButton.IsVisible = e.Value;
         StatusLabel.Text = $"Selection mode: {Tree.SelectionMode}";
+    }
+
+    void OnSelectAllClicked(object? sender, EventArgs e)
+    {
+        Tree.SelectAll();
+        StatusLabel.Text = $"{Tree.SelectedItems?.Count ?? 0} checked";
+    }
+
+    void OnDeselectAllClicked(object? sender, EventArgs e)
+    {
+        Tree.DeselectAll();
+        StatusLabel.Text = "Selection cleared";
     }
 
     void OnItemSelected(object? sender, TreeItemEventArgs e)
     {
-        if (e.Item is FileNode f)
-            StatusLabel.Text = $"Selected: {f.Name}";
+        if (e.Item is not FileNode f)
+            return;
+
+        StatusLabel.Text = Tree.SelectionMode == TreeSelectionMode.Multiple
+            ? $"{Tree.SelectedItems?.Count ?? 0} checked (last: {f.Name})"
+            : $"Selected: {f.Name}";
     }
 
     void OnItemExpanded(object? sender, TreeItemEventArgs e)

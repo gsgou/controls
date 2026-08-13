@@ -28,12 +28,11 @@ public abstract class IconTextTool : ContentView
 
         this.textLabel = new Label
         {
-            FontSize = 14,
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalOptions = LayoutOptions.Center,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
 
         var layout = new HorizontalStackLayout
         {

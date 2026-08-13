@@ -3,8 +3,8 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
-    border-radius: 12px;
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     overflow: hidden;
     background: var(--shiny-color-surface, white);
 }
@@ -13,25 +13,25 @@
     display: grid;
     grid-template-columns: 44px 1fr 44px;
     align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-cal-title {
     text-align: center;
     font-weight: 700;
-    font-size: 16px;
+    font-size: var(--shiny-type-body-large-size, 16px);
 }
 
 .shiny-cal-nav {
     border: 0;
     background: transparent;
     color: var(--shiny-color-primary, #3B82F6);
-    font-size: 18px;
+    font-size: calc(18px * var(--shiny-type-scale, 1));
     font-weight: 700;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
+    padding: calc(6px * var(--shiny-density-scale, 1));
+    border-radius: var(--shiny-shape-corner-small, 6px);
 }
 
 .shiny-cal-nav:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -40,13 +40,13 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     background: var(--shiny-color-surface-container, #F9FAFB);
-    border-bottom: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-cal-dayheader {
     text-align: center;
-    padding: 8px 0;
-    font-size: 11px;
+    padding: var(--shiny-spacing-2, 8px) 0;
+    font-size: var(--shiny-type-label-small-size, 11px);
     font-weight: 700;
     color: var(--shiny-color-on-surface-variant, #6B7280);
     text-transform: uppercase;
@@ -59,21 +59,21 @@
 }
 
 .shiny-cal-cell {
-    border-right: 1px solid var(--shiny-color-outline-variant, #F3F4F6);
-    border-bottom: 1px solid var(--shiny-color-outline-variant, #F3F4F6);
-    padding: 4px 4px 6px;
+    border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #F3F4F6);
+    border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #F3F4F6);
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-1, 4px) calc(6px * var(--shiny-density-scale, 1));
     min-height: 92px;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     overflow: hidden;
 }
 
 .shiny-cal-cell.not-in-month { opacity: 0.35; }
 
 .shiny-cal-daynum {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     font-weight: 600;
     color: var(--shiny-color-on-surface, #111827);
     min-width: 22px;
@@ -87,15 +87,15 @@
 .shiny-cal-events {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     overflow: hidden;
 }
 
 .shiny-cal-event {
     color: var(--shiny-color-on-primary, white);
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-size: var(--shiny-type-label-small-size, 11px);
+    padding: calc(2px * var(--shiny-density-scale, 1)) calc(6px * var(--shiny-density-scale, 1));
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -103,15 +103,15 @@
 }
 
 .shiny-cal-overflow {
-    font-size: 10px;
+    font-size: calc(10px * var(--shiny-type-scale, 1));
     color: var(--shiny-color-on-surface-variant, #6B7280);
-    padding-left: 4px;
+    padding-left: var(--shiny-spacing-1, 4px);
 }
 
 .shiny-cal-count {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     color: var(--shiny-color-primary, #3B82F6);
-    padding-left: 4px;
+    padding-left: var(--shiny-spacing-1, 4px);
 }
 
 .shiny-cal-loader {

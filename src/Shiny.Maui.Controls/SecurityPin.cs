@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -59,8 +60,6 @@ public class SecurityPin : ContentView
 
     const double DefaultCellSize = 50;
     const double DefaultCellSpacing = 8;
-    const double DefaultCornerRadius = 8;
-    const double DefaultFontSize = 24;
     const int DefaultLength = 4;
 
 
@@ -168,7 +167,7 @@ public class SecurityPin : ContentView
         nameof(CellCornerRadius),
         typeof(double),
         typeof(SecurityPin),
-        DefaultCornerRadius,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
                 ((SecurityPin)b).ApplyCellStyle();
@@ -269,13 +268,13 @@ public class SecurityPin : ContentView
         nameof(FontSize),
         typeof(double),
         typeof(SecurityPin),
-        DefaultFontSize,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SecurityPin), () =>
             {
-            var pin = (SecurityPin)b;
-            foreach (var label in pin.cellLabels)
-                label.FontSize = (double)n;
-        })
+                var pin = (SecurityPin)b;
+                foreach (var label in pin.cellLabels)
+                    label.SetTokenOrValue(Label.FontSizeProperty, (double)n, ShinyThemeKeys.Type.HeadlineSmallSize);
+            })
     );
     public double FontSize
     {
@@ -312,12 +311,12 @@ public class SecurityPin : ContentView
         {
             var label = new Label
             {
-                FontSize = FontSize,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center
             };
+            label.SetTokenOrValue(Label.FontSizeProperty, FontSize, ShinyThemeKeys.Type.HeadlineSmallSize);
             if (CellTextColor is Color textColor)
                 label.TextColor = textColor;
 
@@ -329,9 +328,8 @@ public class SecurityPin : ContentView
                 {
                     CornerRadius = new CornerRadius(CellCornerRadius)
                 },
-                StrokeThickness = 1,
                 Content = label
-            };
+            }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
 
             cellLabels.Add(label);
             cellBorders.Add(border);
@@ -356,10 +354,9 @@ public class SecurityPin : ContentView
             var border = cellBorders[i];
             border.WidthRequest = CellSize;
             border.HeightRequest = CellSize;
-            border.StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = new CornerRadius(CellCornerRadius)
-            };
+            var shape = new Microsoft.Maui.Controls.Shapes.RoundRectangle();
+            shape.SetCornerTokenOrValue(CellCornerRadius, ShinyThemeKeys.Shape.CornerSmallRadius);
+            border.StrokeShape = shape;
 
             ApplyActiveCellStyle(border, i);
         }

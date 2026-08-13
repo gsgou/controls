@@ -2,31 +2,31 @@
     display: block;
     width: 100%;
     box-sizing: border-box;
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
     /* must stay visible so the overflow dropdown can escape the bar's bounds */
     overflow: visible;
 }
 
 .shiny-toolbar--shadow.shiny-toolbar--top {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0, 0, 0, 0.12));
 }
 
 .shiny-toolbar--shadow.shiny-toolbar--bottom {
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shiny-elevation-2, 0 -2px 8px rgba(0, 0, 0, 0.12));
 }
 
 .shiny-toolbar-inner {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
     height: 100%;
     min-height: inherit;
-    padding: 0 16px;
+    padding: 0 var(--shiny-spacing-4, 16px);
     box-sizing: border-box;
 }
 
 .shiny-toolbar-title {
-    font-size: 17px;
+    font-size: calc(17px * var(--shiny-type-scale, 1));
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -41,14 +41,14 @@
 .shiny-toolbar-start {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
     min-width: 0;
 }
 
 .shiny-toolbar-end {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     margin-left: auto;
 }
 
@@ -62,7 +62,7 @@
     top: 0;
     left: 0;
     display: flex;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     visibility: hidden;
     pointer-events: none;
     white-space: nowrap;
@@ -86,13 +86,13 @@
     z-index: 2;
     min-width: 180px;
     max-width: 280px;
-    padding: 6px;
+    padding: calc(6px * var(--shiny-density-scale, 1));
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    gap: calc(2px * var(--shiny-density-scale, 1));
+    border-radius: var(--shiny-shape-corner-medium, 12px);
+    box-shadow: var(--shiny-elevation-4, 0 8px 24px rgba(0, 0, 0, 0.18));
 }
 
 .shiny-toolbar--top .shiny-toolbar-menu {
@@ -107,9 +107,9 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--shiny-spacing-3, 12px);
     width: 100%;
-    padding: 10px 12px;
+    padding: calc(10px * var(--shiny-density-scale, 1)) var(--shiny-spacing-3, 12px);
     border: none;
     background: transparent;
     color: inherit;
@@ -117,7 +117,7 @@
     line-height: 1.2;
     text-align: left;
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
     cursor: pointer;
     white-space: nowrap;
     -webkit-tap-highlight-color: transparent;
@@ -138,22 +138,22 @@
 
 .shiny-toolbar-menu-item-text {
     flex: 1 1 auto;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
 }
 
 .shiny-toolbar-menu-item-badge {
     flex: 0 0 auto;
     min-width: 18px;
     height: 18px;
-    padding: 0 5px;
+    padding: 0 calc(5px * var(--shiny-density-scale, 1));
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9px;
+    border-radius: var(--shiny-shape-corner-small, 9px);
     background: var(--shiny-color-error, #EF4444);
     color: var(--shiny-color-on-error, #fff);
-    font-size: 10px;
+    font-size: calc(10px * var(--shiny-type-scale, 1));
     font-weight: 600;
     line-height: 1;
 }
@@ -164,13 +164,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    padding: 6px 10px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
+    padding: calc(6px * var(--shiny-density-scale, 1)) calc(10px * var(--shiny-density-scale, 1));
     border: none;
     background: transparent;
     color: inherit;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: var(--shiny-shape-corner-medium, 10px);
     text-decoration: none;
     font: inherit;
     line-height: 1;
@@ -207,7 +207,7 @@
 }
 
 .shiny-toolbar-item-label {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     line-height: 1;
     white-space: nowrap;
 }
@@ -218,15 +218,15 @@
     right: 2px;
     min-width: 16px;
     height: 16px;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
     background: var(--shiny-color-error, #EF4444);
     color: var(--shiny-color-on-error, #fff);
-    font-size: 10px;
+    font-size: calc(10px * var(--shiny-type-scale, 1));
     font-weight: 600;
     line-height: 1;
 }

@@ -17,7 +17,7 @@
     left: 0;
     right: 0;
     height: 100%;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.18);
+    box-shadow: var(--shiny-elevation-5, 0 -10px 30px rgba(0,0,0,0.18));
     display: flex;
     flex-direction: column;
     will-change: transform;
@@ -31,7 +31,7 @@
 .is-top .shiny-sheet-container {
     top: 0;
     transform: translateY(-100%);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    box-shadow: var(--shiny-elevation-5, 0 10px 30px rgba(0,0,0,0.18));
 }
 
 .shiny-sheet-header {
@@ -53,12 +53,12 @@
 .shiny-sheet-handle {
     width: 40px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--shiny-shape-corner-extra-small, 2px);
 }
 
 .shiny-sheet-scroll {
     flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 0 16px 16px;
+    padding: 0 var(--shiny-spacing-4, 16px) var(--shiny-spacing-4, 16px);
 }

@@ -1,12 +1,12 @@
 .shiny-pill {
     display: inline-block;
-    padding: 4px 12px;
-    border: 1px solid transparent;
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-3, 12px);
+    border: var(--shiny-border-thin, 1px) solid transparent;
     line-height: 1.2;
     white-space: nowrap;
     text-align: center;
     vertical-align: middle;
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
 }
 
 .shiny-pill-none {

@@ -76,11 +76,10 @@ public partial class ColorPicker : ContentView
         {
             WidthRequest = 44,
             HeightRequest = 44,
-            StrokeThickness = 2,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             BackgroundColor = Colors.Black,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
         // Only the swatch's frame is themed - its fill is the colour being picked.
         previewSwatch.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
@@ -88,12 +87,11 @@ public partial class ColorPicker : ContentView
         hexEntry = new Entry
         {
             FontFamily = "monospace",
-            FontSize = 14,
             MaxLength = 9, // #AARRGGBB
             Placeholder = "#000000",
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         hexEntry.Completed += OnHexEntryCompleted;
         hexEntry.Unfocused += OnHexEntryUnfocused;
 

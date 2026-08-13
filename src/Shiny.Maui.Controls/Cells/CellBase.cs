@@ -4,6 +4,7 @@ using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Infrastructure;
 using TvTableView = Shiny.Maui.Controls.TableView;
 using TvTableSection = Shiny.Maui.Controls.Sections.TableSection;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.Cells;
 
@@ -410,9 +411,8 @@ public abstract class CellBase : ContentView
         {
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.End,
-            FontSize = 12,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         var titleArea = new Grid
         {
@@ -437,9 +437,8 @@ public abstract class CellBase : ContentView
         {
             VerticalOptions = LayoutOptions.Start,
             LineBreakMode = LineBreakMode.WordWrap,
-            FontSize = 12,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         Grid.SetColumn(descriptionLabel, 1);
         Grid.SetRow(descriptionLabel, 1);
         rootGrid.Children.Add(descriptionLabel);
@@ -504,7 +503,16 @@ public abstract class CellBase : ContentView
         UpdateCellBackground();
         UpdateCellPadding();
         UpdateBorder();
+        ApplyAccentStyles();
     }
+
+    /// <summary>
+    /// Binds the cell's accent-coloured accessory to the theme. Overridden by the cells that own one.
+    /// It has to run here rather than only from the accent property's own propertyChanged: that
+    /// callback never fires while the property sits at its unset default, which left the switch,
+    /// checkbox and radio on the platform's own tint in every theme.
+    /// </summary>
+    protected virtual void ApplyAccentStyles() { }
 
     protected Color ResolveColor(Color? cellValue, Color? globalValue, Color fallback)
         => cellValue ?? globalValue ?? fallback;

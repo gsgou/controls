@@ -44,7 +44,7 @@
 .shiny-media-spinner {
     width: 42px;
     height: 42px;
-    border: 3px solid rgba(255, 255, 255, 0.25);
+    border: var(--shiny-border-thick, 3px) solid rgba(255, 255, 255, 0.25);
     border-top-color: #fff;
     border-radius: 50%;
     animation: shiny-media-spin 0.9s linear infinite;
@@ -68,11 +68,11 @@
     left: 50%;
     transform: translate(-50%, -50%);
     max-width: 80%;
-    padding: 12px 16px;
-    border-radius: 8px;
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px);
+    border-radius: var(--shiny-shape-corner-small, 8px);
     background: rgba(0, 0, 0, 0.78);
     color: #fff;
-    font-size: 0.82rem;
+    font-size: calc(0.82rem * var(--shiny-type-scale, 1));
     line-height: 1.4;
     text-align: center;
 }
@@ -86,8 +86,8 @@
     bottom: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
+    padding: calc(6px * var(--shiny-density-scale, 1)) calc(10px * var(--shiny-density-scale, 1));
     /* A gradient rather than a flat scrim so the controls stay legible over a bright frame without
        darkening the whole lower third of the video. */
     background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0));
@@ -102,7 +102,7 @@
     justify-content: center;
     width: 34px;
     height: 34px;
-    padding: 5px;
+    padding: calc(5px * var(--shiny-density-scale, 1));
     border: 0;
     border-radius: 50%;
     background: transparent;
@@ -115,7 +115,7 @@
 }
 
 .shiny-media-btn:focus-visible {
-    outline: 2px solid var(--shiny-color-primary, #4f8cff);
+    outline: var(--shiny-border-medium, 2px) solid var(--shiny-color-primary, #4f8cff);
     outline-offset: 1px;
 }
 
@@ -127,7 +127,7 @@
 
 .shiny-media-time {
     flex: 0 0 auto;
-    font-size: 0.72rem;
+    font-size: calc(0.72rem * var(--shiny-type-scale, 1));
     font-variant-numeric: tabular-nums;
     opacity: 0.9;
     user-select: none;
@@ -167,7 +167,7 @@
 */
 .shiny-media-seek::-webkit-slider-runnable-track {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--shiny-shape-corner-extra-small, 2px);
     background: linear-gradient(
         to right,
         var(--shiny-color-primary, #4f8cff) 0 var(--shiny-media-played, 0%),
@@ -177,7 +177,7 @@
 
 .shiny-media-seek::-moz-range-track {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--shiny-shape-corner-extra-small, 2px);
     background: linear-gradient(
         to right,
         var(--shiny-color-primary, #4f8cff) 0 var(--shiny-media-played, 0%),
@@ -187,13 +187,13 @@
 
 .shiny-media-volume::-webkit-slider-runnable-track {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--shiny-shape-corner-extra-small, 2px);
     background: rgba(255, 255, 255, 0.3);
 }
 
 .shiny-media-volume::-moz-range-track {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--shiny-shape-corner-extra-small, 2px);
     background: rgba(255, 255, 255, 0.3);
 }
 
@@ -220,6 +220,6 @@
 
 .shiny-media-seek:focus-visible::-webkit-slider-thumb,
 .shiny-media-volume:focus-visible::-webkit-slider-thumb {
-    outline: 2px solid var(--shiny-color-primary, #4f8cff);
+    outline: var(--shiny-border-medium, 2px) solid var(--shiny-color-primary, #4f8cff);
     outline-offset: 2px;
 }

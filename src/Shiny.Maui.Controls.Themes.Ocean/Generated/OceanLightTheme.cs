@@ -73,12 +73,24 @@ public partial class OceanLightTheme : ResourceDictionary
 
         // ===== Shape =====
         this.Add(ShinyThemeKeys.Shape.CornerNone, 0d);
-        this.Add(ShinyThemeKeys.Shape.CornerExtraSmall, 4d);
-        this.Add(ShinyThemeKeys.Shape.CornerSmall, 8d);
-        this.Add(ShinyThemeKeys.Shape.CornerMedium, 12d);
-        this.Add(ShinyThemeKeys.Shape.CornerLarge, 16d);
-        this.Add(ShinyThemeKeys.Shape.CornerExtraLarge, 28d);
+        this.Add(ShinyThemeKeys.Shape.CornerNoneRadius, new CornerRadius(0d));
+        this.Add(ShinyThemeKeys.Shape.CornerExtraSmall, 7d);
+        this.Add(ShinyThemeKeys.Shape.CornerExtraSmallRadius, new CornerRadius(7d));
+        this.Add(ShinyThemeKeys.Shape.CornerSmall, 14d);
+        this.Add(ShinyThemeKeys.Shape.CornerSmallRadius, new CornerRadius(14d));
+        this.Add(ShinyThemeKeys.Shape.CornerMedium, 21d);
+        this.Add(ShinyThemeKeys.Shape.CornerMediumRadius, new CornerRadius(21d));
+        this.Add(ShinyThemeKeys.Shape.CornerLarge, 28d);
+        this.Add(ShinyThemeKeys.Shape.CornerLargeRadius, new CornerRadius(28d));
+        this.Add(ShinyThemeKeys.Shape.CornerExtraLarge, 49d);
+        this.Add(ShinyThemeKeys.Shape.CornerExtraLargeRadius, new CornerRadius(49d));
         this.Add(ShinyThemeKeys.Shape.CornerFull, 9999d);
+        this.Add(ShinyThemeKeys.Shape.CornerFullRadius, new CornerRadius(9999d));
+
+        // ===== Border =====
+        this.Add(ShinyThemeKeys.Border.Thin, 1d);
+        this.Add(ShinyThemeKeys.Border.Medium, 1.5d);
+        this.Add(ShinyThemeKeys.Border.Thick, 3d);
 
         // ===== State =====
         this.Add(ShinyThemeKeys.State.HoverOpacity, 0.08d);
@@ -86,37 +98,66 @@ public partial class OceanLightTheme : ResourceDictionary
         this.Add(ShinyThemeKeys.State.PressedOpacity, 0.1d);
         this.Add(ShinyThemeKeys.State.DraggedOpacity, 0.16d);
 
+        // ===== Density =====
+        this.Add(ShinyThemeKeys.Density.Scale, 1.2d);
+        this.Add(ShinyThemeKeys.Density.ControlHeight, 53d);
+        this.Add(ShinyThemeKeys.Density.ControlHeightSmall, 38d);
+        this.Add(ShinyThemeKeys.Density.RowHeight, 58d);
+        this.Add(ShinyThemeKeys.Density.TouchTarget, 44d);
+
         // ===== Spacing =====
         this.Add(ShinyThemeKeys.Spacing.Space0, 0d);
-        this.Add(ShinyThemeKeys.Spacing.Space1, 4d);
-        this.Add(ShinyThemeKeys.Spacing.Space2, 8d);
-        this.Add(ShinyThemeKeys.Spacing.Space3, 12d);
-        this.Add(ShinyThemeKeys.Spacing.Space4, 16d);
-        this.Add(ShinyThemeKeys.Spacing.Space5, 24d);
-        this.Add(ShinyThemeKeys.Spacing.Space6, 32d);
-        this.Add(ShinyThemeKeys.Spacing.Space7, 48d);
-        this.Add(ShinyThemeKeys.Spacing.Space8, 64d);
+        this.Add(ShinyThemeKeys.Spacing.Space1, 5d);
+        this.Add(ShinyThemeKeys.Spacing.Space2, 10d);
+        this.Add(ShinyThemeKeys.Spacing.Space3, 14d);
+        this.Add(ShinyThemeKeys.Spacing.Space4, 19d);
+        this.Add(ShinyThemeKeys.Spacing.Space5, 29d);
+        this.Add(ShinyThemeKeys.Spacing.Space6, 38d);
+        this.Add(ShinyThemeKeys.Spacing.Space7, 58d);
+        this.Add(ShinyThemeKeys.Spacing.Space8, 77d);
 
-        // ===== Type sizes =====
+        // ===== Type =====
+        this.Add(ShinyThemeKeys.Type.FontFamily, "");
+        this.Add(ShinyThemeKeys.Type.FontFamilyDisplay, "");
+        this.Add(ShinyThemeKeys.Type.FontFamilyMono, "");
+        this.Add(ShinyThemeKeys.Type.Scale, 1d);
         this.Add(ShinyThemeKeys.Type.DisplayLargeSize, 57d);
+        this.Add(ShinyThemeKeys.Type.DisplayLargeAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.DisplayMediumSize, 45d);
+        this.Add(ShinyThemeKeys.Type.DisplayMediumAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.DisplaySmallSize, 36d);
+        this.Add(ShinyThemeKeys.Type.DisplaySmallAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.HeadlineLargeSize, 32d);
+        this.Add(ShinyThemeKeys.Type.HeadlineLargeAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.HeadlineMediumSize, 28d);
+        this.Add(ShinyThemeKeys.Type.HeadlineMediumAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.HeadlineSmallSize, 24d);
+        this.Add(ShinyThemeKeys.Type.HeadlineSmallAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.TitleLargeSize, 22d);
+        this.Add(ShinyThemeKeys.Type.TitleLargeAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.TitleMediumSize, 16d);
+        this.Add(ShinyThemeKeys.Type.TitleMediumAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.TitleSmallSize, 14d);
+        this.Add(ShinyThemeKeys.Type.TitleSmallAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.BodyLargeSize, 16d);
+        this.Add(ShinyThemeKeys.Type.BodyLargeAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.BodyMediumSize, 14d);
+        this.Add(ShinyThemeKeys.Type.BodyMediumAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.BodySmallSize, 12d);
+        this.Add(ShinyThemeKeys.Type.BodySmallAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.LabelLargeSize, 14d);
+        this.Add(ShinyThemeKeys.Type.LabelLargeAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.LabelMediumSize, 12d);
+        this.Add(ShinyThemeKeys.Type.LabelMediumAttributes, FontAttributes.None);
         this.Add(ShinyThemeKeys.Type.LabelSmallSize, 11d);
+        this.Add(ShinyThemeKeys.Type.LabelSmallAttributes, FontAttributes.None);
 
         // ===== Elevation =====
-        this.Add(ShinyThemeKeys.Elevation.Level1, new Shadow { Brush = new SolidColorBrush(Colors.Black), Offset = new Point(0d, 1d), Radius = 3f, Opacity = 0.2f });
-        this.Add(ShinyThemeKeys.Elevation.Level2, new Shadow { Brush = new SolidColorBrush(Colors.Black), Offset = new Point(0d, 2d), Radius = 6f, Opacity = 0.2f });
-        this.Add(ShinyThemeKeys.Elevation.Level3, new Shadow { Brush = new SolidColorBrush(Colors.Black), Offset = new Point(0d, 4d), Radius = 8f, Opacity = 0.22f });
+        this.Add(ShinyThemeKeys.Elevation.Level0, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 0d), Radius = 0f, Opacity = 0f });
+        this.Add(ShinyThemeKeys.Elevation.Level1, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 2.5d), Radius = 7.5f, Opacity = 0.09f });
+        this.Add(ShinyThemeKeys.Elevation.Level2, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 5d), Radius = 15f, Opacity = 0.09f });
+        this.Add(ShinyThemeKeys.Elevation.Level3, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 10d), Radius = 20f, Opacity = 0.099f });
+        this.Add(ShinyThemeKeys.Elevation.Level4, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 15d), Radius = 30f, Opacity = 0.108f });
+        this.Add(ShinyThemeKeys.Elevation.Level5, new Shadow { Brush = new SolidColorBrush(Color.FromArgb("#000000")), Offset = new Point(0d, 20d), Radius = 40f, Opacity = 0.117f });
     }
 }

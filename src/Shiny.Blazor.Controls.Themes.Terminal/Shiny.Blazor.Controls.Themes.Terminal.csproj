@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Themes.Terminal</RootNamespace>
+        <Description>Terminal theme pack for Shiny.Blazor.Controls — a dense, square, phosphor-green console theme with monospace type and hairline rings instead of shadows. Link _content/Shiny.Blazor.Controls.Themes.Terminal/css/shiny-theme-terminal.css after the core theme.</Description>
+        <PackageTags>blazor shiny controls theme terminal monospace</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+    </ItemGroup>
+
+</Project>

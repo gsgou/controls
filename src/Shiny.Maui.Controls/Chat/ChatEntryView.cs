@@ -70,12 +70,11 @@ public partial class ChatEntryView : ContentView
         this.sendButton = new Button
         {
             Text = "Send",
-            FontSize = 14,
             CornerRadius = 18,
             HeightRequest = 36,
             MinimumWidthRequest = 36,
             Padding = new Thickness(14, 0)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         this.sendButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         this.sendButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         this.sendButton.Clicked += this.OnSendClicked;
@@ -83,14 +82,13 @@ public partial class ChatEntryView : ContentView
         this.attachButton = new Button
         {
             Text = "+",
-            FontSize = 22,
             FontAttributes = FontAttributes.Bold,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 36,
             HeightRequest = 36,
             Padding = 0,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
         this.attachButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         this.attachButton.Clicked += (_, _) => this.AttachRequested?.Invoke(this, EventArgs.Empty);
 
@@ -176,11 +174,10 @@ public partial class ChatEntryView : ContentView
 
         this.composerBorder = new Border
         {
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 24 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraLargeRadius),
             Padding = new Thickness(6, 8),
             Content = this.composerGrid
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         this.composerBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
         this.composerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
 
@@ -188,22 +185,20 @@ public partial class ChatEntryView : ContentView
         this.editBannerLabel = new Label
         {
             Text = "Editing message",
-            FontSize = 12,
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Start
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.editBannerLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var editCancel = new Button
         {
             Text = "✕",
-            FontSize = 14,
             BackgroundColor = Colors.Transparent,
             Padding = 0,
             WidthRequest = 32,
             HeightRequest = 28,
             HorizontalOptions = LayoutOptions.End
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         editCancel.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         editCancel.Clicked += (_, _) => this.EditCancelled?.Invoke(this, EventArgs.Empty);
 
@@ -221,7 +216,7 @@ public partial class ChatEntryView : ContentView
         this.editBanner = new Border
         {
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Padding = new Thickness(12, 4),
             Margin = new Thickness(0, 0, 0, 4),
             IsVisible = false,
@@ -335,13 +330,12 @@ public partial class ChatEntryView : ContentView
         var btn = new Button
         {
             Text = text,
-            FontSize = 14,
             FontAttributes = attrs,
             BackgroundColor = Colors.Transparent,
             WidthRequest = 40,
             HeightRequest = 32,
             Padding = 0
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         btn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         btn.Clicked += (_, _) => action();
         return btn;

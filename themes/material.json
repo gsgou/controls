@@ -2,7 +2,7 @@
     "$schema": "./shiny-theme.schema.json",
     "name": "Material",
     "slug": "material",
-    "description": "A Material Design 3 inspired palette built around the signature M3 purple.",
+    "description": "A Material Design 3 inspired theme: the signature M3 purple, Roboto, generously rounded corners and tonal shadows.",
     "seeds": {
         "primary": "#6750A4",
         "secondary": "#625B71",
@@ -15,5 +15,16 @@
         "warning": "#F9A825",
         "caution": "#EF6C00",
         "critical": "#B3261E"
+    },
+    "shape": {
+        "scale": 1.5
+    },
+    "typography": {
+        "fontFamily": "Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif",
+        "weightOffset": 100
+    },
+    "elevation": {
+        "style": "shadow",
+        "tint": "primary"
     }
 }

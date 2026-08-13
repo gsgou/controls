@@ -1,0 +1,106 @@
+@page "/stateview"
+
+<PageTitle>State View</PageTitle>
+
+<h1>State View</h1>
+
+<section class="demo-section">
+    <h2>Named branches from one string</h2>
+    <p>
+        StateView swaps between named branches driven by a single string. Bind <code>CurrentState</code>
+        and the matching <code>StateViewState</code> is the one on screen — no <code>@@if</code> ladder.
+    </p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <button class="btn btn-secondary" @onclick="@(() => state = "Empty")">Empty</button>
+        <button class="btn btn-primary" @onclick="LoadAsync">Load</button>
+        <button class="btn btn-secondary" @onclick="FailAsync">Fail</button>
+    </div>
+
+    <p style="font-size:0.875rem;">Current state: <strong>@state</strong></p>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px; min-height:150px;">
+        <StateView @bind-CurrentState="state" Transition="StateTransition.Slide">
+            <States>
+                <StateViewState Name="Empty">
+                    <h3>Nothing loaded</h3>
+                    <p>Press Load or Fail to move the state along.</p>
+                </StateViewState>
+
+                <StateViewState Name="Loading">
+                    <h3>Loading…</h3>
+                    <ProgressBar IsIndeterminate="true" />
+                </StateViewState>
+
+                <StateViewState Name="Loaded">
+                    <h3>Loaded</h3>
+                    <p>This branch was never rendered until you reached it — content for a state you never visit is never built.</p>
+                </StateViewState>
+
+                <StateViewState Name="Error">
+                    <h3>Something went wrong</h3>
+                    <button class="btn btn-primary" @onclick="LoadAsync">Try again</button>
+                </StateViewState>
+            </States>
+        </StateView>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Transitions</h2>
+    <p>Every state change animates the incoming branch in. Pick one:</p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        @foreach (var t in transitions)
+        {
+            var choice = t;
+            <button class="btn @(transition == choice ? "btn-primary" : "btn-secondary")"
+                    @onclick="() => transition = choice">@choice</button>
+        }
+    </div>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button class="btn btn-secondary" @onclick="@(() => demo = "One")">One</button>
+        <button class="btn btn-secondary" @onclick="@(() => demo = "Two")">Two</button>
+        <button class="btn btn-secondary" @onclick="@(() => demo = "Three")">Three</button>
+    </div>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px; overflow:hidden;">
+        <StateView @bind-CurrentState="demo" Transition="transition" TransitionDuration="300">
+            <States>
+                <StateViewState Name="One"><h3>Panel one</h3></StateViewState>
+                <StateViewState Name="Two"><h3>Panel two</h3></StateViewState>
+                <StateViewState Name="Three"><h3>Panel three</h3></StateViewState>
+            </States>
+        </StateView>
+    </div>
+</section>
+
+@code {
+    string state = "Empty";
+    string demo = "One";
+    StateTransition transition = StateTransition.Slide;
+
+    static readonly StateTransition[] transitions =
+    [
+        StateTransition.None,
+        StateTransition.Fade,
+        StateTransition.Slide,
+        StateTransition.SlideUp,
+        StateTransition.Scale
+    ];
+
+    async Task LoadAsync()
+    {
+        state = "Loading";
+        await Task.Delay(1200);
+        state = "Loaded";
+    }
+
+    async Task FailAsync()
+    {
+        state = "Loading";
+        await Task.Delay(1200);
+        state = "Error";
+    }
+}

@@ -14,7 +14,7 @@
                 {
                     var isLast = i == Math.Max(ItemCount, 1) - 1 && ItemCount > 1;
                     <div class="shiny-skeleton__shape shiny-skeleton__line"
-                         style="height: @(ItemHeight)px; border-radius: @(CornerRadius)px; width: @(isLast ? "60%" : "100%");"></div>
+                         style="height: @(ItemHeight)px; border-radius: @RadiusCss; width: @(isLast ? "60%" : "100%");"></div>
                 }
             }
         </div>

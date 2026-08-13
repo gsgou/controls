@@ -127,9 +127,8 @@ public partial class RangeSlider : ContentView
         {
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            FontSize = 12,
             FontAttributes = FontAttributes.Bold
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         return label;
     }
@@ -138,7 +137,7 @@ public partial class RangeSlider : ContentView
     {
         var badge = new Border
         {
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
             Stroke = Colors.Transparent,
             Padding = new Thickness(10, 4),
             Content = content,
@@ -154,14 +153,13 @@ public partial class RangeSlider : ContentView
         {
             WidthRequest = 24,
             HeightRequest = 24,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Stroke = ColdColor,
-            StrokeThickness = 1,
             Shadow = Slider.CreateThumbShadow(),
             Padding = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
         return thumb;
     }

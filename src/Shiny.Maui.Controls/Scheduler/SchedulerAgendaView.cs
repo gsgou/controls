@@ -653,7 +653,6 @@ public class SchedulerAgendaView : ContentView
             var lbl = new Label
             {
                 Text = new TimeOnly(hour, 0).ToString(timeFormat),
-                FontSize = 11,
                 TextColor = TimezoneColor,
                 VerticalTextAlignment = TextAlignment.Center,
                 HorizontalTextAlignment = TextAlignment.End,
@@ -661,7 +660,7 @@ public class SchedulerAgendaView : ContentView
                 Margin = new Thickness(0, -8, 0, 0),
                 VerticalOptions = LayoutOptions.Start,
                 HeightRequest = 16
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
             columnsGrid.Add(lbl, 0, hour);
 
             for (var t = 0; t < extraTzs.Count; t++)

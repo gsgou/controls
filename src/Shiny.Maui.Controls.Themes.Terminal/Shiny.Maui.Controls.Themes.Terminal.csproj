@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Themes.Terminal</RootNamespace>
+        <Description>Terminal theme pack for Shiny.Maui.Controls — a dense, square, phosphor-green console theme with monospace type and hairline rings instead of shadows.</Description>
+        <PackageTags>maui shiny controls theme terminal monospace</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+</Project>

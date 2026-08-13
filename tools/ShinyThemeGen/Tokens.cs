@@ -24,6 +24,12 @@ static class Tokens
         "Critical", "OnCritical", "CriticalContainer", "OnCriticalContainer",
     ];
 
+    // ---- Density: control metrics (px) before the theme's density scale is applied. ----
+    public const double ControlHeight = 44;
+    public const double ControlHeightSmall = 32;
+    public const double RowHeight = 48;
+    public const double TouchTarget = 44;
+
     // ---- Shape (corner radii, px). May be overridden per-theme via the "shape" json block. ----
     public static readonly (string Name, double Value)[] Shape =
     [
@@ -79,24 +85,38 @@ static class Tokens
         ("LabelSmall", 11, 16, 500, 0.5),
     ];
 
-    // ---- Elevation: CSS box-shadow per level (Material 3 tonal elevation, neutral shadow) ----
-    public static readonly (string Name, string BoxShadow)[] Elevation =
+    // ---- Elevation (Material 3 tonal elevation), as the layers each level is built from.
+    // Kept structured rather than as literal box-shadow strings so a theme's elevation style and
+    // intensity can rebuild them. Index = level; level 0 is deliberately empty ("none").
+    public static readonly (double OffsetY, double Blur, double Spread, double Alpha)[][] ElevationLayers =
     [
-        ("Level0", "none"),
-        ("Level1", "0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15)"),
-        ("Level2", "0 1px 2px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15)"),
-        ("Level3", "0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3)"),
-        ("Level4", "0 6px 10px 4px rgba(0,0,0,0.15), 0 2px 3px rgba(0,0,0,0.3)"),
-        ("Level5", "0 8px 12px 6px rgba(0,0,0,0.15), 0 4px 4px rgba(0,0,0,0.3)"),
+        [],
+        [(1, 2, 0, 0.30), (1, 3, 1, 0.15)],
+        [(1, 2, 0, 0.30), (2, 6, 2, 0.15)],
+        [(4, 8, 3, 0.15), (1, 3, 0, 0.30)],
+        [(6, 10, 4, 0.15), (2, 3, 0, 0.30)],
+        [(8, 12, 6, 0.15), (4, 4, 0, 0.30)],
     ];
 
-    // ---- Elevation as MAUI Shadow (levels 1..3 are the practically useful ones) ----
-    public static readonly (string Name, double OffsetX, double OffsetY, double Radius, double Opacity)[] MauiShadow =
+    // ---- Elevation as MAUI Shadow. Index = level; level 0 is "no shadow". ----
+    public static readonly (double OffsetX, double OffsetY, double Radius, double Opacity)[] MauiShadowLevels =
     [
-        ("Level1", 0, 1, 3, 0.20),
-        ("Level2", 0, 2, 6, 0.20),
-        ("Level3", 0, 4, 8, 0.22),
+        (0, 0, 0, 0),
+        (0, 1, 3, 0.20),
+        (0, 2, 6, 0.20),
+        (0, 4, 8, 0.22),
+        (0, 6, 12, 0.24),
+        (0, 8, 16, 0.26),
     ];
+
+    public static readonly string[] ElevationNames = ["Level0", "Level1", "Level2", "Level3", "Level4", "Level5"];
+
+    public static readonly string[] BorderNames = ["Thin", "Medium", "Thick"];
+
+    public static readonly string[] DensityNames = ["Scale", "ControlHeight", "ControlHeightSmall", "RowHeight", "TouchTarget"];
+
+    // ---- Font family slots. Empty means "the platform default". ----
+    public static readonly string[] FontFamilyNames = ["FontFamily", "FontFamilyDisplay", "FontFamilyMono"];
 
     /// <summary>camelCase/PascalCase -> kebab-case (OnPrimaryContainer -> on-primary-container).</summary>
     public static string Kebab(string pascal)

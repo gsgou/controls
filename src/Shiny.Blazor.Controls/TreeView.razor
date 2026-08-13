@@ -41,8 +41,11 @@
         var canSelect = CanSelect(node.Item);
         var indent = $"padding-left: {node.Depth * IndentSize}px;";
 
+        var showCheck = ShowSelectionCheckBoxes && SelectionMode == BlazorTreeSelectionMode.Multiple;
+
         <li class="shiny-treeview-item @(node.IsSelected ? "selected" : "")" role="treeitem"
             aria-expanded="@(hasChildren ? node.IsExpanded.ToString().ToLowerInvariant() : null)"
+            aria-checked="@(showCheck ? node.IsSelected.ToString().ToLowerInvariant() : null)"
             aria-selected="@node.IsSelected.ToString().ToLowerInvariant()">
             @* drag/drop is wired natively in tree-view.js — Blazor's synthetic drag
                events can't call dataTransfer.setData(), which Safari/Firefox require *@
@@ -107,6 +110,16 @@
                         }
                     }
                 </span>
+
+                @if (showCheck)
+                {
+                    <input type="checkbox" class="shiny-treeview-check"
+                           checked="@node.IsSelected"
+                           disabled="@(!canSelect)"
+                           aria-label="Select"
+                           @onchange="@(e => OnCheckChanged(node, canSelect, e))"
+                           @onclick:stopPropagation="true" />
+                }
 
                 <div class="shiny-treeview-content @(canSelect ? "" : "shiny-treeview-noselect")">
                     @if (ItemTemplate is not null)

@@ -9,7 +9,7 @@
 
 .shiny-vgrid-empty {
     text-align: center;
-    padding: 32px;
+    padding: var(--shiny-spacing-6, 32px);
 }
 
 .shiny-vgrid-group {
@@ -17,7 +17,7 @@
 }
 
 .shiny-vgrid-group-header {
-    padding: 8px 0;
+    padding: var(--shiny-spacing-2, 8px) 0;
     font-weight: 600;
     background: inherit;
     z-index: 1;
@@ -42,16 +42,16 @@
 .shiny-vgrid-loadmore {
     display: flex;
     justify-content: center;
-    padding: 16px 0;
+    padding: var(--shiny-spacing-4, 16px) 0;
 }
 
 .shiny-vgrid-loadmore-btn {
-    padding: 8px 24px;
-    border: 1px solid var(--shiny-color-outline-variant, #ccc);
-    border-radius: 6px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-5, 24px);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: var(--shiny-shape-corner-small, 6px);
     background: transparent;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
 }
 
 .shiny-vgrid-loadmore-btn:hover {
@@ -60,6 +60,6 @@
 
 .shiny-vgrid-loading {
     text-align: center;
-    padding: 16px 0;
+    padding: var(--shiny-spacing-4, 16px) 0;
     opacity: 0.6;
 }

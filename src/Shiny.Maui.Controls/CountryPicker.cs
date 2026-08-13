@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 namespace Shiny.Maui.Controls;
 
 public class CountryPicker : ContentView
@@ -33,17 +34,14 @@ public class CountryPicker : ContentView
 
                 var flag = new Label
                 {
-                    FontSize = 22,
                     VerticalTextAlignment = TextAlignment.Center,
                     IsVisible = showFlags
-                };
+                }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
                 flag.SetBinding(Label.TextProperty, nameof(Country.FlagEmoji));
 
                 var name = new Label
                 {
-                    VerticalTextAlignment = TextAlignment.Center,
-                    FontSize = 14
-                };
+                    VerticalTextAlignment = TextAlignment.Center}.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
                 name.SetBinding(Label.TextProperty, nameof(Country.Name));
 
                 grid.Add(flag, 0, 0);
@@ -55,12 +53,11 @@ public class CountryPicker : ContentView
 
         selectedFlagLabel = new Label
         {
-            FontSize = 24,
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Center,
             WidthRequest = showFlags ? 32 : 0,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.HeadlineSmallSize);
 
         rootGrid = new Grid
         {

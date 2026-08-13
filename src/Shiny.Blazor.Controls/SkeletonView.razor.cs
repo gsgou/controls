@@ -22,11 +22,18 @@ public partial class SkeletonView
     /// <summary>Vertical spacing in px between built-in placeholder lines.</summary>
     [Parameter] public double ItemSpacing { get; set; } = 12;
 
-    /// <summary>Corner radius in px of the built-in placeholder shapes.</summary>
-    [Parameter] public double CornerRadius { get; set; } = 6;
+    /// <summary>
+    /// Corner radius in px of the built-in placeholder shapes. The default, <c>-1</c>, follows the
+    /// theme's shape scale.
+    /// </summary>
+    [Parameter] public double CornerRadius { get; set; } = -1;
+
+    string RadiusCss => this.CornerRadius >= 0
+        ? FormattableString.Invariant($"{this.CornerRadius}px")
+        : "var(--shiny-shape-corner-small, 6px)";
 
     /// <summary>Base fill color of placeholder shapes.</summary>
-    [Parameter] public string BaseColor { get; set; } = "#e1e1e6";
+    [Parameter] public string BaseColor { get; set; } = "var(--shiny-color-surface-container-high, #e1e1e6)";
 
     /// <summary>Color of the sweeping shimmer highlight.</summary>
     [Parameter] public string HighlightColor { get; set; } = "rgba(255, 255, 255, 0.6)";

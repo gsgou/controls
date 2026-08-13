@@ -25,6 +25,11 @@ public static class MauiProgram
             {
                 cfg.SetCustomFeedback<MyCustomFeedbackService>(); // haptic is installed by default, but we want more fun
                 cfg.AddDefaultMauiControlFeedback();
+
+                // Deliberately tighter than the default of four so the ShinyImage page can actually
+                // show the queued state - with a normal budget the thirty-image grid never has
+                // enough cells waiting to see one.
+                cfg.ConfigureImages(o => o.MaxConcurrentDownloads = 2);
             })
             .UseShinyCamera()
             .UseShinyMediaElement()

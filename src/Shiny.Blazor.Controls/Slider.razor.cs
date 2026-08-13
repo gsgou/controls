@@ -22,13 +22,15 @@ public partial class Slider : IAsyncDisposable
     [Parameter] public string HotColor { get; set; } = "#EF4444";
     [Parameter] public double TrackHeight { get; set; } = 8;
     [Parameter] public double ThumbSize { get; set; } = 24;
-    [Parameter] public string ThumbColor { get; set; } = "#FFFFFF";
-    [Parameter] public double ThumbBorderWidth { get; set; } = 2;
-    [Parameter] public string CornerRadius { get; set; } = "4px";
+    [Parameter] public string ThumbColor { get; set; } = "var(--shiny-color-surface, #FFFFFF)";
+    /// <summary>Thumb ring width in px. The default, <c>-1</c>, follows the theme border scale.</summary>
+    [Parameter] public double ThumbBorderWidth { get; set; } = -1;
+    [Parameter] public string CornerRadius { get; set; } = "var(--shiny-shape-corner-extra-small, 4px)";
     [Parameter] public bool ShowTooltip { get; set; } = true;
-    [Parameter] public string TooltipBackgroundColor { get; set; } = "#1F2937";
-    [Parameter] public string TooltipTextColor { get; set; } = "#FFFFFF";
-    [Parameter] public double TooltipFontSize { get; set; } = 12;
+    [Parameter] public string TooltipBackgroundColor { get; set; } = "var(--shiny-color-inverse-surface, #1F2937)";
+    [Parameter] public string TooltipTextColor { get; set; } = "var(--shiny-color-inverse-on-surface, #FFFFFF)";
+    /// <summary>Tooltip label size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
+    [Parameter] public double TooltipFontSize { get; set; } = -1;
     [Parameter] public string? ValueFormat { get; set; }
     [Parameter] public RenderFragment<double>? TooltipTemplate { get; set; }
     [Parameter] public bool IsEnabled { get; set; } = true;
@@ -48,7 +50,7 @@ public partial class Slider : IAsyncDisposable
 
     string TrackFillStyle => $"width: {Percentage}%; height: 100%; border-radius: {CornerRadius}; background: transparent;";
 
-    string ThumbStyle => $"left: {Percentage}%; width: {ThumbSize}px; height: {ThumbSize}px; border: {ThumbBorderWidth}px solid {BlendedColor}; background: {ThumbColor};";
+    string ThumbStyle => $"left: {Percentage}%; width: {ThumbSize}px; height: {ThumbSize}px; border: {(ThumbBorderWidth >= 0 ? $"{ThumbBorderWidth}px" : "var(--shiny-border-medium, 2px)")} solid {BlendedColor}; background: {ThumbColor};";
 
     // Shift transform from -50% toward 0% at left edge and -100% at right edge to prevent overflow
     string TooltipTransformStyle
@@ -62,7 +64,7 @@ public partial class Slider : IAsyncDisposable
         }
     }
 
-    string TooltipBadgeStyle => $"background: {TooltipBackgroundColor}; color: {TooltipTextColor}; font-size: {TooltipFontSize}px;";
+    string TooltipBadgeStyle => $"background: {TooltipBackgroundColor}; color: {TooltipTextColor}; font-size: {(TooltipFontSize >= 0 ? $"{TooltipFontSize}px" : "var(--shiny-type-body-small-size, 12px)")};";
 
     string TooltipPointerStyle => $"border-top-color: {TooltipBackgroundColor};";
 

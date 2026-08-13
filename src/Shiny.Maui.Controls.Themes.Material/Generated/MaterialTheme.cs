@@ -7,7 +7,7 @@ using Microsoft.Maui.Controls;
 
 namespace Shiny.Maui.Controls.Themes;
 
-/// <summary>A Material Design 3 inspired palette built around the signature M3 purple.</summary>
+/// <summary>A Material Design 3 inspired theme: the signature M3 purple, Roboto, generously rounded corners and tonal shadows.</summary>
 public sealed class MaterialTheme : IShinyTheme
 {
     public string Name => "Material";

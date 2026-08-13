@@ -1,0 +1,48 @@
+{
+    "$schema": "./shiny-theme.schema.json",
+    "name": "Terminal",
+    "slug": "terminal",
+    "description": "A dense, square, phosphor-green console theme — monospace throughout, hard edges, hairline rings instead of shadows.",
+    "seeds": {
+        "primary": "#16A34A",
+        "secondary": "#4D7C0F",
+        "tertiary": "#0891B2",
+        "neutral": "#6B7280",
+        "neutralVariant": "#67706B",
+        "error": "#DC2626",
+        "success": "#16A34A",
+        "info": "#0EA5E9",
+        "warning": "#CA8A04",
+        "caution": "#EA580C",
+        "critical": "#DC2626"
+    },
+    "shape": {
+        "scale": 0,
+        "corners": {
+            "CornerFull": 0
+        }
+    },
+    "typography": {
+        "fontFamily": "ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace",
+        "scale": 0.95,
+        "trackingOffset": 0.2,
+        "lineHeightScale": 0.95
+    },
+    "elevation": {
+        "style": "outline"
+    },
+    "density": {
+        "scale": 0.8
+    },
+    "border": {
+        "thin": 1,
+        "medium": 2,
+        "thick": 3
+    },
+    "state": {
+        "hover": 0.12,
+        "focus": 0.16,
+        "pressed": 0.18,
+        "dragged": 0.2
+    }
+}

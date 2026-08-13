@@ -12,13 +12,21 @@
         <VerticalStackLayout Grid.Row="0" Padding="12,8" Spacing="6">
             <Label Text="File browser demo — lazy-loaded 'Cloud' branch, locked items can't be selected, drag a row onto another to reorder."
                    FontSize="12" TextColor="#666" />
+            <!-- Horizontal scroller: the toolbar is wider than a phone once the
+                 select-all buttons appear. -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
             <HorizontalStackLayout Spacing="8">
                 <Button Text="Expand all" Clicked="OnExpandAllClicked" FontSize="12" Padding="10,4" />
                 <Button Text="Collapse all" Clicked="OnCollapseAllClicked" FontSize="12" Padding="10,4" />
                 <Button Text="Refresh Cloud" Clicked="OnRefreshCloudClicked" FontSize="12" Padding="10,4" />
                 <Switch x:Name="MultiSelectSwitch" Toggled="OnMultiSelectToggled" />
                 <Label Text="Multi-select" VerticalTextAlignment="Center" FontSize="12" />
+                <Button x:Name="SelectAllButton" Text="Select all" Clicked="OnSelectAllClicked"
+                        FontSize="12" Padding="10,4" IsVisible="False" />
+                <Button x:Name="DeselectAllButton" Text="Deselect all" Clicked="OnDeselectAllClicked"
+                        FontSize="12" Padding="10,4" IsVisible="False" />
             </HorizontalStackLayout>
+            </ScrollView>
         </VerticalStackLayout>
 
         <!-- Tree -->

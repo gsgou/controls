@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows.Input;
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -24,10 +25,8 @@ namespace Shiny.Maui.Controls;
 /// </remarks>
 public partial class ShinyButton : ContentView
 {
-    const double DefaultFontSize = 15;
     const double DefaultIconSize = 20;
     const double DefaultIconSpacing = 8;
-    const double DefaultCornerRadius = 10;
     const double DefaultMinimumHeight = 44;
 
     readonly Border border;
@@ -76,7 +75,6 @@ public partial class ShinyButton : ContentView
     {
         this.textLabel = new Label
         {
-            FontSize = DefaultFontSize,
             LineBreakMode = LineBreakMode.NoWrap,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
@@ -142,7 +140,7 @@ public partial class ShinyButton : ContentView
         {
             Padding = new Thickness(16, 10),
             StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(DefaultCornerRadius) },
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Content = this.rootGrid,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill
@@ -166,6 +164,7 @@ public partial class ShinyButton : ContentView
         this.Unloaded += this.OnUnloaded;
 
         this.UpdateContentLayout();
+        this.ApplyFontSize();
         this.ApplyCornerRadius();
         this.ApplyText();
         this.ApplyIcons();
@@ -305,7 +304,14 @@ public partial class ShinyButton : ContentView
     }
 
     void ApplyCornerRadius()
-        => this.border.StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(this.CornerRadius) };
+    {
+        var shape = new RoundRectangle();
+        shape.SetCornerTokenOrValue(this.CornerRadius, ShinyThemeKeys.Shape.CornerMediumRadius);
+        this.border.StrokeShape = shape;
+    }
+
+    void ApplyFontSize()
+        => this.textLabel.SetTokenOrValue(Label.FontSizeProperty, this.FontSize, ShinyThemeKeys.Type.BodyLargeSize);
 
 
     // ---------------------------------------------------------------------------------------------

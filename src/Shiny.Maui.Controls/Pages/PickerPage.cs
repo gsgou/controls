@@ -46,19 +46,17 @@ public class PickerPage : ContentPage
 
                 var displayLabel = new Label
                 {
-                    FontSize = 16,
                     VerticalOptions = LayoutOptions.Center
-                };
+                }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
                 displayLabel.SetBinding(Label.TextProperty, nameof(PickerItemViewModel.DisplayText));
                 Grid.SetColumn(displayLabel, 0);
                 grid.Children.Add(displayLabel);
 
                 var subLabel = new Label
                 {
-                    FontSize = 12,
                     Opacity = 0.6,
                     VerticalOptions = LayoutOptions.Start
-                };
+                }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
                 subLabel.SetBinding(Label.TextProperty, nameof(PickerItemViewModel.SubDisplayText));
                 subLabel.SetBinding(Label.IsVisibleProperty, nameof(PickerItemViewModel.HasSubText));
                 Grid.SetColumn(subLabel, 0);

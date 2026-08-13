@@ -13,6 +13,8 @@
         <option value="">Basic</option>
         <option value="ocean">Ocean</option>
         <option value="material">Material</option>
+        <option value="terminal">Terminal</option>
+        <option value="aurora">Aurora</option>
     </select>
     <label class="theme-switcher-dark">
         <input type="checkbox" @bind="Dark" @bind:after="OnDarkChanged" />
@@ -32,6 +34,8 @@
         {
             "ocean" => "_content/Shiny.Blazor.Controls.Themes.Ocean/css/shiny-theme-ocean.css",
             "material" => "_content/Shiny.Blazor.Controls.Themes.Material/css/shiny-theme-material.css",
+            "terminal" => "_content/Shiny.Blazor.Controls.Themes.Terminal/css/shiny-theme-terminal.css",
+            "aurora" => "_content/Shiny.Blazor.Controls.Themes.Aurora/css/shiny-theme-aurora.css",
             _ => null
         };
     }

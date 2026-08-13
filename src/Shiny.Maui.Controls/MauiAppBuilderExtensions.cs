@@ -3,6 +3,7 @@ using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Dialogs;
+using Shiny.Maui.Controls.Images;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Toast;
 #if ANDROID || IOS || MACCATALYST || WINDOWS
@@ -31,6 +32,20 @@ public static class ControlsMauiAppBuilderExtensions
         builder.Services.TryAddSingleton<IToaster, Toaster>();
         builder.Services.TryAddSingleton(cfg.DialogOptions);
         builder.Services.TryAddSingleton<IDialogService, DialogService>();
+
+        // ShinyImage's stack. The downloader is registered separately from the service so an app can
+        // swap in its own HttpClient (auth headers, pinning) without also taking over caching,
+        // queueing and de-duplication - which is what almost every "custom image loading" need
+        // actually is.
+        builder.Services.TryAddSingleton(cfg.ImageOptions);
+        builder.Services.TryAddSingleton<IImageDownloader>(sp => new HttpImageDownloader(
+            sp.GetRequiredService<ImageOptions>(),
+            sp.GetService<HttpClient>()
+        ));
+        builder.Services.TryAddSingleton<IImageService>(sp => new ImageService(
+            sp.GetRequiredService<ImageOptions>(),
+            sp.GetRequiredService<IImageDownloader>()
+        ));
 
         // Application.Current is not available during builder configuration, so defer applying the
         // theme until the app handler is created - the earliest point it exists, and crucially before
@@ -175,6 +190,40 @@ public static class ControlsMauiAppBuilderExtensions
 public class ShinyControlConfiguration(IServiceCollection services)
 {
     internal DialogOptions DialogOptions { get; } = new();
+
+    internal ImageOptions ImageOptions { get; } = new();
+
+    /// <summary>
+    /// Configure <see cref="ShinyImage"/>'s loading: download concurrency, cache expiry, and the
+    /// size ceilings for the memory and disk tiers.
+    /// </summary>
+    public ShinyControlConfiguration ConfigureImages(Action<ImageOptions> configure)
+    {
+        configure(this.ImageOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Replace how image bytes are fetched while keeping the built-in caching, download queue and
+    /// request de-duplication. This is the hook for authenticated images - your implementation gets
+    /// to build the request, so headers, cookies, a custom handler and certificate pinning are all
+    /// yours.
+    /// </summary>
+    public ShinyControlConfiguration SetCustomImageDownloader<T>() where T : class, IImageDownloader
+    {
+        services.AddSingleton<IImageDownloader, T>();
+        return this;
+    }
+
+    /// <summary>
+    /// Replace the whole image pipeline - caching included. Prefer
+    /// <see cref="SetCustomImageDownloader{T}"/> unless you genuinely need your own cache.
+    /// </summary>
+    public ShinyControlConfiguration SetCustomImageService<T>() where T : class, IImageService
+    {
+        services.AddSingleton<IImageService, T>();
+        return this;
+    }
 
     /// <summary>
     /// Configure global defaults for the <see cref="IDialogService"/> service — the default animation,

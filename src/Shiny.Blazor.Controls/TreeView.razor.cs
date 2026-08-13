@@ -12,6 +12,7 @@ public partial class TreeView<TItem> : IAsyncDisposable
     IJSObjectReference? dragModule;
     DotNetObjectReference<TreeView<TItem>>? selfRef;
     IEnumerable<TItem>? lastItemsSource;
+    BlazorTreeSelectionMode? selectionMode;
     bool isLoadingRoot;
     bool rootLoaderInvoked;
     Exception? rootError;
@@ -36,6 +37,13 @@ public partial class TreeView<TItem> : IAsyncDisposable
 
     // ------------- Selection -------------
     [Parameter] public BlazorTreeSelectionMode SelectionMode { get; set; } = BlazorTreeSelectionMode.Single;
+
+    /// <summary>
+    /// Show a checkbox on each row while <see cref="SelectionMode"/> is
+    /// <see cref="BlazorTreeSelectionMode.Multiple"/>. Defaults to true.
+    /// </summary>
+    [Parameter] public bool ShowSelectionCheckBoxes { get; set; } = true;
+
     [Parameter] public TItem? SelectedItem { get; set; }
     [Parameter] public EventCallback<TItem?> SelectedItemChanged { get; set; }
     [Parameter] public IList<TItem>? SelectedItems { get; set; }
@@ -51,7 +59,7 @@ public partial class TreeView<TItem> : IAsyncDisposable
     // ------------- Layout / visuals -------------
     [Parameter] public double IndentSize { get; set; } = 20;
     [Parameter] public double ChevronSize { get; set; } = 14;
-    [Parameter] public string ChevronColor { get; set; } = "#666";
+    [Parameter] public string ChevronColor { get; set; } = "var(--shiny-color-on-surface-variant, #666)";
     [Parameter] public bool ShowGuideLines { get; set; } = false;
     [Parameter] public bool EnableDragDrop { get; set; } = false;
     [Parameter] public string? CssClass { get; set; }
@@ -61,6 +69,28 @@ public partial class TreeView<TItem> : IAsyncDisposable
 
     protected override async Task OnParametersSetAsync()
     {
+        // Null on the first parameter set: nothing to drop yet, and clearing would wipe a
+        // SelectedItems collection the caller pre-populated.
+        if (selectionMode is null)
+        {
+            selectionMode = SelectionMode;
+        }
+        else if (selectionMode != SelectionMode)
+        {
+            // Switching modes drops the current selection: leftover multi-selection would
+            // otherwise linger as several highlighted rows in Single mode.
+            var hadSelection = EnumerateAll(rootNodes).Any(n => n.IsSelected);
+            selectionMode = SelectionMode;
+            foreach (var n in EnumerateAll(rootNodes))
+                n.IsSelected = false;
+            SelectedItems?.Clear();
+            if (hadSelection)
+            {
+                SelectedItem = default;
+                await SelectedItemChanged.InvokeAsync(default);
+            }
+        }
+
         if (RootLoader != null)
         {
             if (!rootLoaderInvoked)
@@ -272,19 +302,30 @@ public partial class TreeView<TItem> : IAsyncDisposable
         if (n != null && n.IsExpanded) await ToggleExpandAsync(n);
     }
 
-    public async Task ExpandAllAsync()
+    /// <summary>
+    /// Default depth cap for <see cref="ExpandAllAsync(int)"/>. Stops a self-referencing
+    /// (or endlessly lazy-loaded) hierarchy from expanding forever.
+    /// </summary>
+    public const int DefaultExpandAllMaxDepth = 32;
+
+    /// <summary>
+    /// Expand every node, awaiting <see cref="ChildrenLoader"/> for branches that need it.
+    /// </summary>
+    /// <param name="maxDepth">Deepest node depth to expand. Guards against cyclic hierarchies.</param>
+    public async Task ExpandAllAsync(int maxDepth = DefaultExpandAllMaxDepth)
     {
-        foreach (var n in rootNodes) await ExpandRecursive(n);
+        foreach (var n in rootNodes) await ExpandRecursive(n, maxDepth);
         StateHasChanged();
     }
 
-    async Task ExpandRecursive(BlazorTreeNode<TItem> node)
+    async Task ExpandRecursive(BlazorTreeNode<TItem> node, int maxDepth)
     {
+        if (node.Depth >= maxDepth) return;
         if (!HasChildren(node.Item) || !CanExpand(node.Item)) return;
-        if (!node.IsExpanded) await ToggleExpandAsync(node);
+        if (!node.IsExpanded) await ExpandNodeAsync(node, raiseEvents: false);
         if (node.Children != null)
             foreach (var c in node.Children)
-                await ExpandRecursive(c);
+                await ExpandRecursive(c, maxDepth);
     }
 
     public void CollapseAll()
@@ -352,21 +393,106 @@ public partial class TreeView<TItem> : IAsyncDisposable
                 await SelectedItemChanged.InvokeAsync(node.Item);
                 break;
             case BlazorTreeSelectionMode.Multiple:
-                node.IsSelected = !node.IsSelected;
-                SelectedItems ??= new List<TItem>();
-                if (node.IsSelected && !SelectedItems.Contains(node.Item))
-                    SelectedItems.Add(node.Item);
-                else if (!node.IsSelected && SelectedItems.Contains(node.Item))
-                    SelectedItems.Remove(node.Item);
-                await SelectedItemsChanged.InvokeAsync(SelectedItems);
-                if (node.IsSelected)
-                {
-                    SelectedItem = node.Item;
-                    await SelectedItemChanged.InvokeAsync(node.Item);
-                }
+                await ApplyMultiSelectAsync(node, !node.IsSelected);
                 break;
         }
         await ItemSelected.InvokeAsync(new TreeItemEventArgs<TItem>(node));
+    }
+
+    async Task OnCheckChanged(BlazorTreeNode<TItem> node, bool canSelect, ChangeEventArgs e)
+    {
+        if (!canSelect || SelectionMode != BlazorTreeSelectionMode.Multiple)
+            return;
+
+        focusedNode = node;
+        await ApplyMultiSelectAsync(node, e.Value is true or "true" or "True");
+        await ItemSelected.InvokeAsync(new TreeItemEventArgs<TItem>(node));
+        StateHasChanged();
+    }
+
+    async Task ApplyMultiSelectAsync(BlazorTreeNode<TItem> node, bool selected)
+    {
+        node.IsSelected = selected;
+        SelectedItems ??= new List<TItem>();
+        if (selected && !SelectedItems.Contains(node.Item))
+            SelectedItems.Add(node.Item);
+        else if (!selected && SelectedItems.Contains(node.Item))
+            SelectedItems.Remove(node.Item);
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+        if (selected)
+        {
+            SelectedItem = node.Item;
+            await SelectedItemChanged.InvokeAsync(node.Item);
+        }
+    }
+
+    /// <summary>
+    /// Check every selectable node, whether or not its branch is expanded. Only meaningful in
+    /// <see cref="BlazorTreeSelectionMode.Multiple"/>; branches that have never been loaded
+    /// aren't included (call <see cref="ExpandAllAsync(int)"/> first to materialize them).
+    /// </summary>
+    public async Task SelectAllAsync()
+    {
+        if (SelectionMode != BlazorTreeSelectionMode.Multiple)
+            return;
+
+        SelectedItems ??= new List<TItem>();
+        foreach (var node in EnumerateAll(rootNodes))
+        {
+            if (!CanSelect(node.Item))
+                continue;
+            node.IsSelected = true;
+            if (!SelectedItems.Contains(node.Item))
+                SelectedItems.Add(node.Item);
+        }
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Clear the selection in any mode: unchecks every node and resets
+    /// <see cref="SelectedItem"/> / <see cref="SelectedItems"/>.
+    /// </summary>
+    public async Task DeselectAllAsync()
+    {
+        foreach (var node in EnumerateAll(rootNodes))
+            node.IsSelected = false;
+
+        SelectedItems?.Clear();
+        if (SelectedItems != null)
+            await SelectedItemsChanged.InvokeAsync(SelectedItems);
+
+        SelectedItem = default;
+        await SelectedItemChanged.InvokeAsync(default);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Check (or uncheck) an item and every materialized descendant beneath it.
+    /// Only meaningful in <see cref="BlazorTreeSelectionMode.Multiple"/>.
+    /// </summary>
+    public async Task SetBranchSelectedAsync(TItem item, bool selected)
+    {
+        if (SelectionMode != BlazorTreeSelectionMode.Multiple)
+            return;
+
+        var node = FindNode(item);
+        if (node == null)
+            return;
+
+        SelectedItems ??= new List<TItem>();
+        foreach (var n in EnumerateAll(new[] { node }))
+        {
+            if (!CanSelect(n.Item))
+                continue;
+            n.IsSelected = selected;
+            if (selected && !SelectedItems.Contains(n.Item))
+                SelectedItems.Add(n.Item);
+            else if (!selected)
+                SelectedItems.Remove(n.Item);
+        }
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+        StateHasChanged();
     }
 
     IEnumerable<BlazorTreeNode<TItem>> EnumerateAll(IEnumerable<BlazorTreeNode<TItem>> nodes)

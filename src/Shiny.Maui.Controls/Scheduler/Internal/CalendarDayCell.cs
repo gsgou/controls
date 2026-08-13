@@ -26,12 +26,11 @@ class CalendarDayCell : ContentView
     {
         dateLabel = new Label
         {
-            FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             HeightRequest = 24,
             WidthRequest = 24
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         eventsStack = new VerticalStackLayout
         {

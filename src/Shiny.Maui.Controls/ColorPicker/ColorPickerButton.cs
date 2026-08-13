@@ -25,15 +25,14 @@ public class ColorPickerButton : ContentView
 
         buttonBorder = new Border
         {
-            StrokeThickness = 2,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             Padding = new Thickness(12, 6),
             MinimumWidthRequest = 44,
             MinimumHeightRequest = 36,
             BackgroundColor = Colors.Red,
             Content = buttonLabel,
             HorizontalOptions = LayoutOptions.Start
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
         buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
 
@@ -47,35 +46,28 @@ public class ColorPickerButton : ContentView
         var doneButton = new Button
         {
             Text = "Done",
-            FontSize = 14,
             CornerRadius = 8,
             HeightRequest = 36,
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();
 
         var popupBorder = new Border
         {
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Padding = 0,
             Content = new VerticalStackLayout
             {
                 Children = { picker, doneButton }
             },
-            Shadow = new Shadow
-            {
-                Brush = new SolidColorBrush(Colors.Black),
-                Offset = new Point(0, 4),
-                Radius = 12,
-                Opacity = 0.25f
-            },
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
-        };
+        }
+        .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
+        .WithElevation(ShinyThemeKeys.Elevation.Level4);
 
         popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
         popupBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);

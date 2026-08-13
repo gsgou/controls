@@ -122,10 +122,11 @@ public partial class FloatingPanel : ContentView
         // Sheet container with rounded corners
         sheetContainer = new Border
         {
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle
-            {
-                CornerRadius = new CornerRadius(16, 16, 0, 0)
-            },
+            // All four corners take the theme's radius rather than the top two: the bottom edge sits
+            // under safeAreaFill at every detent, so the lower corners are never on screen anyway, and
+            // a single CornerRadius resource can be resolved as one value.
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle()
+                .WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Stroke = Colors.Transparent,
             StrokeThickness = 0,
             Content = sheetInnerGrid

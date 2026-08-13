@@ -15,15 +15,15 @@ public partial class ProgressBar : IDisposable
     [Parameter] public double Maximum { get; set; } = 100;
 
     // Appearance
-    [Parameter] public string TrackColor { get; set; } = "#E5E7EB";
-    [Parameter] public string BarColor { get; set; } = "#3B82F6";
+    [Parameter] public string TrackColor { get; set; } = "var(--shiny-color-surface-container-highest, #E5E7EB)";
+    [Parameter] public string BarColor { get; set; } = "var(--shiny-color-primary, #3B82F6)";
     [Parameter] public double TrackHeight { get; set; } = 8;
-    [Parameter] public string CornerRadius { get; set; } = "4px";
+    [Parameter] public string CornerRadius { get; set; } = "var(--shiny-shape-corner-extra-small, 4px)";
 
     // Gradient
     [Parameter] public bool UseGradient { get; set; }
-    [Parameter] public string GradientStartColor { get; set; } = "#3B82F6";
-    [Parameter] public string GradientEndColor { get; set; } = "#8B5CF6";
+    [Parameter] public string GradientStartColor { get; set; } = "var(--shiny-color-primary, #3B82F6)";
+    [Parameter] public string GradientEndColor { get; set; } = "var(--shiny-color-tertiary, #8B5CF6)";
 
     // Pulse (Vista-style shimmer sweep)
     [Parameter] public bool PulseEnabled { get; set; }
@@ -36,8 +36,9 @@ public partial class ProgressBar : IDisposable
     // Text
     [Parameter] public bool ShowText { get; set; }
     [Parameter] public string TextFormat { get; set; } = "{0:0}%";
-    [Parameter] public string TextColor { get; set; } = "#FFFFFF";
-    [Parameter] public double FontSize { get; set; } = 11;
+    [Parameter] public string TextColor { get; set; } = "var(--shiny-color-on-primary, #FFFFFF)";
+    /// <summary>Overlay label size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
+    [Parameter] public double FontSize { get; set; } = -1;
 
     // Indeterminate
     [Parameter] public bool IsIndeterminate { get; set; }
@@ -71,7 +72,7 @@ public partial class ProgressBar : IDisposable
         }
     }
 
-    string TextStyle => $"color: {TextColor}; font-size: {FontSize}px;";
+    string TextStyle => $"color: {TextColor}; font-size: {(FontSize >= 0 ? $"{FontSize}px" : "var(--shiny-type-label-small-size, 11px)")};";
 
     string PulseClass => isPulsing ? "shiny-pb-pulse" : "";
 

@@ -1,0 +1,61 @@
+@namespace Shiny.Blazor.Controls.Images
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject IServiceProvider Services
+
+@* Splatting must not carry `style`: a second style attribute from @attributes replaces the first
+   outright rather than merging, which silently drops the --shiny-img-fit variable and leaves every
+   image letterboxed the moment a caller writes style="height:100%". SplattedAttributes strips it and
+   RootStyle appends it instead. *@
+<div class="shiny-img @CssClass" style="@RootStyle" @attributes="SplattedAttributes">
+
+    @* The placeholder sits behind the ring rather than being swapped out for it, so a blurred
+       thumbnail with a progress ring over it costs two attributes. *@
+    @if (ShowPlaceholder)
+    {
+        <img class="shiny-img-el shiny-img-placeholder" src="@PlaceholderUri" alt="" aria-hidden="true" />
+    }
+
+    @if (resolvedSrc is not null)
+    {
+        <img class="shiny-img-el shiny-img-target @(state == ImageLoadState.Loaded ? "is-ready" : "")"
+             src="@resolvedSrc" alt="@Alt" style="@FadeStyle" />
+    }
+
+    @if (state == ImageLoadState.Failed)
+    {
+        <div class="shiny-img-layer">
+            @if (ErrorContent is not null)
+            {
+                @ErrorContent(Progress)
+            }
+            else if (!String.IsNullOrWhiteSpace(ErrorUri))
+            {
+                <img class="shiny-img-el shiny-img-error" src="@ErrorUri" alt="@Alt" />
+            }
+            else
+            {
+                <div class="shiny-img-error-glyph" role="img" aria-label="@(Alt ?? "Image failed to load")">@ErrorGlyph</div>
+            }
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="shiny-img-layer">
+            @if (LoadingContent is not null)
+            {
+                @LoadingContent(Progress)
+            }
+            else
+            {
+                <LoadingRing Percent="Progress.Percent"
+                             Size="RingSize"
+                             ShowPercentText="ShowProgressText"
+                             RingColor="@RingColor"
+                             TrackColor="@RingTrackColor"
+                             TextColor="@ProgressTextColor" />
+            }
+        </div>
+    }
+</div>

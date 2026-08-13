@@ -51,15 +51,64 @@ Blazor CSS var (`--shiny-color-…`) ↔ MAUI key (`ShinyThemeKeys.Color.…`). 
 Status pattern (Pill/Toast/Badge): **container** = soft fill background, **on-container** = text on
 that fill, **role** (e.g. `success`) = the vivid border/accent.
 
-## Shape / elevation / state / type / spacing
+## Shape / border / elevation / state / density / type / spacing
+
+These are the axes a theme uses to have a *personality* rather than just a palette. They vary
+per-pack, so a hardcoded literal here is as much a theming bug as a hardcoded colour.
 
 | CSS var | MAUI key | Notes |
 |---|---|---|
-| `--shiny-shape-corner-{none,extra-small,small,medium,large,extra-large,full}` | `Shape.Corner…` | px / double |
-| `--shiny-elevation-{1..5}` | `Elevation.Level1..3` (MAUI `Shadow`) | Blazor = `box-shadow` string |
+| `--shiny-shape-corner-{none,extra-small,small,medium,large,extra-large,full}` | `Shape.Corner…` and `Shape.Corner…Radius` | The plain key is a `double`; the `…Radius` twin is a `CornerRadius` struct, because a dynamic resource is assigned with no conversion and `RoundRectangle.CornerRadius` will silently drop a double |
+| `--shiny-border-{thin,medium,thick}` | `Border.{Thin,Medium,Thick}` | Stroke widths, px / double |
+| `--shiny-elevation-{0..5}` | `Elevation.Level0..5` (MAUI `Shadow`) | Blazor = `box-shadow` string. Tinted/outline/glow styles reference colour vars, so they follow dark mode |
 | `--shiny-state-{hover,focus,pressed,dragged}-opacity` | `State.…Opacity` | 0..1 |
-| `--shiny-type-{role}-{size,line-height,weight,tracking}` | `Type.{Role}Size` | role = display/headline/title/body/label-large/medium/small |
-| `--shiny-spacing-{0..8}` | `Spacing.Space0..8` | 0,4,8,12,16,24,32,48,64 px |
+| `--shiny-density-scale` | `Density.Scale` | Bare multiplier for `calc()` on off-ramp values |
+| `--shiny-density-{control-height,control-height-small,row-height,touch-target}` | `Density.…` | px / double. `touch-target` is deliberately never scaled — shrinking the hit area below the platform minimum is an accessibility bug, not a design choice |
+| `--shiny-type-font-family{,-display,-mono}` | `Type.FontFamily{,Display,Mono}` | Blazor: a CSS stack (`inherit` when the pack does not set one). MAUI: a font alias the host app registered with `ConfigureFonts`; unregistered names fall back to the system font |
+| `--shiny-type-scale` | `Type.Scale` | Bare multiplier for `calc()` on off-scale sizes |
+| `--shiny-type-{role}-{size,line-height,weight,tracking}` | `Type.{Role}Size`, `Type.{Role}Attributes` | role = display/headline/title/body/label-large/medium/small. MAUI has no numeric weight on `Label`, so the scale's weight becomes `FontAttributes.Bold` at 600+ |
+| `--shiny-spacing-{0..8}` | `Spacing.Space0..8` | 0,4,8,12,16,24,32,48,64 px at density 1 |
+
+### Blazor: on-scale versus off-scale values
+
+Use the role token when the literal is exactly a scale value; wrap anything else in `calc()` against
+the matching multiplier, so it still tracks the theme without shifting under the default:
+
+```css
+font-size: var(--shiny-type-body-medium-size, 14px);      /* 14 is on the scale */
+font-size: calc(13px * var(--shiny-type-scale, 1));       /* 13 is not */
+padding: var(--shiny-spacing-2, 8px) calc(10px * var(--shiny-density-scale, 1));
+```
+
+Corner radii snap to the nearest bucket rather than using `calc()` — a 2px radius shift is
+imperceptible where a 2px type shift is not. Leave `border-radius: 50%` alone: a circular avatar or
+spinner is intrinsic geometry, not themeable chrome. Pill shapes (`999px`) do map to `corner-full`,
+so a square theme squares them off.
+
+### MAUI: initializers and unset defaults
+
+An object initializer cannot call `SetDynamicResource`, so chain the helper instead — a literal left
+in the initializer beats the theme permanently:
+
+```csharp
+this.label = new Label { … }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
+border.StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius);
+border.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
+```
+
+Numeric appearance `BindableProperty` defaults use the `ThemeTokens.Unset` sentinel (`-1`) — the same
+idea as `null` for colours. `propertyChanged` then routes through `SetTokenOrValue` /
+`SetCornerTokenOrValue`, which applies an explicit value or re-binds the token when cleared. Font
+sizes only convert on an *exact* match with a role in the type scale; snapping 13px to the nearest
+role would visibly re-typeset the default theme.
+
+Never hand a control the theme's own `Shadow` instance if it mutates it — one dictionary entry is
+shared by every control that resolves it. `ShinyButton` and `TextEntry` own theirs for that reason
+(and are listed in `ThemeGeometryCoverageTests.ShadowIsOwned`).
+
+`ThemeGeometryCoverageTests` fails the build on a hardcoded on-scale font size, a literal
+`RoundRectangle` radius, or an ad-hoc `new Shadow`, and asserts end-to-end that swapping a theme
+re-renders a live control.
 
 ## Common hardcoded value → token cheatsheet
 

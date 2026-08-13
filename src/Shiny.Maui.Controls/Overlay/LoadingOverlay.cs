@@ -35,10 +35,9 @@ public class LoadingOverlay : Overlay
         messageLabel = new Label
         {
             IsVisible = false,
-            FontSize = 14,
             HorizontalTextAlignment = TextAlignment.Center,
             HorizontalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         messageLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
 
         contentLayout = new StackLayout

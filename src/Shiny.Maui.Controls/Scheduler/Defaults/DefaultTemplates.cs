@@ -24,10 +24,9 @@ public static class DefaultTemplates
 
         var titleLabel = new Label
         {
-            FontSize = 11,
             LineBreakMode = LineBreakMode.TailTruncation,
             MaxLines = 1
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         titleLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Title);
 
         grid.Add(colorBar, 0);
@@ -56,9 +55,8 @@ public static class DefaultTemplates
         var caption = new Label
         {
             Text = "Loading...",
-            FontSize = 12,
             HorizontalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         caption.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         return new VerticalStackLayout
@@ -89,17 +87,15 @@ public static class DefaultTemplates
         var dateLabel = new Label
         {
             FontAttributes = FontAttributes.Bold,
-            FontSize = 14,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         dateLabel.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.DateDisplay);
 
         var countLabel = new Label
         {
-            FontSize = 12,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.End
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         countLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         countLabel.SetBinding(Label.TextProperty, static (CalendarListDayGroup g) => g.EventCountDisplay);
 
@@ -138,38 +134,35 @@ public static class DefaultTemplates
 
         var titleLabel = new Label
         {
-            FontSize = 14,
             LineBreakMode = LineBreakMode.TailTruncation,
             MaxLines = 1
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         titleLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Title);
 
         var descLabel = new Label
         {
-            FontSize = 11,
             LineBreakMode = LineBreakMode.TailTruncation,
             MaxLines = 1
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         descLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         descLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Description);
 
-        var startLabel = new Label { FontSize = 11 };
+        var startLabel = new Label().WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         startLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         startLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.Start, stringFormat: "{0:h:mm tt}");
 
-        var endLabel = new Label { FontSize = 11 };
+        var endLabel = new Label().WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         endLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         endLabel.SetBinding(Label.TextProperty, static (SchedulerEvent e) => e.End, stringFormat: "{0:h:mm tt}");
 
         var allDayLabel = new Label
         {
-            FontSize = 11,
             Text = "All Day"
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         allDayLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         allDayLabel.SetBinding(VisualElement.IsVisibleProperty, static (SchedulerEvent e) => e.IsAllDay);
 
-        var dash = new Label { Text = " – ", FontSize = 11 };
+        var dash = new Label { Text = " – "}.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         dash.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         var timeRange = new HorizontalStackLayout
@@ -212,10 +205,9 @@ public static class DefaultTemplates
         var border = new Border
         {
             Content = grid,
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             Margin = new Thickness(12, 2)
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         border.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
         border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
@@ -251,7 +243,7 @@ public static class DefaultTemplates
             Content = stack,
             Padding = new Thickness(4, 6),
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 22 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraLargeRadius),
             WidthRequest = 48,
             HeightRequest = 56,
             BackgroundColor = Colors.Transparent

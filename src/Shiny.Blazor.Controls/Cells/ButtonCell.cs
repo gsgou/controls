@@ -14,7 +14,8 @@ public class ButtonCell : ComponentBase
     [Parameter] public string? Title { get; set; }
     [Parameter] public string? ButtonTextColor { get; set; }
     [Parameter] public string TitleAlignment { get; set; } = "center";
-    [Parameter] public double TitleFontSize { get; set; } = 16;
+    /// <summary>Button label size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
+    [Parameter] public double TitleFontSize { get; set; } = -1;
     [Parameter] public bool IsEnabled { get; set; } = true;
 
     [Parameter] public EventCallback OnClick { get; set; }
@@ -28,8 +29,11 @@ public class ButtonCell : ComponentBase
 
     protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
-        var color = ButtonTextColor ?? ParentTableView?.CellAccentColor ?? "#2196F3";
-        var style = $"color:{color};text-align:{TitleAlignment};font-size:{TitleFontSize}px;";
+        var color = ButtonTextColor ?? ParentTableView?.CellAccentColor ?? "var(--shiny-color-primary, #2196F3)";
+        var size = TitleFontSize >= 0
+            ? FormattableString.Invariant($"{TitleFontSize}px")
+            : "var(--shiny-type-body-large-size, 16px)";
+        var style = $"color:{color};text-align:{TitleAlignment};font-size:{size};";
         if (!IsEnabled) style += "opacity:0.4;cursor:not-allowed;";
 
         builder.OpenElement(0, "button");

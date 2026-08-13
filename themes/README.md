@@ -3,13 +3,40 @@
 Shiny Controls ship a central, Material-3-style theming system shared by **MAUI** and **Blazor**.
 A theme is a set of design tokens (color roles, shape, elevation, type scale, state, spacing).
 The core packages define the token contract and a built-in **Basic** theme; additional themes
-(**Ocean**, **Material**) install as separate NuGet packs.
+(**Ocean**, **Material**, **Terminal**, **Aurora**) install as separate NuGet packs.
+
+## A theme is more than a palette
+
+A pack defines its own **personality**, not just its hue. Every block below is optional; omit one
+and the shared default applies, so a theme only states the axes it wants to differ on.
+
+| Block | What it controls | Example |
+|---|---|---|
+| `shape` | Corner geometry — `scale`, or absolute `corners` overrides | Terminal `scale: 0` (square), Ocean `1.75` (pillowy) |
+| `typography` | `fontFamily` / `displayFamily` / `monoFamily`, `scale`, `weightOffset`, `trackingOffset`, `lineHeightScale` | Terminal is monospace throughout; Aurora is `weightOffset: 200` |
+| `elevation` | `style` (`shadow` / `flat` / `outline` / `glow`), `intensity` (how dark), `softness` (how large and diffuse), `tint` | Terminal draws a hairline ring; Aurora glows in `primary` |
+| `density` | `scale` on the spacing ramp and control metrics, plus absolute `controlHeight` / `controlHeightSmall` / `rowHeight` | Terminal `0.8` (compact), Ocean `1.2` (roomy) |
+| `border` | The `thin` / `medium` / `thick` stroke ramp | A hand-drawn theme thickens `thin` to 2 |
+| `state` | `hover` / `focus` / `pressed` / `dragged` layer opacities | Terminal presses harder |
+
+`intensity` and `softness` are deliberately separate: "big soft halo at low opacity" and "tight dark
+shadow" are different looks that one knob collapses into a single dim, shrunken shadow.
+
+The built-in packs are picked to be visibly unalike: **Basic** (the neutral default, shipped in the
+core packages), **Material** (M3 purple, Roboto, generous corners, tonal shadows), **Ocean** (soft,
+airy, teal, shadows you have to look for), **Terminal** (square, dense, monospace, phosphor green,
+rings instead of shadows) and **Aurora** (violet/cyan, rounded, bold, glowing).
+
+Controls consume these tokens, so a pack restyles geometry and type across the whole set — not only
+colour. That matters because the neutral colour ramp barely differs between packs (a tone-98
+near-white has no room to carry a hue), which is why a palette-only theme leaves most controls
+looking identical.
 
 ## How it works
 
 - **Single source of truth:** each theme is a small JSON file in `/themes/` describing ~11 seed
-  colors. `tools/ShinyThemeGen` expands those into the full Material-3 tonal role set (light + dark)
-  and emits the platform assets:
+  colors plus the optional personality blocks above. `tools/ShinyThemeGen` expands those into the
+  full Material-3 tonal role set (light + dark) and emits the platform assets:
   - **MAUI** → C# `ResourceDictionary` classes (`{Name}LightTheme` / `{Name}DarkTheme` / `{Name}Theme`)
   - **Blazor** → a CSS file of `--shiny-*` custom properties (`:root` light + `.shiny-theme-dark` / `prefers-color-scheme`)
 - Controls consume tokens, so a theme restyles the whole control set:
@@ -31,8 +58,13 @@ Basic is applied automatically by `UseShinyControls()`. To use a pack, install i
 
 ```csharp
 // dotnet add package Shiny.Maui.Controls.Themes.Ocean
-builder.UseShinyControls(cfg => cfg.UseOceanTheme());   // or .UseMaterialTheme() / .UseBasicTheme()
+builder.UseShinyControls(cfg => cfg.UseOceanTheme());
+// or .UseMaterialTheme() / .UseTerminalTheme() / .UseAuroraTheme() / .UseBasicTheme()
 ```
+
+A pack's `typography.fontFamily` is a CSS font stack on Blazor. On MAUI it is a font *alias* the host
+app must register with `ConfigureFonts`; an unregistered name falls back to the system font, so the
+rest of the theme still applies.
 
 Switch at runtime (light/dark follows the OS automatically and hot-swaps):
 
@@ -64,7 +96,17 @@ to `<html>` or any container; the tokens cascade to that subtree.
 ## Authoring a new theme
 
 1. Copy `basic.json` to `myteam.json`, set `name`/`slug`, and tweak the 11 seed colors.
-2. Run the generator. New slugs emit to `src/Shiny.{Maui,Blazor}.Controls.Themes.{Name}/`.
-3. Add the two project files (model them on the Ocean pack) and register in `Shiny.Controls.slnx` / `Build.slnf`.
+2. Add whichever personality blocks you want to differ (see the table above). Everything you omit
+   keeps the shared default, so a colour-only pack is still a one-block file.
+3. Run the generator. New slugs emit to `src/Shiny.{Maui,Blazor}.Controls.Themes.{Name}/`.
+4. Add the two project files (model them on the Ocean pack) and register in `Shiny.Controls.slnx` / `Build.slnf`.
 
-A visual theme creator on the docs site (which exports this same JSON) is planned.
+`shiny-theme.schema.json` documents every field with its default, and editors will complete it from
+the `$schema` reference at the top of each theme file.
+
+### Which axis to reach for
+
+Corner geometry is the single biggest lever — square versus pillowy reads as a different framework
+before any colour registers. Elevation style is next (a flat or outline pack stops everything
+floating), then typography (a monospace or heavier family changes the whole voice), then density.
+Colour alone moves the least, which is the trap the original palette-only format fell into.

@@ -32,12 +32,21 @@ foreach (var file in jsonFiles)
     var light = SchemeBuilder.Build(palettes, dark: false);
     var dark = SchemeBuilder.Build(palettes, dark: true);
 
-    // Shape: defaults, optionally overridden by the theme json.
-    var shape = Tokens.Shape
-        .Select(s => (s.Name, theme.ShapeOverrides.TryGetValue(s.Name, out var v) ? v : s.Value))
-        .ToList();
-
-    var data = new ThemeData(theme.Name, theme.Slug, theme.Description, light, dark, shape);
+    var data = new ThemeData(
+        theme.Name,
+        theme.Slug,
+        theme.Description,
+        light,
+        dark,
+        Resolve.Shape(theme.Shape),
+        Resolve.Type(theme.Type),
+        theme.Type,
+        theme.Elevation,
+        Resolve.CssElevation(theme.Elevation),
+        Resolve.Spacing(theme.Density),
+        Resolve.Density(theme.Density),
+        Resolve.State(theme.State),
+        Resolve.Border(theme.Border));
 
     var isCore = theme.Slug == "basic";
     var mauiDir = isCore
@@ -95,22 +104,120 @@ static ThemeSource LoadTheme(string path)
     foreach (var prop in rootEl.GetProperty("seeds").EnumerateObject())
         seeds[prop.Name] = prop.Value.GetString()!;
 
-    var shapeOverrides = new Dictionary<string, double>(StringComparer.Ordinal);
-    if (rootEl.TryGetProperty("shape", out var shapeEl))
-        foreach (var prop in shapeEl.EnumerateObject())
-            shapeOverrides[prop.Name] = prop.Value.GetDouble();
-
     return new ThemeSource(
         rootEl.GetProperty("name").GetString()!,
         rootEl.GetProperty("slug").GetString()!,
         rootEl.TryGetProperty("description", out var d) ? d.GetString()! : "",
         seeds,
-        shapeOverrides);
+        ReadShape(rootEl),
+        ReadType(rootEl),
+        ReadElevation(rootEl),
+        ReadDensity(rootEl),
+        ReadBorder(rootEl),
+        ReadState(rootEl));
 }
+
+// Every block below is optional and falls back to the shared default, so a theme only states the
+// axes it actually wants to differ on.
+
+static ShapeSpec ReadShape(JsonElement root)
+{
+    if (!root.TryGetProperty("shape", out var el))
+        return ShapeSpec.Default;
+
+    var scale = Num(el, "scale") ?? 1d;
+    var corners = new Dictionary<string, double>(StringComparer.Ordinal);
+    if (el.TryGetProperty("corners", out var cornersEl))
+        foreach (var prop in cornersEl.EnumerateObject())
+            corners[prop.Name] = prop.Value.GetDouble();
+
+    return new ShapeSpec(scale, corners);
+}
+
+static TypeSpec ReadType(JsonElement root)
+{
+    if (!root.TryGetProperty("typography", out var el))
+        return TypeSpec.Default;
+
+    return new TypeSpec(
+        Str(el, "fontFamily") ?? "",
+        Str(el, "displayFamily") ?? "",
+        Str(el, "monoFamily") ?? "",
+        Num(el, "scale") ?? 1d,
+        (int)(Num(el, "weightOffset") ?? 0d),
+        Num(el, "trackingOffset") ?? 0d,
+        Num(el, "lineHeightScale") ?? 1d);
+}
+
+static ElevationSpec ReadElevation(JsonElement root)
+{
+    if (!root.TryGetProperty("elevation", out var el))
+        return ElevationSpec.Default;
+
+    var style = (Str(el, "style") ?? "shadow").ToLowerInvariant() switch
+    {
+        "flat" => ElevationStyle.Flat,
+        "outline" => ElevationStyle.Outline,
+        "glow" => ElevationStyle.Glow,
+        "shadow" => ElevationStyle.Shadow,
+        var other => throw new InvalidOperationException($"Unknown elevation style '{other}'.")
+    };
+
+    return new ElevationSpec(
+        style,
+        Num(el, "intensity") ?? 1d,
+        Num(el, "softness") ?? 1d,
+        (Str(el, "tint") ?? "neutral").Equals("primary", StringComparison.OrdinalIgnoreCase));
+}
+
+static DensitySpec ReadDensity(JsonElement root)
+{
+    if (!root.TryGetProperty("density", out var el))
+        return DensitySpec.Default;
+
+    return new DensitySpec(
+        Num(el, "scale") ?? 1d,
+        Num(el, "controlHeight"),
+        Num(el, "controlHeightSmall"),
+        Num(el, "rowHeight"));
+}
+
+static BorderSpec ReadBorder(JsonElement root)
+{
+    if (!root.TryGetProperty("border", out var el))
+        return BorderSpec.Default;
+
+    var d = BorderSpec.Default;
+    return new BorderSpec(Num(el, "thin") ?? d.Thin, Num(el, "medium") ?? d.Medium, Num(el, "thick") ?? d.Thick);
+}
+
+static StateSpec ReadState(JsonElement root)
+{
+    if (!root.TryGetProperty("state", out var el))
+        return StateSpec.Default;
+
+    var d = StateSpec.Default;
+    return new StateSpec(
+        Num(el, "hover") ?? d.Hover,
+        Num(el, "focus") ?? d.Focus,
+        Num(el, "pressed") ?? d.Pressed,
+        Num(el, "dragged") ?? d.Dragged);
+}
+
+static double? Num(JsonElement el, string name) =>
+    el.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : null;
+
+static string? Str(JsonElement el, string name) =>
+    el.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
 sealed record ThemeSource(
     string Name,
     string Slug,
     string Description,
     IReadOnlyDictionary<string, string> Seeds,
-    IReadOnlyDictionary<string, double> ShapeOverrides);
+    ShapeSpec Shape,
+    TypeSpec Type,
+    ElevationSpec Elevation,
+    DensitySpec Density,
+    BorderSpec Border,
+    StateSpec State);

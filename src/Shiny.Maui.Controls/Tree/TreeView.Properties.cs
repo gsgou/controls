@@ -128,10 +128,46 @@ public partial class TreeView
                 ((TreeView)b).OnSelectionModeChanged();
             }));
 
+    /// <summary>
+    /// Selection behaviour. <see cref="TreeSelectionMode.Multiple"/> renders a checkbox on
+    /// every row (see <see cref="ShowSelectionCheckBoxes"/> to turn that off).
+    /// </summary>
     public TreeSelectionMode SelectionMode
     {
         get => (TreeSelectionMode)GetValue(SelectionModeProperty);
         set => SetValue(SelectionModeProperty, value);
+    }
+
+    public static readonly BindableProperty ShowSelectionCheckBoxesProperty = BindableProperty.Create(
+        nameof(ShowSelectionCheckBoxes), typeof(bool), typeof(TreeView), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
+            {
+                ((TreeView)b).Rebuild();
+            }));
+
+    /// <summary>
+    /// Show a checkbox on each row while <see cref="SelectionMode"/> is
+    /// <see cref="TreeSelectionMode.Multiple"/>. Defaults to true. The checkbox mirrors the
+    /// row's selection state — tapping anywhere on the row (including the box) toggles it.
+    /// </summary>
+    public bool ShowSelectionCheckBoxes
+    {
+        get => (bool)GetValue(ShowSelectionCheckBoxesProperty);
+        set => SetValue(ShowSelectionCheckBoxesProperty, value);
+    }
+
+    public static readonly BindableProperty CheckBoxColorProperty = BindableProperty.Create(
+        nameof(CheckBoxColor), typeof(Color), typeof(TreeView), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(TreeView), () =>
+            {
+                ((TreeView)b).Rebuild();
+            }));
+
+    /// <summary>Multi-select checkbox color. When unset, binds the Primary theme token.</summary>
+    public Color? CheckBoxColor
+    {
+        get => (Color?)GetValue(CheckBoxColorProperty);
+        set => SetValue(CheckBoxColorProperty, value);
     }
 
     public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(

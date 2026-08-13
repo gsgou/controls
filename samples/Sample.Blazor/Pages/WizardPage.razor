@@ -1,0 +1,114 @@
+@page "/wizard"
+
+<PageTitle>Wizard</PageTitle>
+
+<h1>Wizard</h1>
+
+<section class="demo-section">
+    <h2>Checkout</h2>
+    <p>
+        A step is only left when it says it can be. The Delivery step disappears entirely when collection
+        is chosen — hidden steps are skipped by Next/Back and drop off the progress bar.
+    </p>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px;">
+        <Wizard @bind-CurrentStep="step"
+                ShowCancel="true"
+                AllowStepSelection="true"
+                ProgressStyle="WizardProgressStyle.Chevron"
+                Finished="OnFinished"
+                Cancelled="OnCancelled">
+            <Steps>
+                <WizardStep Name="Account" Title="Account" IsValid="@AccountIsValid">
+                    <h3>Where should we send the receipt?</h3>
+                    <TextEntry @bind-Text="email" Placeholder="@("you@example.com")" />
+                    <p style="font-size:0.875rem;">Next stays disabled until this is a plausible email.</p>
+                </WizardStep>
+
+                <WizardStep Name="Fulfilment" Title="Fulfilment">
+                    <h3>How do you want it?</h3>
+                    <label style="display:flex; gap:8px; align-items:center;">
+                        <input type="checkbox" @bind="wantsDelivery" />
+                        Deliver it to me
+                    </label>
+                    <p style="font-size:0.875rem;">Turn this off and the Delivery step vanishes from the run.</p>
+                </WizardStep>
+
+                @* IsVisible is what makes a branch conditional. *@
+                <WizardStep Name="Delivery" Title="Delivery" IsVisible="@wantsDelivery" IsOptional="true">
+                    <h3>Delivery address</h3>
+                    <TextEntry @bind-Text="address" Placeholder="Street, city" />
+                    <p style="font-size:0.875rem;">Marked <code>IsOptional</code>, so you can move on without filling it in.</p>
+                </WizardStep>
+
+                @* An async Validate runs before the step is left - a server round-trip is a
+                   first-class validator, not something bolted onto an event. *@
+                <WizardStep Name="Review" Title="Review" NextText="Place order" Validate="ConfirmAsync">
+                    <h3>Nearly there</h3>
+                    <p>Receipt to <strong>@email</strong></p>
+                    @if (wantsDelivery)
+                    {
+                        <p>Deliver to <strong>@address</strong></p>
+                    }
+                </WizardStep>
+            </Steps>
+        </Wizard>
+    </div>
+
+    <p style="margin-top:12px;"><strong>@status</strong></p>
+</section>
+
+<section class="demo-section">
+    <h2>Indicator styles</h2>
+    <p>The built-in indicator has three looks. Chevron is the default pointed breadcrumb.</p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        @foreach (var s in styles)
+        {
+            var choice = s;
+            <button class="btn @(indicator == choice ? "btn-primary" : "btn-secondary")"
+                    @onclick="() => indicator = choice">@choice</button>
+        }
+    </div>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:16px;">
+        <Wizard ProgressStyle="indicator" Transition="StateTransition.Fade">
+            <Steps>
+                <WizardStep Name="Welcome" Title="Welcome"><p>First stop on the tour.</p></WizardStep>
+                <WizardStep Name="Setup" Title="Setup"><p>Second stop.</p></WizardStep>
+                <WizardStep Name="Done" Title="Done"><p>All finished.</p></WizardStep>
+            </Steps>
+        </Wizard>
+    </div>
+</section>
+
+@code {
+    string step = "Account";
+    string status = "Nothing submitted yet.";
+    string email = string.Empty;
+    string address = string.Empty;
+    bool wantsDelivery = true;
+
+    WizardProgressStyle indicator = WizardProgressStyle.Dots;
+
+    static readonly WizardProgressStyle[] styles =
+    [
+        WizardProgressStyle.Chevron,
+        WizardProgressStyle.Dots,
+        WizardProgressStyle.Bar
+    ];
+
+    bool AccountIsValid => !string.IsNullOrWhiteSpace(email) && email.Contains('@');
+
+    async Task<bool> ConfirmAsync()
+    {
+        // Stands in for a server call that can refuse the finish.
+        await Task.Delay(400);
+        return true;
+    }
+
+    void OnFinished() => status = $"Submitted {email}" +
+                                  (wantsDelivery ? $" for delivery to {address}" : " for collection");
+
+    void OnCancelled() => status = "Cancelled — nothing was submitted.";
+}

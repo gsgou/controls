@@ -56,12 +56,11 @@ public partial class SignaturePad : ContentView
         var clearButton = new Button
         {
             Text = "Clear",
-            FontSize = 12,
             BackgroundColor = Colors.Transparent,
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Padding = new Thickness(8, 2)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         clearButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         clearButton.Clicked += OnClearClicked;
 
@@ -89,11 +88,10 @@ public partial class SignaturePad : ContentView
         var titleLabel = new Label
         {
             Text = "Draw your signature below",
-            FontSize = 16,
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             Margin = new Thickness(0, 12, 0, 4)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
 
         var contentGrid = new Grid
         {

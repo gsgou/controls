@@ -162,14 +162,13 @@ class AgendaTimelinePanel : ContentView
                 var lbl = new Label
                 {
                     Text = new TimeOnly(hour, 0).ToString(timeFormat),
-                    FontSize = 11,
                     VerticalTextAlignment = TextAlignment.Center,
                     HorizontalTextAlignment = TextAlignment.End,
                     Padding = new Thickness(0, 0, 8, 0),
                     Margin = new Thickness(0, -8, 0, 0),
                     VerticalOptions = LayoutOptions.Start,
                     HeightRequest = 16
-                };
+                }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
                 Tint(lbl, Label.TextColorProperty, timezoneColor, ShinyThemeKeys.Color.OnSurfaceVariant);
                 timelineGrid.Add(lbl, 0, hour);
 
@@ -454,7 +453,7 @@ class AgendaTimelinePanel : ContentView
     {
         var border = new Border
         {
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
             Stroke = Colors.Transparent,
             Padding = new Thickness(6, 4),
             Margin = new Thickness(1)
@@ -463,10 +462,9 @@ class AgendaTimelinePanel : ContentView
         var title = new Label
         {
             Text = evt.Title,
-            FontSize = 12,
             FontAttributes = FontAttributes.Bold,
             LineBreakMode = LineBreakMode.TailTruncation
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
 
         var when = new Label
         {

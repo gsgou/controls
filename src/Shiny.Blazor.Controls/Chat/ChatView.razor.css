@@ -4,13 +4,13 @@
     height: 100%;
     width: 100%;
     background: var(--shiny-color-background, #f0f0f0);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--shiny-type-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 }
 
 .shiny-chat-messages {
     flex: 1 1 auto;
     overflow-y: auto;
-    padding: 12px;
+    padding: var(--shiny-spacing-3, 12px);
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
@@ -20,10 +20,10 @@
 .shiny-chat-loadmore {
     align-self: center;
     background: transparent;
-    border: 1px solid var(--shiny-color-outline-variant, #ccc);
-    border-radius: 16px;
-    padding: 6px 16px;
-    font-size: 13px;
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #ccc);
+    border-radius: var(--shiny-shape-corner-large, 16px);
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px);
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     color: var(--shiny-color-on-surface-variant, #666);
     cursor: pointer;
     margin-bottom: 12px;
@@ -59,7 +59,7 @@
 .shiny-chat-sender-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
     margin-bottom: 2px;
 }
 
@@ -70,7 +70,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     font-weight: 600;
     color: var(--shiny-color-on-primary, white);
     overflow: hidden;
@@ -84,20 +84,20 @@
 }
 
 .shiny-chat-name {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #666);
     font-weight: 500;
 }
 
 /* Bubble */
 .shiny-chat-bubble {
-    padding: 8px 12px;
-    border-radius: 18px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border-radius: var(--shiny-shape-corner-large, 18px);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    font-size: 15px;
+    font-size: calc(15px * var(--shiny-type-scale, 1));
     line-height: 1.4;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+    box-shadow: var(--shiny-elevation-1, 0 1px 1px rgba(0,0,0,0.06));
 }
 
 .shiny-chat-bubble-wrap.is-me .shiny-chat-bubble {
@@ -124,22 +124,22 @@
 .shiny-chat-image {
     max-width: 250px;
     max-height: 250px;
-    border-radius: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     display: block;
 }
 
 .shiny-chat-bubble:has(.shiny-chat-image) {
-    padding: 4px;
+    padding: var(--shiny-spacing-1, 4px);
     background: transparent !important;
     box-shadow: none;
 }
 
 /* Timestamp */
 .shiny-chat-time {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     color: var(--shiny-color-on-surface-variant, #999);
     margin-top: 2px;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
 }
 
 /* New Messages pill */
@@ -148,13 +148,13 @@
     background: var(--shiny-color-primary, #007AFF);
     color: var(--shiny-color-on-primary, white);
     border: none;
-    border-radius: 16px;
-    padding: 8px 16px;
-    font-size: 13px;
+    border-radius: var(--shiny-shape-corner-large, 16px);
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-4, 16px);
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     font-weight: 600;
     cursor: pointer;
     margin: 8px 0;
-    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0,122,255,0.3));
     z-index: 1;
 }
 
@@ -166,15 +166,15 @@
 .shiny-chat-typing {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 16px;
-    font-size: 13px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px);
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     color: var(--shiny-color-on-surface-variant, #888);
 }
 
 .shiny-chat-typing-dots {
     display: flex;
-    gap: 3px;
+    gap: calc(3px * var(--shiny-density-scale, 1));
     align-items: center;
 }
 
@@ -206,9 +206,9 @@
     background: var(--shiny-color-primary, #007AFF);
     color: var(--shiny-color-on-primary, white);
     border: none;
-    border-radius: 18px;
-    padding: 8px 16px;
-    font-size: 14px;
+    border-radius: var(--shiny-shape-corner-large, 18px);
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-4, 16px);
+    font-size: var(--shiny-type-body-medium-size, 14px);
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
@@ -221,18 +221,18 @@
 /* Acknowledgement badges */
 .shiny-chat-acks {
     display: flex;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     margin-top: 2px;
 }
 
 .shiny-chat-ack-badge {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     background: var(--shiny-color-surface-container-high, #E5E7EB);
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 12px;
+    border-radius: var(--shiny-shape-corner-medium, 10px);
+    padding: calc(2px * var(--shiny-density-scale, 1)) calc(6px * var(--shiny-density-scale, 1));
+    font-size: var(--shiny-type-body-small-size, 12px);
 }
 
 .shiny-chat-ack-glyph {
@@ -240,12 +240,12 @@
 }
 
 .shiny-chat-ack-count {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     color: var(--shiny-color-on-surface-variant, #666);
 }
 
 .shiny-chat-ack-badge {
-    border: 1px solid transparent;
+    border: var(--shiny-border-thin, 1px) solid transparent;
     cursor: pointer;
 }
 
@@ -259,8 +259,8 @@
     background: var(--shiny-color-error-container, #FFE0E0);
     color: var(--shiny-color-on-error-container, #8a1f1f);
     text-align: center;
-    font-size: 13px;
-    padding: 6px 12px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
+    padding: calc(6px * var(--shiny-density-scale, 1)) var(--shiny-spacing-3, 12px);
 }
 
 /* Initial loader */
@@ -274,7 +274,7 @@
 .shiny-chat-spinner {
     width: 28px;
     height: 28px;
-    border: 3px solid var(--shiny-color-outline-variant, #ddd);
+    border: var(--shiny-border-thick, 3px) solid var(--shiny-color-outline-variant, #ddd);
     border-top-color: var(--shiny-color-primary, #007AFF);
     border-radius: 50%;
     animation: shiny-chat-spin 0.8s linear infinite;
@@ -288,9 +288,9 @@
 .shiny-chat-error {
     margin: auto;
     color: var(--shiny-color-error, #c0392b);
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
     text-align: center;
-    padding: 24px;
+    padding: var(--shiny-spacing-5, 24px);
 }
 
 /* Optimistic / status */
@@ -299,12 +299,12 @@
 }
 
 .shiny-chat-status {
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     color: var(--shiny-color-on-surface-variant, #999);
     margin-top: 2px;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
     display: flex;
-    gap: 6px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
     align-items: center;
 }
 
@@ -317,7 +317,7 @@
     border: none;
     color: var(--shiny-color-primary, #007AFF);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     padding: 0;
 }
 
@@ -336,7 +336,7 @@
     border: none;
     background: var(--shiny-color-surface-container-high, #e0e0e0);
     color: var(--shiny-color-on-surface-variant, #555);
-    font-size: 13px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     line-height: 1;
     cursor: pointer;
     opacity: 0;
@@ -349,22 +349,22 @@
 
 .shiny-chat-actions-menu {
     display: flex;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     margin-top: 4px;
     background: var(--shiny-color-surface, #fff);
-    border: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
-    border-radius: 12px;
-    padding: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #e0e0e0);
+    border-radius: var(--shiny-shape-corner-medium, 12px);
+    padding: var(--shiny-spacing-1, 4px);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0,0,0,0.12));
 }
 
 .shiny-chat-actions-menu button {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 13px;
-    padding: 4px 8px;
-    border-radius: 8px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-2, 8px);
+    border-radius: var(--shiny-shape-corner-small, 8px);
     color: var(--shiny-color-on-surface, #222);
 }
 
@@ -380,22 +380,22 @@
 .shiny-chat-reaction-picker {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     margin-top: 4px;
     background: var(--shiny-color-surface, #fff);
-    border: 1px solid var(--shiny-color-outline-variant, #e0e0e0);
-    border-radius: 16px;
-    padding: 4px 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #e0e0e0);
+    border-radius: var(--shiny-shape-corner-large, 16px);
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-2, 8px);
+    box-shadow: var(--shiny-elevation-2, 0 2px 8px rgba(0,0,0,0.12));
 }
 
 .shiny-chat-reaction-picker button {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 18px;
-    padding: 2px 4px;
-    border-radius: 8px;
+    font-size: calc(18px * var(--shiny-type-scale, 1));
+    padding: calc(2px * var(--shiny-density-scale, 1)) var(--shiny-spacing-1, 4px);
+    border-radius: var(--shiny-shape-corner-small, 8px);
 }
 
 .shiny-chat-reaction-picker button:hover {
@@ -406,13 +406,13 @@
 .shiny-chat-edit {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     width: 100%;
 }
 
 .shiny-chat-edit-actions {
     display: flex;
-    gap: 6px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
     justify-content: flex-end;
 }
 
@@ -422,11 +422,11 @@
     width: 100%;
     resize: none;
     font: inherit;
-    font-size: 15px;
+    font-size: calc(15px * var(--shiny-type-scale, 1));
     line-height: 1.4;
-    padding: 8px 12px;
-    border: 1px solid var(--shiny-color-outline-variant, #ddd);
-    border-radius: 12px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #ddd);
+    border-radius: var(--shiny-shape-corner-medium, 12px);
     outline: none;
     background: var(--shiny-color-surface-container-lowest, #fff);
     color: var(--shiny-color-on-surface, #222);

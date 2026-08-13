@@ -22,6 +22,7 @@
 [assembly: Microsoft.Maui.Controls.XmlnsDefinition("http://shiny.net/maui/controls", "Shiny.Maui.Controls.Tree")]
 [assembly: Microsoft.Maui.Controls.XmlnsDefinition("http://shiny.net/maui/controls", "Shiny.Maui.Controls.Badge")]
 [assembly: Microsoft.Maui.Controls.XmlnsDefinition("http://shiny.net/maui/controls", "Shiny.Maui.Controls.Media")]
+[assembly: Microsoft.Maui.Controls.XmlnsDefinition("http://shiny.net/maui/controls", "Shiny.Maui.Controls.Images")]
 // The icon and motion model lives in the shared package; surfacing it under the same namespace URI
 // means a XAML author never has to know there are two assemblies involved.
 [assembly: Microsoft.Maui.Controls.XmlnsDefinition("http://shiny.net/maui/controls", "Shiny.Controls.MotionIcons", AssemblyName = "Shiny.Controls.MotionIcons.Shared")]

@@ -27,15 +27,14 @@ public partial class Slider : ContentView
         {
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
-            FontSize = 12,
             FontAttributes = FontAttributes.Bold
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         // Theme default — overridden if the consumer sets TooltipTextColor explicitly.
         tooltipLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         tooltipBadge = new Border
         {
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
             Stroke = Colors.Transparent,
             Padding = new Thickness(10, 4),
             Content = tooltipLabel,
@@ -71,19 +70,18 @@ public partial class Slider : ContentView
         };
 
         // Thumb
-        thumbShape = new RoundRectangle { CornerRadius = 12 };
+        thumbShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius);
         thumb = new Border
         {
             WidthRequest = 24,
             HeightRequest = 24,
             StrokeShape = thumbShape,
             Stroke = ColdColor,
-            StrokeThickness = 1,
             Shadow = CreateThumbShadow(),
             Padding = 0,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         // Theme default — overridden if the consumer sets ThumbColor explicitly.
         thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
 

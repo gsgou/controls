@@ -63,18 +63,30 @@
 
     /* ===== Shape ===== */
     --shiny-shape-corner-none: 0px;
-    --shiny-shape-corner-extra-small: 4px;
-    --shiny-shape-corner-small: 8px;
-    --shiny-shape-corner-medium: 12px;
-    --shiny-shape-corner-large: 16px;
-    --shiny-shape-corner-extra-large: 28px;
+    --shiny-shape-corner-extra-small: 6px;
+    --shiny-shape-corner-small: 12px;
+    --shiny-shape-corner-medium: 18px;
+    --shiny-shape-corner-large: 24px;
+    --shiny-shape-corner-extra-large: 42px;
     --shiny-shape-corner-full: 9999px;
+
+    /* ===== Border widths ===== */
+    --shiny-border-thin: 1px;
+    --shiny-border-medium: 2px;
+    --shiny-border-thick: 4px;
 
     /* ===== State ===== */
     --shiny-state-hover-opacity: 0.08;
     --shiny-state-focus-opacity: 0.1;
     --shiny-state-pressed-opacity: 0.1;
     --shiny-state-dragged-opacity: 0.16;
+
+    /* ===== Density ===== */
+    --shiny-density-scale: 1;
+    --shiny-density-control-height: 44px;
+    --shiny-density-control-height-small: 32px;
+    --shiny-density-row-height: 48px;
+    --shiny-density-touch-target: 44px;
 
     /* ===== Spacing ===== */
     --shiny-spacing-0: 0px;
@@ -88,74 +100,78 @@
     --shiny-spacing-8: 64px;
 
     /* ===== Type scale ===== */
+    --shiny-type-font-family: Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --shiny-type-font-family-display: var(--shiny-type-font-family);
+    --shiny-type-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --shiny-type-scale: 1;
     --shiny-type-display-large-size: 57px;
     --shiny-type-display-large-line-height: 64px;
-    --shiny-type-display-large-weight: 400;
+    --shiny-type-display-large-weight: 500;
     --shiny-type-display-large-tracking: -0.25px;
     --shiny-type-display-medium-size: 45px;
     --shiny-type-display-medium-line-height: 52px;
-    --shiny-type-display-medium-weight: 400;
+    --shiny-type-display-medium-weight: 500;
     --shiny-type-display-medium-tracking: 0px;
     --shiny-type-display-small-size: 36px;
     --shiny-type-display-small-line-height: 44px;
-    --shiny-type-display-small-weight: 400;
+    --shiny-type-display-small-weight: 500;
     --shiny-type-display-small-tracking: 0px;
     --shiny-type-headline-large-size: 32px;
     --shiny-type-headline-large-line-height: 40px;
-    --shiny-type-headline-large-weight: 400;
+    --shiny-type-headline-large-weight: 500;
     --shiny-type-headline-large-tracking: 0px;
     --shiny-type-headline-medium-size: 28px;
     --shiny-type-headline-medium-line-height: 36px;
-    --shiny-type-headline-medium-weight: 400;
+    --shiny-type-headline-medium-weight: 500;
     --shiny-type-headline-medium-tracking: 0px;
     --shiny-type-headline-small-size: 24px;
     --shiny-type-headline-small-line-height: 32px;
-    --shiny-type-headline-small-weight: 400;
+    --shiny-type-headline-small-weight: 500;
     --shiny-type-headline-small-tracking: 0px;
     --shiny-type-title-large-size: 22px;
     --shiny-type-title-large-line-height: 28px;
-    --shiny-type-title-large-weight: 400;
+    --shiny-type-title-large-weight: 500;
     --shiny-type-title-large-tracking: 0px;
     --shiny-type-title-medium-size: 16px;
     --shiny-type-title-medium-line-height: 24px;
-    --shiny-type-title-medium-weight: 500;
+    --shiny-type-title-medium-weight: 600;
     --shiny-type-title-medium-tracking: 0.15px;
     --shiny-type-title-small-size: 14px;
     --shiny-type-title-small-line-height: 20px;
-    --shiny-type-title-small-weight: 500;
+    --shiny-type-title-small-weight: 600;
     --shiny-type-title-small-tracking: 0.1px;
     --shiny-type-body-large-size: 16px;
     --shiny-type-body-large-line-height: 24px;
-    --shiny-type-body-large-weight: 400;
+    --shiny-type-body-large-weight: 500;
     --shiny-type-body-large-tracking: 0.5px;
     --shiny-type-body-medium-size: 14px;
     --shiny-type-body-medium-line-height: 20px;
-    --shiny-type-body-medium-weight: 400;
+    --shiny-type-body-medium-weight: 500;
     --shiny-type-body-medium-tracking: 0.25px;
     --shiny-type-body-small-size: 12px;
     --shiny-type-body-small-line-height: 16px;
-    --shiny-type-body-small-weight: 400;
+    --shiny-type-body-small-weight: 500;
     --shiny-type-body-small-tracking: 0.4px;
     --shiny-type-label-large-size: 14px;
     --shiny-type-label-large-line-height: 20px;
-    --shiny-type-label-large-weight: 500;
+    --shiny-type-label-large-weight: 600;
     --shiny-type-label-large-tracking: 0.1px;
     --shiny-type-label-medium-size: 12px;
     --shiny-type-label-medium-line-height: 16px;
-    --shiny-type-label-medium-weight: 500;
+    --shiny-type-label-medium-weight: 600;
     --shiny-type-label-medium-tracking: 0.5px;
     --shiny-type-label-small-size: 11px;
     --shiny-type-label-small-line-height: 16px;
-    --shiny-type-label-small-weight: 500;
+    --shiny-type-label-small-weight: 600;
     --shiny-type-label-small-tracking: 0.5px;
 
     /* ===== Elevation ===== */
     --shiny-elevation-0: none;
-    --shiny-elevation-1: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
-    --shiny-elevation-2: 0 1px 2px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15);
-    --shiny-elevation-3: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
-    --shiny-elevation-4: 0 6px 10px 4px rgba(0,0,0,0.15), 0 2px 3px rgba(0,0,0,0.3);
-    --shiny-elevation-5: 0 8px 12px 6px rgba(0,0,0,0.15), 0 4px 4px rgba(0,0,0,0.3);
+    --shiny-elevation-1: 0 1px 2px color-mix(in srgb, var(--shiny-color-shadow) 30%, transparent), 0 1px 3px 1px color-mix(in srgb, var(--shiny-color-shadow) 15%, transparent);
+    --shiny-elevation-2: 0 1px 2px color-mix(in srgb, var(--shiny-color-shadow) 30%, transparent), 0 2px 6px 2px color-mix(in srgb, var(--shiny-color-shadow) 15%, transparent);
+    --shiny-elevation-3: 0 4px 8px 3px color-mix(in srgb, var(--shiny-color-shadow) 15%, transparent), 0 1px 3px color-mix(in srgb, var(--shiny-color-shadow) 30%, transparent);
+    --shiny-elevation-4: 0 6px 10px 4px color-mix(in srgb, var(--shiny-color-shadow) 15%, transparent), 0 2px 3px color-mix(in srgb, var(--shiny-color-shadow) 30%, transparent);
+    --shiny-elevation-5: 0 8px 12px 6px color-mix(in srgb, var(--shiny-color-shadow) 15%, transparent), 0 4px 4px color-mix(in srgb, var(--shiny-color-shadow) 30%, transparent);
 }
 
 /* Explicit dark mode (toggle .shiny-theme-dark on <html> or a container) */

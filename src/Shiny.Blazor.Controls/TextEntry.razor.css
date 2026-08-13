@@ -7,7 +7,7 @@
 .shiny-te-border {
     display: flex;
     align-items: stretch;
-    min-height: 44px;
+    min-height: var(--shiny-density-control-height, 44px);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     cursor: text;
     box-sizing: border-box;
@@ -25,7 +25,7 @@
 .shiny-te-field {
     flex: 1;
     position: relative;
-    padding: 8px 12px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
     min-height: 40px;
     display: flex;
     align-items: center;
@@ -36,7 +36,7 @@
     position: absolute;
     left: 8px;
     top: 50%;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
     max-width: calc(100% - 16px);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -86,12 +86,12 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--shiny-type-body-medium-size, 14px);
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: var(--shiny-spacing-1, 4px);
     white-space: nowrap;
     color: var(--shiny-color-on-surface-variant, #6B7280);
     transition: background 0.15s, color 0.15s;
@@ -100,14 +100,14 @@
 /* ---- Inline tools (default): a bare tinted glyph on the field, no rail, no separator ---- */
 .shiny-te--tools-inline .shiny-te-tools {
     align-items: center;
-    padding: 0 4px;
+    padding: 0 var(--shiny-spacing-1, 4px);
 }
 
 .shiny-te--tools-inline .shiny-te-tool-btn {
     min-width: 32px;
     height: 32px;
-    padding: 0 8px;
-    border-radius: 8px;
+    padding: 0 var(--shiny-spacing-2, 8px);
+    border-radius: var(--shiny-shape-corner-small, 8px);
 }
 
 .shiny-te--tools-inline .shiny-te-tool-btn:hover {
@@ -127,24 +127,24 @@
 }
 
 .shiny-te--tools-addon .shiny-te-tools--left {
-    border-right: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
+    border-right: var(--shiny-border-thin, 1px) solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
     border-top-left-radius: inherit;
     border-bottom-left-radius: inherit;
 }
 
 .shiny-te--tools-addon .shiny-te-tools--right {
-    border-left: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
+    border-left: var(--shiny-border-thin, 1px) solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
     border-top-right-radius: inherit;
     border-bottom-right-radius: inherit;
 }
 
 .shiny-te--tools-addon .shiny-te-tool-btn {
-    padding: 0 12px;
+    padding: 0 var(--shiny-spacing-3, 12px);
     min-width: 40px;
 }
 
 .shiny-te--tools-addon .shiny-te-tool-btn + .shiny-te-tool-btn {
-    border-left: 1px solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
+    border-left: var(--shiny-border-thin, 1px) solid var(--shiny-te-border-color, var(--shiny-color-outline-variant, #CCCCCC));
 }
 
 .shiny-te--tools-addon .shiny-te-tool-btn:hover {
@@ -156,7 +156,7 @@
 }
 
 .shiny-te-hint {
-    font-size: 12px;
+    font-size: var(--shiny-type-body-small-size, 12px);
     margin: 4px 12px 0;
     min-height: 18px;
 }
@@ -171,12 +171,12 @@
 }
 
 .shiny-te-tool-icon {
-    font-size: 16px;
+    font-size: var(--shiny-type-body-large-size, 16px);
     line-height: 1;
 }
 
 .shiny-te-tool-text {
-    font-size: 13px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     line-height: 1;
     font-weight: 500;
 }

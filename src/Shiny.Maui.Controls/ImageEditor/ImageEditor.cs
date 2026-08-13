@@ -841,7 +841,6 @@ public partial class ImageEditor : ContentView
             var save = new Button
             {
                 Text = SaveText,
-                FontSize = 14,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White),
                 BackgroundColor = AccentColor,
@@ -850,7 +849,7 @@ public partial class ImageEditor : ContentView
                 Padding = new Thickness(16, 0),
                 HorizontalOptions = LayoutOptions.End,
                 VerticalOptions = LayoutOptions.Center
-            };
+            }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
             save.Clicked += (_, _) => ExecuteSave();
             grid.Add(save, 2);
         }
@@ -870,12 +869,11 @@ public partial class ImageEditor : ContentView
         zoomReadout = new Label
         {
             Text = FormatZoom(zoomScale),
-            FontSize = 11,
             TextColor = ChromeForeground,
             WidthRequest = 42,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
 
         // Tapping the percentage is the fastest way back to fit-to-view
         var tap = new TapGestureRecognizer();
@@ -906,7 +904,6 @@ public partial class ImageEditor : ContentView
         var cancelBtn = new Button
         {
             Text = CropCancelText,
-            FontSize = 14,
             TextColor = ChromeForeground,
             BackgroundColor = Color.FromRgba(255, 255, 255, 0.14f),
             CornerRadius = 14,
@@ -914,7 +911,7 @@ public partial class ImageEditor : ContentView
             MinimumWidthRequest = 64,
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         cancelBtn.Clicked += (_, _) => CurrentToolMode = ImageEditorToolMode.Move;
         grid.Add(cancelBtn, 0);
 
@@ -930,7 +927,6 @@ public partial class ImageEditor : ContentView
         var applyBtn = new Button
         {
             Text = CropApplyText,
-            FontSize = 14,
             FontAttributes = FontAttributes.Bold,
             TextColor = ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White),
             BackgroundColor = AccentColor,
@@ -939,7 +935,7 @@ public partial class ImageEditor : ContentView
             MinimumWidthRequest = 64,
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         applyBtn.Clicked += (_, _) => ApplyCrop();
         grid.Add(applyBtn, 2);
 
@@ -952,7 +948,7 @@ public partial class ImageEditor : ContentView
         Content = content,
         StrokeThickness = 0,
         BackgroundColor = ToolbarBackgroundColor,
-        StrokeShape = new RoundRectangle { CornerRadius = 22 },
+        StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraLargeRadius),
         Padding = new Thickness(8, 8),
         Margin = new Thickness(10, 8)
     };
@@ -1007,7 +1003,7 @@ public partial class ImageEditor : ContentView
             Content = content,
             StrokeThickness = 0,
             BackgroundColor = selected ? AccentColor : Colors.Transparent,
-            StrokeShape = new RoundRectangle { CornerRadius = 14 },
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Padding = new Thickness(6, 4),
             MinimumWidthRequest = width ?? (showLabel ? 54 : 44),
             HeightRequest = showLabel ? 48 : 40,
@@ -1051,7 +1047,7 @@ public partial class ImageEditor : ContentView
             Content = dot,
             StrokeThickness = 0,
             BackgroundColor = selected ? AccentColor : Colors.Transparent,
-            StrokeShape = new RoundRectangle { CornerRadius = 18 },
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             WidthRequest = 36,
             HeightRequest = 36,
             VerticalOptions = LayoutOptions.Center

@@ -8,7 +8,6 @@ public class Fab : ContentView
 {
     const double DefaultSize = 56;
     const double DefaultIconSize = 24;
-    const double DefaultFontSize = 14;
     const double IconTextSpacing = 8;
 
     readonly Border border;
@@ -32,7 +31,6 @@ public class Fab : ContentView
 
         textLabel = new Label
         {
-            FontSize = DefaultFontSize,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             LineBreakMode = LineBreakMode.NoWrap,
@@ -67,19 +65,15 @@ public class Fab : ContentView
             },
             Content = innerGrid,
             HorizontalOptions = LayoutOptions.End,
-            VerticalOptions = LayoutOptions.End,
-            Shadow = new Shadow
-            {
-                Brush = Brush.Black,
-                Opacity = 0.25f,
-                Radius = 8,
-                Offset = new Point(0, 4)
-            }
+            VerticalOptions = LayoutOptions.End
         };
 
-        // Theme defaults — overridden if the consumer sets FabBackgroundColor / TextColor explicitly.
+        // Theme defaults — overridden if the consumer sets FabBackgroundColor / TextColor / FontSize
+        // explicitly. A literal left here would beat the theme permanently, not just by default.
         border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+        border.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
         textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        textLabel.SetDynamicResource(Label.FontSizeProperty, ShinyThemeKeys.Type.LabelLargeSize);
 
         tap = new TapGestureRecognizer();
         tap.Tapped += OnTapped;
@@ -230,10 +224,10 @@ public class Fab : ContentView
         nameof(FontSize),
         typeof(double),
         typeof(Fab),
-        DefaultFontSize,
+        ThemeTokens.Unset,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
-                ((Fab)b).textLabel.FontSize = (double)n;
+                ((Fab)b).textLabel.SetTokenOrValue(Label.FontSizeProperty, (double)n, ShinyThemeKeys.Type.LabelLargeSize);
             }));
     public double FontSize
     {
@@ -299,11 +293,12 @@ public class Fab : ContentView
         true,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
-            var fab = (Fab)b;
-            fab.border.Shadow = (bool)n
-                ? new Shadow { Brush = Brush.Black, Opacity = 0.25f, Radius = 8, Offset = new Point(0, 4) }
-                : null!;
-        }));
+                var fab = (Fab)b;
+                if ((bool)n)
+                    fab.border.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
+                else
+                    fab.border.Shadow = null;
+            }));
     public bool HasShadow
     {
         get => (bool)GetValue(HasShadowProperty);

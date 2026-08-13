@@ -1,0 +1,117 @@
+@page "/shinyimage"
+@using Shiny.Blazor.Controls.Images
+
+<PageTitle>Shiny Image</PageTitle>
+
+<h1>Shiny Image</h1>
+<p>
+    Always shows something: placeholder artwork, a loading ring, the image, or error artwork.
+    Remote images are streamed through <code>fetch</code> so the ring can report a real percentage &mdash;
+    something a plain <code>&lt;img&gt;</code> can never do, because the DOM has no progress event for it.
+</p>
+
+<section class="demo-section">
+    <h2>Download progress</h2>
+    <p>A large photo from a server that sends <code>Content-Length</code>. The ring fills and counts.</p>
+    <button class="btn btn-primary" @onclick="ReloadLarge">Reload</button>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; overflow:hidden; margin-top:12px; height:240px;">
+        <ShinyImage @ref="largeImage"
+                    Uri="@LargeUri"
+                    Alt="A large sample photograph"
+                    ObjectFit="cover"
+                    style="height:100%"
+                    ImageLoaded="OnLargeLoaded" />
+    </div>
+    <p style="color:#6B7280;">Status: @largeStatus</p>
+</section>
+
+<section class="demo-section">
+    <h2>Error artwork</h2>
+    <p>A URL that 404s. With no <code>ErrorUri</code> supplied, the built-in glyph stands in.</p>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; overflow:hidden; margin-top:12px; height:140px;">
+        <ShinyImage Uri="https://shinylib.net/this-image-does-not-exist-404.png"
+                    Alt="Deliberately broken image"
+                    style="height:100%"
+                    ImageFailed="@(msg => failMessage = msg)" />
+    </div>
+    <p style="color:#6B7280;">Reported: @failMessage</p>
+</section>
+
+<section class="demo-section">
+    <h2>Placeholder behind the ring</h2>
+    <p>The placeholder stays put while the ring runs over it, rather than being swapped out for it.</p>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; overflow:hidden; margin-top:12px; height:200px;">
+        <ShinyImage Uri="@PlaceholderDemoUri"
+                    PlaceholderUri="/images/placeholder.svg"
+                    Alt="Photo loading over a placeholder"
+                    ObjectFit="cover"
+                    style="height:100%" />
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Custom loading content</h2>
+    <p>
+        <code>LoadingContent</code> replaces the ring. Its context is the live
+        <code>ImageLoadProgress</code>, so state, percentage and byte count are all in hand.
+    </p>
+
+    <div style="border:1px solid #E5E7EB; border-radius:12px; overflow:hidden; margin-top:12px; height:200px;">
+        <ShinyImage Uri="@TemplateDemoUri" Alt="Photo with a custom loading indicator"
+                    ObjectFit="cover" style="height:100%">
+            <LoadingContent>
+                <div style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+                    <strong>@context.State</strong>
+                    <ProgressBar Value="@context.PercentDisplay"
+                                 IsIndeterminate="@context.IsIndeterminate"
+                                 style="width:180px" />
+                    <span style="font-size:11px; color:#6B7280;">@context.BytesRead.ToString("N0") bytes</span>
+                </div>
+            </LoadingContent>
+        </ShinyImage>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Browser-loaded (no progress)</h2>
+    <p>
+        <code>DisableProgress</code> skips the streamed fetch and hands the URL straight to the browser.
+        No percentage, no CORS exposure, one less copy of the bytes &mdash; the right trade for
+        same-origin thumbnails. The same fallback happens automatically when a cross-origin server
+        blocks <code>fetch</code>.
+    </p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:8px; margin-top:12px;">
+        @foreach (var uri in Thumbnails)
+        {
+            <div style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; height:110px;">
+                <ShinyImage Uri="@uri" Alt="Thumbnail" ObjectFit="cover" RingSize="28"
+                            DisableProgress="true" ShowProgressText="false" style="height:100%" />
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    // Seeded so each URL is stable between runs - otherwise a "cached" reload would just be a
+    // different picture and prove nothing.
+    const string LargeUriBase = "https://picsum.photos/seed/shiny-blazor-large/1600/1200";
+
+    ShinyImage? largeImage;
+    string LargeUri = LargeUriBase;
+    string largeStatus = "-";
+    string failMessage = "-";
+
+    const string PlaceholderDemoUri = "https://picsum.photos/seed/shiny-blazor-ph/1200/800";
+    const string TemplateDemoUri = "https://picsum.photos/seed/shiny-blazor-tpl/1200/800";
+
+    static readonly string[] Thumbnails =
+        Enumerable.Range(1, 12).Select(i => $"https://picsum.photos/seed/shiny-blazor-{i}/300/300").ToArray();
+
+    Task ReloadLarge() => largeImage?.ReloadAsync() ?? Task.CompletedTask;
+
+    void OnLargeLoaded(string? uri) => largeStatus = $"loaded {uri}";
+}

@@ -329,7 +329,9 @@ public partial class TreeView : ContentView
                 return;
 
             case TreeSelectionMode.Single:
-                foreach (var n in flatNodes)
+                // All nodes, not just the visible ones — a selection inside a collapsed
+                // branch has to clear too.
+                foreach (var n in EnumerateAllNodes())
                     n.IsSelected = ReferenceEquals(n, node);
                 SetValueFromInternal(SelectedItemProperty, node.Item);
                 break;
@@ -361,19 +363,37 @@ public partial class TreeView : ContentView
         if (suppressSelectedItemSync || SelectionMode == TreeSelectionMode.None)
             return;
 
-        foreach (var n in flatNodes)
+        foreach (var n in EnumerateAllNodes())
             n.IsSelected = n.Item == newValue;
     }
 
+    bool selectionModeApplied;
+
     void OnSelectionModeChanged()
     {
-        if (SelectionMode == TreeSelectionMode.None)
+        if (!selectionModeApplied)
         {
-            foreach (var n in flatNodes)
-                n.IsSelected = false;
-            SetValueFromInternal(SelectedItemProperty, null);
-            SetValueFromInternal(SelectedItemsProperty, null);
+            // First application (e.g. SelectionMode="Multiple" in XAML) — there is nothing
+            // to drop, and clearing here would wipe a SelectedItems collection the caller
+            // set before the mode.
+            selectionModeApplied = true;
+            Rebuild();
+            return;
         }
+
+        // Switching modes drops the current selection: leftover multi-selection would
+        // otherwise linger as several highlighted rows in Single mode.
+        foreach (var n in EnumerateAllNodes())
+            n.IsSelected = false;
+        SetValueFromInternal(SelectedItemProperty, null);
+
+        if (SelectionMode == TreeSelectionMode.None)
+            SetValueFromInternal(SelectedItemsProperty, null);
+        else
+            SelectedItems?.Clear(); // keep the caller's bound collection instance
+
+        // Rows are built per-mode (the checkbox column only exists in Multiple).
+        Rebuild();
     }
 
     void SetValueFromInternal(BindableProperty prop, object? value)

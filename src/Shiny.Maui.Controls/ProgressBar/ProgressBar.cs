@@ -63,14 +63,13 @@ public partial class ProgressBar : ContentView, IDisposable
 
         progressLabel = new Label
         {
-            FontSize = 11,
             FontAttributes = FontAttributes.Bold,
             HorizontalTextAlignment = TextAlignment.Center,
             VerticalTextAlignment = TextAlignment.Center,
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Center,
             IsVisible = false
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
         // Theme default — overridden if the consumer sets TextColor explicitly.
         progressLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
 

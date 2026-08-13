@@ -70,11 +70,23 @@
     --shiny-shape-corner-extra-large: 28px;
     --shiny-shape-corner-full: 9999px;
 
+    /* ===== Border widths ===== */
+    --shiny-border-thin: 1px;
+    --shiny-border-medium: 2px;
+    --shiny-border-thick: 4px;
+
     /* ===== State ===== */
     --shiny-state-hover-opacity: 0.08;
     --shiny-state-focus-opacity: 0.1;
     --shiny-state-pressed-opacity: 0.1;
     --shiny-state-dragged-opacity: 0.16;
+
+    /* ===== Density ===== */
+    --shiny-density-scale: 1;
+    --shiny-density-control-height: 44px;
+    --shiny-density-control-height-small: 32px;
+    --shiny-density-row-height: 48px;
+    --shiny-density-touch-target: 44px;
 
     /* ===== Spacing ===== */
     --shiny-spacing-0: 0px;
@@ -88,6 +100,10 @@
     --shiny-spacing-8: 64px;
 
     /* ===== Type scale ===== */
+    --shiny-type-font-family: inherit;
+    --shiny-type-font-family-display: var(--shiny-type-font-family);
+    --shiny-type-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --shiny-type-scale: 1;
     --shiny-type-display-large-size: 57px;
     --shiny-type-display-large-line-height: 64px;
     --shiny-type-display-large-weight: 400;

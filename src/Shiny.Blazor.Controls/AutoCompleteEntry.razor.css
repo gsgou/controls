@@ -17,7 +17,7 @@
     font: inherit;
     font-size: var(--shiny-ac-font-size, inherit);
     color: var(--shiny-ac-text, inherit);
-    padding: 8px 0;
+    padding: var(--shiny-spacing-2, 8px) 0;
     width: 100%;
 }
 
@@ -28,7 +28,7 @@
 .shiny-ac-spinner {
     display: flex;
     align-items: center;
-    padding-left: 8px;
+    padding-left: var(--shiny-spacing-2, 8px);
     color: var(--shiny-ac-spinner, var(--shiny-color-on-surface-variant, #9CA3AF));
 }
 
@@ -48,14 +48,14 @@
     z-index: 100;
     overflow-y: auto;
     background: var(--shiny-ac-dd-bg, var(--shiny-color-surface, #fff));
-    border: 1px solid var(--shiny-ac-dd-border, var(--shiny-color-outline-variant, #D1D5DB));
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-ac-dd-border, var(--shiny-color-outline-variant, #D1D5DB));
     max-height: var(--shiny-ac-dd-max-h, 200px);
-    border-radius: 4px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    border-radius: var(--shiny-shape-corner-extra-small, 4px);
+    box-shadow: var(--shiny-elevation-2, 0 3px 6px rgba(0,0,0,0.15));
 }
 
 .shiny-ac-item {
-    padding: 8px 12px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
     cursor: pointer;
     transition: background-color 120ms ease;
 }

@@ -70,12 +70,26 @@ public static class ShinyThemeKeys
     public static class Shape
     {
         public const string CornerNone = "Shiny.Shape.CornerNone";
+        public const string CornerNoneRadius = "Shiny.Shape.CornerNoneRadius";
         public const string CornerExtraSmall = "Shiny.Shape.CornerExtraSmall";
+        public const string CornerExtraSmallRadius = "Shiny.Shape.CornerExtraSmallRadius";
         public const string CornerSmall = "Shiny.Shape.CornerSmall";
+        public const string CornerSmallRadius = "Shiny.Shape.CornerSmallRadius";
         public const string CornerMedium = "Shiny.Shape.CornerMedium";
+        public const string CornerMediumRadius = "Shiny.Shape.CornerMediumRadius";
         public const string CornerLarge = "Shiny.Shape.CornerLarge";
+        public const string CornerLargeRadius = "Shiny.Shape.CornerLargeRadius";
         public const string CornerExtraLarge = "Shiny.Shape.CornerExtraLarge";
+        public const string CornerExtraLargeRadius = "Shiny.Shape.CornerExtraLargeRadius";
         public const string CornerFull = "Shiny.Shape.CornerFull";
+        public const string CornerFullRadius = "Shiny.Shape.CornerFullRadius";
+    }
+
+    public static class Border
+    {
+        public const string Thin = "Shiny.Border.Thin";
+        public const string Medium = "Shiny.Border.Medium";
+        public const string Thick = "Shiny.Border.Thick";
     }
 
     public static class State
@@ -84,6 +98,15 @@ public static class ShinyThemeKeys
         public const string FocusOpacity = "Shiny.State.FocusOpacity";
         public const string PressedOpacity = "Shiny.State.PressedOpacity";
         public const string DraggedOpacity = "Shiny.State.DraggedOpacity";
+    }
+
+    public static class Density
+    {
+        public const string Scale = "Shiny.Density.Scale";
+        public const string ControlHeight = "Shiny.Density.ControlHeight";
+        public const string ControlHeightSmall = "Shiny.Density.ControlHeightSmall";
+        public const string RowHeight = "Shiny.Density.RowHeight";
+        public const string TouchTarget = "Shiny.Density.TouchTarget";
     }
 
     public static class Spacing
@@ -101,28 +124,50 @@ public static class ShinyThemeKeys
 
     public static class Type
     {
+        public const string FontFamily = "Shiny.Type.FontFamily";
+        public const string FontFamilyDisplay = "Shiny.Type.FontFamilyDisplay";
+        public const string FontFamilyMono = "Shiny.Type.FontFamilyMono";
+        public const string Scale = "Shiny.Type.Scale";
         public const string DisplayLargeSize = "Shiny.Type.DisplayLargeSize";
+        public const string DisplayLargeAttributes = "Shiny.Type.DisplayLargeAttributes";
         public const string DisplayMediumSize = "Shiny.Type.DisplayMediumSize";
+        public const string DisplayMediumAttributes = "Shiny.Type.DisplayMediumAttributes";
         public const string DisplaySmallSize = "Shiny.Type.DisplaySmallSize";
+        public const string DisplaySmallAttributes = "Shiny.Type.DisplaySmallAttributes";
         public const string HeadlineLargeSize = "Shiny.Type.HeadlineLargeSize";
+        public const string HeadlineLargeAttributes = "Shiny.Type.HeadlineLargeAttributes";
         public const string HeadlineMediumSize = "Shiny.Type.HeadlineMediumSize";
+        public const string HeadlineMediumAttributes = "Shiny.Type.HeadlineMediumAttributes";
         public const string HeadlineSmallSize = "Shiny.Type.HeadlineSmallSize";
+        public const string HeadlineSmallAttributes = "Shiny.Type.HeadlineSmallAttributes";
         public const string TitleLargeSize = "Shiny.Type.TitleLargeSize";
+        public const string TitleLargeAttributes = "Shiny.Type.TitleLargeAttributes";
         public const string TitleMediumSize = "Shiny.Type.TitleMediumSize";
+        public const string TitleMediumAttributes = "Shiny.Type.TitleMediumAttributes";
         public const string TitleSmallSize = "Shiny.Type.TitleSmallSize";
+        public const string TitleSmallAttributes = "Shiny.Type.TitleSmallAttributes";
         public const string BodyLargeSize = "Shiny.Type.BodyLargeSize";
+        public const string BodyLargeAttributes = "Shiny.Type.BodyLargeAttributes";
         public const string BodyMediumSize = "Shiny.Type.BodyMediumSize";
+        public const string BodyMediumAttributes = "Shiny.Type.BodyMediumAttributes";
         public const string BodySmallSize = "Shiny.Type.BodySmallSize";
+        public const string BodySmallAttributes = "Shiny.Type.BodySmallAttributes";
         public const string LabelLargeSize = "Shiny.Type.LabelLargeSize";
+        public const string LabelLargeAttributes = "Shiny.Type.LabelLargeAttributes";
         public const string LabelMediumSize = "Shiny.Type.LabelMediumSize";
+        public const string LabelMediumAttributes = "Shiny.Type.LabelMediumAttributes";
         public const string LabelSmallSize = "Shiny.Type.LabelSmallSize";
+        public const string LabelSmallAttributes = "Shiny.Type.LabelSmallAttributes";
     }
 
     public static class Elevation
     {
+        public const string Level0 = "Shiny.Elevation.Level0";
         public const string Level1 = "Shiny.Elevation.Level1";
         public const string Level2 = "Shiny.Elevation.Level2";
         public const string Level3 = "Shiny.Elevation.Level3";
+        public const string Level4 = "Shiny.Elevation.Level4";
+        public const string Level5 = "Shiny.Elevation.Level5";
     }
 
 }

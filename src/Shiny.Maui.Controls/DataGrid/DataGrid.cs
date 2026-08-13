@@ -356,7 +356,7 @@ public partial class DataGrid : ContentView
 
     View BuildGroupHeaderView()
     {
-        var caret = new Label { FontSize = 12, VerticalOptions = LayoutOptions.Center, WidthRequest = 18 };
+        var caret = new Label { VerticalOptions = LayoutOptions.Center, WidthRequest = 18 }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         caret.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.CaretGlyph));
         caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
@@ -679,9 +679,8 @@ public partial class DataGrid : ContentView
                 var sortGlyph = new Label
                 {
                     Text = this.SortGlyph(column),
-                    FontSize = 11,
                     VerticalOptions = LayoutOptions.Center
-                };
+                }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
                 sortGlyph.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.Primary);
 
                 // Grid rather than a stack so the title actually gets squeezed (and ellipsized)
@@ -722,10 +721,9 @@ public partial class DataGrid : ContentView
                     var filterGlyph = new Label
                     {
                         Text = "▾",
-                        FontSize = 12,
                         VerticalOptions = LayoutOptions.Center,
                         Opacity = this.HasActiveFilter(column) ? 1 : 0.5
-                    };
+                    }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
                     filterGlyph.SetDynamicResource(Label.TextColorProperty,
                         this.HasActiveFilter(column) ? ShinyThemeKeys.Color.Primary : ShinyThemeKeys.Color.OnSurfaceVariant);
                     var ft = new TapGestureRecognizer();
@@ -740,10 +738,9 @@ public partial class DataGrid : ContentView
                     var groupGlyph = new Label
                     {
                         Text = "⊞",
-                        FontSize = 12,
                         VerticalOptions = LayoutOptions.Center,
                         Opacity = grouped ? 1 : 0.5
-                    };
+                    }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
                     groupGlyph.SetDynamicResource(Label.TextColorProperty,
                         grouped ? ShinyThemeKeys.Color.Primary : ShinyThemeKeys.Color.OnSurfaceVariant);
                     var gt = new TapGestureRecognizer();
@@ -832,7 +829,7 @@ public partial class DataGrid : ContentView
     // ---------- Reorder / resize ----------
     Label ReorderArrow(string glyph, DataGridColumn col, int direction)
     {
-        var arrow = new Label { Text = glyph, FontSize = 14, Opacity = 0.6, VerticalOptions = LayoutOptions.Center };
+        var arrow = new Label { Text = glyph, Opacity = 0.6, VerticalOptions = LayoutOptions.Center }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         arrow.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         var tap = new TapGestureRecognizer();
         tap.Tapped += (_, _) => this.MoveColumn(col, direction);
@@ -1027,10 +1024,10 @@ public partial class DataGrid : ContentView
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(0, 8, 8, 0),
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
-            Shadow = new Shadow { Brush = Colors.Black, Offset = new Point(0, 4), Radius = 16, Opacity = 0.25f }
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius)
         };
         popup.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+        popup.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level4);
         return popup;
     }
 
@@ -1258,12 +1255,11 @@ public partial class DataGrid : ContentView
         var button = new Button
         {
             Text = text,
-            FontSize = 16,
             WidthRequest = 40,
             HeightRequest = 40,
             Padding = 0,
             BackgroundColor = Colors.Transparent
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         button.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
         button.Clicked += (_, _) => action();
         return button;
@@ -1318,10 +1314,10 @@ public partial class DataGrid : ContentView
             Padding = 8,
             StrokeThickness = 0,
             VerticalOptions = LayoutOptions.End,
-            Content = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End, Children = { cancel, save } },
-            Shadow = new Shadow { Brush = Colors.Black, Offset = new Point(0, -2), Radius = 12, Opacity = 0.2f }
+            Content = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.End, Children = { cancel, save } }
         };
         bar.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        bar.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
         return bar;
     }
 

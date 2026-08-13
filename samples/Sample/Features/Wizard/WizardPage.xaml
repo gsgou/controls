@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             xmlns:local="clr-namespace:Sample.Features.Wizard"
+             x:Class="Sample.Features.Wizard.WizardPage"
+             x:DataType="local:WizardViewModel"
+             Title="Wizard"
+             AutomationId="WizardPage">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="12">
+
+        <Label Grid.Row="0"
+               Text="A step is only left when it says it can be. The Delivery step disappears entirely when collection is chosen — hidden steps are skipped and drop off the progress bar."
+               LineBreakMode="WordWrap" />
+
+        <shiny:Wizard Grid.Row="1"
+                      x:Name="Checkout"
+                      AutomationId="DemoWizard"
+                      CurrentStep="{Binding CurrentStep}"
+                      ShowCancel="True"
+                      AllowStepSelection="True"
+                      ProgressStyle="Chevron"
+                      Transition="Slide"
+                      FinishedCommand="{Binding SubmitCommand}"
+                      CancelledCommand="{Binding AbandonCommand}">
+
+            <shiny:WizardStep Name="Account" Title="Account" IsValid="{Binding AccountIsValid}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Where should we send the receipt?" FontAttributes="Bold" />
+                    <shiny:TextEntry Text="{Binding Email}" Placeholder="you@example.com"
+                                     Keyboard="Email" AutomationId="WizardEmailEntry" />
+                    <Label Text="Next stays disabled until this is a plausible email." FontSize="12" />
+                </VerticalStackLayout>
+            </shiny:WizardStep>
+
+            <shiny:WizardStep Name="Fulfilment" Title="Fulfilment">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="How do you want it?" FontAttributes="Bold" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Switch IsToggled="{Binding WantsDelivery}" AutomationId="WizardDeliverySwitch" />
+                        <Label Text="Deliver it to me" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label Text="Turn this off and the Delivery step vanishes from the run." FontSize="12" />
+                </VerticalStackLayout>
+            </shiny:WizardStep>
+
+            <!-- IsVisible is what makes a branch conditional: hidden steps are skipped by Next/Back
+                 and are not drawn on the progress bar. -->
+            <shiny:WizardStep Name="Delivery" Title="Delivery"
+                              IsVisible="{Binding WantsDelivery}"
+                              IsOptional="True">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Delivery address" FontAttributes="Bold" />
+                    <shiny:TextEntry Text="{Binding Address}" Placeholder="Street, city"
+                                     AutomationId="WizardAddressEntry" />
+                    <Label Text="Marked IsOptional, so you can move on without filling it in." FontSize="12" />
+                </VerticalStackLayout>
+            </shiny:WizardStep>
+
+            <shiny:WizardStep Name="Review" Title="Review" NextText="Place order">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Nearly there" FontAttributes="Bold" />
+                    <Label Text="{Binding Email, StringFormat='Receipt to {0}'}" />
+                    <Label Text="{Binding Address, StringFormat='Deliver to {0}'}" IsVisible="{Binding WantsDelivery}" />
+                    <!-- The wizard's own commands, reachable from inside a step by x:Reference. -->
+                    <Button Text="Back to the start"
+                            Command="{Binding Source={x:Reference Checkout}, Path=GoToStepCommand}"
+                            CommandParameter="Account"
+                            HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </shiny:WizardStep>
+        </shiny:Wizard>
+
+        <Label Grid.Row="2" Text="{Binding Status}" AutomationId="WizardStatusLabel" LineBreakMode="WordWrap" />
+    </Grid>
+</ContentPage>

@@ -33,7 +33,7 @@
 .shiny-imgeditor-toolbar {
     flex-shrink: 0;
     z-index: 10;
-    padding: 8px 10px;
+    padding: var(--shiny-spacing-2, 8px) calc(10px * var(--shiny-density-scale, 1));
 }
 
 .shiny-imgeditor-toolbar--top {
@@ -45,9 +45,9 @@
 .shiny-imgeditor-bar {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 8px;
-    border-radius: 22px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
+    padding: var(--shiny-spacing-2, 8px);
+    border-radius: var(--shiny-shape-corner-extra-large, 22px);
     background: rgba(20, 20, 22, 0.86);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -57,7 +57,7 @@
 .shiny-imgeditor-bar--crop {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
 }
 
 /* Rows scroll instead of clipping when there are more tools than width */
@@ -77,13 +77,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     width: max-content;
     min-width: 100%;
 }
 
 .shiny-imgeditor-options {
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
 }
 
 /* --- Tool buttons --- */
@@ -93,11 +93,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
     min-width: 54px;
-    padding: 5px 6px;
+    padding: calc(5px * var(--shiny-density-scale, 1)) calc(6px * var(--shiny-density-scale, 1));
     border: none;
-    border-radius: 14px;
+    border-radius: var(--shiny-shape-corner-large, 14px);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -114,7 +114,7 @@
 }
 
 .shiny-imgeditor-cap {
-    font-size: 9.5px;
+    font-size: calc(9.5px * var(--shiny-type-scale, 1));
     line-height: 1.1;
     letter-spacing: 0.01em;
     white-space: nowrap;
@@ -139,13 +139,13 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    gap: 6px;
+    gap: calc(6px * var(--shiny-density-scale, 1));
 }
 
 .shiny-imgeditor-group {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: calc(2px * var(--shiny-density-scale, 1));
 }
 
 .shiny-imgeditor-group--zoom {
@@ -166,7 +166,7 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 14px;
+    border-radius: var(--shiny-shape-corner-large, 14px);
     background: transparent;
     color: inherit;
     cursor: pointer;
@@ -189,10 +189,10 @@
     border: none;
     background: transparent;
     color: inherit;
-    font-size: 11px;
+    font-size: var(--shiny-type-label-small-size, 11px);
     font-variant-numeric: tabular-nums;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: var(--shiny-shape-corner-medium, 10px);
 }
 
 .shiny-imgeditor-zoomvalue:hover {
@@ -203,10 +203,10 @@
 
 .shiny-imgeditor-pill {
     height: 40px;
-    padding: 0 18px;
+    padding: 0 calc(18px * var(--shiny-density-scale, 1));
     border: none;
-    border-radius: 14px;
-    font-size: 14px;
+    border-radius: var(--shiny-shape-corner-large, 14px);
+    font-size: var(--shiny-type-body-medium-size, 14px);
     cursor: pointer;
     color: inherit;
     background: rgba(255, 255, 255, 0.14);
@@ -225,7 +225,7 @@
 .shiny-imgeditor-hint {
     flex: 1;
     text-align: center;
-    font-size: 13px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     opacity: 0.75;
 }
 
@@ -238,7 +238,7 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 18px;
+    border-radius: var(--shiny-shape-corner-large, 18px);
     background: transparent;
     cursor: pointer;
     padding: 0;
@@ -265,12 +265,12 @@
 
 .shiny-imgeditor-select {
     height: 36px;
-    padding: 0 8px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 0 var(--shiny-spacing-2, 8px);
+    border-radius: var(--shiny-shape-corner-medium, 10px);
+    border: var(--shiny-border-thin, 1px) solid rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.1);
     color: inherit;
-    font-size: 13px;
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     cursor: pointer;
 }
 
@@ -282,8 +282,8 @@
 .shiny-imgeditor-color {
     width: 36px;
     height: 36px;
-    padding: 2px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    padding: calc(2px * var(--shiny-density-scale, 1));
+    border: var(--shiny-border-medium, 2px) solid rgba(255, 255, 255, 0.4);
     border-radius: 50%;
     background: transparent;
     cursor: pointer;
@@ -309,9 +309,9 @@
 .shiny-imgeditor-text-input {
     position: absolute;
     background: transparent;
-    border: 1px dashed rgba(255, 255, 255, 0.6);
+    border: var(--shiny-border-thin, 1px) dashed rgba(255, 255, 255, 0.6);
     outline: none;
-    padding: 2px 4px;
+    padding: calc(2px * var(--shiny-density-scale, 1)) var(--shiny-spacing-1, 4px);
     min-width: 100px;
     z-index: 5;
 }

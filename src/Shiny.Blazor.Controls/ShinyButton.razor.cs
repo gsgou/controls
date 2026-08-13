@@ -47,14 +47,14 @@ public partial class ShinyButton : IDisposable
     /// <summary>Explicit label colour. Overrides <see cref="Appearance"/> and <see cref="Type"/>.</summary>
     [Parameter] public string? TextColor { get; set; }
 
-    /// <summary>Label size in px.</summary>
-    [Parameter] public double FontSize { get; set; } = 15d;
+    /// <summary>Label size in px. The default, <c>-1</c>, lets the theme's type scale decide.</summary>
+    [Parameter] public double FontSize { get; set; } = -1d;
 
     /// <summary>Label font family. Unset inherits from the page.</summary>
     [Parameter] public string? FontFamily { get; set; }
 
-    /// <summary>Label weight, as a CSS <c>font-weight</c> value.</summary>
-    [Parameter] public string? FontWeight { get; set; } = "500";
+    /// <summary>Label weight, as a CSS <c>font-weight</c> value. Unset follows the theme's label weight.</summary>
+    [Parameter] public string? FontWeight { get; set; }
 
 
     // ---------------------------------------------------------------------------------------------
@@ -78,11 +78,14 @@ public partial class ShinyButton : IDisposable
     /// </summary>
     [Parameter] public double BorderThickness { get; set; } = -1d;
 
-    /// <summary>Corner radius in px.</summary>
-    [Parameter] public double CornerRadius { get; set; } = 10d;
+    /// <summary>Corner radius in px. The default, <c>-1</c>, lets the theme's shape scale decide.</summary>
+    [Parameter] public double CornerRadius { get; set; } = -1d;
 
-    /// <summary>The inset between the button's edge and its content, as a CSS <c>padding</c> value.</summary>
-    [Parameter] public string ContentPadding { get; set; } = "10px 16px";
+    /// <summary>
+    /// The inset between the button's edge and its content, as a CSS <c>padding</c> value.
+    /// Unset follows the theme's density.
+    /// </summary>
+    [Parameter] public string? ContentPadding { get; set; }
 
     /// <summary>
     /// Drop shadow. Unset lets <see cref="Appearance"/> decide — on for
@@ -129,8 +132,8 @@ public partial class ShinyButton : IDisposable
     /// </summary>
     [Parameter] public string? IconColor { get; set; }
 
-    /// <summary>Gap between an icon and the label, in px.</summary>
-    [Parameter] public double IconSpacing { get; set; } = 8d;
+    /// <summary>Gap between an icon and the label, in px. The default, <c>-1</c>, follows the theme's spacing.</summary>
+    [Parameter] public double IconSpacing { get; set; } = -1d;
 
     /// <summary>Where the icons sit relative to the text.</summary>
     [Parameter] public ButtonContentLayout ContentLayout { get; set; } = ButtonContentLayout.Sides;
@@ -618,11 +621,23 @@ public partial class ShinyButton : IDisposable
         get
         {
             var sb = new StringBuilder();
-            sb.Append(Invariant($"--shiny-btn-radius:{this.CornerRadius}px;"));
-            sb.Append(Invariant($"--shiny-btn-gap:{this.IconSpacing}px;"));
+
+            // Only emit what the caller explicitly set. An inline declaration wins over the scoped
+            // stylesheet outright, so writing these unconditionally would make every themed rule in
+            // ShinyButton.razor.css dead on arrival.
+            if (this.CornerRadius >= 0)
+                sb.Append(Invariant($"--shiny-btn-radius:{this.CornerRadius}px;"));
+
+            if (this.IconSpacing >= 0)
+                sb.Append(Invariant($"--shiny-btn-gap:{this.IconSpacing}px;"));
+
             sb.Append(Invariant($"--shiny-btn-icon:{this.IconSize}px;"));
-            sb.Append(Invariant($"font-size:{this.FontSize}px;"));
-            sb.Append("padding:").Append(this.ContentPadding).Append(';');
+
+            if (this.FontSize >= 0)
+                sb.Append(Invariant($"font-size:{this.FontSize}px;"));
+
+            if (!string.IsNullOrEmpty(this.ContentPadding))
+                sb.Append("padding:").Append(this.ContentPadding).Append(';');
 
             if (!string.IsNullOrEmpty(this.FontFamily))
                 sb.Append("font-family:").Append(this.FontFamily).Append(';');

@@ -4,8 +4,8 @@
    wins, since it overrides --shiny-btn-bg / -fg / -stroke inline. */
 
 .shiny-btn {
-    --shiny-btn-radius: 10px;
-    --shiny-btn-gap: 8px;
+    --shiny-btn-radius: var(--shiny-shape-corner-medium, 10px);
+    --shiny-btn-gap: var(--shiny-spacing-2, 8px);
     --shiny-btn-icon: 20px;
     --shiny-btn-stroke-width: 0px;
 
@@ -14,12 +14,17 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-height: 44px;
+    min-height: var(--shiny-density-control-height, 44px);
     border: var(--shiny-btn-stroke-width) solid var(--shiny-btn-stroke, transparent);
     border-radius: var(--shiny-btn-radius);
     background: var(--shiny-btn-bg, transparent);
     color: var(--shiny-btn-fg, inherit);
-    font-family: inherit;
+    font-family: var(--shiny-type-font-family, inherit);
+    /* These four used to be written inline from the parameter defaults, which meant no theme could
+       ever reach them. They live here now; an explicitly-set parameter still overrides inline. */
+    font-size: calc(15px * var(--shiny-type-scale, 1));
+    font-weight: var(--shiny-type-label-large-weight, 500);
+    padding: calc(10px * var(--shiny-density-scale, 1)) var(--shiny-spacing-4, 16px);
     line-height: 1.2;
     cursor: pointer;
     user-select: none;
@@ -33,7 +38,7 @@
 }
 
 .shiny-btn:focus-visible {
-    outline: 2px solid var(--shiny-btn-focus, var(--shiny-color-primary, #0055D9));
+    outline: var(--shiny-border-medium, 2px) solid var(--shiny-btn-focus, var(--shiny-color-primary, #0055D9));
     outline-offset: 2px;
 }
 
@@ -122,7 +127,7 @@
     --shiny-btn-bg: transparent;
     --shiny-btn-fg: var(--shiny-btn-base);
     --shiny-btn-stroke: var(--shiny-color-outline, #6C788D);
-    --shiny-btn-stroke-width: 1px;
+    --shiny-btn-stroke-width: var(--shiny-border-thin, 1px);
 }
 
 .shiny-btn--text {
@@ -237,7 +242,7 @@
 .shiny-btn__spinner {
     display: inline-block;
     box-sizing: border-box;
-    border: 2px solid currentColor;
+    border: var(--shiny-border-medium, 2px) solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
     animation: shiny-btn-spin 700ms linear infinite;

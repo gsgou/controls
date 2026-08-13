@@ -121,7 +121,7 @@
                                HasShadow="False"
                                HorizontalOptions="Center" />
 
-                    <Label Text="Switch Basic / Ocean / Material &amp; dark mode from the flyout menu."
+                    <Label Text="Switch Basic / Ocean / Material / Terminal / Aurora &amp; dark mode from the flyout menu."
                            FontSize="12"
                            HorizontalTextAlignment="Center"
                            TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />

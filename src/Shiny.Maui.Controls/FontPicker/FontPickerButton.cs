@@ -26,14 +26,13 @@ public class FontPickerButton : ContentView
 
         buttonBorder = new Border
         {
-            StrokeThickness = 2,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             Padding = new Thickness(12, 6),
             MinimumWidthRequest = 80,
             MinimumHeightRequest = 36,
             Content = buttonLabel,
             HorizontalOptions = LayoutOptions.Start
-        };
+        }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
         buttonLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
@@ -53,12 +52,11 @@ public class FontPickerButton : ContentView
         var doneButton = new Button
         {
             Text = "Done",
-            FontSize = 14,
             CornerRadius = 8,
             HeightRequest = 36,
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
-        };
+        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();
@@ -70,21 +68,15 @@ public class FontPickerButton : ContentView
 
         popupBorder = new Border
         {
-            StrokeThickness = 1,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius),
             Padding = 0,
             Content = pickerWithDone,
-            Shadow = new Shadow
-            {
-                Brush = new SolidColorBrush(Colors.Black),
-                Offset = new Point(0, 4),
-                Radius = 12,
-                Opacity = 0.25f
-            },
             IsVisible = false,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
-        };
+        }
+        .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
+        .WithElevation(ShinyThemeKeys.Elevation.Level4);
 
         var backdrop = new BoxView
         {

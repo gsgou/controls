@@ -3,8 +3,8 @@
     flex-direction: column;
     width: 100%;
     min-height: 320px;
-    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
-    border-radius: 8px;
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+    border-radius: var(--shiny-shape-corner-small, 8px);
     overflow: hidden;
     background: var(--shiny-color-surface, white);
 }
@@ -18,7 +18,7 @@
 }
 
 .shiny-md-editor.is-split .shiny-md-editor-input {
-    border-right: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
 }
 
 .shiny-md-editor-textarea {
@@ -26,10 +26,10 @@
     width: 100%;
     border: 0;
     outline: none;
-    padding: 12px 14px;
+    padding: var(--shiny-spacing-3, 12px) calc(14px * var(--shiny-density-scale, 1));
     resize: none;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 13px;
+    font-family: var(--shiny-type-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: calc(13px * var(--shiny-type-scale, 1));
     line-height: 1.5;
     color: var(--shiny-color-on-surface, #111827);
     background: var(--shiny-color-surface, white);
@@ -37,5 +37,5 @@
 
 .shiny-md-editor-preview {
     overflow: auto;
-    padding: 12px 14px;
+    padding: var(--shiny-spacing-3, 12px) calc(14px * var(--shiny-density-scale, 1));
 }

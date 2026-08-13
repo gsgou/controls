@@ -15,28 +15,31 @@ public partial class BadgeView
     [Parameter] public BadgePosition Position { get; set; } = BadgePosition.TopRight;
 
     /// <summary>Badge fill color (any valid CSS color).</summary>
-    [Parameter] public string BadgeColor { get; set; } = "#DC2626";
+    [Parameter] public string BadgeColor { get; set; } = "var(--shiny-color-error, #DC2626)";
 
     /// <summary>Badge text color (any valid CSS color).</summary>
-    [Parameter] public string BadgeTextColor { get; set; } = "#FFFFFF";
+    [Parameter] public string BadgeTextColor { get; set; } = "var(--shiny-color-on-error, #FFFFFF)";
 
     /// <summary>Badge border color (any valid CSS color). Defaults to white for clean separation from the wrapped content.</summary>
-    [Parameter] public string BadgeBorderColor { get; set; } = "#FFFFFF";
+    [Parameter] public string BadgeBorderColor { get; set; } = "var(--shiny-color-surface, #FFFFFF)";
 
     /// <summary>Badge border thickness in px.</summary>
-    [Parameter] public double BadgeBorderThickness { get; set; } = 1.5;
+    /// <summary>Badge border thickness in px. The default, <c>-1</c>, follows the theme border scale.</summary>
+    [Parameter] public double BadgeBorderThickness { get; set; } = -1;
 
     /// <summary>Badge text font size in px.</summary>
-    [Parameter] public double FontSize { get; set; } = 10;
+    /// <summary>Badge text size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
+    [Parameter] public double FontSize { get; set; } = -1;
 
     /// <summary>Badge text font weight (CSS value).</summary>
-    [Parameter] public string FontWeight { get; set; } = "700";
+    [Parameter] public string FontWeight { get; set; } = "var(--shiny-type-label-small-weight, 700)";
 
     /// <summary>Badge corner radius in px. Default is a fully rounded pill.</summary>
-    [Parameter] public double CornerRadius { get; set; } = 999;
+    /// <summary>Badge corner radius in px. The default, <c>-1</c>, follows the theme's full-round shape.</summary>
+    [Parameter] public double CornerRadius { get; set; } = -1;
 
     /// <summary>Inner padding of the badge as a CSS value (e.g. "2px 6px").</summary>
-    [Parameter] public string BadgePadding { get; set; } = "2px 6px";
+    [Parameter] public string BadgePadding { get; set; } = "calc(2px * var(--shiny-density-scale, 1)) calc(6px * var(--shiny-density-scale, 1))";
 
     /// <summary>Horizontal nudge in px from the corner. Positive pushes outward (away from content).</summary>
     [Parameter] public double OffsetX { get; set; } = 4;
@@ -96,8 +99,8 @@ public partial class BadgeView
             var common =
                 $"background:{BadgeColor};" +
                 $"color:{BadgeTextColor};" +
-                $"border:{BadgeBorderThickness.ToString(ci)}px solid {BadgeBorderColor};" +
-                $"border-radius:{CornerRadius.ToString(ci)}px;" +
+                $"border:{(BadgeBorderThickness >= 0 ? $"{BadgeBorderThickness.ToString(ci)}px" : "var(--shiny-border-thin, 1.5px)")} solid {BadgeBorderColor};" +
+                $"border-radius:{(CornerRadius >= 0 ? $"{CornerRadius.ToString(ci)}px" : "var(--shiny-shape-corner-full, 999px)")};" +
                 $"font-weight:{FontWeight};";
 
             if (IsDot)
@@ -111,7 +114,7 @@ public partial class BadgeView
             {
                 common +=
                     $"padding:{BadgePadding};" +
-                    $"font-size:{FontSize.ToString(ci)}px;" +
+                    $"font-size:{(FontSize >= 0 ? $"{FontSize.ToString(ci)}px" : "calc(10px * var(--shiny-type-scale, 1))")};" +
                     "min-width:1em; line-height:1;";
             }
 

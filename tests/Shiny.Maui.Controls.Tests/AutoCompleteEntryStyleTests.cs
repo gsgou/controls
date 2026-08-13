@@ -103,7 +103,7 @@ public class AutoCompleteEntryStyleTests
         new Application();
 
         var control = new AutoCompleteEntry();
-        control.CornerRadius.ShouldBe(4d);
+        control.CornerRadius.ShouldBe(-1d);
 
         control.Style = BuildStyle();
 
@@ -111,7 +111,11 @@ public class AutoCompleteEntryStyleTests
         control.SpinnerColor.ShouldBe(Colors.Green);
     }
 
-    /// <summary>Unstyled construction keeps the documented defaults.</summary>
+    /// <summary>
+    /// Unstyled construction keeps the documented defaults. The appearance properties that a theme
+    /// owns report -1 ("unset"): the constructor binds those to the theme token instead, and any
+    /// literal default here would beat the theme permanently rather than merely by default.
+    /// </summary>
     [Fact]
     public void NoStyle_UsesDefaults()
     {
@@ -119,9 +123,9 @@ public class AutoCompleteEntryStyleTests
 
         var control = new AutoCompleteEntry();
 
-        control.CornerRadius.ShouldBe(4d);
+        control.CornerRadius.ShouldBe(-1d);
         control.MaxDropDownHeight.ShouldBe(200d);
-        control.FontSize.ShouldBe(14d);
+        control.FontSize.ShouldBe(-1d);
         control.DropDownBackgroundColor.ShouldBeNull();
         control.SpinnerColor.ShouldBeNull();
     }

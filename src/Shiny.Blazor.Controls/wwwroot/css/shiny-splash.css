@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    padding: max(24px, env(safe-area-inset-top)) var(--shiny-spacing-5, 24px) max(24px, env(safe-area-inset-bottom));
     background: var(--shiny-splash-bg);
     color: var(--shiny-splash-fg);
     font-family: var(--shiny-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
@@ -51,7 +51,7 @@ html.shiny-splash-locked body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: var(--shiny-spacing-4, 16px);
     width: 100%;
     max-width: 320px;
     text-align: center;
@@ -66,20 +66,20 @@ html.shiny-splash-locked body {
 }
 
 .shiny-splash-title {
-    font-size: 1.375rem;
+    font-size: calc(1.375rem * var(--shiny-type-scale, 1));
     font-weight: 600;
     letter-spacing: -0.01em;
 }
 
 .shiny-splash-subtitle {
     margin-top: -10px;
-    font-size: 0.875rem;
+    font-size: calc(0.875rem * var(--shiny-type-scale, 1));
     color: var(--shiny-splash-muted);
 }
 
 .shiny-splash-status {
     min-height: 1.25em;
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem * var(--shiny-type-scale, 1));
     color: var(--shiny-splash-muted);
 }
 
@@ -88,7 +88,7 @@ html.shiny-splash-locked body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 3px solid color-mix(in srgb, var(--shiny-splash-accent) 24%, transparent);
+    border: var(--shiny-border-thick, 3px) solid color-mix(in srgb, var(--shiny-splash-accent) 24%, transparent);
     border-top-color: var(--shiny-splash-accent);
     animation: shiny-splash-spin 800ms linear infinite;
 }
@@ -100,7 +100,7 @@ html.shiny-splash-locked body {
 /* ===== Spinner: dots ===== */
 .shiny-splash-dots {
     display: flex;
-    gap: 8px;
+    gap: var(--shiny-spacing-2, 8px);
 }
 
 .shiny-splash-dots span {
@@ -139,7 +139,7 @@ html.shiny-splash-locked body {
     width: 100%;
     height: 4px;
     overflow: hidden;
-    border-radius: 999px;
+    border-radius: var(--shiny-shape-corner-full, 999px);
     background: color-mix(in srgb, var(--shiny-splash-accent) 18%, transparent);
 }
 
