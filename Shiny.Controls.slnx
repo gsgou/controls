@@ -61,6 +61,7 @@
     <Project Path="tests/Shiny.Controls.Keyframe.Tests/Shiny.Controls.Keyframe.Tests.csproj" />
     <Project Path="tests/Shiny.Controls.MotionIcons.Tests/Shiny.Controls.MotionIcons.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.Keyframe.Export.Tests/Shiny.Maui.Controls.Keyframe.Export.Tests.csproj" />
+    <Project Path="tests/Shiny.Blazor.Controls.Tests/Shiny.Blazor.Controls.Tests.csproj" />
     <Project Path="tests/Shiny.Blazor.Controls.Camera.Tests/Shiny.Blazor.Controls.Camera.Tests.csproj" />
     <Project Path="tests/Shiny.Maui.Controls.MediaElement.Tests/Shiny.Maui.Controls.MediaElement.Tests.csproj" />
 </Solution>

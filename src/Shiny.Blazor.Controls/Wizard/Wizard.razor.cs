@@ -24,6 +24,7 @@ public partial class Wizard
     WizardStep? current;
     int direction = 1;
     bool resolved;
+    bool resolveQueued;
 
     /// <summary>The steps, as markup. Children are <c>WizardStep</c> components.</summary>
     [Parameter] public RenderFragment? Steps { get; set; }
@@ -362,14 +363,22 @@ public partial class Wizard
 
     void IStateViewHost.NotifyStateChanged(StateViewState state) => this.QueueResolve();
 
-    void QueueResolve() =>
+    void QueueResolve()
+    {
         // Steps register while this component is already rendering them, so anything their arrival
-        // changes cannot be shown in this pass - queue another one.
+        // changes cannot be shown in this pass - queue another one. One pass covers every step that
+        // spoke up before it ran, so collapse the rest rather than rendering once per step.
+        if (this.resolveQueued)
+            return;
+
+        this.resolveQueued = true;
         _ = this.InvokeAsync(async () =>
         {
+            this.resolveQueued = false;
             await this.ResolveAsync().ConfigureAwait(true);
             this.StateHasChanged();
         });
+    }
 
     protected override async Task OnParametersSetAsync()
     {

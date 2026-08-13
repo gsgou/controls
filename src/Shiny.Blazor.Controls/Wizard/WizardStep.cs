@@ -11,6 +11,18 @@ public class WizardStep : StateViewState
 {
     bool lastCompletedParameter;
 
+    // What the wizard draws each step from. Tracked so a parameter set that changed none of it does
+    // not ask the wizard for another render - see HasHostRelevantChange.
+    bool lastVisible = true;
+    bool lastEnabled = true;
+    bool lastValid = true;
+    bool lastOptional;
+    bool lastCompleted;
+    string? lastTitle;
+    string? lastDescription;
+    string? lastNextText;
+    string? lastBackText;
+
     /// <summary>Shown on the progress indicator. Falls back to <see cref="StateViewState.Name"/>.</summary>
     [Parameter] public string? Title { get; set; }
 
@@ -72,6 +84,43 @@ public class WizardStep : StateViewState
         }
 
         base.OnParametersSet();
+    }
+
+    /// <inheritdoc />
+    protected override bool HasHostRelevantChange()
+    {
+        // Every one of these has to run - |=, not || - because each also records the value it read.
+        var changed = base.HasHostRelevantChange();
+
+        changed |= Moved(ref this.lastVisible, this.IsVisible);
+        changed |= Moved(ref this.lastEnabled, this.IsEnabled);
+        changed |= Moved(ref this.lastValid, this.IsValid);
+        changed |= Moved(ref this.lastOptional, this.IsOptional);
+        changed |= Moved(ref this.lastCompleted, this.Completed);
+        changed |= Moved(ref this.lastTitle, this.Title);
+        changed |= Moved(ref this.lastDescription, this.Description);
+        changed |= Moved(ref this.lastNextText, this.NextText);
+        changed |= Moved(ref this.lastBackText, this.BackText);
+
+        return changed;
+    }
+
+    static bool Moved(ref bool tracked, bool value)
+    {
+        if (tracked == value)
+            return false;
+
+        tracked = value;
+        return true;
+    }
+
+    static bool Moved(ref string? tracked, string? value)
+    {
+        if (string.Equals(tracked, value, StringComparison.Ordinal))
+            return false;
+
+        tracked = value;
+        return true;
     }
 
     internal void SetCompleted(bool value)

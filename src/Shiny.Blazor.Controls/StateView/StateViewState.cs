@@ -26,6 +26,8 @@ public interface IStateViewHost
 public class StateViewState : ComponentBase, IDisposable
 {
     IStateViewHost? registeredWith;
+    string? lastName;
+    bool seen;
 
     /// <summary>
     /// Supplied by the owning host. Must be public — a private cascading parameter compiles and is
@@ -45,7 +47,27 @@ public class StateViewState : ComponentBase, IDisposable
         this.registeredWith?.RegisterState(this);
     }
 
-    protected override void OnParametersSet() => this.registeredWith?.NotifyStateChanged(this);
+    protected override void OnParametersSet()
+    {
+        // This runs again every time the host re-renders us - including the re-render a notification
+        // itself triggers - so notifying unconditionally is an infinite render loop. Only speak up
+        // when something the host resolves or draws from has actually moved.
+        if (this.HasHostRelevantChange())
+            this.registeredWith?.NotifyStateChanged(this);
+    }
+
+    /// <summary>
+    /// Whether anything the host reads off this state has changed since the last parameter set.
+    /// Overrides must call the base unconditionally - it updates the values it tracks - and OR their
+    /// own comparisons in (<c>|=</c>, never <c>||</c>), so every comparison still runs.
+    /// </summary>
+    protected virtual bool HasHostRelevantChange()
+    {
+        var changed = !this.seen || !string.Equals(this.lastName, this.Name, StringComparison.Ordinal);
+        this.seen = true;
+        this.lastName = this.Name;
+        return changed;
+    }
 
     // Deliberately empty: the host decides when, and where, ChildContent is rendered.
     protected override void BuildRenderTree(RenderTreeBuilder builder)
