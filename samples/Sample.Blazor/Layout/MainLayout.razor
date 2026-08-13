@@ -4,34 +4,102 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
+@* The gallery shell is itself an AppLayout: the nav is a real AppLayoutPanel (drag-resizable,
+   persisted, and it collapses to a drawer on narrow screens), the toolbar sits in the header
+   region and the routed page owns the content region's scroll. HeaderSpan/FooterSpan are
+   Content so the nav runs the full height of the window, as a sidebar should. *@
 <div class="page @(dark ? "shiny-theme-dark" : null)">
-    <aside class="sidebar">
-        <NavMenu />
-    </aside>
+    <AppLayout Height="100dvh"
+               HeaderSpan="LayoutSpan.Content"
+               FooterSpan="LayoutSpan.Content">
 
-    <main class="content">
-        <ShinyToolbar Dock="ToolbarDock.Top"
-                      Frosted="true"
-                      TintColor="rgba(245, 243, 255, 0.72)"
-                      TextColor="#1E1B4B"
-                      Height="52"
-                      Title="Shiny Controls"
-                      Items="@headerItems" />
+        <AppLayoutPanel @ref="navPanel"
+                        Side="PanelSide.Left"
+                        Size="260"
+                        MinSize="200"
+                        MaxSize="380"
+                        CollapseBelow="820"
+                        CollapsedState="PanelState.Hidden"
+                        PersistKey="sample-nav"
+                        Border="false"
+                        Background="#0F0D1A"
+                        style="color:#E0E7FF;">
+            @* The brand bar is a ShinyToolbar too, pinned by the panel's HeaderContent so it
+               stays put while the links scroll under it. *@
+            <HeaderContent>
+                @* same height as the app bar, so the two line up into one band across the top *@
+                <ShinyToolbar Sticky="false"
+                              HasShadow="false"
+                              Height="64"
+                              TextColor="#FFFFFF"
+                              Style="background:var(--brand-bar-lead);">
+                    <StartContent>
+                        <span class="nav-logo-tile">
+                            <img src="css/shiny_logo.png" alt="" class="nav-logo" />
+                        </span>
+                        <span class="nav-brand">
+                            <span class="nav-title">Shiny Controls</span>
+                            <span class="nav-subtitle">Blazor Gallery</span>
+                        </span>
+                    </StartContent>
+                </ShinyToolbar>
+            </HeaderContent>
+            <ChildContent>
+                <NavMenu />
+            </ChildContent>
+        </AppLayoutPanel>
 
-        <ThemeSwitcher DarkChanged="d => dark = d" />
+        <AppLayoutHeader Height="64" Border="false" Padding="0">
+            @* The app bar picks the brand gradient up where the nav's brand bar drops it, so the
+               two run together as one sweep across the top: violet at the far left through indigo
+               and blue to cyan on the right. Both gradients are declared on .page so they cannot
+               drift apart and leave a seam at the panel edge. *@
+            <ShinyToolbar Dock="ToolbarDock.Top"
+                          Sticky="false"
+                          HasShadow="false"
+                          TextColor="#FFFFFF"
+                          Height="64"
+                          Style="background:var(--brand-bar);">
+                <StartContent>
+                    <button type="button"
+                            class="nav-toggle"
+                            title="Toggle navigation"
+                            aria-label="Toggle navigation"
+                            @onclick="ToggleNavAsync">
+                        @((MarkupString)IconMenu)
+                    </button>
+                    <span class="app-title">@Catalog.LabelFor(CurrentRoute)</span>
+                </StartContent>
+                <EndContent>
+                    <ThemeSwitcher DarkChanged="d => dark = d" />
+                    <a class="toolbar-link" href="https://shinylib.net" target="_blank" rel="noopener"
+                       title="Documentation" aria-label="Documentation">@((MarkupString)IconDocs)</a>
+                    <a class="toolbar-link" href="https://github.com/shinyorg/controls" target="_blank" rel="noopener"
+                       title="GitHub" aria-label="GitHub">@((MarkupString)IconGitHub)</a>
+                </EndContent>
+            </ShinyToolbar>
+        </AppLayoutHeader>
 
-        <div class="content-inner">
-            @Body
-        </div>
+        <AppLayoutContent>
+            <div class="content-inner">
+                @Body
+            </div>
+        </AppLayoutContent>
 
-        <ShinyTabBar CssClass="mobile-tabbar"
-                     Items="@tabs"
-                     SelectedKey="@SelectedTabKey"
-                     ActiveColor="#7C3AED"
-                     InactiveColor="#9CA3AF"
-                     Frosted="true"
-                     TintColor="rgba(255, 255, 255, 0.82)" />
-    </main>
+        @* Mobile only — the media query below collapses this row away on desktop, where the
+           nav panel is showing instead. *@
+        <AppLayoutFooter Border="false" Padding="0" class="mobile-tabbar-footer">
+            @* Fixed="false" — the footer row already pins it, and a fixed bar would drop out of
+               the grid's flow and float over the content instead. *@
+            <ShinyTabBar Fixed="false"
+                         Items="@tabs"
+                         SelectedKey="@SelectedTabKey"
+                         ActiveColor="#7C3AED"
+                         InactiveColor="#9CA3AF"
+                         Frosted="true"
+                         TintColor="rgba(255, 255, 255, 0.82)" />
+        </AppLayoutFooter>
+    </AppLayout>
 </div>
 
 <ToastHost />
@@ -46,8 +114,11 @@
 
 @code {
     bool dark;
+    AppLayoutPanel? navPanel;
 
     [Inject] ISplashScreen Splash { get; set; } = default!;
+
+    Task ToggleNavAsync() => this.navPanel?.ToggleAsync() ?? Task.CompletedTask;
 
     // Stands in for real startup work (prefs, cache warm-up, first fetch). The splash is
     // already on screen - this just narrates it before SplashScreenHost dismisses it.
@@ -68,29 +139,29 @@
         }
     }
 
-    string SelectedTabKey
-    {
-        get
-        {
-            var path = Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
-            return path.Length == 0 ? "home" : path;
-        }
-    }
+    string CurrentRoute => Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
+
+    string SelectedTabKey => this.CurrentRoute.Length == 0 ? "home" : this.CurrentRoute;
 
     protected override void OnInitialized() => Nav.LocationChanged += OnLocationChanged;
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
-    void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => StateHasChanged();
 
+    void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // on a narrow window the nav floats over the content — following a link should close it
+        if (this.navPanel is { IsOverlay: true } panel)
+            _ = panel.SetStateAsync(PanelState.Hidden);
+
+        StateHasChanged();
+    }
+
+    const string IconMenu = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M3 6h18M3 12h18M3 18h18'/></svg>";
+    const string IconDocs = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22V4.5z'/><path d='M8 7h8M8 11h6'/></svg>";
     const string IconGitHub = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.73 1.27 3.4.97.1-.76.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.42.36.8 1.08.8 2.18v3.23c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z'/></svg>";
     const string IconHome = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/></svg>";
     const string IconHomeFill = "<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 3l9 8h-2v9h-5v-6h-4v6H5v-9H3l9-8z'/></svg>";
     const string IconToolbar = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='4' width='18' height='4' rx='1'/><path d='M5 13h6M5 17h10'/></svg>";
     const string IconTabBar = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><rect x='3' y='16' width='18' height='5' rx='1'/><path d='M7 18.5h.01M12 18.5h.01M17 18.5h.01M5 4h14'/></svg>";
-
-    List<ToolbarItem> headerItems = new()
-    {
-        new() { Icon = IconGitHub, Href = "https://github.com/shinyorg/controls", Target = "_blank" }
-    };
 
     List<TabBarItem> tabs = new()
     {

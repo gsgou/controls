@@ -1,189 +1,26 @@
 @namespace Sample.Blazor.Layout
+@using Sample.Blazor
 
-<div class="nav-header">
-    <img src="css/shiny_logo.png" alt="" class="nav-logo" />
-    <div>
-        <span class="nav-title">Shiny Controls</span>
-        <span class="nav-subtitle">Blazor Gallery</span>
-    </div>
-</div>
-
+@* The brand block lives in the AppLayoutPanel's HeaderContent so it stays pinned — this is just
+   the scrolling link list, rendered from the shared Catalog so it can never drift from the
+   home page. *@
 <nav>
     <div class="nav-section">GET STARTED</div>
-    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-        <span class="nav-icon" style="color:#A78BFA;">&#x2302;</span> Home
-    </NavLink>
-    <NavLink class="nav-link" href="kitchensink">
-        <span class="nav-icon" style="color:#A78BFA;">&#x2699;</span> Kitchen Sink
-    </NavLink>
+    @foreach (var item in Catalog.GettingStarted)
+    {
+        <NavLink class="nav-link" href="@item.Href" Match="@(item.Href.Length == 0 ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+            <span class="nav-icon" style="color:#A78BFA;">@item.Icon</span> @item.Label
+        </NavLink>
+    }
 
-    <div class="nav-section">LAYOUT &amp; COLLECTIONS</div>
-    <NavLink class="nav-link" href="layout">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25A4;</span> Stacks &amp; Grid
-    </NavLink>
-    <NavLink class="nav-link" href="applayout">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25EB;</span> App Layout
-    </NavLink>
-    <NavLink class="nav-link" href="carousel">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25C0;</span> Carousel Gallery
-    </NavLink>
-    <NavLink class="nav-link" href="carousel-advanced">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25B6;</span> Carousel
-    </NavLink>
-    <NavLink class="nav-link" href="staggeredgrid">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25A6;</span> Staggered Grid
-    </NavLink>
-    <NavLink class="nav-link" href="virtualizedgrid">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25A3;</span> Virtualized Grid
-    </NavLink>
-    <NavLink class="nav-link" href="parallaxlist">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25B0;</span> Parallax List
-    </NavLink>
-    <NavLink class="nav-link" href="treeview">
-        <span class="nav-icon" style="color:#60A5FA;">&#x2387;</span> Tree View
-    </NavLink>
-    <NavLink class="nav-link" href="cells">
-        <span class="nav-icon" style="color:#60A5FA;">&#x2630;</span> Cells
-    </NavLink>
-    <NavLink class="nav-link" href="tableview">
-        <span class="nav-icon" style="color:#60A5FA;">&#x2637;</span> Table View
-    </NavLink>
-    <NavLink class="nav-link" href="datagrid">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25A6;</span> Data Grid
-    </NavLink>
-    <NavLink class="nav-link" href="docking">
-        <span class="nav-icon" style="color:#60A5FA;">&#x25A8;</span> Docking
-    </NavLink>
-
-    <div class="nav-section">PANELS &amp; OVERLAYS</div>
-    <NavLink class="nav-link" href="sheet">
-        <span class="nav-icon" style="color:#22D3EE;">&#x25A3;</span> Sheet
-    </NavLink>
-    <NavLink class="nav-link" href="overlay">
-        <span class="nav-icon" style="color:#22D3EE;">&#x25A6;</span> Overlay
-    </NavLink>
-    <NavLink class="nav-link" href="frostedglass">
-        <span class="nav-icon" style="color:#22D3EE;">&#x25C7;</span> Frosted Glass
-    </NavLink>
-
-    <div class="nav-section">INPUT</div>
-    <NavLink class="nav-link" href="textentry">
-        <span class="nav-icon" style="color:#34D399;">&#x270F;</span> Text Entry
-    </NavLink>
-    <NavLink class="nav-link" href="autocomplete">
-        <span class="nav-icon" style="color:#34D399;">&#x2263;</span> AutoComplete
-    </NavLink>
-    <NavLink class="nav-link" href="colorpicker">
-        <span class="nav-icon" style="color:#34D399;">&#x25C9;</span> Color Picker
-    </NavLink>
-    <NavLink class="nav-link" href="countryaddress">
-        <span class="nav-icon" style="color:#34D399;">&#x2691;</span> Country &amp; Address
-    </NavLink>
-    <NavLink class="nav-link" href="slider">
-        <span class="nav-icon" style="color:#34D399;">&#x2501;</span> Slider
-    </NavLink>
-    <NavLink class="nav-link" href="rangeslider">
-        <span class="nav-icon" style="color:#34D399;">&#x2261;</span> Range Slider
-    </NavLink>
-    <NavLink class="nav-link" href="securitypin">
-        <span class="nav-icon" style="color:#34D399;">&#x2731;</span> Security Pin
-    </NavLink>
-    <NavLink class="nav-link" href="signaturepad">
-        <span class="nav-icon" style="color:#34D399;">&#x270D;</span> Signature Pad
-    </NavLink>
-
-    <div class="nav-section">ACTIONS &amp; NAVIGATION</div>
-    <NavLink class="nav-link" href="button">
-        <span class="nav-icon" style="color:#2DD4BF;">&#x1F518;</span> ShinyButton
-    </NavLink>
-    <NavLink class="nav-link" href="fab">
-        <span class="nav-icon" style="color:#2DD4BF;">&#x2795;</span> Fab
-    </NavLink>
-    <NavLink class="nav-link" href="fab-menu">
-        <span class="nav-icon" style="color:#2DD4BF;">&#x2726;</span> Fab Menu
-    </NavLink>
-    <NavLink class="nav-link" href="toolbar">
-        <span class="nav-icon" style="color:#2DD4BF;">&#x2630;</span> Toolbar
-    </NavLink>
-    <NavLink class="nav-link" href="tabbar">
-        <span class="nav-icon" style="color:#2DD4BF;">&#x2637;</span> Tab Bar
-    </NavLink>
-
-    <div class="nav-section">STATUS &amp; FEEDBACK</div>
-    <NavLink class="nav-link" href="pills">
-        <span class="nav-icon" style="color:#F472B6;">&#x25CF;</span> Pills
-    </NavLink>
-    <NavLink class="nav-link" href="badge">
-        <span class="nav-icon" style="color:#F472B6;">&#x25CF;</span> Badge
-    </NavLink>
-    <NavLink class="nav-link" href="toast">
-        <span class="nav-icon" style="color:#F472B6;">&#x25AC;</span> Toast
-    </NavLink>
-    <NavLink class="nav-link" href="dialogs">
-        <span class="nav-icon" style="color:#F472B6;">&#x2755;</span> Dialogs
-    </NavLink>
-    <NavLink class="nav-link" href="progressbar">
-        <span class="nav-icon" style="color:#F472B6;">&#x25A3;</span> Progress Bar
-    </NavLink>
-    <NavLink class="nav-link" href="skeleton">
-        <span class="nav-icon" style="color:#F472B6;">&#x2630;</span> Skeleton
-    </NavLink>
-    <NavLink class="nav-link" href="splashscreen">
-        <span class="nav-icon" style="color:#F472B6;">&#x2600;</span> Splash Screen
-    </NavLink>
-    <NavLink class="nav-link" href="motionicons">
-        <span class="nav-icon" style="color:#F472B6;">&#x2726;</span> Motion Icons
-    </NavLink>
-
-    <div class="nav-section">MEDIA</div>
-    <NavLink class="nav-link" href="camera">
-        <span class="nav-icon" style="color:#C084FC;">&#x25C9;</span> Camera
-    </NavLink>
-    <NavLink class="nav-link" href="mediaelement">
-        <span class="nav-icon" style="color:#C084FC;">&#x25B6;</span> Media Element
-    </NavLink>
-    <NavLink class="nav-link" href="imageviewer">
-        <span class="nav-icon" style="color:#C084FC;">&#x25A3;</span> Image Viewer
-    </NavLink>
-    <NavLink class="nav-link" href="imageeditor">
-        <span class="nav-icon" style="color:#C084FC;">&#x270E;</span> Image Editor
-    </NavLink>
-    <NavLink class="nav-link" href="mediapicker">
-        <span class="nav-icon" style="color:#C084FC;">&#x1F4F7;</span> Media Picker
-    </NavLink>
-
-    <div class="nav-section">SCHEDULER</div>
-    <NavLink class="nav-link" href="calendar">
-        <span class="nav-icon" style="color:#F87171;">&#x25A1;</span> Calendar
-    </NavLink>
-    <NavLink class="nav-link" href="agenda">
-        <span class="nav-icon" style="color:#F87171;">&#x2261;</span> Agenda
-    </NavLink>
-    <NavLink class="nav-link" href="agendalist">
-        <span class="nav-icon" style="color:#F87171;">&#x2637;</span> Event List
-    </NavLink>
-
-    <div class="nav-section">COMMUNICATION</div>
-    <NavLink class="nav-link" href="chat">
-        <span class="nav-icon" style="color:#38BDF8;">&#x2709;</span> Chat
-    </NavLink>
-
-    <div class="nav-section">CONTENT</div>
-    <NavLink class="nav-link" href="markdown">
-        <span class="nav-icon" style="color:#A3E635;">&#x2193;</span> Markdown
-    </NavLink>
-    <NavLink class="nav-link" href="markdown-editor">
-        <span class="nav-icon" style="color:#A3E635;">&#x270D;</span> Markdown Editor
-    </NavLink>
-    <NavLink class="nav-link" href="mermaid">
-        <span class="nav-icon" style="color:#FB7185;">&#x2B13;</span> Mermaid
-    </NavLink>
-
-    <div class="nav-section">BARCODES</div>
-    <NavLink class="nav-link" href="qrcode">
-        <span class="nav-icon" style="color:#A78BFA;">&#x25A6;</span> QR Code
-    </NavLink>
-    <NavLink class="nav-link" href="barcodes">
-        <span class="nav-icon" style="color:#A78BFA;">&#x2630;</span> Barcode Gallery
-    </NavLink>
+    @foreach (var section in Catalog.Sections)
+    {
+        <div class="nav-section">@section.Title.ToUpperInvariant()</div>
+        @foreach (var item in section.Items)
+        {
+            <NavLink class="nav-link" href="@item.Href">
+                <span class="nav-icon" style="color:@section.Color;">@item.Icon</span> @item.Label
+            </NavLink>
+        }
+    }
 </nav>

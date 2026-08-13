@@ -22,11 +22,6 @@
     grid-area: right;
 }
 
-.shiny-applayout-panel.is-hidden {
-    border-left-width: 0;
-    border-right-width: 0;
-}
-
 /* Compact drawer: out of the grid flow entirely, so the track it lived in collapses to zero.
    grid-area must go back to auto — an absolutely positioned grid item with a definite grid
    position is positioned against its (now zero-width) grid area instead of the whole layout. */

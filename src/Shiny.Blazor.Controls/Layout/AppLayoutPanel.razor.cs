@@ -274,6 +274,7 @@ public partial class AppLayoutPanel : IAsyncDisposable
     {
         get
         {
+            var hidden = this.currentState == PanelState.Hidden;
             var width = this.currentState switch
             {
                 PanelState.Hidden => 0,
@@ -284,7 +285,13 @@ public partial class AppLayoutPanel : IAsyncDisposable
             var css = $"width:{LayoutAttributes.Px(width)};";
 
             // the divider always sits on the edge facing the content
-            css += this.BorderCss(this.Side == PanelSide.Left ? "right" : "left");
+            var edge = this.Side == PanelSide.Left ? "right" : "left";
+
+            // A hidden panel is zero-wide, but the border still paints — leaving a 1px sliver that
+            // butts straight up against whatever divider is next to it and reads as one 2px line.
+            // It has to be dropped here rather than in the stylesheet: this style is inline, so a
+            // `.is-hidden { border-width: 0 }` rule would never win.
+            css += hidden ? $"border-{edge}:none;" : this.BorderCss(edge);
 
             if (!string.IsNullOrWhiteSpace(this.Background))
                 css += $"background:{this.Background};";

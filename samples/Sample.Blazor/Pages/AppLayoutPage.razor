@@ -34,14 +34,24 @@
                    BorderWidth="@(borders ? 1 : 0)"
                    Background="var(--shiny-color-surface)">
 
+            @* The leading/trailing buttons sit in slots exactly as wide as the panels' toolbar rail,
+               so they line up with the rail icons underneath them instead of drifting off-axis. *@
             <AppLayoutHeader Height="52"
                              Background="var(--shiny-color-surface-container-high)"
-                             Padding="0 16px"
-                             style="display:flex;align-items:center;gap:12px;">
-                <button @onclick="() => Cycle(l => leftState = l, leftState)" title="Toggle the left panel">☰</button>
+                             Padding="0"
+                             style="display:flex;align-items:center;">
+                <div style="@RailSlotStyle">
+                    <button @onclick="() => Cycle(l => leftState = l, leftState)"
+                            style="@HeaderButtonStyle"
+                            title="Toggle the left panel">☰</button>
+                </div>
                 <strong>Workspace</strong>
                 <span style="flex:1;"></span>
-                <button @onclick="() => Cycle(r => rightState = r, rightState)" title="Toggle the right panel">⋮</button>
+                <div style="@RailSlotStyle">
+                    <button @onclick="() => Cycle(r => rightState = r, rightState)"
+                            style="@HeaderButtonStyle"
+                            title="Toggle the right panel">⋮</button>
+                </div>
             </AppLayoutHeader>
 
             <AppLayoutPanel Side="PanelSide.Left"
@@ -49,7 +59,7 @@
                             @bind-Size="leftWidth"
                             MinSize="180"
                             MaxSize="420"
-                            ToolbarSize="52"
+                            ToolbarSize="@RailSize"
                             CollapseBelow="900"
                             PersistKey="sample-left"
                             Background="var(--shiny-color-surface-container)">
@@ -98,7 +108,7 @@
                             @bind-Size="rightWidth"
                             MinSize="200"
                             MaxSize="480"
-                            ToolbarSize="52"
+                            ToolbarSize="@RailSize"
                             CollapsedState="PanelState.Hidden"
                             PersistKey="sample-right"
                             Padding="14"
@@ -139,9 +149,22 @@
     LayoutSpan headerSpan = LayoutSpan.Full;
     bool borders = true;
 
+    // One number drives the rail width, the header's leading/trailing slots and the button size,
+    // so the header buttons and the rail icons can never drift out of alignment.
+    const double RailSize = 52;
+
     const string RailButtonStyle =
         "width:36px;height:36px;border-radius:9px;border:none;background:transparent;" +
-        "cursor:pointer;font-size:16px;color:inherit;";
+        "cursor:pointer;font-size:16px;color:inherit;display:inline-flex;" +
+        "align-items:center;justify-content:center;padding:0;";
+
+    // Same 36px box as a rail button, but it keeps the sample's button chrome from app.css.
+    const string HeaderButtonStyle =
+        "width:36px;height:36px;padding:0;font-size:16px;display:inline-flex;" +
+        "align-items:center;justify-content:center;";
+
+    static readonly string RailSlotStyle =
+        $"flex:0 0 auto;width:{RailSize}px;display:flex;justify-content:center;";
 
     static void Cycle(Action<PanelState> set, PanelState current)
         => set(current switch

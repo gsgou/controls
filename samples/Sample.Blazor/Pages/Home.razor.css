@@ -1,0 +1,234 @@
+/* ---- banner ---------------------------------------------------------------------------- */
+
+.hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 55%, #2563EB 100%);
+}
+
+/* one soft highlight instead of the old absolutely-positioned circle divs */
+.hero::after {
+    content: '';
+    position: absolute;
+    top: -70px;
+    right: -40px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
+.hero-logo-tile {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.hero-logo {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 3px rgba(15, 13, 26, 0.45));
+}
+
+.hero-text {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.hero-text h1 {
+    margin: 0 0 2px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.hero-text p {
+    margin: 0;
+    font-size: 13px;
+    color: #DDD6FE;
+}
+
+.hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.hero-btn:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.hero-btn:active {
+    transform: scale(0.97);
+}
+
+.hero-btn-primary {
+    background: #fff;
+    color: #4C1D95;
+    box-shadow: 0 2px 10px rgba(15, 13, 26, 0.18);
+}
+
+.hero-btn-primary:hover {
+    background: #F5F3FF;
+}
+
+/* ---- catalogue ------------------------------------------------------------------------- */
+
+.catalog-section {
+    margin-bottom: 26px;
+}
+
+.catalog-heading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
+}
+
+.catalog-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.catalog-count {
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
+    background: var(--shiny-color-surface-container, #EDE9FE);
+}
+
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 12px;
+}
+
+.catalog-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 3px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+/* the accent only shows up on hover, so a wall of cards does not turn into a wall of colour */
+.catalog-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.catalog-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(76, 29, 149, 0.12);
+}
+
+.catalog-card:hover::before {
+    opacity: 1;
+}
+
+.catalog-icon {
+    grid-row: 1 / span 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1;
+    /* the nav accents are tuned for a near-black sidebar and go weak on a white card, so the
+       glyph is darkened while the tile keeps the original hue */
+    color: color-mix(in srgb, var(--accent) 62%, #0F172A);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.catalog-name {
+    align-self: end;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--shiny-color-on-surface, #1E1B4B);
+}
+
+.catalog-blurb {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
+}
+
+@media (max-width: 820px) {
+    .hero {
+        padding: 16px;
+    }
+
+    .hero-text {
+        flex-basis: 100%;
+    }
+
+    .catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+}
