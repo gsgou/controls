@@ -17,36 +17,42 @@
         <div class="shiny-sheet-container"
              @ref="sheetEl"
              style="@SheetStyle">
-            @if (Direction == SheetDirection.Bottom)
-            {
-                @if (HeaderTemplate != null)
+            @* The container spans the full viewport and is translated down to the detent, so the
+               band below the detent line is off-screen. The viewport is sized to just that visible
+               band (--sheet-visible-height, kept current by sheet.js) so content laid out inside it
+               — a chat input bar, a footer button — stays reachable at every detent. *@
+            <div class="shiny-sheet-viewport">
+                @if (Direction == SheetDirection.Bottom)
                 {
-                    <div class="shiny-sheet-header" @ref="headerEl" @onclick="OnHeaderClick">
-                        @HeaderTemplate
+                    @if (HeaderTemplate != null)
+                    {
+                        <div class="shiny-sheet-header" @ref="headerEl" @onclick="OnHeaderClick">
+                            @HeaderTemplate
+                        </div>
+                    }
+                    <div class="shiny-sheet-handle-host" @ref="handleEl">
+                        <div class="shiny-sheet-handle" style="@HandleStyle"></div>
+                    </div>
+                    <div class="shiny-sheet-scroll">
+                        @SheetContent
                     </div>
                 }
-                <div class="shiny-sheet-handle-host" @ref="handleEl">
-                    <div class="shiny-sheet-handle" style="@HandleStyle"></div>
-                </div>
-                <div class="shiny-sheet-scroll">
-                    @SheetContent
-                </div>
-            }
-            else
-            {
-                <div class="shiny-sheet-scroll">
-                    @SheetContent
-                </div>
-                <div class="shiny-sheet-handle-host" @ref="handleEl">
-                    <div class="shiny-sheet-handle" style="@HandleStyle"></div>
-                </div>
-                @if (HeaderTemplate != null)
+                else
                 {
-                    <div class="shiny-sheet-header" @ref="headerEl" @onclick="OnHeaderClick">
-                        @HeaderTemplate
+                    <div class="shiny-sheet-scroll">
+                        @SheetContent
                     </div>
+                    <div class="shiny-sheet-handle-host" @ref="handleEl">
+                        <div class="shiny-sheet-handle" style="@HandleStyle"></div>
+                    </div>
+                    @if (HeaderTemplate != null)
+                    {
+                        <div class="shiny-sheet-header" @ref="headerEl" @onclick="OnHeaderClick">
+                            @HeaderTemplate
+                        </div>
+                    }
                 }
-            }
+            </div>
         </div>
     </div>
 }

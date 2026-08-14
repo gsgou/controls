@@ -9,8 +9,15 @@ public static class DockingServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the docking infrastructure for Blazor. Call once during Program.cs,
-    /// then register each panel with <see cref="AddDockPanel{TComponent}"/>.
+    /// then register each panel with <see cref="AddDockPanel{TComponent}"/>. Also covered by
+    /// <c>AddShinyControls()</c> — calling both is safe.
     /// </summary>
+    /// <remarks>
+    /// Singleton on purpose, unlike the other control services. <see cref="DockableContentRegistry"/>
+    /// is an immutable lookup built once from the registered factories and holds no per-user state —
+    /// the live layout lives in <c>DockHost</c>, which is a component and therefore already per-user.
+    /// Do not "fix" this to scoped for consistency.
+    /// </remarks>
     public static IServiceCollection AddShinyDocking(this IServiceCollection services)
     {
         services.TryAddSingleton<DockableContentRegistry>();

@@ -1,0 +1,37 @@
+@namespace Shiny.Blazor.Controls.OnScreenKeyboard
+
+@* The keyboard itself. Place one of these once, near the root of the layout.
+
+   Every pointerdown in here is cancelled — on the container so the gaps between keys count too,
+   and on each key so the cancel happens on the element the browser is actually about to focus.
+   That is what keeps the caret in the field the user is typing into: without it the first tap
+   moves focus to a key, and every command in onscreen-keyboard.js has nothing to type into. *@
+<div class="shiny-osk @ThemeClass @(Keyboard.IsVisible ? "is-open" : "is-closed") @CssClass"
+     data-shiny-osk
+     role="application"
+     aria-label="On-screen keyboard"
+     aria-hidden="@(Keyboard.IsVisible ? "false" : "true")"
+     style="@RootStyle"
+     @onpointerdown:preventDefault
+     @oncontextmenu:preventDefault>
+
+    @foreach (var row in Rows)
+    {
+        <div class="shiny-osk-row">
+            @foreach (var key in row)
+            {
+                <button type="button"
+                        tabindex="-1"
+                        class="shiny-osk-key @(key.IsAccent ? "is-accent" : null) @StateClass(key)"
+                        style="flex: @Flex(key)"
+                        aria-label="@AriaFor(key)"
+                        aria-pressed="@AriaPressedFor(key)"
+                        @onpointerdown="() => PressAsync(key)"
+                        @onpointerdown:preventDefault
+                        @onpointerup="Release"
+                        @onpointerleave="Release"
+                        @onpointercancel="Release">@FaceFor(key)</button>
+            }
+        </div>
+    }
+</div>

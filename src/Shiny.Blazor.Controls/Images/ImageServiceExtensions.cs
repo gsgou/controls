@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -28,7 +29,7 @@ public static class ImageServiceExtensions
     /// <summary>
     /// Routes <see cref="ShinyImage"/> downloads through your own <see cref="IImageDownloader"/>.
     /// </summary>
-    public static IServiceCollection AddShinyImages<T>(this IServiceCollection services)
+    public static IServiceCollection AddShinyImages<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this IServiceCollection services)
         where T : class, IImageDownloader
     {
         services.AddScoped<IImageDownloader, T>();

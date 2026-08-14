@@ -1,0 +1,139 @@
+/* Every colour is a custom property with a fallback, so an app can restyle the keyboard by setting
+   --shiny-osk-* on any ancestor without knowing a single class name here. */
+
+.shiny-osk {
+    --shiny-osk-height: 280px;
+    --shiny-osk-gap: 4px;
+    --shiny-osk-radius: var(--shiny-shape-corner-small, 8px);
+
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Above the dialog host (10000) — a modal with a text field still needs somewhere to type —
+       and below the tooltip layer. */
+    z-index: 10500;
+
+    box-sizing: border-box;
+    height: var(--shiny-osk-height);
+    display: flex;
+    flex-direction: column;
+    gap: var(--shiny-osk-gap);
+    padding: var(--shiny-osk-gap);
+
+    background: var(--shiny-osk-bg);
+    border-top: 1px solid var(--shiny-osk-border);
+    box-shadow: 0 -6px 24px rgb(0 0 0 / 18%);
+
+    /* A key must not take the caret, and a drag across the keys must not scroll the page. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+
+    transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.shiny-osk.is-closed {
+    transform: translateY(100%);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.shiny-osk.is-open {
+    transform: translateY(0);
+}
+
+.shiny-osk-row {
+    display: flex;
+    flex: 1 1 0;
+    gap: var(--shiny-osk-gap);
+    min-height: 0;
+}
+
+.shiny-osk-key {
+    /* flex is set inline per key — that is the only thing that varies between them.
+       The face is centred explicitly because host apps routinely restyle bare `button`, and a key
+       whose label drifts to the left edge reads as broken. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--shiny-osk-border);
+    border-radius: var(--shiny-osk-radius);
+    background: var(--shiny-osk-key-bg);
+    color: var(--shiny-osk-key-fg);
+
+    font-family: var(--shiny-type-font-family, inherit);
+    font-size: clamp(0.75rem, 2.1vw, 1.05rem);
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    transition: background-color 60ms linear;
+}
+
+.shiny-osk-key.is-accent {
+    background: var(--shiny-osk-modifier-bg);
+    font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+}
+
+.shiny-osk-key:active,
+.shiny-osk-key.is-latched {
+    background: var(--shiny-osk-key-pressed-bg);
+    color: var(--shiny-osk-key-pressed-fg);
+}
+
+/* Space carries no glyph, so give it something to aim at. */
+.shiny-osk-key.is-space::after {
+    content: "";
+    display: block;
+    width: 40%;
+    height: 2px;
+    margin: 0 auto;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.35;
+}
+
+/* ---- palettes ------------------------------------------------------------------------------
+   Auto follows the app's theme tokens and therefore tracks a runtime theme switch; the two fixed
+   palettes are for kiosks that pin one look regardless of what the rest of the app is doing. */
+
+.shiny-osk.theme-auto {
+    --shiny-osk-bg: var(--shiny-color-surface-container-high, #E2E9F2);
+    --shiny-osk-border: var(--shiny-color-outline-variant, #BBC7DF);
+    --shiny-osk-key-bg: var(--shiny-color-surface-container-lowest, #FFFFFF);
+    --shiny-osk-key-fg: var(--shiny-color-on-surface, #161C23);
+    --shiny-osk-modifier-bg: var(--shiny-color-surface-container-highest, #DBE3EE);
+    --shiny-osk-key-pressed-bg: var(--shiny-color-primary, #0055D9);
+    --shiny-osk-key-pressed-fg: var(--shiny-color-on-primary, #FFFFFF);
+}
+
+.shiny-osk.theme-light {
+    --shiny-osk-bg: #D6DAE0;
+    --shiny-osk-border: #C0C5CD;
+    --shiny-osk-key-bg: #FFFFFF;
+    --shiny-osk-key-fg: #111827;
+    --shiny-osk-modifier-bg: #ADB4BE;
+    --shiny-osk-key-pressed-bg: #93A0B4;
+    --shiny-osk-key-pressed-fg: #111827;
+}
+
+.shiny-osk.theme-dark {
+    --shiny-osk-bg: #16181D;
+    --shiny-osk-border: #33373F;
+    --shiny-osk-key-bg: #2A2E37;
+    --shiny-osk-key-fg: #F3F4F6;
+    --shiny-osk-modifier-bg: #1E2128;
+    --shiny-osk-key-pressed-bg: #4B5563;
+    --shiny-osk-key-pressed-fg: #FFFFFF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-osk {
+        transition: none;
+    }
+}

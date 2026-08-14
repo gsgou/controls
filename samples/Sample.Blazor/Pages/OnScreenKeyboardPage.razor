@@ -1,0 +1,164 @@
+@page "/onscreenkeyboard"
+@using Shiny.Blazor.Controls.OnScreenKeyboard
+@inject IOnScreenKeyboardService Keyboard
+@inject OnScreenKeyboardOptions Options
+@implements IDisposable
+
+<PageTitle>On-Screen Keyboard</PageTitle>
+
+<h1>On-Screen Keyboard</h1>
+
+<section class="demo-section">
+    <p>
+        A touch / kiosk soft keyboard for apps that cannot rely on the OS one — a point-of-sale
+        terminal, a wall-mounted panel, a tablet with no hardware keyboard. It docks along the bottom
+        edge, auto-shows when an <code>&lt;input&gt;</code> or <code>&lt;textarea&gt;</code> takes
+        focus, and types into whatever is focused <em>without ever taking the caret off it</em>.
+    </p>
+    <p style="font-size:0.875rem;">
+        Normally <code>&lt;OnScreenKeyboardHost /&gt;</code> goes once in <code>MainLayout.razor</code>.
+        This page hosts its own so the keyboard only appears here rather than popping up on every
+        other demo in the gallery.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>1. Type into anything</h2>
+    <p style="font-size:0.875rem;">
+        Tap a field. Every key routes through the caret, so selecting text and typing replaces it,
+        <code>⌫</code> and the arrows repeat when held, and the value binding updates live.
+    </p>
+
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:520px;">
+        <input class="demo-input" placeholder="A plain input" @bind="plain" @bind:event="oninput" />
+
+        <TextEntry Placeholder="A Shiny TextEntry"
+                   Variant="TextEntryVariant.Floating"
+                   @bind-Text="entry" />
+
+        <textarea class="demo-input"
+                  rows="4"
+                  placeholder="A textarea — try ▲ ▼ to walk between lines"
+                  @bind="notes"
+                  @bind:event="oninput"></textarea>
+
+        <input class="demo-input" type="password" placeholder="…and a password field" @bind="secret" @bind:event="oninput" />
+    </div>
+
+    <p style="font-size:0.8125rem; margin-top:12px;">
+        <strong>Bound values:</strong>
+        <code>@Describe(plain)</code> · <code>@Describe(entry)</code> ·
+        <code>@Describe(notes)</code> · <code>@Describe(new string('•', secret.Length))</code>
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>2. Driving it from code</h2>
+    <p style="font-size:0.875rem;">
+        <code>IOnScreenKeyboardService</code> is the whole API: <code>Show()</code>,
+        <code>Hide()</code>, <code>Toggle()</code>, <code>IsVisible</code> and a
+        <code>VisibilityChanged</code> event. Kiosk apps usually turn auto-show off and pin the
+        keyboard up for the life of the screen.
+    </p>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <ShinyButton Text="Show" Clicked="@(() => Keyboard.Show())" />
+        <ShinyButton Text="Hide" Appearance="ButtonAppearance.Outlined" Clicked="@(() => Keyboard.Hide())" />
+        <ShinyButton Text="Toggle" Appearance="ButtonAppearance.Tonal" Clicked="@(() => Keyboard.Toggle())" />
+    </div>
+
+    <p style="font-size:0.875rem; margin-top:10px;">
+        <Pill Text="@(Keyboard.IsVisible ? "Visible" : "Hidden")"
+              Type="@(Keyboard.IsVisible ? PillType.Success : PillType.None)" />
+        <span style="margin-left:8px;">
+            Clicking a button moves focus off the field, so with <em>auto-hide on blur</em> still on
+            these fight each other. Turn it off below to drive visibility purely from code.
+        </span>
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>3. Options</h2>
+    <p style="font-size:0.875rem;">
+        <code>OnScreenKeyboardOptions</code> is registered as a live singleton — set it once in
+        <code>Program.cs</code>, or change it at runtime like this page does.
+    </p>
+
+    <div class="osk-options">
+        <label>
+            <input type="checkbox" @bind="Options.AutoShowOnFocus" />
+            Auto-show on focus
+        </label>
+        <label>
+            <input type="checkbox" @bind="Options.AutoHideOnBlur" />
+            Auto-hide on blur
+        </label>
+        <label>
+            <input type="checkbox" @bind="Options.PushContent" />
+            Push content
+        </label>
+        <label>
+            <input type="checkbox" @bind="Options.EnterInsertsNewLine" />
+            Enter types a newline in a textarea
+        </label>
+        <label>
+            Theme
+            <select @bind="Options.Theme">
+                <option value="@OnScreenKeyboardTheme.Auto">Auto (follows the app theme)</option>
+                <option value="@OnScreenKeyboardTheme.Light">Light</option>
+                <option value="@OnScreenKeyboardTheme.Dark">Dark</option>
+            </select>
+        </label>
+        <label>
+            Height
+            <input type="range" min="180" max="380" step="10" @bind="Options.HeightPx" @bind:event="oninput" />
+            <span>@((int)Options.HeightPx)px</span>
+        </label>
+    </div>
+
+    <p style="font-size:0.8125rem; margin-top:10px;">
+        <em>Push content</em> pads the document body out from under the keys. This gallery scrolls
+        inside an <code>AppLayout</code> content region rather than the body, so what you will
+        actually notice here is the focused field being scrolled clear of the keyboard — that part
+        measures the real overlap and works in whichever container scrolls.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>4. Layers</h2>
+    <p style="font-size:0.875rem;">
+        US-QWERTY with a symbols layer behind <code>123</code>. <code>⇧</code> is momentary — it
+        drops after one character — and <code>⇪</code> is sticky. Caps Lock only raises the letters,
+        so the number row keeps its digits, exactly like a real keyboard.
+    </p>
+    <p style="font-size:0.875rem;">
+        Scope is deliberately narrow: English US-QWERTY, no IME, no dead keys, no language
+        switching, and it types into this app's own DOM inputs only — never into another window or
+        another process. That is the 80% of a kiosk, not a replacement for the OS keyboard.
+    </p>
+</section>
+
+@* Normally this lives once in MainLayout.razor. *@
+<OnScreenKeyboardHost />
+
+@code {
+    string plain = "";
+    string entry = "";
+    string notes = "";
+    string secret = "";
+
+    protected override void OnInitialized() => Keyboard.VisibilityChanged += OnVisibilityChanged;
+
+    public void Dispose()
+    {
+        Keyboard.VisibilityChanged -= OnVisibilityChanged;
+
+        // Leaving the page takes the host with it; do not strand the keyboard "visible" for the
+        // next visit.
+        Keyboard.Hide();
+    }
+
+    void OnVisibilityChanged(object? sender, bool visible) => InvokeAsync(StateHasChanged);
+
+    static string Describe(string value) => value.Length == 0 ? "(empty)" : value;
+}

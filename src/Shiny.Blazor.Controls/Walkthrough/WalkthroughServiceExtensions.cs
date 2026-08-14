@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -25,7 +26,7 @@ public static class WalkthroughServiceExtensions
     /// Keeps the flag with the rest of your user state — a server profile, a synced settings store —
     /// instead of in one browser.
     /// </summary>
-    public static IServiceCollection AddShinyWalkthrough<T>(this IServiceCollection services)
+    public static IServiceCollection AddShinyWalkthrough<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>(this IServiceCollection services)
         where T : class, IWalkthroughStore
     {
         services.AddScoped<IWalkthroughStore, T>();

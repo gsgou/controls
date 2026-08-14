@@ -25,22 +25,26 @@
                    HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
 
-        <!-- FabMenu: open chats -->
+        <!-- FabMenu: open chats. The margin keeps it (and its pills) off the screen edge. -->
         <shiny:FabMenu Text="Chats"
                        FabBackgroundColor="#6C63FF"
                        TextColor="White"
                        HasBackdrop="True"
                        CloseOnBackdropTap="True"
-                       CloseOnItemTap="True">
+                       CloseOnItemTap="True"
+                       Margin="0,0,24,24">
             <shiny:FabMenuItem Text="Alice Johnson"
+                               Icon="dotnet_bot.png"
                                FabBackgroundColor="#E3F2FD"
                                Command="{Binding OpenChatCommand}"
                                CommandParameter="alice" />
             <shiny:FabMenuItem Text="Bob Smith"
+                               Icon="dotnet_bot.png"
                                FabBackgroundColor="#FFF3E0"
                                Command="{Binding OpenChatCommand}"
                                CommandParameter="bob" />
             <shiny:FabMenuItem Text="Carol Davis"
+                               Icon="dotnet_bot.png"
                                FabBackgroundColor="#F3E5F5"
                                Command="{Binding OpenChatCommand}"
                                CommandParameter="carol" />
@@ -51,13 +55,19 @@
 
   <shiny:ShinyContentPage.Panels>
     <!-- Sheet: chat window -->
+    <!--
+      Detents (not FitContent) so the sheet can be dragged between half and full height, and
+      IsContentScrollEnabled=False so the ChatView owns its own scrolling and fills the panel
+      instead of being nested in the panel's ScrollView at a fixed height.
+    -->
     <shiny:FloatingPanel IsOpen="{Binding IsChatOpen}"
+                         Detents="{Binding SheetDetents}"
+                         IsContentScrollEnabled="False"
+                         ExpandOnInputFocus="True"
                          HasBackdrop="True"
                          CloseOnBackdropTap="True"
                          HandleColor="Gray"
-                         PanelBackgroundColor="White"
-                         PanelCornerRadius="20"
-                         FitContent="True">
+                         PanelCornerRadius="20">
         <shiny:FloatingPanel.HeaderTemplate>
             <Border BackgroundColor="#6C63FF"
                     Padding="16,12"
@@ -71,11 +81,7 @@
 
         <shiny:ChatView Provider="{Binding ChatProvider}"
                         SessionId="{Binding ActiveSessionId}"
-                        MyBubbleColor="#DCF8C6"
-                        OtherBubbleColor="White"
-                        PlaceholderText="Type a message..."
-                        AdjustForKeyboard="False"
-                        HeightRequest="500">
+                        PlaceholderText="Type a message...">
             <shiny:ChatView.MessageTemplateSelector>
                 <local:KitchenSinkMessageTemplateSelector>
                     <local:KitchenSinkMessageTemplateSelector.TextTemplate>

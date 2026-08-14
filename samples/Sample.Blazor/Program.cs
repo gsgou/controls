@@ -1,27 +1,25 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sample.Blazor;
+using Sample.Blazor.DockPanels;
 using Shiny.Blazor.Controls;
-using Shiny.Blazor.Controls.Dialogs;
-using Shiny.Blazor.Controls.Docking;
-using Shiny.Blazor.Controls.Splash;
-using Shiny.Blazor.Controls.Toast;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-builder.Services.AddShinyToast();
-builder.Services.AddShinySplashScreen();
-builder.Services.AddShinyDialogs();
-builder.Services.AddShinyDocking();
-builder.Services.AddShinyWalkthrough();
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ExplorerPanel>("explorer", "Explorer", "📁");
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.PropertiesPanel>("properties", "Properties", "🔧");
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.OutputPanel>("output", "Output", "🖥️");
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ErrorListPanel>("errors", "Error List", "⚠️");
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.EditorPanel>("editor", "Program.cs", "📄");
-builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ReadmePanel>("readme", "README.md", "📘");
+// One call covers every service-backed control - Toast, Dialogs, the splash screen, the walkthrough
+// store, docking and the on-screen keyboard. The individual AddShiny* calls still exist for apps
+// that want to keep the WASM payload tight; dock panels can only ever come from the app.
+builder.Services.AddShinyControls(cfg => cfg
+    .AddDockPanel<ExplorerPanel>("explorer", "Explorer", "📁")
+    .AddDockPanel<PropertiesPanel>("properties", "Properties", "🔧")
+    .AddDockPanel<OutputPanel>("output", "Output", "🖥️")
+    .AddDockPanel<ErrorListPanel>("errors", "Error List", "⚠️")
+    .AddDockPanel<EditorPanel>("editor", "Program.cs", "📄")
+    .AddDockPanel<ReadmePanel>("readme", "README.md", "📘")
+);
+
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<Sample.Blazor.Chat.InMemoryChatSessionProvider>();
 builder.Services.AddSingleton<Sample.Blazor.Chat.KitchenSinkChatProvider>();

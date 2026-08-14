@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -159,7 +159,37 @@ Add the `@using` directives — typically in `_Imports.razor`:
 @using Shiny.Controls.Barcodes
 ```
 
-No DI registration is required — drop the components into any `.razor` page.
+Most controls need no DI registration at all — drop the component into any `.razor` page and its
+scoped CSS and JS module come along with it. A handful are driven by a service (Toast, Dialogs, the
+splash screen, the walkthrough store, Docking and the on-screen keyboard), and one call covers all
+of them, mirroring MAUI's `UseShinyControls()`:
+
+```csharp
+using Shiny.Blazor.Controls;
+
+builder.Services.AddShinyControls();
+```
+
+With optional configuration, again shaped like the MAUI side:
+
+```csharp
+builder.Services.AddShinyControls(cfg => cfg
+    .ConfigureDialogs(o => o.DefaultAnimation = DialogAnimation.Zoom)
+    .ConfigureKeyboard(o => o.HeightPx = 320)
+    .UseHttpImageDownloader()                    // ShinyImage through your HttpClient (optional)
+    .AddDockPanel<ExplorerPanel>("explorer", "Explorer", "📁")
+);
+```
+
+Every individual `AddShinyToast()` / `AddShinyDialogs()` / `AddShinySplashScreen()` /
+`AddShinyWalkthrough()` / `AddShinyDocking()` / `AddShinyOnScreenKeyboard()` call still exists, and
+all registrations are `TryAdd`, so the two styles compose in either order. Register à la carte when
+you want to keep the WASM payload tight; to replace an implementation, use a `SetCustom*` method or
+register your own first — first registration wins.
+
+> All of these services are **scoped**, not singleton: they hold per-user UI state. Under WebAssembly
+> the two lifetimes are identical, but on Blazor Server a singleton would show one user's toast,
+> dialog or keyboard to every connected user.
 
 #### MAUI → Blazor quick reference
 
@@ -324,6 +354,8 @@ On Blazor, events are matched across the JS boundary by `SchedulerEvent.Identifi
 A floating panel overlay system for MAUI. Panels slide in from the bottom or top of the screen with configurable snap positions (detents), optional header peek when closed, backdrop dimming, and feedback. Multiple panels can coexist on the same page without blocking touches on content underneath.
 
 **OverlayHost** is a transparent Grid layer that manages backdrop and touch passthrough for overlay clients (`FloatingPanel`, `Overlay`, `LoadingOverlay`). **ShinyContentPage** is a convenience ContentPage with a built-in OverlayHost.
+
+> **Blazor equivalent — `SheetView`.** Blazor sheets lay their content out inside the band the detent actually puts on screen, so a footer, an action row or a `ChatView` input bar stays reachable at every detent instead of being pushed below the fold. Give sheet content `height: 100%` to fill that band; anything taller scrolls inside the sheet. A full-bleed `HeaderTemplate` is clipped to the sheet's rounded corners.
 
 | Closed | Open | Header (Closed) | Header (Open) | Top (Closed) | Top (Open) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
@@ -865,7 +897,7 @@ public interface IChatSessionProvider
 | MessageTemplate | DataTemplate? | null | Single template for all message content (MAUI only) |
 | MessageTemplateSelector | DataTemplateSelector? | null | Per-type template selector (MAUI only) |
 | UseFeedback | bool | true | Haptic feedback on interactions (MAUI only) |
-| AdjustForKeyboard | bool | true | iOS keyboard padding (set false inside a FloatingPanel) (MAUI only) |
+| AdjustForKeyboard | bool | true | iOS keyboard padding. Leave on inside a `FloatingPanel` — the panel's `ExpandOnInputFocus` raises the sheet, but only this padding lifts the composer clear of the keyboard once the panel is at its top detent. Set false only when something else already handles the overlap (MAUI only) |
 
 **Methods (MAUI):** `ScrollToEnd(bool animate)`, `ScrollToMessage(string messageId, bool animate)`, `SubmitEntry()`, `EntryText` (get/set), `MessageTapped` event (non-image bubble taps).
 
@@ -3233,9 +3265,9 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
 
-### Desktop (Tray Icon + Docking + On-Screen Keyboard)
+### Desktop (Tray Icon + Docking) &amp; the On-Screen Keyboard
 
-`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines three features: a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and a touch / kiosk **on-screen keyboard** (US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows on input focus). On the Blazor side there is no equivalent add-on — docking ships in the main `Shiny.Blazor.Controls` package.
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). A touch / kiosk **on-screen keyboard** is planned for it but not built. On the Blazor side there is no equivalent add-on — docking *and* the on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 ```bash
 dotnet add package Shiny.Maui.Controls.Desktop
@@ -3252,15 +3284,10 @@ builder
     .UseTrayIcon()         // tray / status-bar icon
     .UseShinyDocking()     // docking host
     .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
-    .AddDockPanel<OutputPanel>("output")
-    .UseOnScreenKeyboard(opts =>  // touch / kiosk soft keyboard
-    {
-        opts.AutoShowOnFocus = true;
-        opts.PushContent     = true;
-    });
+    .AddDockPanel<OutputPanel>("output");
 ```
 
-> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API, `using Shiny.Maui.Controls.Desktop.Docking;` for docking, and `using Shiny.Maui.Controls.Desktop.OnScreenKeyboard;` for the on-screen keyboard. The extension methods themselves live in the `Shiny` namespace.
+> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API and `using Shiny.Maui.Controls.Desktop.Docking;` for docking. The extension methods themselves live in the `Shiny` namespace. There is no `UseOnScreenKeyboard` — see below.
 
 #### Tray Icon
 
@@ -3403,35 +3430,12 @@ The component itself implements `IDockHost` — grab it with `@ref` to call `Sho
 
 #### On-Screen Keyboard
 
-Touch / kiosk soft keyboard. US-QWERTY with shift / numbers / symbols layers, bottom-docked, auto-shows when an `Entry` / `Editor` (MAUI) or `<input>` / `<textarea>` (Blazor) gains focus, and — critically — does **not** steal focus when keys are tapped.
+> [!IMPORTANT]
+> **Blazor only.** The keyboard ships in `Shiny.Blazor.Controls`. The MAUI half —
+> `UseOnScreenKeyboard` / `IOnScreenKeyboard` / `OnScreenKeyboardView` in
+> `Shiny.Maui.Controls.Desktop` — is still a design and will not compile.
 
-```csharp
-// MAUI registration
-using Shiny;
-using Shiny.Maui.Controls.Desktop.OnScreenKeyboard;
-
-builder
-    .UseMauiApp<App>()
-    .UseOnScreenKeyboard(opts =>
-    {
-        opts.AutoShowOnFocus = true;
-        opts.AutoHideOnBlur  = true;
-        opts.Height          = 280;
-        opts.PushContent     = true;     // shrinks the page above by Height (false = overlay)
-        opts.Theme           = OnScreenKeyboardTheme.Light;
-    });
-```
-
-Drive visibility from code via DI:
-
-```csharp
-public class MyPageViewModel(IOnScreenKeyboard keyboard)
-{
-    public void StartKioskMode() => keyboard.Show();
-}
-```
-
-##### Blazor
+Touch / kiosk soft keyboard. US-QWERTY with a symbols layer, bottom-docked, auto-shows when an `<input>` / `<textarea>` gains focus, and — critically — does **not** take the caret off it when keys are tapped.
 
 ```csharp
 using Shiny.Blazor.Controls.OnScreenKeyboard;
@@ -3439,16 +3443,30 @@ using Shiny.Blazor.Controls.OnScreenKeyboard;
 builder.Services.AddShinyOnScreenKeyboard(opts =>
 {
     opts.AutoShowOnFocus = true;
+    opts.AutoHideOnBlur  = true;
     opts.HeightPx        = 280;
-    opts.PushContent     = true;
+    opts.PushContent     = true;     // pad the body out from under the keys (false = overlay)
+    opts.Theme           = OnScreenKeyboardTheme.Auto;   // follows the app's theme tokens
 });
 ```
 
 ```razor
 @using Shiny.Blazor.Controls.OnScreenKeyboard
 
-@* Place once in MainLayout.razor *@
+@* Place once in MainLayout.razor — the host watches focus for the whole document *@
 <OnScreenKeyboardHost />
 ```
 
-Limitations: MAUI / DOM inputs only — no system-wide injection. No Shadow DOM. No IME / dead-key composition. English US-QWERTY only. Full AutomationPeer (MAUI) / ARIA (Blazor) tree for switch-input accessibility from day one.
+Drive visibility from code via DI:
+
+```csharp
+@inject IOnScreenKeyboardService Keyboard
+
+<button @onclick="() => Keyboard.Show()">Kiosk mode</button>
+```
+
+`IOnScreenKeyboardService` is `Show` / `Hide` / `Toggle` / `IsVisible` / `VisibilityChanged`. Both it and `OnScreenKeyboardOptions` are registered **scoped** — the options object is live, so change it at runtime and the host picks it up on the next render, and being per-scope means one user's settings are not everyone's under Blazor Server. `AddShinyControls()` covers this too; `ConfigureKeyboard` is the umbrella's equivalent of the `opts` delegate above.
+
+`⇧` is momentary, `⇪` is sticky and only raises the letters (the number row keeps its digits), and holding a character, `⌫`, space or an arrow auto-repeats. Arrows are caret-aware: `▲` / `▼` walk to the same column on the adjacent line of a `<textarea>`. Enter dispatches real key events and submits the form on a single-line input; set `EnterInsertsNewLine` to type a newline in a `<textarea>` instead. Theming is entirely `--shiny-osk-*` custom properties.
+
+Limitations: DOM inputs only — no injection into another window, process or cross-origin frame. No Shadow DOM (`focusin` does not pierce shadow roots). No IME / dead-key composition, English US-QWERTY only. No Ctrl / Alt chords — and no inert keys on the board pretending otherwise. Keys are `tabindex="-1"` by design, since taking focus is the one thing the control exists to avoid; the ARIA tree is there so the board is describable, not tab-navigable.

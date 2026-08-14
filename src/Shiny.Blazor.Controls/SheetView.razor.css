@@ -21,6 +21,28 @@
     display: flex;
     flex-direction: column;
     will-change: transform;
+    /* Keeps a full-bleed HeaderTemplate inside the sheet's rounded corners. */
+    overflow: hidden;
+}
+
+/*
+ * The visible band of the sheet. The container is always viewport-tall and translated down to the
+ * detent, which would leave everything past the detent line laid out below the fold. Sizing the
+ * viewport to --sheet-visible-height (written by sheet.js on every transform) keeps the whole
+ * column — header, handle and content — inside the part the user can actually see and touch.
+ */
+.shiny-sheet-viewport {
+    display: flex;
+    flex-direction: column;
+    height: var(--sheet-visible-height, 100%);
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* A top sheet's visible band is the bottom of the container, so the viewport hangs off the end. */
+.is-top .shiny-sheet-viewport {
+    margin-top: auto;
 }
 
 .is-bottom .shiny-sheet-container {

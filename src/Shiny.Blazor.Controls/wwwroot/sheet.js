@@ -3,8 +3,14 @@ const states = new WeakMap();
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
+// Every move of the sheet also republishes how much of it is on screen. The CSS sizes
+// .shiny-sheet-viewport off this, so content stays inside the visible band while dragging and not
+// just at the snapped detents.
 function applyTransform(sheet, y) {
     sheet.style.transform = `translateY(${y}px)`;
+    const state = states.get(sheet);
+    if (state && state.height > 0)
+        sheet.style.setProperty('--sheet-visible-height', `${clamp(state.height - Math.abs(y), 0, state.height)}px`);
 }
 
 function offScreenY(state) {
@@ -32,9 +38,9 @@ function backdropOpacityFor(y, height) {
 function snapInternal(state, ratio, animate) {
     const targetY = detentY(state, ratio);
     state.currentY = targetY;
+    state.snappedRatio = ratio;
     state.sheet.style.transition = animate ? `transform ${state.duration}ms cubic-bezier(.2,.8,.2,1)` : 'none';
     applyTransform(state.sheet, targetY);
-    state.sheet.style.setProperty('--sheet-visible-height', `${state.height * ratio}px`);
     state.dotnet.invokeMethodAsync('OnBackdropOpacity', backdropOpacityFor(targetY, state.height));
     state.dotnet.invokeMethodAsync('OnDetentChanged', ratio);
 }
@@ -54,6 +60,9 @@ export function init(root, sheet, handle, dotnetRef, ratios, duration, locked, i
         dragStartTransform: 0,
         dragging: false,
         pointerId: null,
+        // The detent the sheet is resting at, or null when it is hidden/minimized. Tracked so a
+        // viewport resize can re-derive the transform instead of keeping a stale pixel offset.
+        snappedRatio: null,
     };
     states.set(sheet, state);
 
@@ -64,6 +73,16 @@ export function init(root, sheet, handle, dotnetRef, ratios, duration, locked, i
 
     const onResize = () => {
         state.height = root.clientHeight || window.innerHeight;
+        // Re-derive the offset against the new viewport, otherwise the sheet keeps a pixel offset
+        // measured against the old one and lands at the wrong detent.
+        if (state.snappedRatio !== null)
+            snapInternal(state, state.snappedRatio, false);
+        else if (state.minimized)
+            minimizeInternal(state);
+        else {
+            state.currentY = offScreenY(state);
+            applyTransform(sheet, state.currentY);
+        }
     };
     window.addEventListener('resize', onResize);
     state.onResize = onResize;
@@ -76,6 +95,8 @@ export function init(root, sheet, handle, dotnetRef, ratios, duration, locked, i
         state.dragging = true;
         state.dragStartY = ev.clientY;
         state.dragStartTransform = state.currentY;
+        // Between pointerdown and the snap on pointerup the sheet rests at no detent at all.
+        state.snappedRatio = null;
         sheet.style.transition = 'none';
         handle.setPointerCapture(ev.pointerId);
     };
@@ -139,6 +160,8 @@ export function open(sheet, ratios, isBottom) {
     if (isBottom !== undefined) state.isBottom = isBottom;
     state.height = state.root.clientHeight || window.innerHeight;
 
+    state.minimized = false;
+
     // If not already showing (minimized), start off-screen
     const minY = minimizedY(state);
     const isCurrentlyMinimized = Math.abs(state.currentY - minY) < 5;
@@ -159,17 +182,25 @@ export function close(sheet, shouldMinimize) {
     state.sheet.style.transition = `transform ${state.duration}ms cubic-bezier(.4,.0,.2,1)`;
     applyTransform(sheet, targetY);
     state.currentY = targetY;
+    state.snappedRatio = null;
+    state.minimized = !!shouldMinimize;
     state.dotnet.invokeMethodAsync('OnBackdropOpacity', 0);
+}
+
+function minimizeInternal(state) {
+    const targetY = minimizedY(state);
+    state.sheet.style.transition = 'none';
+    applyTransform(state.sheet, targetY);
+    state.currentY = targetY;
+    state.snappedRatio = null;
+    state.minimized = true;
 }
 
 export function minimize(sheet) {
     const state = states.get(sheet);
     if (!state) return;
     state.height = state.root.clientHeight || window.innerHeight;
-    const targetY = minimizedY(state);
-    sheet.style.transition = 'none';
-    applyTransform(sheet, targetY);
-    state.currentY = targetY;
+    minimizeInternal(state);
 }
 
 export function snapTo(sheet, ratio) {

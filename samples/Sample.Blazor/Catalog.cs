@@ -55,7 +55,8 @@ public static class Catalog
             new("slider", "Slider", "━", "Single-value slider with ticks and labels"),
             new("rangeslider", "Range Slider", "≡", "Two-thumb range selection"),
             new("securitypin", "Security Pin", "✱", "PIN entry with masking and shake-on-error"),
-            new("signaturepad", "Signature Pad", "✍", "Draw, clear and export a signature")
+            new("signaturepad", "Signature Pad", "✍", "Draw, clear and export a signature"),
+            new("onscreenkeyboard", "On-Screen Keyboard", "⌨", "Touch / kiosk QWERTY that never steals the caret")
         ]),
 
         new("Actions & Navigation", "#2DD4BF",

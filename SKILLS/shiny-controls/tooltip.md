@@ -57,7 +57,7 @@ xmlns:shiny="http://shiny.net/maui/controls"
 | `Target` | null | `{x:Reference}`. Defaults to the tooltip's own `Content` when wrapping. |
 | `TargetName` | null | `x:Name` resolved through the name scope, for where `{x:Reference}` cannot reach. |
 | `IsOpen` | false | **Two-way.** Not `IsVisible` — see above. |
-| `Trigger` | `Manual` | `Manual` / `Tap` / `LongPress` / `Hover` / `Focus`. |
+| `Trigger` | `Manual` | `Manual` / `Tap` / `LongPress` / `Hover` / `Focus`. `Tap` anchors through `Clicked` when the anchor is a `Button` or `ImageButton` — those consume touch natively and never route it to their `GestureRecognizers`, so a tap gesture on one would never fire. |
 | `Placement` | `Auto` | `Auto` / `Top` / `Bottom` / `Left` / `Right` / `Center`. |
 | `ShowTail` | true | The pointer back at the target. Always off for `Center`. |
 | `TailSize` | 7 | Half the tail's base width. |
