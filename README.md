@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon, Visual-Studio-style docking, and a touch / kiosk on-screen keyboard — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking ships in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -592,16 +592,41 @@ A full-screen image overlay with pinch-to-zoom, pan, double-tap zoom, and animat
 </Grid>
 ```
 
+**MAUI: remote images.** Both the thumbnail and the full-screen overlay are a `ShinyImage`, so setting `Uri` instead of `Source` brings the whole loading pipeline with it — placeholder artwork, a loading ring that fills to a real percentage, error artwork, and `IImageService` memory + disk caching. Opening the viewer resolves off the cache the thumbnail already filled rather than downloading the picture a second time.
+
+```xml
+<shiny:ImageViewer Uri="{Binding PhotoUrl}"
+                   PlaceholderImage="blur_thumb.png"
+                   ErrorImage="broken_image.png"
+                   Aspect="AspectFill"
+                   RingSize="32"
+                   HeightRequest="180" />
+```
+
 | Property | Type | Description |
 |---|---|---|
-| Source | ImageSource? | The image to display |
+| Uri | string? | Remote or local image to load. `http`/`https` goes through `IImageService` (MAUI only) |
+| Source | ImageSource? | An explicit source. Takes precedence over `Uri` and skips the service |
 | IsOpen | bool | Show/hide the viewer (TwoWay) |
-| Aspect | Aspect | Image aspect ratio mode (default: AspectFit) |
+| Aspect | Aspect | Thumbnail aspect ratio mode (default: AspectFit) |
+| OverlayAspect | Aspect | Aspect ratio mode inside the overlay (default: AspectFit) |
 | MaxZoom | double | Maximum zoom scale (default: 5.0) |
+| PlaceholderImage | ImageSource? | Artwork shown during the load, behind the ring |
+| ErrorImage | ImageSource? | Artwork shown when the load fails |
+| LoadingTemplate | DataTemplate? | Replaces the ring; binding context is the live `ImageLoadProgress` |
+| ErrorTemplate | DataTemplate? | Replaces the error artwork |
+| FadeInDuration | uint | Fade-in milliseconds once loaded (default: 150) |
+| RingSize / RingColor / RingTrackColor / ProgressTextColor / ShowProgressText | — | Loading-ring styling |
+| CacheEnabled / CacheDuration | bool / TimeSpan? | Per-image cache participation and expiry |
+| State / Progress / IsLoading / LoadError | — | Read-only load state, mirrored from the thumbnail |
+| ImageLoaded / ImageFailed | event | Raised once per load (thumbnail only, so one image is not announced twice) |
 | CloseButtonTemplate | DataTemplate? | Custom close button (tapping closes viewer) |
 | HeaderTemplate | DataTemplate? | Custom header overlay |
 | FooterTemplate | DataTemplate? | Custom footer overlay |
+| OpenViewerOnTap | bool | Whether tapping the thumbnail opens the overlay (default: true) |
 | UseFeedback | bool | Enable/disable feedback on double-tap zoom (default: true) |
+
+Method: `ReloadAsync()` re-fetches, skipping both cache tiers.
 
 **Features:**
 - Pinch-to-zoom with origin tracking
@@ -609,6 +634,9 @@ A full-screen image overlay with pinch-to-zoom, pan, double-tap zoom, and animat
 - Double-tap to zoom in (2.5x) / reset
 - Animated fade open/close with backdrop
 - Close button overlay
+- Remote loading with caching, progress ring and placeholder/error artwork (MAUI)
+
+On Blazor, `Source` is a URL string handed straight to `<img>` — the loading pipeline is MAUI-only for now.
 
 ### ImageEditor
 
@@ -1842,6 +1870,139 @@ What the wizard adds beyond switching views:
 
 Turn `ShowNavigationBar` off when each step carries its own buttons; `NavigationBar` (MAUI) /
 `<NavigationBar>` (Blazor) replaces the built-in bar while keeping the wizard's own navigation logic.
+
+### Walkthrough
+
+A guided tour of a page on both hosts: dim everything, cut an animated spotlight around one control at a
+time, and say what it does. Onboarding, feature announcements, and workflows people only do once a quarter.
+
+The steps are declared **together on the walkthrough, in order** — not attached to the controls they
+describe. That is the point of the control. On a real screen (nested layouts, templated cells, a control
+that is only sometimes there) attached ordering scatters the sequence across the markup where nothing can
+see it as a whole: reordering means hunting, and a step whose control is conditionally hidden derails the
+rest silently. Here reordering is moving a line, and `IsVisible="False"` takes a step out of the run and
+re-numbers the counter.
+
+The tour paints into a layer above the page's content, so a target inside a scroll view or a card is
+highlighted **where it actually is** rather than clipped by its container.
+
+A step advances **three ways**, which compose per step:
+
+1. **The Next command** — the built-in nav row, or `NextCommand` / `NextAsync()` on your own button.
+2. **Using the highlighted control** — `AdvanceOnTargetTap` (MAUI) / `AdvanceOnTargetClick` (Blazor). This
+   is "tap Save to continue"; it implies target interaction, since the tap has to reach the control.
+3. **A timer** — the step's `Duration` in milliseconds. Zero (the default) waits for the user.
+
+Four displays: **`Popover`** (card, tail, counter and Back/Next/Skip — the default), **`Tooltip`**
+(compact, no buttons), **`Inline`** (card without a tail, beside the target), and **`Spotlight`** (no card
+at all — the text sits on the dim and the cut-out does the pointing). Or replace the body entirely with
+`Content` / `ContentTemplate`.
+
+`RememberRunKey` is what makes onboarding onboarding: the tour runs once per user and then stays out of the
+way. It is backed by a replaceable `IWalkthroughStore` — `Preferences` on MAUI, `localStorage` on Blazor —
+so the flag can live with the rest of your user state instead. `Restart()` clears it and runs again, which
+is the "show me the tour again" menu item.
+
+```xml
+<shiny:Walkthrough x:Name="Tour"
+                   RememberRunKey="home-v1"
+                   AutoStart="True"
+                   UseOverlay="True"
+                   OverlayOpacity="0.8">
+
+    <!-- No target: a centred welcome card, no cut-out. -->
+    <shiny:WalkthroughStep Title="Welcome" Text="Here is what is new." AnimationIn="Pop" />
+
+    <shiny:WalkthroughStep Target="{x:Reference SearchBox}"
+                           Title="Find anything"
+                           Text="Search across every project you can see."
+                           Placement="Bottom" />
+
+    <!-- No card; the cut-out does the pointing. -->
+    <shiny:WalkthroughStep Target="{x:Reference Avatar}"
+                           Title="Your profile"
+                           Display="Spotlight" Highlight="Circle" />
+
+    <!-- Live control: the tap reaches it through the hole, and using it advances. -->
+    <shiny:WalkthroughStep Target="{x:Reference SaveButton}"
+                           Text="Press Save to finish."
+                           AllowTargetInteraction="True"
+                           AdvanceOnTargetTap="True" />
+</shiny:Walkthrough>
+```
+
+```razor
+<Walkthrough @ref="tour" RememberRunKey="home-v1" AutoStart="true">
+    <Steps>
+        <WalkthroughStep Title="Welcome" Text="Here is what is new." />
+        <WalkthroughStep Target="#search" Title="Find anything" Text="Search everything."
+                         Placement="TooltipPlacement.Bottom" />
+        <WalkthroughStep Target="#avatar" Title="Your profile"
+                         Display="WalkthroughDisplay.Spotlight"
+                         Highlight="WalkthroughHighlight.Circle" />
+        <WalkthroughStep Target="#save" Text="Press Save to finish."
+                         AllowTargetInteraction="true" AdvanceOnTargetClick="true" />
+    </Steps>
+</Walkthrough>
+```
+
+Targets are `{x:Reference}` on MAUI — prefer it, because it is checked when the XAML compiles, so a renamed
+control breaks the build instead of quietly producing a tour that highlights nothing — or a CSS selector on
+Blazor. `Walkthrough` renders nothing where it sits, so put it anywhere on the page. Blazor adds keyboard
+navigation (arrows and Enter move, Escape leaves) and a scroll lock, both on by default; register the
+`localStorage` store with `builder.Services.AddShinyWalkthrough()`.
+
+`AllowTargetInteraction` is implemented by fencing the backdrop with four transparent panels *around* the
+cut-out rather than one full-screen catcher — hit testing has no notion of a hole, so the hole has to be a
+gap between panels.
+
+### Tooltip
+
+The bubble the walkthrough is built on, usable on its own. It either **wraps** the thing it describes or
+**points at** something else, and it is drawn in a page-level layer (MAUI) or the browser's top layer
+(Blazor) — so it is never clipped by the scroll view, card or grid cell its target lives in, and never
+loses a z-index argument.
+
+```xml
+<!-- Wrapping: no reference needed, and the wrapper does not disturb the layout. -->
+<shiny:Tooltip Text="Saves without closing" Placement="Top" Trigger="LongPress">
+    <Button Text="Apply" />
+</shiny:Tooltip>
+
+<!-- Anchored and bound: it does not have to sit near its target in the markup. -->
+<shiny:Tooltip Target="{x:Reference SaveButton}"
+               Title="Why is this disabled?"
+               Text="Make a change first."
+               Placement="Bottom"
+               ShowTail="True"
+               IsOpen="{Binding ShowSaveHint}"
+               Command="{Binding DismissHint}" />
+
+<!-- The attached shorthand, for places an element does not fit. -->
+<Button Text="Sync" shiny:TooltipProperties.Text="Pushes local changes to the server" />
+```
+
+```razor
+<Tooltip Text="Saves without closing" Placement="TooltipPlacement.Top">
+    <ShinyButton Text="Apply" />
+</Tooltip>
+
+<Tooltip Target="#save" Title="Why is this disabled?" Text="Make a change first."
+         Trigger="TooltipTrigger.Manual" @bind-IsOpen="showHint" />
+```
+
+Bind **`IsOpen`**, never `IsVisible` — that one is `VisualElement.IsVisible`, and setting it would hide the
+anchor the tooltip is wrapping rather than the bubble.
+
+`Placement` is a preference, not a promise: a side with no room flips to its opposite, then to the roomiest
+of the four; the bubble is clamped to stay inside `ScreenMargin`; and the tail slides along the bubble's
+edge to keep pointing at the target it was clamped away from, pulled in from the corners so it always meets
+a straight edge. So `Placement="Left"` on a control hard against the left edge gives you a bubble on the
+right, deliberately.
+
+Triggers are `Manual` / `Tap` / `LongPress` / `Hover` / `Focus` on MAUI, and `Manual` / `Hover` / `Click` /
+`Focus` / `HoverOrFocus` (the default) / `LongPress` on Blazor — `HoverOrFocus` being the accessible one,
+since a hover-only tooltip is unreachable by keyboard.
 
 ### ShinyToolbar & ShinyTabBar (Blazor)
 

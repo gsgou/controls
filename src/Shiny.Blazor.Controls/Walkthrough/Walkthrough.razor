@@ -1,0 +1,100 @@
+@namespace Shiny.Blazor.Controls
+@implements IWalkthroughHost
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    Every element is declared here rather than built with RenderTreeBuilder: CSS isolation only stamps
+    its scope attribute onto elements that appear in markup, and a rule targeting one built in C#
+    silently never matches.
+*@
+
+@* Steps register here and render nothing of their own. *@
+<CascadingValue TValue="IWalkthroughHost" Value="this" IsFixed="true">
+    @(Steps ?? ChildContent)
+</CascadingValue>
+
+@if (chromeVisible)
+{
+    <div class="shiny-walkthrough @CssClass" style="@RootStyle">
+
+        @if (UseOverlay)
+        {
+            @* The dim is this element's box-shadow spread across the viewport, so the cut-out is the
+               absence of shadow rather than a second element - which is what lets one CSS transition
+               carry the spotlight from one target to the next. *@
+            <div class="shiny-walkthrough__spot @(scrimVisible ? "is-lit" : null)" style="@SpotStyle"></div>
+
+            @* A box-shadow is not hit-testable, so the backdrop needs real elements to catch clicks.
+               One when the tour is modal; four framing the hole when the step wants the control live,
+               since hit testing has no notion of a hole. *@
+            @if (PassThrough)
+            {
+                @foreach (var shield in Shields)
+                {
+                    <div class="shiny-walkthrough__shield" style="@shield" @onclick="OnBackdropClickAsync"></div>
+                }
+            }
+            else
+            {
+                <div class="shiny-walkthrough__shield shiny-walkthrough__shield--full" @onclick="OnBackdropClickAsync"></div>
+            }
+        }
+
+        <div class="@CalloutClass" style="@CalloutStyle" @ref="calloutRef" role="dialog" aria-modal="true" aria-live="polite">
+            <div class="shiny-walkthrough__card">
+                @if (CurrentStepItem is not null)
+                {
+                    @if (CurrentStepItem.ChildContent is not null)
+                    {
+                        <div class="shiny-walkthrough__custom">@CurrentStepItem.ChildContent</div>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrWhiteSpace(CurrentStepItem.Title) && !IsCompact)
+                        {
+                            <div class="shiny-walkthrough__title">@CurrentStepItem.Title</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(CurrentStepItem.Text))
+                        {
+                            <div class="shiny-walkthrough__text">@CurrentStepItem.Text</div>
+                        }
+                    }
+
+                    @if (ShowNavigation && !IsCompact)
+                    {
+                        <div class="shiny-walkthrough__nav">
+                            <div class="shiny-walkthrough__counter">
+                                @if (ShowStepCounter && StepCount > 1)
+                                {
+                                    @($"{StepNumber} of {StepCount}")
+                                }
+                            </div>
+                            <div class="shiny-walkthrough__actions">
+                                @if (ShowSkip && !IsLastStep)
+                                {
+                                    <button type="button" class="shiny-walkthrough__btn" @onclick="SkipAsync">@SkipText</button>
+                                }
+                                @if (ShowBack && !IsFirstStep)
+                                {
+                                    <button type="button" class="shiny-walkthrough__btn" @onclick="BackAsync">@BackText</button>
+                                }
+                                <button type="button"
+                                        class="shiny-walkthrough__btn shiny-walkthrough__btn--primary"
+                                        @ref="nextRef"
+                                        @onclick="NextAsync">
+                                    @(IsLastStep ? FinishText : NextText)
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            @if (HasTail)
+            {
+                <span class="shiny-walkthrough__tail" aria-hidden="true"></span>
+            }
+        </div>
+    </div>
+}

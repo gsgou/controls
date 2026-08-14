@@ -1,0 +1,145 @@
+/* Everything here reads from the theme token contract so the page restyles itself
+   when a theme pack stylesheet is swapped into <head>. No literal colours. */
+
+/* app.css paints .demo-section a literal white with a literal border, which is fine for the
+   other demo pages but would make this one lie: switching to a dark pack would recolour the
+   swatches and leave the cards holding them white. Scoped rules out-specify the global one,
+   so only this page's cards move onto the tokens. */
+.demo-section {
+    background: var(--shiny-color-surface);
+    border-color: var(--shiny-color-outline-variant);
+    color: var(--shiny-color-on-surface);
+}
+
+h1 {
+    color: var(--shiny-color-on-background);
+}
+
+.demo-section h2,
+.demo-section h3 {
+    color: var(--shiny-color-on-surface);
+}
+
+.demo-section code {
+    background: var(--shiny-color-surface-container-high);
+    color: var(--shiny-color-on-surface-variant);
+}
+
+.token-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    margin: 12px 0 20px;
+}
+
+.token-swatch {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 74px;
+    padding: 12px;
+    border-radius: var(--shiny-shape-corner-medium);
+}
+
+.token-swatch-outlined {
+    border: var(--shiny-border-thin) solid var(--shiny-color-outline-variant);
+}
+
+.token-swatch-name {
+    font-size: var(--shiny-type-label-large-size);
+    font-weight: var(--shiny-type-label-large-weight);
+    text-transform: capitalize;
+}
+
+.token-swatch-var {
+    font-family: var(--shiny-type-font-family-mono);
+    font-size: var(--shiny-type-label-small-size);
+    opacity: 0.75;
+    word-break: break-all;
+}
+
+.token-type-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.token-type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: var(--shiny-border-thin) solid var(--shiny-color-outline-variant);
+    overflow: hidden;
+}
+
+.token-type-name {
+    flex: 0 0 130px;
+    font-family: var(--shiny-type-font-family-mono);
+    font-size: var(--shiny-type-label-small-size);
+    color: var(--shiny-color-on-surface-variant);
+}
+
+.token-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.token-shape,
+.token-elevation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 104px;
+    height: 76px;
+    padding: 8px;
+    text-align: center;
+    font-size: var(--shiny-type-label-small-size);
+    background: var(--shiny-color-surface-container-high);
+    color: var(--shiny-color-on-surface);
+}
+
+.token-elevation {
+    border-radius: var(--shiny-shape-corner-medium);
+    background: var(--shiny-color-surface-container-lowest);
+}
+
+.token-spacing-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.token-spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.token-spacing-name {
+    flex: 0 0 90px;
+    font-family: var(--shiny-type-font-family-mono);
+    font-size: var(--shiny-type-label-small-size);
+    color: var(--shiny-color-on-surface-variant);
+}
+
+.token-spacing-bar {
+    min-width: 2px;
+    height: 14px;
+    border-radius: var(--shiny-shape-corner-extra-small);
+    background: var(--shiny-color-primary);
+}
+
+.token-density {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: var(--shiny-shape-corner-small);
+    font-size: var(--shiny-type-label-medium-size);
+    background: var(--shiny-color-secondary-container);
+    color: var(--shiny-color-on-secondary-container);
+}

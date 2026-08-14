@@ -33,6 +33,7 @@
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
                   xmlns:skeleton="clr-namespace:Sample.Features.Skeleton"
                   xmlns:wizard="clr-namespace:Sample.Features.Wizard"
+                  xmlns:walkthrough="clr-namespace:Sample.Features.Walkthrough"
                   xmlns:keyframe="clr-namespace:Sample.Features.Keyframe"
                   xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
@@ -530,6 +531,14 @@
         <ShellContent ContentTemplate="{DataTemplate pickers:DurationPickerPage}" Route="durationpicker" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Font Picker">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1D538;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate pickers:FontPickerPage}" Route="fontpicker" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Slider">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x2501;" Size="20"
@@ -611,6 +620,22 @@
                              Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate wizard:WizardPage}" Route="wizard" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Walkthrough">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x263C;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate walkthrough:WalkthroughPage}" Route="walkthrough" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Tooltip">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4AC;" Size="20"
+                             Color="{AppThemeBinding Light=#0D9488, Dark=#2DD4BF}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate walkthrough:TooltipPage}" Route="tooltip" />
     </FlyoutItem>
 
     <!-- ============================================================ -->

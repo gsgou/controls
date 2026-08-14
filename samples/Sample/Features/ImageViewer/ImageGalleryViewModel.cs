@@ -4,7 +4,7 @@ namespace Sample.Features.ImageViewer;
 
 public partial class GalleryImage : ObservableObject
 {
-    public required string Source { get; init; }
+    public required string Uri { get; init; }
     public required string Title { get; init; }
 
     [ObservableProperty]
@@ -14,13 +14,15 @@ public partial class GalleryImage : ObservableObject
 [Shiny.ShellMap<ImageGalleryPage>(registerRoute: false)]
 public partial class ImageGalleryViewModel : ObservableObject
 {
+    // Remote URIs on purpose: each cell shows its own loading ring, and opening one full-screen
+    // resolves off the memory cache the thumbnail already filled rather than downloading again.
     public List<GalleryImage> Images { get; } = new()
     {
-        new GalleryImage { Source = "dotnet_bot.png", Title = ".NET Bot" },
-        new GalleryImage { Source = "dotnet_bot.png", Title = "Bot Again" },
-        new GalleryImage { Source = "dotnet_bot.png", Title = "Third Bot" },
-        new GalleryImage { Source = "dotnet_bot.png", Title = "Fourth Bot" },
-        new GalleryImage { Source = "dotnet_bot.png", Title = "Fifth Bot" },
-        new GalleryImage { Source = "dotnet_bot.png", Title = "Sixth Bot" }
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-1/1200/800", Title = "Harbour" },
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-2/1200/800", Title = "Ridge Line" },
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-3/1200/800", Title = "Old Town" },
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-4/1200/800", Title = "Low Tide" },
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-5/1200/800", Title = "Switchback" },
+        new GalleryImage { Uri = "https://picsum.photos/seed/shiny-gallery-6/1200/800", Title = "Long Exposure" }
     };
 }

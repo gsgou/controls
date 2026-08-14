@@ -36,6 +36,7 @@ public class ThemeGeometryCoverageTests(ITestOutputHelper output)
     {
         ["ShinyButton.cs"] = "one Shadow built at construction and toggled by Opacity - reassigning one mid-interaction unfocuses the content on Android",
         ["TextEntry.cs"] = "focusGlow is animated by mutating Radius/Opacity on the instance",
+        ["TooltipBubble.cs"] = "one Shadow built at construction and toggled by Opacity for HasShadow - the same reason as ShinyButton, since reassigning Shadow tears the native layer down",
     };
 
     [Fact]

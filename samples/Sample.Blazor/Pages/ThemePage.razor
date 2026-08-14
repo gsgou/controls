@@ -1,0 +1,165 @@
+@page "/theming"
+
+<PageTitle>Theming</PageTitle>
+
+<h1>Theming</h1>
+
+<section class="demo-section">
+    <h2>One token contract, five packs</h2>
+    <p>
+        Every Shiny control reads its colour, shape, elevation, typography, density and spacing from
+        CSS custom properties rather than hard-coded values. Swapping a theme pack in
+        <code>&lt;head&gt;</code> redefines those properties and the whole gallery follows —
+        nothing on this page is styled by hand.
+    </p>
+    <p>
+        Use the <strong>theme selector in the header</strong> to switch between Basic, Ocean,
+        Material, Terminal and Aurora, and the <strong>Dark</strong> toggle to see each pack's dark
+        ramp. Everything below is drawn from <code>var(--shiny-*)</code>.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>Colour roles</h2>
+    <p>Each role is a background paired with its legible foreground — the pairing is what makes a pack safe to swap.</p>
+
+    <div class="token-grid">
+        @foreach (var pair in ColorPairs)
+        {
+            <div class="token-swatch" style="background:var(--shiny-color-@pair.Bg); color:var(--shiny-color-@pair.Fg);">
+                <span class="token-swatch-name">@pair.Label</span>
+                <code class="token-swatch-var">--shiny-color-@pair.Bg</code>
+            </div>
+        }
+    </div>
+
+    <h3>Surfaces</h3>
+    <div class="token-grid">
+        @foreach (var surface in Surfaces)
+        {
+            <div class="token-swatch token-swatch-outlined" style="background:var(--shiny-color-@surface); color:var(--shiny-color-on-surface);">
+                <span class="token-swatch-name">@(surface.Replace("-", " "))</span>
+                <code class="token-swatch-var">--shiny-color-@surface</code>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Typography</h2>
+    <p>Fifteen named steps, each with its own size, weight, line height and tracking.</p>
+
+    <div class="token-type-list">
+        @foreach (var step in TypeSteps)
+        {
+            <div class="token-type-row">
+                <code class="token-type-name">@step</code>
+                <span style="font-family:var(--shiny-type-font-family);
+                             font-size:var(--shiny-type-@(step)-size);
+                             font-weight:var(--shiny-type-@(step)-weight);
+                             line-height:var(--shiny-type-@(step)-line-height);
+                             letter-spacing:var(--shiny-type-@(step)-tracking);">
+                    Sphinx of black quartz
+                </span>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Shape</h2>
+    <p>Corner radii the controls round themselves to.</p>
+
+    <div class="token-row">
+        @foreach (var corner in Corners)
+        {
+            <div class="token-shape" style="border-radius:var(--shiny-shape-corner-@corner);">
+                <span>@corner</span>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Elevation</h2>
+    <p>Six levels, expressed as shadows tinted by the pack's shadow colour.</p>
+
+    <div class="token-row">
+        @for (var level = 0; level <= 5; level++)
+        {
+            <div class="token-elevation" style="box-shadow:var(--shiny-elevation-@level);">
+                <span>Level @level</span>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Spacing &amp; density</h2>
+    <p>The spacing ramp and the control metrics that scale with it.</p>
+
+    <div class="token-spacing-list">
+        @for (var step = 0; step <= 8; step++)
+        {
+            <div class="token-spacing-row">
+                <code class="token-spacing-name">spacing-@step</code>
+                <div class="token-spacing-bar" style="width:var(--shiny-spacing-@step);"></div>
+            </div>
+        }
+    </div>
+
+    <div class="token-row" style="margin-top:16px;">
+        <div class="token-density" style="height:var(--shiny-density-control-height);">control-height</div>
+        <div class="token-density" style="height:var(--shiny-density-control-height-small);">control-height-small</div>
+        <div class="token-density" style="height:var(--shiny-density-row-height);">row-height</div>
+        <div class="token-density" style="height:var(--shiny-density-touch-target);">touch-target</div>
+    </div>
+</section>
+
+@code {
+    record ColorPair(string Label, string Bg, string Fg);
+
+    static readonly ColorPair[] ColorPairs =
+    [
+        new("Primary", "primary", "on-primary"),
+        new("Primary container", "primary-container", "on-primary-container"),
+        new("Secondary", "secondary", "on-secondary"),
+        new("Secondary container", "secondary-container", "on-secondary-container"),
+        new("Tertiary", "tertiary", "on-tertiary"),
+        new("Tertiary container", "tertiary-container", "on-tertiary-container"),
+        new("Error", "error", "on-error"),
+        new("Error container", "error-container", "on-error-container"),
+        new("Success", "success", "on-success"),
+        new("Warning", "warning", "on-warning"),
+        new("Caution", "caution", "on-caution"),
+        new("Critical", "critical", "on-critical"),
+        new("Info", "info", "on-info"),
+        new("Inverse surface", "inverse-surface", "inverse-on-surface")
+    ];
+
+    static readonly string[] Surfaces =
+    [
+        "background",
+        "surface",
+        "surface-variant",
+        "surface-container-lowest",
+        "surface-container-low",
+        "surface-container",
+        "surface-container-high",
+        "surface-container-highest"
+    ];
+
+    static readonly string[] TypeSteps =
+    [
+        "display-large", "display-medium", "display-small",
+        "headline-large", "headline-medium", "headline-small",
+        "title-large", "title-medium", "title-small",
+        "body-large", "body-medium", "body-small",
+        "label-large", "label-medium", "label-small"
+    ];
+
+    static readonly string[] Corners =
+    [
+        "none", "extra-small", "small", "medium", "large", "extra-large", "full"
+    ];
+}

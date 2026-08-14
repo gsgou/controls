@@ -60,6 +60,7 @@ public static class Catalog
             new("colorpicker", "Color Picker", "◉", "Wheel, sliders and swatches"),
             new("countryaddress", "Country & Address", "⚑", "Country picker and structured address entry"),
             new("durationpicker", "Duration Picker", "◷", "Hours and minutes on a floating panel"),
+            new("fontpicker", "Font Picker", "𝔸", "Family and size pickers, inline or popup"),
             new("slider", "Slider", "━", "Single-value slider with ticks and labels"),
             new("rangeslider", "Range Slider", "≡", "Two-thumb range selection"),
             new("securitypin", "Security Pin", "✱", "PIN entry with masking and shake-on-error"),

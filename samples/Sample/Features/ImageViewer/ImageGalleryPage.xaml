@@ -14,7 +14,7 @@
                        FontSize="22"
                        FontAttributes="Bold"
                        HorizontalTextAlignment="Center" />
-                <Label Text="Tap any image to view full-screen with pinch-to-zoom"
+                <Label Text="Remote images with a per-cell loading ring. Tap any one to view full-screen with pinch-to-zoom — it opens off the cache the thumbnail filled."
                        FontSize="14"
                        HorizontalTextAlignment="Center"
                        TextColor="Gray" />
@@ -38,9 +38,10 @@
                                 Padding="0"
                                 HeightRequest="180">
                             <Grid RowDefinitions="*,Auto">
-                                <shiny:ImageViewer Source="{Binding Source}"
+                                <shiny:ImageViewer Uri="{Binding Uri}"
                                                    IsOpen="{Binding IsOpen}"
                                                    Aspect="AspectFill"
+                                                   RingSize="32"
                                                    HorizontalOptions="Fill"
                                                    VerticalOptions="Fill" />
                                 <Label Grid.Row="1"

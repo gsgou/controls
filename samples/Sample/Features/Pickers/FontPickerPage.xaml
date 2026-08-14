@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Sample.Features.Pickers"
+             xmlns:fonts="clr-namespace:Shiny.Maui.Controls.FontPicker;assembly=Shiny.Maui.Controls"
+             x:Class="Sample.Features.Pickers.FontPickerPage"
+             x:DataType="local:FontPickerViewModel"
+             Title="Font Picker"
+             AutomationId="FontPickerPage">
+    <!--
+        The root is a Grid on purpose: FontPickerButton parents its popup into the page's
+        Content when that Content is already a Grid, and otherwise re-parents the whole tree
+        into a new wrapper. Starting with a Grid keeps the native views intact.
+    -->
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="18">
+                <Label Text="FontPicker"
+                       FontSize="24"
+                       FontAttributes="Bold" />
+
+                <Label Text="Font family and size selection, inline or as a popup button. Every row previews itself in its own typeface."
+                       FontSize="14"
+                       TextColor="Gray" />
+
+                <BoxView HeightRequest="1" Color="LightGray" />
+
+                <!-- Live preview -->
+                <Label Text="Preview" FontSize="16" FontAttributes="Bold" />
+                <Border Padding="14" StrokeThickness="1" Stroke="LightGray">
+                    <Label Text="{Binding PreviewText}"
+                           FontFamily="{Binding SelectedFont}"
+                           FontSize="{Binding SelectedFontSize}"
+                           AutomationId="font-preview" />
+                </Border>
+                <Label Text="{Binding SelectedFont, StringFormat='Family: {0}'}"
+                       FontSize="13"
+                       TextColor="Gray" />
+                <Label Text="{Binding SelectedFontSize, StringFormat='Size: {0}'}"
+                       FontSize="13"
+                       TextColor="Gray" />
+
+                <BoxView HeightRequest="1" Color="LightGray" />
+
+                <!-- Popup buttons -->
+                <Label Text="Popup pickers" FontSize="16" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="12">
+                    <fonts:FontPickerButton AvailableFonts="{Binding AvailableFonts}"
+                                            SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
+                                            Placeholder="Font"
+                                            AutomationId="font-picker-button" />
+
+                    <fonts:FontSizePickerButton AvailableFontSizes="{Binding AvailableFontSizes}"
+                                                SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
+                                                AutomationId="font-size-picker-button" />
+                </HorizontalStackLayout>
+
+                <BoxView HeightRequest="1" Color="LightGray" />
+
+                <!-- Inline family list -->
+                <Label Text="Inline FontPicker" FontSize="16" FontAttributes="Bold" />
+                <Border StrokeThickness="1" Stroke="LightGray" Padding="0">
+                    <fonts:FontPicker AvailableFonts="{Binding AvailableFonts}"
+                                      SelectedFont="{Binding SelectedFont, Mode=TwoWay}"
+                                      PreviewText="Sphinx of black quartz"
+                                      PreviewFontSize="17"
+                                      HeightRequest="300"
+                                      AutomationId="font-picker-inline" />
+                </Border>
+
+                <BoxView HeightRequest="1" Color="LightGray" />
+
+                <!-- Inline size list -->
+                <Label Text="Inline FontSizePicker" FontSize="16" FontAttributes="Bold" />
+                <Border StrokeThickness="1" Stroke="LightGray" Padding="0">
+                    <fonts:FontSizePicker AvailableFontSizes="{Binding AvailableFontSizes}"
+                                          SelectedFontSize="{Binding SelectedFontSize, Mode=TwoWay}"
+                                          PreviewText="Aa"
+                                          HeightRequest="220"
+                                          AutomationId="font-size-picker-inline" />
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

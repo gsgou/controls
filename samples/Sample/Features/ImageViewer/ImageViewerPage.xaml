@@ -37,6 +37,34 @@
                         </DataTemplate>
                     </shiny:ImageViewer.FooterTemplate>
                 </shiny:ImageViewer>
+
+                <Label Text="Remote image"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       Margin="0,12,0,0" />
+
+                <Label Text="A URI loads through the image service: cached to memory and disk, with a ring that fills to a real percentage when the server sends a Content-Length."
+                       FontSize="14"
+                       HorizontalTextAlignment="Center"
+                       TextColor="Gray" />
+
+                <shiny:ImageViewer Uri="https://picsum.photos/seed/shiny-viewer/1600/1200"
+                                   PlaceholderImage="dotnet_bot.png"
+                                   ErrorImage="dotnet_bot.png"
+                                   HeightRequest="200"
+                                   Aspect="AspectFill" />
+
+                <Label Text="Broken URL — error artwork"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       Margin="0,12,0,0" />
+
+                <shiny:ImageViewer Uri="https://example.com/does-not-exist.png"
+                                   ErrorImage="dotnet_bot.png"
+                                   HeightRequest="140"
+                                   Aspect="AspectFit" />
             </VerticalStackLayout>
         </ScrollView>
     </shiny:ShinyContentPage.PageContent>

@@ -1,22 +1,32 @@
 using Shiny.Maui.Controls.FloatingPanel;
+using Shiny.Maui.Controls.Images;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
-public class ImageViewer : ContentView
+/// <summary>
+/// A tappable thumbnail that opens a full-screen, pinch-to-zoom overlay of the same image.
+/// </summary>
+/// <remarks>
+/// Both the thumbnail and the overlay are <see cref="ShinyImage"/>, so a remote <see cref="Uri"/>
+/// brings placeholder artwork, a loading ring, error artwork and <see cref="IImageService"/>
+/// caching with it. The overlay is loaded from the same URI as the thumbnail, which means it comes
+/// back off the memory cache rather than downloading the picture a second time.
+/// </remarks>
+public partial class ImageViewer : ContentView, IDisposable
 {
     const double MinScale = 1.0;
     const double DefaultMaxZoom = 5.0;
     const uint AnimationDuration = 250;
 
     // Thumbnail — visible when IsOpen=false
-    readonly Image thumbnailImage;
+    internal readonly ShinyImage thumbnailImage;
 
     // Overlay elements — injected into OverlayHost when IsOpen=true
     readonly Grid overlayGrid;
     readonly BoxView backdrop;
-    readonly Image overlayImage;
+    internal readonly ShinyImage overlayImage;
     View closeView;
     View? headerView;
     View? footerView;
@@ -32,6 +42,7 @@ public class ImageViewer : ContentView
     double startY;
     bool isAnimating;
     bool isPinching;
+    bool isDisposed;
 
     // Track where the overlay is hosted
     Layout? overlayParent;
@@ -41,8 +52,8 @@ public class ImageViewer : ContentView
         // When no source is set, the viewer should not intercept touches
         InputTransparent = true;
 
-        // Thumbnail: standard Image with tap-to-open
-        thumbnailImage = new Image
+        // Thumbnail: a ShinyImage with tap-to-open
+        thumbnailImage = new ShinyImage
         {
             Aspect = Aspect.AspectFit,
             HorizontalOptions = LayoutOptions.Fill,
@@ -51,10 +62,16 @@ public class ImageViewer : ContentView
         var tapToOpen = new TapGestureRecognizer();
         tapToOpen.Tapped += (_, _) =>
         {
-            if (!IsOpen && Source != null && OpenViewerOnTap)
+            if (!IsOpen && HasImage && OpenViewerOnTap)
                 IsOpen = true;
         };
         thumbnailImage.GestureRecognizers.Add(tapToOpen);
+
+        // The thumbnail is the copy that is always in the visual tree and always loads first, so it
+        // is the one that drives the viewer's own State/Progress/IsLoading and its events.
+        thumbnailImage.PropertyChanged += OnThumbnailPropertyChanged;
+        thumbnailImage.ImageLoaded += OnThumbnailImageLoaded;
+        thumbnailImage.ImageFailed += OnThumbnailImageFailed;
 
         Content = thumbnailImage;
 
@@ -68,7 +85,7 @@ public class ImageViewer : ContentView
         // Swallow touches on backdrop
         backdrop.GestureRecognizers.Add(new TapGestureRecognizer());
 
-        overlayImage = new Image
+        overlayImage = new ShinyImage
         {
             Aspect = Aspect.AspectFit,
             HorizontalOptions = LayoutOptions.Fill,
@@ -102,164 +119,97 @@ public class ImageViewer : ContentView
         StyleGuard.MarkReady(this, typeof(ImageViewer));
     }
 
-    #region Bindable Properties
+    #region Image Loading
 
-    public static readonly BindableProperty SourceProperty = BindableProperty.Create(
-        nameof(Source),
-        typeof(ImageSource),
-        typeof(ImageViewer),
-        null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-            var viewer = (ImageViewer)b;
-            var source = (ImageSource?)n;
-            viewer.thumbnailImage.Source = source;
-            viewer.overlayImage.Source = source;
-            // Only intercept touches when there's an image to show
-            viewer.InputTransparent = source == null;
-        }));
+    /// <summary>True when either an explicit <see cref="Source"/> or a <see cref="Uri"/> is set.</summary>
+    bool HasImage => this.Source != null || !String.IsNullOrWhiteSpace(this.Uri);
 
-    public ImageSource? Source
+    /// <summary>
+    /// The service both images load through. Assign to override the resolved one for this instance -
+    /// handy in tests and for a screen that needs its own cache policy.
+    /// </summary>
+    public IImageService ImageService
     {
-        get => (ImageSource?)GetValue(SourceProperty);
-        set => SetValue(SourceProperty, value);
+        get => this.thumbnailImage.ImageService;
+        set => this.ForEachImage(i => i.ImageService = value);
     }
 
-    public static readonly BindableProperty AspectProperty = BindableProperty.Create(
-        nameof(Aspect),
-        typeof(Aspect),
-        typeof(ImageViewer),
-        Aspect.AspectFit,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-                ((ImageViewer)b).thumbnailImage.Aspect = (Aspect)n;
-            }));
-
-    public Aspect Aspect
+    void ForEachImage(Action<ShinyImage> apply)
     {
-        get => (Aspect)GetValue(AspectProperty);
-        set => SetValue(AspectProperty, value);
+        apply(this.thumbnailImage);
+        apply(this.overlayImage);
     }
 
-    public static readonly BindableProperty OverlayAspectProperty = BindableProperty.Create(
-        nameof(OverlayAspect),
-        typeof(Aspect),
-        typeof(ImageViewer),
-        Aspect.AspectFit,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-                ((ImageViewer)b).overlayImage.Aspect = (Aspect)n;
-            }));
-
-    public Aspect OverlayAspect
+    /// <summary>
+    /// Pushes the current source onto the thumbnail, and onto the overlay when it is on screen.
+    /// </summary>
+    /// <remarks>
+    /// A closed overlay is deliberately left empty. Assigning it up front would decode a second
+    /// full-size bitmap for every viewer in a list, and the overlay is populated on open anyway. It
+    /// still has to track changes made <b>while</b> open, because paging between photos from a
+    /// header template does exactly that.
+    /// </remarks>
+    void SyncSource()
     {
-        get => (Aspect)GetValue(OverlayAspectProperty);
-        set => SetValue(OverlayAspectProperty, value);
+        this.thumbnailImage.Source = this.Source;
+        this.thumbnailImage.Uri = this.Uri;
+
+        if (this.IsOpen)
+        {
+            this.overlayImage.Source = this.Source;
+            this.overlayImage.Uri = this.Uri;
+        }
+
+        // Only intercept touches when there's an image to show
+        this.InputTransparent = !this.HasImage;
     }
 
-    public static readonly BindableProperty MaxZoomProperty = BindableProperty.Create(
-        nameof(MaxZoom),
-        typeof(double),
-        typeof(ImageViewer),
-        DefaultMaxZoom);
+    /// <summary>
+    /// Re-fetches the image, skipping both cache tiers. The cache is refreshed with what comes back.
+    /// </summary>
+    public Task ReloadAsync() => Task.WhenAll(
+        this.thumbnailImage.ReloadAsync(),
+        this.IsOpen ? this.overlayImage.ReloadAsync() : Task.CompletedTask
+    );
 
-    public double MaxZoom
+    void OnThumbnailPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        get => (double)GetValue(MaxZoomProperty);
-        set => SetValue(MaxZoomProperty, value);
+        switch (e.PropertyName)
+        {
+            case nameof(ShinyImage.State):
+                this.SetValue(StatePropertyKey, this.thumbnailImage.State);
+                break;
+
+            case nameof(ShinyImage.Progress):
+                this.SetValue(ProgressPropertyKey, this.thumbnailImage.Progress);
+                break;
+
+            case nameof(ShinyImage.IsLoading):
+                this.SetValue(IsLoadingPropertyKey, this.thumbnailImage.IsLoading);
+                break;
+
+            case nameof(ShinyImage.LoadError):
+                this.SetValue(LoadErrorPropertyKey, this.thumbnailImage.LoadError);
+                break;
+        }
     }
 
-    public static readonly BindableProperty IsOpenProperty = BindableProperty.Create(
-        nameof(IsOpen),
-        typeof(bool),
-        typeof(ImageViewer),
-        false,
-        BindingMode.TwoWay,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-            var viewer = (ImageViewer)b;
-            if ((bool)n)
-                _ = viewer.OpenAsync();
-            else
-                _ = viewer.CloseAsync();
-        }));
-
-    public bool IsOpen
+    void OnThumbnailImageLoaded(object? sender, ImageLoadedEventArgs e)
     {
-        get => (bool)GetValue(IsOpenProperty);
-        set => SetValue(IsOpenProperty, value);
+        this.ImageLoaded?.Invoke(this, e);
+
+        var command = this.ImageLoadedCommand;
+        if (command?.CanExecute(e) == true)
+            command.Execute(e);
     }
 
-    public static readonly BindableProperty CloseButtonTemplateProperty = BindableProperty.Create(
-        nameof(CloseButtonTemplate),
-        typeof(DataTemplate),
-        typeof(ImageViewer),
-        null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-                ((ImageViewer)b).ApplyCloseButtonTemplate();
-            }));
-
-    public DataTemplate? CloseButtonTemplate
+    void OnThumbnailImageFailed(object? sender, ImageFailedEventArgs e)
     {
-        get => (DataTemplate?)GetValue(CloseButtonTemplateProperty);
-        set => SetValue(CloseButtonTemplateProperty, value);
-    }
+        this.ImageFailed?.Invoke(this, e);
 
-    public static readonly BindableProperty HeaderTemplateProperty = BindableProperty.Create(
-        nameof(HeaderTemplate),
-        typeof(DataTemplate),
-        typeof(ImageViewer),
-        null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-                ((ImageViewer)b).ApplyHeaderTemplate();
-            }));
-
-    public DataTemplate? HeaderTemplate
-    {
-        get => (DataTemplate?)GetValue(HeaderTemplateProperty);
-        set => SetValue(HeaderTemplateProperty, value);
-    }
-
-    public static readonly BindableProperty FooterTemplateProperty = BindableProperty.Create(
-        nameof(FooterTemplate),
-        typeof(DataTemplate),
-        typeof(ImageViewer),
-        null,
-        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
-            {
-                ((ImageViewer)b).ApplyFooterTemplate();
-            }));
-
-    public DataTemplate? FooterTemplate
-    {
-        get => (DataTemplate?)GetValue(FooterTemplateProperty);
-        set => SetValue(FooterTemplateProperty, value);
-    }
-
-    public static readonly BindableProperty UseFeedbackProperty = BindableProperty.Create(
-        nameof(UseFeedback),
-        typeof(bool),
-        typeof(ImageViewer),
-        true);
-
-    public bool UseFeedback
-    {
-        get => (bool)GetValue(UseFeedbackProperty);
-        set => SetValue(UseFeedbackProperty, value);
-    }
-
-    public static readonly BindableProperty OpenViewerOnTapProperty = BindableProperty.Create(
-        nameof(OpenViewerOnTap),
-        typeof(bool),
-        typeof(ImageViewer),
-        true);
-
-    public bool OpenViewerOnTap
-    {
-        get => (bool)GetValue(OpenViewerOnTapProperty);
-        set => SetValue(OpenViewerOnTapProperty, value);
+        var command = this.ImageFailedCommand;
+        if (command?.CanExecute(e.Error) == true)
+            command.Execute(e.Error);
     }
 
     #endregion
@@ -348,9 +298,9 @@ public class ImageViewer : ContentView
     {
         var btn = new Button
         {
-            Text = "\u2715",
+            Text = "✕",
             FontSize = 20,
-            // Close button sits on the dark Scrim backdrop \u2014 use inverse-on-surface.
+            // Close button sits on the dark Scrim backdrop — use inverse-on-surface.
             // Translucent black chip background left as-is.
             BackgroundColor = Color.FromRgba(0, 0, 0, 0.5),
             CornerRadius = 20,
@@ -410,8 +360,10 @@ public class ImageViewer : ContentView
 
         ResetTransform();
 
-        // Sync source to overlay image
+        // Sync source to overlay image. Same URI as the thumbnail, so this is a memory cache hit
+        // rather than a second download.
         overlayImage.Source = Source;
+        overlayImage.Uri = Uri;
 
         // Find host and inject overlay
         overlayParent = FindOverlayParent()
@@ -608,4 +560,25 @@ public class ImageViewer : ContentView
     }
 
     #endregion
+
+    /// <summary>Cancels any in-flight load and releases the control's resources.</summary>
+    public void Dispose()
+    {
+        this.Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Cancels any in-flight load and releases the control's resources.</summary>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (this.isDisposed || !disposing)
+            return;
+
+        this.isDisposed = true;
+        this.thumbnailImage.PropertyChanged -= this.OnThumbnailPropertyChanged;
+        this.thumbnailImage.ImageLoaded -= this.OnThumbnailImageLoaded;
+        this.thumbnailImage.ImageFailed -= this.OnThumbnailImageFailed;
+        this.thumbnailImage.Dispose();
+        this.overlayImage.Dispose();
+    }
 }

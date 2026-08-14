@@ -1,0 +1,56 @@
+@namespace Shiny.Blazor.Controls
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@*
+    Everything is declared in markup rather than built with RenderTreeBuilder: CSS isolation only
+    stamps its scope attribute onto elements that appear here, and a rule targeting one built in C#
+    silently never matches.
+*@
+
+@if (ChildContent is not null)
+{
+    @* display:contents, so wrapping a control to give it a tooltip does not change how it lays out. *@
+    <span class="shiny-tooltip__anchor"
+          @ref="anchorRef"
+          aria-describedby="@(this.open ? this.bubbleId : null)"
+          @onpointerenter="OnPointerEnterAsync"
+          @onpointerleave="OnPointerLeaveAsync"
+          @onpointerdown="OnPointerDownAsync"
+          @onpointerup="OnPointerUpAsync"
+          @onclick="OnAnchorClickAsync"
+          @onfocusin="OnFocusInAsync"
+          @onfocusout="OnFocusOutAsync">
+        @ChildContent
+    </span>
+}
+
+<div class="shiny-tooltip @PlacementClass @StateClass @CssClass"
+     id="@bubbleId"
+     role="tooltip"
+     popover="manual"
+     style="@RootStyle"
+     @ref="bubbleRef"
+     @onclick="OnBubbleClickAsync"
+     @attributes="AdditionalAttributes">
+
+    <div class="shiny-tooltip__card">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <div class="shiny-tooltip__title">@Title</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Text))
+        {
+            <div class="shiny-tooltip__text">@Text</div>
+        }
+        @if (BubbleContent is not null)
+        {
+            <div class="shiny-tooltip__body">@BubbleContent</div>
+        }
+    </div>
+
+    @if (ShowTail && HasTail)
+    {
+        <span class="shiny-tooltip__tail" aria-hidden="true"></span>
+    }
+</div>

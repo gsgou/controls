@@ -1,0 +1,97 @@
+@page "/tooltip"
+
+<PageTitle>Tooltip</PageTitle>
+
+<h1>Tooltip</h1>
+
+<section class="demo-section">
+    <p>
+        A tooltip either wraps the thing it describes or points at it by selector. The bubble goes in
+        the browser's top layer, so it is never clipped by an <code>overflow: hidden</code> ancestor and
+        never loses a z-index argument.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>1. Wrapping a control</h2>
+    <Tooltip Text="Applies the change without closing the sheet." Placement="TooltipPlacement.Top">
+        <ShinyButton Text="Apply" />
+    </Tooltip>
+    <p style="font-size:0.875rem;">
+        The wrapper is <code>display: contents</code>, so it does not change how the button lays out.
+        The default trigger is hover <em>or</em> focus, which is what makes it reachable by keyboard.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>2. Placement</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <Tooltip Text="Above" Placement="TooltipPlacement.Top"><ShinyButton Text="Top" /></Tooltip>
+        <Tooltip Text="Below" Placement="TooltipPlacement.Bottom"><ShinyButton Text="Bottom" /></Tooltip>
+        <Tooltip Text="To the left" Placement="TooltipPlacement.Left"><ShinyButton Text="Left" /></Tooltip>
+        <Tooltip Text="To the right" Placement="TooltipPlacement.Right"><ShinyButton Text="Right" /></Tooltip>
+    </div>
+    <p style="font-size:0.875rem;">
+        Placement is a preference, not a promise: a side with no room flips to the opposite one, and the
+        bubble is clamped to stay on screen while the tail slides along to keep pointing at the target.
+        Scroll the page with one open and it follows.
+    </p>
+</section>
+
+<section class="demo-section">
+    <h2>3. Clipped containers</h2>
+    <p style="font-size:0.875rem;">
+        The box below has <code>overflow: hidden</code>. An in-tree popover would be cut off at its edge.
+    </p>
+    <div style="overflow:hidden; height:90px; border:1px solid var(--shiny-color-outline-variant, #ccc);
+                border-radius:12px; padding:16px;">
+        <Tooltip Text="Drawn in the top layer, so the box cannot clip it." Placement="TooltipPlacement.Bottom">
+            <ShinyButton Text="Hover me" />
+        </Tooltip>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>4. Bound to state</h2>
+    <div style="display:flex; flex-direction:column; gap:10px; max-width:360px;">
+        <ShinyButton id="tt-hint-target" Text="Nothing to save yet" Disabled="true" />
+        <ShinyButton Text="Toggle the hint" Appearance="ButtonAppearance.Outlined" Clicked="@(_ => Toggle())" />
+    </div>
+
+    @* No content: it points at a selector and is driven entirely from state. *@
+    <Tooltip Target="#tt-hint-target"
+             Title="Why is this disabled?"
+             Text="Make a change first. Click this hint to dismiss it."
+             Placement="TooltipPlacement.Bottom"
+             Trigger="TooltipTrigger.Manual"
+             @bind-IsOpen="showHint"
+             Clicked="OnHintClickedAsync" />
+
+    <p><em>@status</em></p>
+</section>
+
+<section class="demo-section">
+    <h2>5. Styled</h2>
+    <Tooltip Title="Heads up"
+             Text="A tooltip takes the theme's inverse surface by default; give it a colour and it takes that instead."
+             Placement="TooltipPlacement.Top"
+             Trigger="TooltipTrigger.Click"
+             BubbleColor="#0F766E"
+             TextColor="#FFFFFF"
+             MaxWidth="240px">
+        <ShinyButton Text="Custom colours" />
+    </Tooltip>
+</section>
+
+@code {
+    bool showHint;
+    string status = "Hover, focus or click a control to see its tooltip.";
+
+    void Toggle() => this.showHint = !this.showHint;
+
+    Task OnHintClickedAsync()
+    {
+        this.status = "The bound tooltip was clicked, which raised Clicked and closed it.";
+        return Task.CompletedTask;
+    }
+}

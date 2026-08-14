@@ -17,7 +17,8 @@ public static class Catalog
     public static readonly CatalogItem[] GettingStarted =
     [
         new("", "Home", "⌂", "Start here"),
-        new("kitchensink", "Kitchen Sink", "⚙", "Every control on one page")
+        new("kitchensink", "Kitchen Sink", "⚙", "Every control on one page"),
+        new("theming", "Theming", "◐", "The design tokens every control reads")
     ];
 
     public static readonly CatalogSection[] Sections =
@@ -65,7 +66,9 @@ public static class Catalog
             new("toolbar", "Toolbar", "☰", "Docked app bar with overflow and frosted glass"),
             new("tabbar", "Tab Bar", "☷", "Bottom tab navigation with badges"),
             new("stateview", "State View", "⇄", "Named branches switched by one string"),
-            new("wizard", "Wizard", "➤", "Multi-step flow with a pointed progress bar")
+            new("wizard", "Wizard", "➤", "Multi-step flow with a pointed progress bar"),
+            new("walkthrough", "Walkthrough", "☼", "Guided tour that spotlights one control at a time"),
+            new("tooltip", "Tooltip", "💬", "Themed tooltip that points at any element")
         ]),
 
         new("Status & Feedback", "#F472B6",

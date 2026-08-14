@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sample.Blazor;
+using Shiny.Blazor.Controls;
 using Shiny.Blazor.Controls.Dialogs;
 using Shiny.Blazor.Controls.Docking;
 using Shiny.Blazor.Controls.Splash;
@@ -14,6 +15,7 @@ builder.Services.AddShinyToast();
 builder.Services.AddShinySplashScreen();
 builder.Services.AddShinyDialogs();
 builder.Services.AddShinyDocking();
+builder.Services.AddShinyWalkthrough();
 builder.Services.AddDockPanel<Sample.Blazor.DockPanels.ExplorerPanel>("explorer", "Explorer", "📁");
 builder.Services.AddDockPanel<Sample.Blazor.DockPanels.PropertiesPanel>("properties", "Properties", "🔧");
 builder.Services.AddDockPanel<Sample.Blazor.DockPanels.OutputPanel>("output", "Output", "🖥️");

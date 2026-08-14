@@ -1,0 +1,173 @@
+@page "/walkthrough"
+
+<PageTitle>Walkthrough</PageTitle>
+
+<h1>Walkthrough</h1>
+
+<section class="demo-section">
+    <p>
+        A guided tour of a page: dim everything, cut a hole around one element at a time, and say what it
+        does. The steps are declared together on the control, in order — so reordering is moving a line,
+        and a step whose <code>IsVisible</code> goes false drops out of the run and the counter
+        re-numbers itself.
+    </p>
+    <p>
+        A step advances three ways: the built-in <em>Next</em>, a click on the highlighted element when
+        <code>AdvanceOnTargetClick</code> is set, or a <code>Duration</code> timer. Arrow keys and
+        Escape work throughout.
+    </p>
+</section>
+
+@*
+    The tour renders nothing where it sits, so it can go anywhere on the page. Targets are CSS
+    selectors, which is what lets a step point at markup this component does not own.
+*@
+<Walkthrough @ref="tour"
+             RememberRunKey="sample-walkthrough-v1"
+             AutoStart="true"
+             AutoStartDelay="700"
+             UseOverlay="@useOverlay"
+             OverlayOpacity="0.82"
+             RingColor="#7DD3FC"
+             RingThickness="2"
+             StepChanged="OnStepChangedAsync"
+             Completed="OnCompletedAsync"
+             Skipped="OnSkippedAsync">
+    <Steps>
+        @* No target: a centred welcome card, no cut-out. *@
+        <WalkthroughStep Name="Welcome"
+                         Title="Welcome"
+                         Text="This is a walkthrough. Everything it highlights is a real element on this page."
+                         AnimationIn="WalkthroughAnimation.Pop" />
+
+        @* Popover: the full card, tail pointing at the highlight. *@
+        <WalkthroughStep Name="Search"
+                         Target="#wt-search"
+                         Title="Search"
+                         Text="Type here to filter. The spotlight travels between targets rather than blinking."
+                         Placement="TooltipPlacement.Bottom" />
+
+        @* Tooltip: compact, no buttons, advances itself after the dwell time. *@
+        <WalkthroughStep Name="Filter"
+                         Target="#wt-filter"
+                         Text="This one auto-advances after 2.5 seconds."
+                         Display="WalkthroughDisplay.Tooltip"
+                         Duration="2500"
+                         AnimationIn="WalkthroughAnimation.Slide" />
+
+        @* Spotlight: no card, text straight on the dim, circular cut-out. *@
+        <WalkthroughStep Name="Avatar"
+                         Target="#wt-avatar"
+                         Title="Your profile"
+                         Text="A circular cut-out for a round element, with the text on the backdrop instead of in a card."
+                         Display="WalkthroughDisplay.Spotlight"
+                         Highlight="WalkthroughHighlight.Circle"
+                         HighlightPadding="4" />
+
+        @* Conditional: drops out of the run when the checkbox is off. *@
+        <WalkthroughStep Name="Advanced"
+                         Target="#wt-advanced"
+                         IsVisible="@showAdvanced"
+                         Title="Advanced"
+                         Text="This step only exists while the Advanced box is ticked."
+                         Display="WalkthroughDisplay.Inline" />
+
+        @* Live target: the backdrop leaves a hole the click can reach, and using it advances. *@
+        <WalkthroughStep Name="Save"
+                         Target="#wt-save"
+                         Title="Try it"
+                         Text="Press Save to finish the tour — the button is live through the cut-out."
+                         Placement="TooltipPlacement.Top"
+                         AllowTargetInteraction="true"
+                         AdvanceOnTargetClick="true" />
+    </Steps>
+</Walkthrough>
+
+<section class="demo-section">
+    <div style="display:flex; flex-direction:column; gap:16px; max-width:520px;">
+
+        <TextEntry id="wt-search" @bind-Text="searchText" Placeholder="Search projects" />
+
+        <label style="display:flex; gap:10px; align-items:center;">
+            <input id="wt-filter" type="checkbox" @bind="onlyMine" />
+            <span>Only show mine</span>
+
+            @* The tooltip wraps its target, so it needs no selector at all. *@
+            <Tooltip Text="Filters the list to projects you own." Placement="TooltipPlacement.Top">
+                <span style="cursor:help;">&#x24D8;</span>
+            </Tooltip>
+        </label>
+
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div id="wt-avatar"
+                 style="width:48px; height:48px; border-radius:50%; background:#6750A4; color:#fff;
+                        display:flex; align-items:center; justify-content:center; font-weight:600;">
+                AR
+            </div>
+            <span>Allan Ritchie</span>
+        </div>
+
+        <label style="display:flex; gap:10px; align-items:center;">
+            <input type="checkbox" @bind="showAdvanced" />
+            <span>Include the Advanced step</span>
+        </label>
+
+        <div id="wt-advanced" style="border:1px solid var(--shiny-color-outline-variant, #ccc); border-radius:12px; padding:12px;">
+            <strong>Advanced</strong>
+            <p style="font-size:0.8125rem; margin:6px 0 0;">
+                Untick the box above and this panel's step vanishes from the run.
+            </p>
+        </div>
+
+        <label style="display:flex; gap:10px; align-items:center;">
+            <input type="checkbox" @bind="useOverlay" />
+            <span>Dim the background</span>
+        </label>
+
+        <div style="display:flex; gap:10px;">
+            <ShinyButton Text="Start" Clicked="@(_ => tour!.StartAsync())" />
+
+            @* Restart clears the remembered flag first, which is the "show me the tour again" case. *@
+            <ShinyButton Text="Restart" Appearance="ButtonAppearance.Outlined" Clicked="@(_ => tour!.RestartAsync())" />
+            <ShinyButton id="wt-save" Text="Save" Appearance="ButtonAppearance.Tonal" Clicked="OnSaveAsync" />
+        </div>
+
+        <p><em>@status</em></p>
+    </div>
+</section>
+
+@code {
+    Walkthrough? tour;
+
+    string searchText = string.Empty;
+    bool onlyMine;
+    bool showAdvanced;
+    bool useOverlay = true;
+    int saveCount;
+    string status = "The tour auto-starts once. Use Restart to see it again.";
+
+    Task OnStepChangedAsync(string? name)
+    {
+        this.status = $"Entered step: {name ?? "(unnamed)"}";
+        return Task.CompletedTask;
+    }
+
+    Task OnCompletedAsync()
+    {
+        this.status = "Tour completed — it will not auto-start again.";
+        return Task.CompletedTask;
+    }
+
+    Task OnSkippedAsync()
+    {
+        this.status = "Tour skipped. Restart clears the remembered flag.";
+        return Task.CompletedTask;
+    }
+
+    Task OnSaveAsync(MouseEventArgs e)
+    {
+        this.saveCount++;
+        this.status = $"Saved {this.saveCount} time(s).";
+        return Task.CompletedTask;
+    }
+}
