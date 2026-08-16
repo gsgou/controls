@@ -171,6 +171,12 @@
                                               PickerTitle="Frame rate (0 = platform default)"
                                               ItemsSource="{Binding FrameRates}"
                                               SelectedItem="{Binding SelectedFrameRate, Mode=TwoWay}" />
+                        <!-- Covers the preview, stills, video and analyzer frames alike — rotate the device
+                             on Device, then pin a landscape value and rotate again to see it hold. -->
+                        <shiny:TextPickerCell Title="Orientation"
+                                              PickerTitle="Capture orientation"
+                                              ItemsSource="{Binding Orientations}"
+                                              SelectedItem="{Binding Orientation, Source={x:Reference Camera}, Mode=TwoWay}" />
                     </shiny:TableSection>
 
                     <shiny:TableSection Title="Session">

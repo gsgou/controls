@@ -144,6 +144,43 @@ public partial class CameraView
     public static readonly BindableProperty MixWithOtherAudioProperty = BindableProperty.Create(
         nameof(MixWithOtherAudio), typeof(bool), typeof(CameraView), true);
 
+    /// <summary>
+    /// How captured output is oriented. Default <see cref="CameraOrientation.Device"/> — the camera follows
+    /// the device as it rotates.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is a property of the <i>session</i>, not of an individual recording or capture, which is why it
+    /// lives here rather than on <see cref="VideoRecordingOptions"/>. On Apple platforms the preview layer,
+    /// the photo output and the video data output all hang off connections on one session, and the data
+    /// output is the same one that feeds <see cref="CameraView.Analyzer"/> — so a recording cannot be
+    /// oriented independently of what an analyzer sees. That coupling is the correct behaviour rather than a
+    /// limitation: for a landscape-mounted device, "upright" genuinely <i>is</i> landscape, and the analyzer
+    /// should be looking at the same scene the file gets.
+    /// </para>
+    /// <para>
+    /// <b>A change is deferred while a recording is in progress, and that is not politeness.</b> Re-orienting
+    /// the capture connection swaps the pixel buffer's width and height, and an encoder is configured with
+    /// fixed dimensions off its first frame — on Apple the owned <c>AVAssetWriter</c> path literally reads
+    /// them from frame one. Feeding it transposed buffers afterwards does not produce a rotated file, it
+    /// produces a corrupt one, and for anything recording unattended that is discovered long after the
+    /// footage mattered. The pending value is applied when the recording finishes.
+    /// </para>
+    /// <para>
+    /// It follows that a caller which needs one orientation across <i>several</i> recordings — segmented
+    /// continuous capture, where each segment is its own <see cref="CameraView.StartVideoRecordingAsync"/>
+    /// call — must pin an explicit value rather than leaving this at <see cref="CameraOrientation.Device"/>.
+    /// Otherwise a device rotated between segments yields a set of files that disagree, and the usual way
+    /// that surfaces is a concatenation or trim taking its transform from the first track and rendering
+    /// every later one sideways.
+    /// </para>
+    /// <para>
+    /// macOS and Windows ignore this: neither has a rotating display behind the capture device.
+    /// </para>
+    /// </remarks>
+    public static readonly BindableProperty OrientationProperty = BindableProperty.Create(
+        nameof(Orientation), typeof(CameraOrientation), typeof(CameraView), CameraOrientation.Device);
+
     /// <summary>Whether a video recording is currently in progress (updated by the control).</summary>
     public static readonly BindableProperty IsRecordingProperty = BindableProperty.Create(
         nameof(IsRecording), typeof(bool), typeof(CameraView), false, BindingMode.OneWayToSource);
@@ -271,6 +308,13 @@ public partial class CameraView
     {
         get => (bool)this.GetValue(MixWithOtherAudioProperty);
         set => this.SetValue(MixWithOtherAudioProperty, value);
+    }
+
+    /// <inheritdoc cref="OrientationProperty"/>
+    public CameraOrientation Orientation
+    {
+        get => (CameraOrientation)this.GetValue(OrientationProperty);
+        set => this.SetValue(OrientationProperty, value);
     }
 
     /// <inheritdoc cref="IsRecordingProperty"/>

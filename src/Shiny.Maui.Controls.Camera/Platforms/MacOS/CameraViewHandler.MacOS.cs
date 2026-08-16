@@ -225,6 +225,10 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* drawn by managed overlay */ }
 
+    // Nothing to do: a Mac's display does not rotate behind the capture device, so there is no orientation
+    // to follow and nothing an explicit CameraOrientation could usefully mean here.
+    static partial void MapOrientation(CameraViewHandler handler, CameraView view) { }
+
     // Same session-level reconfiguration as iOS, and refused mid-recording for the same reason — the
     // preset renegotiates the active format underneath whatever is writing the file.
     static partial void MapVideoQuality(CameraViewHandler handler, CameraView view)

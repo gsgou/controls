@@ -38,6 +38,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     // The use-case shape currently bound. A change in either dimension (an analyzer toggling, a recording
     // starting or finishing) is what triggers a rebind.
     (bool Analyzing, bool Video) boundShape;
+    DisplayRotationListener? displayListener;
 
     protected override AWidget.FrameLayout CreatePlatformView()
     {
@@ -62,6 +63,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         base.ConnectHandler(platformView);
         this.lifecycleOwner = new CameraLifecycleOwner();
         this.InitPipeline();
+        this.displayListener = DisplayRotationListener.Register(this.Context, this.ApplyTargetRotation);
         if (this.VirtualView.IsActive)
             _ = this.StartAsync();
     }
@@ -71,6 +73,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.TeardownPipeline();
         try
         {
+            this.displayListener?.Unregister();
             this.imageAnalysis?.ClearAnalyzer();
             this.cameraProvider?.UnbindAll();
             this.DisposeOverlayEffect();
@@ -82,6 +85,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.recordingOverlay = null;
         this.wantsVideoCapture = false;
         this.boundShape = default;
+        this.displayListener = null;
         this.overlayThread = null;
         this.analysisExecutor = null;
         this.camera = null;
@@ -261,6 +265,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
                 if (hadOverlay)
                     this.BindUseCases(); // rebind without the overlay effect
                 this.RebindIfModeChanged();
+                // Pick up any rotation that happened during the take. ApplyTargetRotation held VideoCapture
+                // back while the recording owned it, and neither rebind above is guaranteed to run.
+                this.ApplyTargetRotation();
             }),
             TaskScheduler.Default);
         return task;
@@ -327,15 +334,17 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     //
     // Applied ONLY when analysis and recording are bound together — the case that could not exist at all
     // before — so no existing single-use-case configuration has its recorded field of view moved underneath it.
-    ViewPort? BuildSharedViewPort(Preview preview)
+    ViewPort? BuildSharedViewPort(int rotation)
     {
         // The PreviewView's own ViewPort matches what the user is looking at, which is the most useful thing
-        // to align to. It is null until the view has been laid out, so fall back to the Recorder's 16:9.
+        // to align to. It is null until the view has been laid out, so fall back to the Recorder's 16:9 at
+        // the rotation the use cases were just given — reading it back off the Preview use case would report
+        // the display rotation Preview defaulted to, which is not necessarily the one in force here.
         var fromPreview = this.previewView?.ViewPort;
         if (fromPreview != null)
             return fromPreview;
 
-        return new ViewPort.Builder(new Android.Util.Rational(16, 9), preview.TargetRotation)
+        return new ViewPort.Builder(new Android.Util.Rational(16, 9), rotation)
             .SetScaleType(ViewPort.FillCenter)
             .Build();
     }
@@ -431,6 +440,12 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
     static partial void MapOverlay(CameraViewHandler handler, CameraView view) { /* Phase 2 */ }
 
+    // No rebind: target rotation is settable on a bound use case, so this costs nothing and does not blink
+    // the preview. Unlike VideoQuality it is therefore safe to call mid-recording — ApplyTargetRotation skips
+    // VideoCapture while one is running.
+    static partial void MapOrientation(CameraViewHandler handler, CameraView view)
+        => handler.ApplyTargetRotation();
+
     static partial void MapEffects(CameraViewHandler handler, CameraView view) => handler.ApplyEffects(view.EffectChain);
 
     // Quality is baked into the Recorder at bind time, so a change means a rebind. Refused mid-recording:
@@ -480,6 +495,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         this.videoCapture = null;
         this.recorder = null;
 
+        // Every use case below is built with this. Preview is excluded on purpose — see ApplyTargetRotation.
+        var rotation = this.ResolveTargetRotation();
+
         // Use-case budget. CameraX guarantees Preview + 2 more at LIMITED hardware level; a fourth use case
         // needs LEVEL_3, which most phones are not. Preview + VideoCapture + ImageAnalysis IS a guaranteed
         // LIMITED combination, so analysis and recording are not actually mutually exclusive — a live-analysis
@@ -491,7 +509,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
 
         if (!(analyzing && video))
         {
-            this.imageCapture = new ImageCapture.Builder().Build();
+            this.imageCapture = new ImageCapture.Builder()
+                .SetTargetRotation(rotation)!
+                .Build();
             useCases.Add(this.imageCapture);
         }
 
@@ -499,7 +519,8 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         {
             this.analysisExecutor ??= Java.Util.Concurrent.Executors.NewSingleThreadExecutor();
             this.imageAnalysis = new ImageAnalysis.Builder()
-                .SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest!)
+                .SetBackpressureStrategy(ImageAnalysis.StrategyKeepOnlyLatest!)!
+                .SetTargetRotation(rotation)!
                 .Build();
             this.imageAnalysis.SetAnalyzer(this.analysisExecutor!, new FrameAnalyzerBridge(this));
             useCases.Add(this.imageAnalysis);
@@ -509,6 +530,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         {
             this.recorder = this.BuildRecorder();
             this.videoCapture = this.BuildVideoCapture(this.recorder);
+            this.videoCapture.TargetRotation = rotation;
             useCases.Add(this.videoCapture);
         }
 
@@ -520,7 +542,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         var overlayEffect = this.recordingOverlay is { } overlay && this.videoCapture != null
             ? this.CreateOverlayEffect(overlay)
             : null;
-        var sharedViewPort = analyzing && video ? this.BuildSharedViewPort(preview) : null;
+        var sharedViewPort = analyzing && video ? this.BuildSharedViewPort(rotation) : null;
 
         if (overlayEffect != null || sharedViewPort != null)
         {
@@ -553,4 +575,116 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
         if (zoomState != null)
             this.MaybeVirtualView?.OnZoomRangeChanged(zoomState.MinZoomRatio, zoomState.MaxZoomRatio);
     }
+
+
+    /// <summary>
+    /// Push the resolved target rotation onto the bound use cases.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// CameraX takes target rotation per use case and it can be changed on a bound one — no rebind, no
+    /// preview hiccup — which is what makes following the display cheap. Left unset it defaults to the
+    /// display rotation <i>at the moment the use case was built</i> and never moves again: launch the app
+    /// already in landscape and every recording came out rotated, with nothing in the code saying so.
+    /// </para>
+    /// <para>
+    /// <b>Preview is deliberately not in the list.</b> <c>PreviewView</c> owns its own rotation handling and
+    /// CameraX's guidance is not to fight it; setting a target rotation on the Preview use case while a
+    /// PreviewView is displaying it distorts what the user sees. The shared ViewPort is given the resolved
+    /// rotation directly instead (see <see cref="BuildSharedViewPort"/>).
+    /// </para>
+    /// <para>
+    /// <b>VideoCapture is skipped while recording.</b> CameraX fixes the rotation when the recording starts,
+    /// so setting it mid-take does nothing to the file in progress — but it would leave the use case
+    /// disagreeing with the encoder for the remainder of it. <see cref="StopVideoRecordingAsync"/> rebinds
+    /// once the recording finalizes, which picks up whatever the display reached in the meantime.
+    /// </para>
+    /// </remarks>
+    void ApplyTargetRotation()
+    {
+        if (this.MaybeVirtualView == null)
+            return;
+
+        var rotation = this.ResolveTargetRotation();
+
+        if (this.imageCapture != null)
+            this.imageCapture.TargetRotation = rotation;
+
+        if (this.imageAnalysis != null)
+            this.imageAnalysis.TargetRotation = rotation;
+
+        if (this.videoCapture != null && this.activeRecording == null)
+            this.videoCapture.TargetRotation = rotation;
+    }
+
+
+    /// <summary>
+    /// Turn <see cref="CameraView.Orientation"/> into a <c>Surface.ROTATION_*</c> value.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="CameraOrientation.Device"/> reads the display rotation, which is exact on any device.
+    /// The explicit members go through the table on <see cref="CameraOrientation"/>, which assumes a
+    /// portrait-natural device — true of every phone, not of every tablet.
+    /// </remarks>
+    int ResolveTargetRotation() => this.MaybeVirtualView?.Orientation switch
+    {
+        CameraOrientation.Portrait => (int)Android.Views.SurfaceOrientation.Rotation0,
+        CameraOrientation.PortraitUpsideDown => (int)Android.Views.SurfaceOrientation.Rotation180,
+        CameraOrientation.LandscapeTopLeft => (int)Android.Views.SurfaceOrientation.Rotation90,
+        CameraOrientation.LandscapeTopRight => (int)Android.Views.SurfaceOrientation.Rotation270,
+        _ => this.ReadDisplayRotation()
+    };
+
+
+    // The view's own display once it is attached; the default display before that (Display is null on a view
+    // that is not in a window yet, which is the state during the first BindUseCases).
+    int ReadDisplayRotation()
+    {
+        var display = this.previewView?.Display
+            ?? (this.Context.GetSystemService(Android.Content.Context.DisplayService)
+                as Android.Hardware.Display.DisplayManager)
+                ?.GetDisplay(Android.Views.Display.DefaultDisplay);
+
+        return (int)(display?.Rotation ?? Android.Views.SurfaceOrientation.Rotation0);
+    }
+}
+
+
+/// <summary>
+/// Fires when the display rotates, so capture orientation can follow it.
+/// </summary>
+/// <remarks>
+/// A layout pass would be the cheaper signal and is what the Apple handler leans on, but it does not catch
+/// the case that matters most here: rotating 180° — landscape-left to landscape-right, a cradle remounted
+/// the other way up — leaves the view's bounds identical, so nothing re-lays out while the footage quietly
+/// starts recording upside down. <c>DisplayManager</c> reports it. This is also what CameraX's own samples
+/// use.
+/// </remarks>
+sealed class DisplayRotationListener(Action onRotated)
+    : Java.Lang.Object, Android.Hardware.Display.DisplayManager.IDisplayListener
+{
+    Android.Hardware.Display.DisplayManager? manager;
+
+    public static DisplayRotationListener? Register(Android.Content.Context context, Action onRotated)
+    {
+        if (context.GetSystemService(Android.Content.Context.DisplayService)
+            is not Android.Hardware.Display.DisplayManager manager)
+            return null;
+
+        var listener = new DisplayRotationListener(onRotated) { manager = manager };
+        manager.RegisterDisplayListener(listener, null);
+        return listener;
+    }
+
+    public void Unregister()
+    {
+        this.manager?.UnregisterDisplayListener(this);
+        this.manager = null;
+    }
+
+    public void OnDisplayAdded(int displayId) { }
+
+    public void OnDisplayRemoved(int displayId) { }
+
+    public void OnDisplayChanged(int displayId) => onRotated();
 }

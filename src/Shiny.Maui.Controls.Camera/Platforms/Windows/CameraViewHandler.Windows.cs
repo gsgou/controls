@@ -380,4 +380,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
     // Nothing to do: the MediaEncodingProfile is built per recording, so the new value is picked up by the
     // next StartVideoRecordingAsync without touching the running session.
     static partial void MapVideoQuality(CameraViewHandler handler, CameraView view) { }
+
+    // Nothing to do: no rotating display behind the capture device on desktop Windows.
+    static partial void MapOrientation(CameraViewHandler handler, CameraView view) { }
 }

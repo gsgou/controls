@@ -87,6 +87,9 @@ public partial class CameraPage : ShinyContentPage
     /// <summary>Target capture resolutions for the "Video quality" picker.</summary>
     public VideoQuality[] VideoQualities { get; } = Enum.GetValues<VideoQuality>();
 
+    /// <summary>Choices for the "Capture orientation" picker.</summary>
+    public CameraOrientation[] Orientations { get; } = Enum.GetValues<CameraOrientation>();
+
     /// <summary>
     /// Frame-rate choices, with 0 standing in for "platform default" — <see cref="CameraView.VideoFrameRate"/>
     /// is <c>int?</c> and a picker cannot bind a null entry, so <see cref="SelectedFrameRate"/> maps between them.

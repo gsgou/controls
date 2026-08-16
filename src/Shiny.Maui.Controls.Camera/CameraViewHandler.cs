@@ -67,6 +67,7 @@ public partial class CameraViewHandler
             [nameof(CameraView.VideoQuality)] = MapVideoQuality,
             [nameof(CameraView.VideoBitrate)] = MapVideoQuality,
             [nameof(CameraView.VideoFrameRate)] = MapVideoQuality,
+            [nameof(CameraView.Orientation)] = MapOrientation,
         };
 
     static void MapAnalyzer(CameraViewHandler handler, CameraView view) => handler.SyncAnalyzer();
@@ -95,5 +96,9 @@ public partial class CameraViewHandler
     // Backs VideoQuality, VideoBitrate and VideoFrameRate — all three are fixed when the session is
     // configured, so one mapper reapplies the set of them rather than three that each reconfigure.
     static partial void MapVideoQuality(CameraViewHandler handler, CameraView view);
+
+    // Implemented on Android and Apple only; macOS and Windows have no rotating display behind the capture
+    // device, so the partial is elided there rather than being a no-op body on each.
+    static partial void MapOrientation(CameraViewHandler handler, CameraView view);
 }
 #endif

@@ -26,6 +26,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     VideoFrameDelegate? frameDelegate;
     MovieRecordingDelegate? recordingDelegate;
     UIImageView? filterView;
+    NSObject? orientationToken;
     NSObject? interruptedToken;
     NSObject? interruptionEndedToken;
     NSObject? runtimeErrorToken;
@@ -38,12 +39,32 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     {
         base.ConnectHandler(platformView);
         this.InitPipeline();
+        // Two triggers for one idempotent apply, because neither catches everything. Layout is the accurate
+        // one (the interface orientation has settled by then) but a 180° flip — landscape-left to
+        // landscape-right, which is a cradle being remounted the other way up — does not change the view's
+        // bounds. The device notification catches that; it fires slightly ahead of the interface updating,
+        // which is why it only triggers the apply rather than supplying the value. See
+        // CameraPreviewView.LayoutChanged and ResolveOrientation.
+        platformView.LayoutChanged = this.OrientConnections;
+        UIDevice.CurrentDevice.BeginGeneratingDeviceOrientationNotifications();
+        this.orientationToken = NSNotificationCenter.DefaultCenter.AddObserver(
+            UIDevice.OrientationDidChangeNotification,
+            _ => this.OrientConnections()
+        );
         if (this.VirtualView.IsActive)
             _ = this.StartAsync();
     }
 
     protected override void DisconnectHandler(CameraPreviewView platformView)
     {
+        platformView.LayoutChanged = null;
+        if (this.orientationToken != null)
+        {
+            NSNotificationCenter.DefaultCenter.RemoveObserver(this.orientationToken);
+            this.orientationToken.Dispose();
+            this.orientationToken = null;
+            UIDevice.CurrentDevice.EndGeneratingDeviceOrientationNotifications();
+        }
         this.TeardownPipeline();
         this.TeardownSession();
         base.DisconnectHandler(platformView);
@@ -171,14 +192,25 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             if (this.audioDelegate != null)
                 this.audioDelegate.Recorder = null;
             this.overlayRecorder = null;
-            return recorder.FinishAsync();
+            return this.ReorientWhenDone(recorder.FinishAsync());
         }
 
         if (this.movieOutput is not { Recording: true } || this.recordingDelegate == null)
             throw new InvalidOperationException("Not recording");
 
         this.movieOutput.StopRecording();
-        return this.recordingDelegate.Task;
+        return this.ReorientWhenDone(this.recordingDelegate.Task);
+    }
+
+
+    // Apply whatever orientation the device reached during the recording, now that transposing the buffers can
+    // no longer corrupt an encoder mid-file. See OrientConnections for why it was held off.
+    Task<CameraVideo> ReorientWhenDone(Task<CameraVideo> recording)
+    {
+        _ = recording.ContinueWith(
+            _ => this.MainThread(this.OrientConnections),
+            TaskScheduler.Default);
+        return recording;
     }
 
 
@@ -241,6 +273,11 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
     static partial void MapEffects(CameraViewHandler handler, CameraView view)
         => handler.MainThread(() => handler.ApplyEffects(view.EffectChain));
+
+    // Cheap and idempotent — orienting a connection needs no session reconfiguration, so unlike
+    // MapVideoQuality below this does not blink the preview. OrientConnections declines it mid-recording.
+    static partial void MapOrientation(CameraViewHandler handler, CameraView view)
+        => handler.OrientConnections();
 
     // The preset sizes the whole session — preview, data output and movie output alike — so this is a session
     // reconfiguration, not a recording setting. Refused mid-recording: changing the preset renegotiates the
@@ -534,27 +571,104 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
     };
 
 
-    // Orient the frame-delivery connection so buffers arrive upright (portrait) and front-mirrored to
-    // match the preview. The wrapped AppleCameraFrame then needs no further rotation/mirroring.
+    /// <summary>
+    /// Orient every connection on the session so buffers arrive upright for the way the device is being
+    /// held, and front-mirror the frame-delivery one to match the preview. The wrapped
+    /// <see cref="AppleCameraFrame"/> then needs no further rotation/mirroring.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>All four connections, not just the data output.</b> The preview layer, the photo output, the movie
+    /// output and the video data output each carry their own <c>AVCaptureConnection</c>, and every one of
+    /// them defaults to <c>Portrait</c> — so leaving any unset does not mean "follow the device", it means
+    /// "pinned to portrait forever". Only the data output was ever oriented here, which is why a
+    /// landscape-held device previewed sideways and recorded sideways through the native movie path.
+    /// </para>
+    /// <para>
+    /// <b>Deferred while recording.</b> Orienting a connection transposes the pixel buffer, and an encoder is
+    /// configured with fixed dimensions from its first frame — the owned <c>AVAssetWriter</c> path reads
+    /// width and height off frame one and never revisits them. Handing it transposed buffers afterwards
+    /// corrupts the file rather than rotating it. <see cref="StopVideoRecordingAsync"/> re-runs this once the
+    /// recording has finalized, so a rotation during a take is applied to the next one.
+    /// </para>
+    /// </remarks>
     void OrientConnections()
     {
-        var front = this.VirtualView.Facing == CameraFacing.Front;
-        var conn = this.dataOutput?.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!);
-        if (conn == null)
+        // MaybeVirtualView, not VirtualView: ReorientWhenDone can land here after the page was navigated away
+        // from, and VirtualView throws rather than returning null once disconnected.
+        if (this.MaybeVirtualView is not { } view)
             return;
 
-        if (conn.SupportsVideoOrientation)
-            conn.VideoOrientation = AVCaptureVideoOrientation.Portrait;
+        if (this.overlayRecorder != null || this.movieOutput is { Recording: true })
+            return;
 
-        if (conn.SupportsVideoMirroring)
+        var orientation = this.ResolveOrientation();
+        var front = view.Facing == CameraFacing.Front;
+
+        var dataConnection = this.dataOutput?.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!);
+        if (dataConnection != null)
         {
-            conn.AutomaticallyAdjustsVideoMirroring = false;
-            conn.VideoMirrored = front;
+            Orient(dataConnection, orientation);
+            if (dataConnection.SupportsVideoMirroring)
+            {
+                dataConnection.AutomaticallyAdjustsVideoMirroring = false;
+                dataConnection.VideoMirrored = front;
+            }
+
+            if (this.frameDelegate != null)
+                this.frameDelegate.Mirrored = false; // connection already applies orientation + mirroring
         }
 
-        if (this.frameDelegate != null)
-            this.frameDelegate.Mirrored = false; // connection already applies orientation + mirroring
+        Orient(this.photoOutput?.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!), orientation);
+        Orient(this.movieOutput?.ConnectionFromMediaType(AVMediaTypes.Video.GetConstant()!), orientation);
+        Orient(this.PlatformView?.PreviewLayer.Connection, orientation);
     }
+
+
+    static void Orient(AVCaptureConnection? connection, AVCaptureVideoOrientation orientation)
+    {
+        if (connection is { SupportsVideoOrientation: true } && connection.VideoOrientation != orientation)
+            connection.VideoOrientation = orientation;
+    }
+
+
+    /// <summary>
+    /// Turn <see cref="CameraView.Orientation"/> into the AVFoundation constant to put on a connection.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="CameraOrientation.Device"/> reads the <b>window scene's interface orientation</b> rather
+    /// than <c>UIDevice.CurrentDevice.Orientation</c>. The device one reports <c>FaceUp</c>, <c>FaceDown</c>
+    /// and <c>Unknown</c> — none of which the camera can be pointed in, and all of which a phone sitting in a
+    /// cradle or flat on a desk will produce — and it also ignores whatever the app actually allows, so a
+    /// portrait-locked app would still rotate its capture. The interface orientation has neither problem.
+    /// </para>
+    /// <para>
+    /// The explicit members map through the inversion documented on <see cref="CameraOrientation"/>:
+    /// <c>AVCaptureVideoOrientation</c> follows the <i>interface</i> convention, in which "landscape left"
+    /// means the device's top edge points <i>right</i>. The crossed-over pair below is correct, not a typo.
+    /// </para>
+    /// </remarks>
+    AVCaptureVideoOrientation ResolveOrientation() => this.MaybeVirtualView?.Orientation switch
+    {
+        CameraOrientation.Portrait => AVCaptureVideoOrientation.Portrait,
+        CameraOrientation.PortraitUpsideDown => AVCaptureVideoOrientation.PortraitUpsideDown,
+        CameraOrientation.LandscapeTopLeft => AVCaptureVideoOrientation.LandscapeRight,
+        CameraOrientation.LandscapeTopRight => AVCaptureVideoOrientation.LandscapeLeft,
+        _ => this.ReadInterfaceOrientation()
+    };
+
+
+    AVCaptureVideoOrientation ReadInterfaceOrientation()
+        => this.PlatformView?.Window?.WindowScene?.InterfaceOrientation switch
+        {
+            UIInterfaceOrientation.PortraitUpsideDown => AVCaptureVideoOrientation.PortraitUpsideDown,
+            UIInterfaceOrientation.LandscapeLeft => AVCaptureVideoOrientation.LandscapeLeft,
+            UIInterfaceOrientation.LandscapeRight => AVCaptureVideoOrientation.LandscapeRight,
+            // Portrait, Unknown, and the null the view reports before it is in a window. A view that is not
+            // on screen yet gets corrected by the layout pass that puts it there.
+            _ => AVCaptureVideoOrientation.Portrait
+        };
 
 
     void SetupFilterView()

@@ -44,10 +44,24 @@ public sealed class CameraPreviewView : UIView
         }
     }
 
+    /// <summary>
+    /// Raised after every layout pass. The handler uses it to re-apply capture orientation.
+    /// </summary>
+    /// <remarks>
+    /// A rotation always produces a layout pass, and by the time one runs the window scene's interface
+    /// orientation has settled — which <c>UIDeviceOrientationDidChangeNotification</c> has not, since it
+    /// fires ahead of the interface catching up (and reports <c>FaceUp</c>/<c>FaceDown</c> for a device
+    /// lying flat, which is not an orientation the camera can be pointed in). Layout is therefore the
+    /// signal, not the notification. It fires for plenty of reasons that are not rotation, so whatever
+    /// subscribes must be idempotent and cheap.
+    /// </remarks>
+    public Action? LayoutChanged { get; set; }
+
     public override void LayoutSubviews()
     {
         base.LayoutSubviews();
         if (this.fallbackLayer != null)
             this.fallbackLayer.Frame = this.Bounds;
+        this.LayoutChanged?.Invoke();
     }
 }
