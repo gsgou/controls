@@ -41,5 +41,30 @@ public sealed class AndroidCameraFrame(IImageProxy proxy, bool mirrored) : Camer
         return lum;
     }
 
+    /// <summary>
+    /// Reads the sampled pixels straight out of the Y plane — no 2 MB plane materialized to answer a
+    /// question a thousand bytes can.
+    /// </summary>
+    public override void SampleLuminance(Span<byte> destination, int columns, int rows)
+    {
+        var plane = this.Proxy.GetPlanes()![0];
+        var buffer = plane.Buffer!;
+        var rowStride = plane.RowStride;
+        var pixelStride = plane.PixelStride;
+        var one = new byte[1];
+
+        for (var r = 0; r < rows; r++)
+        {
+            var y = SampleCoordinate(r, rows, this.Height);
+            for (var c = 0; c < columns; c++)
+            {
+                var x = SampleCoordinate(c, columns, this.Width);
+                buffer.Position(y * rowStride + x * pixelStride);
+                buffer.Get(one, 0, 1);
+                destination[r * columns + c] = one[0];
+            }
+        }
+    }
+
     protected override void ReleaseNative() => this.Proxy.Close();
 }

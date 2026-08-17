@@ -102,6 +102,7 @@ public partial class MediaElement : ContentView
         this.CurrentState = this.backend.State;
         this.Duration = this.backend.Duration;
         this.Capabilities = this.backend.Capabilities;
+        this.SetVideoSizeFromBackend();
 
         this.UpdatePlayPauseGlyph();
         this.UpdateBusyOverlay();
@@ -119,6 +120,7 @@ public partial class MediaElement : ContentView
     {
         b.StateChanged += this.OnBackendStateChanged;
         b.MediaOpened += this.OnBackendOpened;
+        b.VideoSizeChanged += this.OnBackendVideoSizeChanged;
         b.MediaEnded += this.OnBackendEnded;
         b.Failed += this.OnBackendFailed;
         b.PictureInPictureChanged += this.OnBackendPipChanged;
@@ -129,6 +131,7 @@ public partial class MediaElement : ContentView
     {
         b.StateChanged -= this.OnBackendStateChanged;
         b.MediaOpened -= this.OnBackendOpened;
+        b.VideoSizeChanged -= this.OnBackendVideoSizeChanged;
         b.MediaEnded -= this.OnBackendEnded;
         b.Failed -= this.OnBackendFailed;
         b.PictureInPictureChanged -= this.OnBackendPipChanged;
@@ -214,6 +217,7 @@ public partial class MediaElement : ContentView
         this.IsMuted = owner.IsMuted;
         this.Duration = owner.Duration;
         this.CurrentState = owner.CurrentState;
+        this.VideoSize = owner.VideoSize;
         this.Aspect = owner.Aspect;
 
         // Shows the "collapse" glyph and routes its tap back to the owner, which owns the modal page.
@@ -236,6 +240,11 @@ public partial class MediaElement : ContentView
 
         this.HideError();
         this.Duration = TimeSpan.Zero;
+
+        // Cleared with the duration rather than left standing: a page sizing itself to the last video would
+        // otherwise hold that shape over the black frame of a source that turns out to be a different one
+        // (or audio-only), until the new size arrives.
+        this.VideoSize = Size.Zero;
         this.SetPositionFromPlayer(TimeSpan.Zero);
 
         try
@@ -285,9 +294,26 @@ public partial class MediaElement : ContentView
 
         this.Duration = this.backend.Duration;
         this.Capabilities = this.backend.Capabilities;
+
+        // Seeded here as well as from VideoSizeChanged, because the two platforms disagree about which
+        // comes first: Windows/GTK/AVPlayer have the size by the time they say the media is open, ExoPlayer
+        // reports it from a callback that lands afterwards. Whichever arrives second is the no-op.
+        this.SetVideoSizeFromBackend();
+
         this.ApplyTransportVisibility();
         this.UpdateTimeLabels();
         this.MediaOpened?.Invoke(this, EventArgs.Empty);
+    }
+
+    void OnBackendVideoSizeChanged(object? sender, EventArgs e) => this.SetVideoSizeFromBackend();
+
+    void SetVideoSizeFromBackend()
+    {
+        if (this.backend is null || this.VideoSize == this.backend.VideoSize)
+            return;
+
+        this.VideoSize = this.backend.VideoSize;
+        this.VideoSizeChanged?.Invoke(this, this.VideoSize);
     }
 
     void OnBackendEnded(object? sender, EventArgs e)
@@ -564,6 +590,16 @@ public partial class MediaElement : ContentView
 
     /// <summary>Raised once the source is loaded and <see cref="Duration"/> is known.</summary>
     public event EventHandler? MediaOpened;
+
+    /// <summary>
+    /// Raised when <see cref="VideoSize"/> becomes known, or changes. Carries the new size.
+    /// </summary>
+    /// <remarks>
+    /// Use this rather than reading <see cref="VideoSize"/> inside <see cref="MediaOpened"/>: on Android the
+    /// size arrives from a separate player callback that routinely lands <i>after</i> the media is open, so
+    /// the read-at-open version of the same code reports <see cref="Size.Zero"/> there for real video.
+    /// </remarks>
+    public event EventHandler<Size>? VideoSizeChanged;
 
     /// <summary>Raised when playback reaches the end. Not raised while <see cref="IsLooping"/>.</summary>
     public event EventHandler? MediaEnded;

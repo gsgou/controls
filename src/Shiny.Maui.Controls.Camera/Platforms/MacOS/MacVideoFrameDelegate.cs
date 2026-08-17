@@ -53,25 +53,48 @@ sealed class MacVideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegat
 
     public override void DidOutputSampleBuffer(AVCaptureOutput captureOutput, CMSampleBuffer sampleBuffer, AVCaptureConnection connection)
     {
+        var handedOff = false;
         try
         {
-            using var pixelBuffer = sampleBuffer.GetImageBuffer() as CVPixelBuffer;
+            var pixelBuffer = sampleBuffer.GetImageBuffer() as CVPixelBuffer;
             if (pixelBuffer == null)
                 return;
 
-            var chain = this.filters;
-            if (chain.Length > 0 && this.filterTarget.TryGetTarget(out var view))
-                this.RenderFiltered(chain, pixelBuffer, view);
+            try
+            {
+                var chain = this.filters;
+                if (chain.Length > 0 && this.filterTarget.TryGetTarget(out var view))
+                    this.RenderFiltered(chain, pixelBuffer, view);
 
-            if (this.OnFrame != null && this.WantFrames?.Invoke() == true)
-                this.OnFrame(new AppleCameraFrame(pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+                var recorder = this.Recorder;
+                if (this.OnFrame != null && this.WantFrames?.Invoke() == true)
+                {
+                    // Same rule as iOS: borrow only when no recorder is going to composite into this buffer.
+                    // See AppleCameraFrame's remarks for why sharing it with one corrupts the analysis.
+                    if (recorder == null)
+                    {
+                        this.OnFrame(AppleCameraFrame.Borrow(sampleBuffer, pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+                        handedOff = true;
+                    }
+                    else
+                    {
+                        this.OnFrame(AppleCameraFrame.Copy(pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+                    }
+                }
 
-            // composite + encode LAST so analyzers/preview see the clean frame and only the file gets the overlay
-            this.Recorder?.AppendVideo(sampleBuffer);
+                // composite + encode LAST so analyzers/preview see the clean frame and only the file gets the overlay
+                recorder?.AppendVideo(sampleBuffer);
+            }
+            finally
+            {
+                if (!handedOff)
+                    pixelBuffer.Dispose();
+            }
         }
         finally
         {
-            sampleBuffer.Dispose();
+            if (!handedOff)
+                sampleBuffer.Dispose();
         }
     }
 

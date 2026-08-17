@@ -160,6 +160,107 @@ public class CameraPipelineTests
     }
 
 
+    // ── WantsFrame: the gate platforms consult before materializing anything ─────────────────────
+
+    [Fact]
+    public void No_analyzer_wants_no_frame()
+        => new CameraPipeline().WantsFrame().ShouldBeFalse();
+
+
+    [Fact]
+    public void An_analyzer_that_wants_every_frame_is_asked_for_every_frame()
+    {
+        var pipeline = new CameraPipeline();
+        pipeline.SetAnalyzer(new ScriptedAnalyzer("x"));
+
+        pipeline.WantsFrame().ShouldBeTrue();
+    }
+
+
+    /// <summary>
+    /// The whole point of the gate: an analyzer declaring a cadence stops the platform building a frame it
+    /// was only going to skip — on Apple that is an 8.3 MB copy per 1080p frame.
+    /// </summary>
+    [Fact]
+    public void A_declined_frame_is_never_built()
+    {
+        var pipeline = new CameraPipeline();
+        var analyzer = new CadencedAnalyzer("c") { Wanted = false };
+        pipeline.SetAnalyzer(analyzer);
+
+        pipeline.WantsFrame().ShouldBeFalse();
+
+        analyzer.Wanted = true;
+        pipeline.WantsFrame().ShouldBeTrue();
+    }
+
+
+    [Fact]
+    public async Task A_pass_in_flight_declines_the_next_frame()
+    {
+        var pipeline = new CameraPipeline();
+        var gate = new TaskCompletionSource<IReadOnlyList<OverlayBox>?>();
+        pipeline.SetAnalyzer(new BlockingAnalyzer("b", gate.Task));
+
+        pipeline.WantsFrame().ShouldBeTrue();
+        pipeline.Process(new FakeFrame(), default);
+
+        // still analyzing — a frame delivered now would be dropped by the runner anyway
+        pipeline.WantsFrame().ShouldBeFalse();
+
+        // The runner clears its flag on the continuation, which is not this thread — so this waits for it
+        // rather than asserting on a race it would lose most of the time.
+        gate.SetResult(null);
+        for (var i = 0; i < 100 && !pipeline.WantsFrame(); i++)
+            await Task.Delay(10);
+
+        pipeline.WantsFrame().ShouldBeTrue();
+    }
+
+
+    /// <summary>An analyzer that throws on the capture thread must not take the camera down with it.</summary>
+    [Fact]
+    public void A_throwing_analyzer_is_treated_as_wanting_the_frame()
+    {
+        var pipeline = new CameraPipeline();
+        pipeline.SetAnalyzer(new ThrowingGateAnalyzer("t"));
+
+        pipeline.WantsFrame().ShouldBeTrue();
+    }
+
+
+    sealed class CadencedAnalyzer(string id) : IFrameAnalyzer
+    {
+        public string Id { get; } = id;
+        public bool Wanted { get; set; } = true;
+
+        public bool WantsFrame() => this.Wanted;
+
+        public ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+            => new((IReadOnlyList<OverlayBox>?)null);
+    }
+
+
+    sealed class BlockingAnalyzer(string id, Task<IReadOnlyList<OverlayBox>?> gate) : IFrameAnalyzer
+    {
+        public string Id { get; } = id;
+
+        public async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+            => await gate.ConfigureAwait(false);
+    }
+
+
+    sealed class ThrowingGateAnalyzer(string id) : IFrameAnalyzer
+    {
+        public string Id { get; } = id;
+
+        public bool WantsFrame() => throw new InvalidOperationException("analyzer is broken");
+
+        public ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+            => new((IReadOnlyList<OverlayBox>?)null);
+    }
+
+
     sealed class ScriptedAnalyzer(string id, params IReadOnlyList<OverlayBox>?[] results) : IFrameAnalyzer
     {
         readonly Queue<IReadOnlyList<OverlayBox>?> queue = new(results);

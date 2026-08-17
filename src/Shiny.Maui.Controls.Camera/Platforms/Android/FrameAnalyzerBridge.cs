@@ -8,7 +8,9 @@ sealed class FrameAnalyzerBridge(CameraViewHandler handler) : Java.Lang.Object, 
 {
     public void Analyze(IImageProxy image)
     {
-        if (!handler.Pipeline.HasAnalyzer)
+        // WantsFrame, not HasAnalyzer: closing the proxy immediately hands the buffer straight back to
+        // CameraX rather than holding it open through a pass the analyzer's cadence was going to skip.
+        if (!handler.Pipeline.WantsFrame())
         {
             image.Close();
             return;

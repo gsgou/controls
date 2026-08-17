@@ -88,6 +88,7 @@ class AndroidMediaPlayerBackend : IMediaPlayerBackend
 
     public event EventHandler<MediaElementState>? StateChanged;
     public event EventHandler? MediaOpened;
+    public event EventHandler? VideoSizeChanged;
     public event EventHandler? MediaEnded;
     public event EventHandler<MediaFailure>? Failed;
     public event EventHandler<bool>? PictureInPictureChanged;
@@ -412,8 +413,15 @@ class AndroidMediaPlayerBackend : IMediaPlayerBackend
         => OnMain(() =>
         {
             var size = this.player.VideoSize;
-            if (size is not null)
-                this.VideoSize = new Size(size.Width, size.Height);
+            if (size is null)
+                return;
+
+            var next = new Size(size.Width, size.Height);
+            if (next == this.VideoSize)
+                return;
+
+            this.VideoSize = next;
+            this.VideoSizeChanged?.Invoke(this, EventArgs.Empty);
         });
 
     void OnPlayerError(PlaybackException? error)

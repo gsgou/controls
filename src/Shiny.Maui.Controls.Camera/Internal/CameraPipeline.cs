@@ -40,6 +40,49 @@ sealed class CameraPipeline
     public bool HasAnalyzer => this.enabled;
 
     /// <summary>
+    /// Whether the next frame is worth building. Called on the capture callback, once per frame, before the
+    /// platform wraps the native buffer.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ <b>This is the difference between a rate-limited analyzer and a rate-limited camera.</b>
+    /// <see cref="HasAnalyzer"/> only answers "is anything attached", so every platform used to materialize
+    /// a <see cref="CameraFrame"/> for every delivered frame and let the analyzer decide afterwards. On
+    /// Apple that decision came <i>after</i> an 8.3 MB copy of the frame at 1080p — so an analyzer running
+    /// five passes a second was costing thirty copies a second, 25 of which went straight to the GC.
+    /// </para>
+    /// <para>
+    /// Two questions, both cheap: is a pass already in flight (the frame would be dropped by
+    /// <see cref="AnalyzerRunner.TrySubmit"/> anyway), and does the analyzer want a frame at all right now
+    /// (<see cref="IFrameAnalyzer.WantsFrame"/>).
+    /// </para>
+    /// <para>
+    /// A <c>false</c> here is not a dropped detection: the pipeline keeps the analyzer's last box set and
+    /// replays it, so nothing blinks.
+    /// </para>
+    /// </remarks>
+    public bool WantsFrame()
+    {
+        if (!this.enabled)
+            return false;
+
+        var current = this.runner;
+        if (current is null || current.Busy)
+            return false;
+
+        // The analyzer's own cadence. Guarded because it is user code on the capture thread: an analyzer
+        // that throws here must not take the camera down, and "I could not ask" is safest read as yes.
+        try
+        {
+            return current.Analyzer.WantsFrame();
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    /// <summary>
     /// The analyzer's current boxes and ungated typed result, for consumers running off the render/encoder
     /// threads (draw effects). Safe to call from any thread; never touches a bindable.
     /// </summary>

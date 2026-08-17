@@ -120,6 +120,13 @@ public abstract class FrameAnalyzer : BindableObject, IFrameAnalyzer
     /// <inheritdoc/>
     public abstract ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct);
 
+    /// <inheritdoc cref="IFrameAnalyzer.WantsFrame"/>
+    /// <remarks>
+    /// Override this to declare a cadence — it is what stops the platform building a frame the analyzer is
+    /// only going to skip. An analyzer that genuinely wants every frame leaves it alone.
+    /// </remarks>
+    public virtual bool WantsFrame() => true;
+
     /// <summary>
     /// Set by the camera pipeline so <see cref="Raise"/>/<see cref="Emit"/> post to the UI thread. Pass
     /// <c>null</c> to detach (then they run inline on the analysis thread).

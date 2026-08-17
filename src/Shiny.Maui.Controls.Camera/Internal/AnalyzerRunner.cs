@@ -19,6 +19,13 @@ sealed class AnalyzerRunner(IFrameAnalyzer analyzer, Action<string, IReadOnlyLis
     /// <summary>Cached enabled state, refreshed by the pipeline so frame dispatch never reads a bindable off-thread.</summary>
     public volatile bool Enabled = true;
 
+    /// <summary>
+    /// Whether a pass is in flight. Read by the pipeline <b>before</b> the platform materializes a frame, so
+    /// a frame that <see cref="TrySubmit"/> would only drop is never built in the first place — on Apple
+    /// that is a full-frame copy saved for every frame that lands during a slow pass.
+    /// </summary>
+    public bool Busy => Volatile.Read(ref this.busy) != 0;
+
     /// <summary>Submit a frame. Returns false (frame untouched) when the analyzer is busy.</summary>
     public bool TrySubmit(CameraFrame frame, CancellationToken ct)
     {

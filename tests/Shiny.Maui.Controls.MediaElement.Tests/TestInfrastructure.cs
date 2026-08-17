@@ -107,6 +107,7 @@ sealed class FakeMediaPlayerBackend : IMediaPlayerBackend
 
     public event EventHandler<MediaElementState>? StateChanged;
     public event EventHandler? MediaOpened;
+    public event EventHandler? VideoSizeChanged;
     public event EventHandler? MediaEnded;
     public event EventHandler<MediaFailure>? Failed;
     public event EventHandler<bool>? PictureInPictureChanged;
@@ -237,6 +238,15 @@ sealed class FakeMediaPlayerBackend : IMediaPlayerBackend
     {
         this.Duration = duration;
         this.MediaOpened?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Report a video size the way ExoPlayer does — on its own, with no open behind it.
+    /// </summary>
+    public void RaiseVideoSize(Size size)
+    {
+        this.VideoSize = size;
+        this.VideoSizeChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void RaiseEnded() => this.MediaEnded?.Invoke(this, EventArgs.Empty);

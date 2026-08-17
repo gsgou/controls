@@ -62,24 +62,48 @@ sealed class VideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegate
 
     public override void DidOutputSampleBuffer(AVCaptureOutput captureOutput, CMSampleBuffer sampleBuffer, AVCaptureConnection connection)
     {
+        var handedOff = false;
         try
         {
-            using var pixelBuffer = sampleBuffer.GetImageBuffer() as CVPixelBuffer;
+            var pixelBuffer = sampleBuffer.GetImageBuffer() as CVPixelBuffer;
             if (pixelBuffer == null)
                 return;
 
-            var chain = this.filters;
-            if (chain.Length > 0 && this.filterTarget.TryGetTarget(out var view))
-                this.RenderFiltered(chain, pixelBuffer, view);
-
-            if (this.OnFrame != null && this.WantFrames?.Invoke() == true)
+            try
             {
-                var frame = new AppleCameraFrame(pixelBuffer, rotation: 0, mirrored: this.Mirrored);
-                this.OnFrame(frame);
-            }
+                var chain = this.filters;
+                if (chain.Length > 0 && this.filterTarget.TryGetTarget(out var view))
+                    this.RenderFiltered(chain, pixelBuffer, view);
 
-            // composite + encode LAST, so analyzers/preview see the clean frame and only the file gets the overlay
-            this.Recorder?.AppendVideo(sampleBuffer);
+                var recorder = this.Recorder;
+                if (this.OnFrame != null && this.WantFrames?.Invoke() == true)
+                {
+                    // ⚠️ Borrow only when nothing is going to write to this buffer. The recorder composites
+                    // effects and the burn-in overlay back into it (AppleVideoOverlayRecorder.Composite), so
+                    // with one attached a borrowed frame would be read by the analyzer on one thread while
+                    // the encoder mutated it on another — an OCR pass over a half-drawn HUD. A copy costs
+                    // 8.3 MB at 1080p, which is why it is now only paid on the frames an analyzer actually
+                    // takes (see CameraPipeline.WantsFrame) rather than on every delivered frame.
+                    if (recorder == null)
+                    {
+                        this.OnFrame(AppleCameraFrame.Borrow(sampleBuffer, pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+                        handedOff = true;
+                    }
+                    else
+                    {
+                        this.OnFrame(AppleCameraFrame.Copy(pixelBuffer, rotation: 0, mirrored: this.Mirrored));
+                    }
+                }
+
+                // composite + encode LAST, so analyzers/preview see the clean frame and only the file gets
+                // the overlay. Safe alongside a borrowed frame because the two are mutually exclusive above.
+                recorder?.AppendVideo(sampleBuffer);
+            }
+            finally
+            {
+                if (!handedOff)
+                    pixelBuffer.Dispose();
+            }
         }
         catch (Exception ex)
         {
@@ -89,7 +113,9 @@ sealed class VideoFrameDelegate : AVCaptureVideoDataOutputSampleBufferDelegate
         }
         finally
         {
-            sampleBuffer.Dispose();
+            // A borrowed frame owns the sample buffer now and disposes it when the analysis finishes.
+            if (!handedOff)
+                sampleBuffer.Dispose();
         }
     }
 

@@ -50,6 +50,19 @@ public partial class MediaElement
     public static readonly BindableProperty DurationProperty = BindableProperty.Create(
         nameof(Duration), typeof(TimeSpan), typeof(MediaElement), TimeSpan.Zero, BindingMode.OneWayToSource);
 
+    /// <summary>
+    /// Pixel dimensions of the video track, or <see cref="Size.Zero"/> until the source opens and for
+    /// audio-only media. Read-only; bind to it to size the player to whatever it is actually playing.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <b>Do not read this once at <see cref="MediaElement.MediaOpened"/> and stop.</b> On Android it is
+    /// routinely still <see cref="Size.Zero"/> at that point — ExoPlayer reports the size from a separate
+    /// callback that lands after the player is ready — and an adaptive stream can change it mid-playback.
+    /// Bind to it, or handle <see cref="MediaElement.VideoSizeChanged"/>.
+    /// </remarks>
+    public static readonly BindableProperty VideoSizeProperty = BindableProperty.Create(
+        nameof(VideoSize), typeof(Size), typeof(MediaElement), Size.Zero, BindingMode.OneWayToSource);
+
     /// <summary>The player's lifecycle state. Read-only; bind to it to drive your own UI.</summary>
     public static readonly BindableProperty CurrentStateProperty = BindableProperty.Create(
         nameof(CurrentState), typeof(MediaElementState), typeof(MediaElement), MediaElementState.None,
@@ -268,6 +281,13 @@ public partial class MediaElement
     {
         get => (TimeSpan)this.GetValue(DurationProperty);
         private set => this.SetValue(DurationProperty, value);
+    }
+
+    /// <inheritdoc cref="VideoSizeProperty"/>
+    public Size VideoSize
+    {
+        get => (Size)this.GetValue(VideoSizeProperty);
+        private set => this.SetValue(VideoSizeProperty, value);
     }
 
     /// <inheritdoc cref="CurrentStateProperty"/>

@@ -234,6 +234,36 @@ if it had none (so, e.g., Android can record video again).
 
 `IsEnabled` (run or not) is distinct from `ShowBoundingBox` (run, but draw nothing).
 
+### Rate-limiting an analyzer — override `WantsFrame`, never `AnalyzeAsync`
+
+An analyzer that only needs a few passes a second must declare that by overriding **`WantsFrame()`**, which
+the pipeline asks on the capture thread **before the platform builds a frame at all**:
+
+```csharp
+public override bool WantsFrame() => timeProvider.GetUtcNow() >= this.nextPassAt;
+
+public override async ValueTask<IReadOnlyList<OverlayBox>?> AnalyzeAsync(CameraFrame frame, CancellationToken ct)
+{
+    this.nextPassAt = timeProvider.GetUtcNow() + Cadence;
+    ...
+}
+```
+
+⚠️ **Do not generate the throttle as an early return from `AnalyzeAsync`.** By then the frame exists, and on
+Apple building one can mean a full-frame pixel copy — 8.3 MB at 1080p, on the Large Object Heap. An analyzer
+that runs five passes a second but bails out of the other twenty-five was paying for thirty frames a second
+and discarding 25 of them. `WantsFrame` is what turns that into five.
+
+It must be cheap and must not block or throw — it runs on the capture callback, ahead of the encoder. Read a
+cached deadline, not a setting. (Default is `true`: every frame.)
+
+### Ambient light and other whole-frame statistics
+
+For a consumer that wants a *number* rather than an image — an exposure or ambient-light average — use
+**`CameraFrame.SampleLuminance(destination, columns, rows)`**, which fills an evenly spaced grid by reading
+only those pixels off the native buffer. `GetLuminance()` materializes the entire plane (a 2 MB array at
+1080p, converted pixel by pixel), so reading a 32×32 grid out of it pays two million reads for a thousand.
+
 > **Picking among several detectors at runtime:** build the analyzer instances once, keep their `OnDetected`
 > handlers wired, and assign the chosen one to `Camera.Analyzer` from a picker (see the sample's `CameraPage`).
 > Only one runs at a time.

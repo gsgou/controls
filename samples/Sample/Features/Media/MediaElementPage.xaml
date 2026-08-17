@@ -48,6 +48,19 @@
                                 </FormattedString>
                             </Label.FormattedText>
                         </Label>
+                        <!-- VideoSize is bindable rather than read once at MediaOpened on purpose: Android
+                             reports it from a separate player callback that lands after the media is open,
+                             so a one-shot read shows 0 x 0 there. -->
+                        <Label FontSize="12">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Video size: " FontAttributes="Bold" />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=VideoSize.Width, StringFormat='{0:0}'}" />
+                                    <Span Text=" x " />
+                                    <Span Text="{Binding Source={x:Reference Player}, Path=VideoSize.Height, StringFormat='{0:0}'}" />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
                         <Label FontSize="12">
                             <Label.FormattedText>
                                 <FormattedString>

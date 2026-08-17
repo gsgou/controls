@@ -55,6 +55,7 @@ class GtkMediaPlayerBackend : IMediaPlayerBackend
 
     public event EventHandler<MediaElementState>? StateChanged;
     public event EventHandler? MediaOpened;
+    public event EventHandler? VideoSizeChanged;
     public event EventHandler? MediaEnded;
     public event EventHandler<MediaFailure>? Failed;
 
@@ -244,7 +245,15 @@ class GtkMediaPlayerBackend : IMediaPlayerBackend
             if (duration > 0)
                 this.Duration = TimeSpan.FromSeconds(duration / (double)MicrosecondsPerSecond);
 
-            this.VideoSize = new Size(this.stream.GetIntrinsicWidth(), this.stream.GetIntrinsicHeight());
+            // The intrinsic size is readable as soon as the stream is prepared, so like Windows this lands
+            // ahead of MediaOpened rather than after it.
+            var size = new Size(this.stream.GetIntrinsicWidth(), this.stream.GetIntrinsicHeight());
+            if (size != this.VideoSize)
+            {
+                this.VideoSize = size;
+                this.VideoSizeChanged?.Invoke(this, EventArgs.Empty);
+            }
+
             this.MediaOpened?.Invoke(this, EventArgs.Empty);
         }
 

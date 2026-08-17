@@ -696,7 +696,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         ]);
         this.frameDelegate = new VideoFrameDelegate(this.filterView)
         {
-            WantFrames = () => this.Pipeline.HasAnalyzer,
+            WantFrames = () => this.Pipeline.WantsFrame(),
             OnFrame = frame => this.Pipeline.Process(frame, default),
             OnError = this.OnFrameError,
             Mirrored = this.VirtualView.Facing == CameraFacing.Front

@@ -119,6 +119,62 @@ public class MediaElementTests : MediaTestBase
     }
 
     [Fact]
+    public void Opening_publishes_the_video_size_the_backend_already_knows()
+    {
+        // Windows, GTK and AVPlayer all have the size by the time they say the media is open.
+        var element = new MediaElement();
+        this.Backend.VideoSize = new Size(1920, 1080);
+
+        this.Backend.RaiseOpened(TimeSpan.FromSeconds(90));
+
+        element.VideoSize.ShouldBe(new Size(1920, 1080));
+    }
+
+    [Fact]
+    public void A_video_size_arriving_after_the_open_is_still_published()
+    {
+        // ExoPlayer's onVideoSizeChanged routinely lands after the player reports ready, which is what
+        // makes reading the size once inside MediaOpened wrong on Android.
+        var element = new MediaElement();
+        Size? reported = null;
+        element.VideoSizeChanged += (_, size) => reported = size;
+
+        this.Backend.RaiseOpened(TimeSpan.FromSeconds(90));
+        element.VideoSize.ShouldBe(Size.Zero);
+
+        this.Backend.RaiseVideoSize(new Size(1080, 1920));
+
+        element.VideoSize.ShouldBe(new Size(1080, 1920));
+        reported.ShouldBe(new Size(1080, 1920));
+    }
+
+    [Fact]
+    public void The_video_size_is_reported_once_per_change()
+    {
+        var element = new MediaElement();
+        var reports = 0;
+        element.VideoSizeChanged += (_, _) => reports++;
+
+        this.Backend.RaiseVideoSize(new Size(1280, 720));
+        this.Backend.RaiseOpened(TimeSpan.FromSeconds(90));
+        this.Backend.RaiseVideoSize(new Size(1280, 720));
+
+        reports.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_new_source_clears_the_video_size()
+    {
+        var element = new MediaElement();
+        this.Backend.RaiseVideoSize(new Size(1280, 720));
+
+        element.Source = MediaSource.FromUri("https://example.com/next.mp4");
+        await Task.Yield();
+
+        element.VideoSize.ShouldBe(Size.Zero);
+    }
+
+    [Fact]
     public void A_backend_failure_surfaces_as_Failed_state_and_the_event()
     {
         var element = new MediaElement();

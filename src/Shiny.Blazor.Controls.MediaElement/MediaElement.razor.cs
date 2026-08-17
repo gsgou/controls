@@ -126,6 +126,16 @@ public partial class MediaElement : IAsyncDisposable
     /// <summary>Raised once metadata has loaded and <see cref="Duration"/> is known.</summary>
     [Parameter] public EventCallback OnMediaOpened { get; set; }
 
+    /// <summary>
+    /// Raised when <see cref="VideoWidth"/>/<see cref="VideoHeight"/> become known, or change.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="OnMediaOpened"/> because <c>loadedmetadata</c> is not the only moment the
+    /// browser learns the size — an adaptive source that switches rendition reports a new one mid-playback.
+    /// The MAUI control raises <c>VideoSizeChanged</c> for the same reason.
+    /// </remarks>
+    [Parameter] public EventCallback OnVideoSizeChanged { get; set; }
+
     /// <summary>Raised when playback reaches the end.</summary>
     [Parameter] public EventCallback OnMediaEnded { get; set; }
 
@@ -155,6 +165,15 @@ public partial class MediaElement : IAsyncDisposable
 
     /// <summary>How much is buffered ahead of the playhead, 0..1.</summary>
     public double BufferedProgress { get; private set; }
+
+    /// <summary>
+    /// Width of the video track in pixels — the element's <c>videoWidth</c> — or 0 until metadata has
+    /// loaded and for audio-only media. The MAUI control carries the same value as a <c>VideoSize</c>.
+    /// </summary>
+    public int VideoWidth { get; private set; }
+
+    /// <summary>Height of the video track in pixels, or 0 while unknown. See <see cref="VideoWidth"/>.</summary>
+    public int VideoHeight { get; private set; }
 
     /// <summary>Whether the player is showing fullscreen.</summary>
     public bool IsFullScreen { get; private set; }
@@ -236,6 +255,11 @@ public partial class MediaElement : IAsyncDisposable
             this.errorMessage = null;
             this.Duration = TimeSpan.Zero;
             this.Position = TimeSpan.Zero;
+
+            // Cleared with the duration, so a layout sized to the last video does not hold that shape over
+            // the new source until its metadata lands.
+            this.VideoWidth = 0;
+            this.VideoHeight = 0;
             await this.module.InvokeVoidAsync("setSource", this.mediaEl, this.Source, this.AutoPlay).ConfigureAwait(true);
         }
 
@@ -384,6 +408,7 @@ public partial class MediaElement : IAsyncDisposable
 
         this.Duration = ToTimeSpan(status.Duration);
         this.BufferedProgress = status.Buffered;
+        await this.ApplyVideoSize(status).ConfigureAwait(true);
 
         // A finger on the scrubber owns the thumb until it lifts; letting timeupdate write through would
         // yank it back to the player's position on every tick.
@@ -413,8 +438,27 @@ public partial class MediaElement : IAsyncDisposable
     public async Task OnOpened(MediaStatus status)
     {
         this.Duration = ToTimeSpan(status.Duration);
+        await this.ApplyVideoSize(status).ConfigureAwait(true);
         await this.OnMediaOpened.InvokeAsync().ConfigureAwait(true);
         this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Takes the video dimensions off a snapshot, reporting only a real change.
+    /// </summary>
+    /// <remarks>
+    /// Called from both callbacks on purpose: <c>loadedmetadata</c> is where the size normally first
+    /// appears, but a source that switches rendition reports a new one through the ordinary status pushes,
+    /// with no second open.
+    /// </remarks>
+    async Task ApplyVideoSize(MediaStatus status)
+    {
+        if (status.Width == this.VideoWidth && status.Height == this.VideoHeight)
+            return;
+
+        this.VideoWidth = status.Width;
+        this.VideoHeight = status.Height;
+        await this.OnVideoSizeChanged.InvokeAsync().ConfigureAwait(true);
     }
 
     [JSInvokable]

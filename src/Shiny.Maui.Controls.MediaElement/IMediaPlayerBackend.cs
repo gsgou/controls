@@ -46,6 +46,29 @@ public interface IMediaPlayerBackend : IDisposable
     /// <summary>Raised on the UI thread once the source is loaded and <see cref="Duration"/>/<see cref="VideoSize"/> are known.</summary>
     event EventHandler? MediaOpened;
 
+    /// <summary>Raised on the UI thread when <see cref="VideoSize"/> becomes known, or changes.</summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ <b>Separate from <see cref="MediaOpened"/>, and it has to be.</b> ExoPlayer reports the video size
+    /// from its own <c>onVideoSizeChanged</c> callback, which routinely lands <i>after</i> the player reaches
+    /// ready — so a control that read the size once at open would report <see cref="Size.Zero"/> on Android
+    /// for real video. AVPlayer has the size by <c>ReadyToPlay</c>, but also re-reports
+    /// <c>presentationSize</c> when an adaptive stream switches rendition, which the same read-once control
+    /// would then have stale.
+    /// </para>
+    /// <para>
+    /// A no-op default implementation is supplied so a backend written against an earlier version still
+    /// compiles. Such a backend never reports a change, and <see cref="MediaElement.VideoSize"/> is then
+    /// whatever was readable when <see cref="MediaOpened"/> fired — which is the behaviour that existed
+    /// before this event, not a regression.
+    /// </para>
+    /// </remarks>
+    event EventHandler? VideoSizeChanged
+    {
+        add { }
+        remove { }
+    }
+
     /// <summary>Raised on the UI thread when playback reaches the end (not raised while looping).</summary>
     event EventHandler? MediaEnded;
 

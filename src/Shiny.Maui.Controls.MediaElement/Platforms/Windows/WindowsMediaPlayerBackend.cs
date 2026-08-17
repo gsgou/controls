@@ -60,6 +60,7 @@ class WindowsMediaPlayerBackend : IMediaPlayerBackend
 
     public event EventHandler<MediaElementState>? StateChanged;
     public event EventHandler? MediaOpened;
+    public event EventHandler? VideoSizeChanged;
     public event EventHandler? MediaEnded;
     public event EventHandler<MediaFailure>? Failed;
     // Neither is raised on Windows: there is no per-element PiP API, and the SMTC drives the MediaPlayer
@@ -233,7 +234,16 @@ class WindowsMediaPlayerBackend : IMediaPlayerBackend
         {
             var session = this.player.PlaybackSession;
             this.Duration = session.NaturalDuration;
-            this.VideoSize = new Size(session.NaturalVideoWidth, session.NaturalVideoHeight);
+
+            // Windows has the natural size by the time it says the media is open, so this always fires
+            // ahead of MediaOpened rather than after it as Android's does. The control handles either.
+            var size = new Size(session.NaturalVideoWidth, session.NaturalVideoHeight);
+            if (size != this.VideoSize)
+            {
+                this.VideoSize = size;
+                this.VideoSizeChanged?.Invoke(this, EventArgs.Empty);
+            }
+
             this.MediaOpened?.Invoke(this, EventArgs.Empty);
             this.PublishTransportControls();
         });

@@ -340,7 +340,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
 
         this.frameDelegate = new MacVideoFrameDelegate(this.filterView)
         {
-            WantFrames = () => this.Pipeline.HasAnalyzer,
+            WantFrames = () => this.Pipeline.WantsFrame(),
             OnFrame = frame => this.Pipeline.Process(frame, default),
             Mirrored = this.VirtualView.Facing == CameraFacing.Front
         };

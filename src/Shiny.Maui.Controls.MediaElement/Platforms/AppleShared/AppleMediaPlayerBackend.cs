@@ -108,6 +108,7 @@ class AppleMediaPlayerBackend : IMediaPlayerBackend
 
     public event EventHandler<MediaElementState>? StateChanged;
     public event EventHandler? MediaOpened;
+    public event EventHandler? VideoSizeChanged;
     public event EventHandler? MediaEnded;
     public event EventHandler<MediaFailure>? Failed;
     // Only raised on iOS/Catalyst, where AVPictureInPictureController is wired up; macOS advertises no
@@ -234,7 +235,16 @@ class AppleMediaPlayerBackend : IMediaPlayerBackend
             return;
 
         var size = this.item.PresentationSize;
-        this.VideoSize = new Size(size.Width, size.Height);
+        var next = new Size(size.Width, size.Height);
+
+        // The presentationSize KVO fires for reasons other than a change — and once per rendition switch on
+        // an adaptive stream, which is usually the same size again. Only a real change is worth waking the
+        // control (and anything it has re-laid out) for.
+        if (next == this.VideoSize)
+            return;
+
+        this.VideoSize = next;
+        this.VideoSizeChanged?.Invoke(this, EventArgs.Empty);
     }
 
     void UpdateBuffered()
