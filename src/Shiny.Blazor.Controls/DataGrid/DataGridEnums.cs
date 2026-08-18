@@ -90,3 +90,17 @@ public enum DataGridAggregateType
     Max,
     Custom
 }
+
+/// <summary>
+/// Which edge a column is frozen (pinned) to while the grid scrolls horizontally.
+/// </summary>
+public enum DataGridFrozen
+{
+    None,
+
+    /// <summary>Pinned to the leading edge (left in LTR).</summary>
+    Start,
+
+    /// <summary>Pinned to the trailing edge (right in LTR).</summary>
+    End
+}

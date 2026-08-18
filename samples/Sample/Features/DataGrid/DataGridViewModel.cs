@@ -15,6 +15,13 @@ public partial class DataGridViewModel : ObservableObject
     [ObservableProperty]
     object? selectedItem;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FrozenCount))]
+    bool freezeFirstColumn = true;
+
+    /// <summary>DataGrid.FrozenColumns takes a count, the demo toggle is a switch.</summary>
+    public int FrozenCount => this.FreezeFirstColumn ? 1 : 0;
+
     public ObservableCollection<Person> People { get; } =
     [
         new("Ada", "Lovelace", 36, "Engineering", 142000, true),

@@ -63,8 +63,59 @@
     </DataGrid>
 </section>
 
+<section class="demo-section">
+    <h2>Frozen columns + sticky header</h2>
+    <p>
+        Scroll sideways and down: the header stays put, the first @frozenStart column(s) stay pinned to
+        the left and the last @frozenEnd to the right. Frozen cells sit above the scrolling ones, so
+        content slides underneath them.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label>Frozen at start
+            <select @bind="frozenStart">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+            </select>
+        </label>
+        <label>Frozen at end
+            <select @bind="frozenEnd">
+                <option value="0">0</option>
+                <option value="1">1</option>
+            </select>
+        </label>
+        <label class="toggle-row"><span>Multi-select</span><input type="checkbox" @bind="frozenMultiSelect" /></label>
+    </div>
+    <DataGrid TItem="Person"
+              Items="people"
+              SelectionMode="@(frozenMultiSelect ? DataGridSelectionMode.Multiple : DataGridSelectionMode.None)"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Bordered="true" Hover="true"
+              FixedHeader="true" Height="300px"
+              FrozenColumns="frozenStart"
+              FrozenEndColumns="frozenEnd">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" />
+            <PropertyColumn Property="x => x.LastName" Title="Last" Width="160px" />
+            <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
+            <PropertyColumn Property="x => x.Department" Width="200px" />
+            <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
+            <PropertyColumn Property="x => x.Location" Width="180px" />
+            <PropertyColumn Property="x => x.CostCentre" Title="Cost centre" Width="180px" />
+            <TemplateColumn Title="Status" Sortable="false" Filterable="false" Width="140px">
+                <CellTemplate>
+                    <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
+                          Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </DataGrid>
+</section>
+
 @code {
     string status = "Pick options and interact with the grid";
+    int frozenStart = 1, frozenEnd = 1;
+    bool frozenMultiSelect;
     bool dense, striped = true, bordered, hover = true, loading;
     DataGridSelectionMode selectionMode = DataGridSelectionMode.Multiple;
     DataGridFilterMode filterMode = DataGridFilterMode.Menu;
@@ -85,17 +136,19 @@
         public string Department { get; set; } = "";
         public decimal Salary { get; set; }
         public bool Active { get; set; }
+        public string Location { get; set; } = "";
+        public string CostCentre { get; set; } = "";
 
         public static List<Person> Sample() =>
         [
-            new() { FirstName = "Ada", LastName = "Lovelace", Age = 36, Department = "Engineering", Salary = 142000, Active = true },
-            new() { FirstName = "Alan", LastName = "Turing", Age = 41, Department = "Research", Salary = 158000, Active = true },
-            new() { FirstName = "Grace", LastName = "Hopper", Age = 52, Department = "Engineering", Salary = 165000, Active = false },
-            new() { FirstName = "Katherine", LastName = "Johnson", Age = 44, Department = "Mathematics", Salary = 134000, Active = true },
-            new() { FirstName = "Margaret", LastName = "Hamilton", Age = 39, Department = "Software", Salary = 151000, Active = true },
-            new() { FirstName = "Edsger", LastName = "Dijkstra", Age = 47, Department = "Research", Salary = 149000, Active = false },
-            new() { FirstName = "Donald", LastName = "Knuth", Age = 58, Department = "Mathematics", Salary = 172000, Active = true },
-            new() { FirstName = "Barbara", LastName = "Liskov", Age = 49, Department = "Software", Salary = 161000, Active = true },
+            new() { FirstName = "Ada", LastName = "Lovelace", Age = 36, Department = "Engineering", Salary = 142000, Active = true, Location = "London", CostCentre = "CC-1180" },
+            new() { FirstName = "Alan", LastName = "Turing", Age = 41, Department = "Research", Salary = 158000, Active = true, Location = "Manchester", CostCentre = "CC-2240" },
+            new() { FirstName = "Grace", LastName = "Hopper", Age = 52, Department = "Engineering", Salary = 165000, Active = false, Location = "Arlington", CostCentre = "CC-1180" },
+            new() { FirstName = "Katherine", LastName = "Johnson", Age = 44, Department = "Mathematics", Salary = 134000, Active = true, Location = "Hampton", CostCentre = "CC-3310" },
+            new() { FirstName = "Margaret", LastName = "Hamilton", Age = 39, Department = "Software", Salary = 151000, Active = true, Location = "Cambridge", CostCentre = "CC-4025" },
+            new() { FirstName = "Edsger", LastName = "Dijkstra", Age = 47, Department = "Research", Salary = 149000, Active = false, Location = "Eindhoven", CostCentre = "CC-2240" },
+            new() { FirstName = "Donald", LastName = "Knuth", Age = 58, Department = "Mathematics", Salary = 172000, Active = true, Location = "Palo Alto", CostCentre = "CC-3310" },
+            new() { FirstName = "Barbara", LastName = "Liskov", Age = 49, Department = "Software", Salary = 161000, Active = true, Location = "Cambridge", CostCentre = "CC-4025" },
         ];
     }
 }

@@ -8,10 +8,18 @@
              Title="DataGrid"
              AutomationId="DataGridPage">
 
-    <Grid RowDefinitions="Auto,*" Padding="16" RowSpacing="8">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="8">
         <Label Grid.Row="0" Text="{Binding StatusMessage}" FontSize="13" TextColor="Gray" />
 
-        <shiny:DataGrid Grid.Row="1"
+        <HorizontalStackLayout Grid.Row="1" Spacing="8" VerticalOptions="Center">
+            <Label Text="Freeze first column" FontSize="13" VerticalOptions="Center" />
+            <Switch IsToggled="{Binding FreezeFirstColumn, Mode=TwoWay}"
+                    AutomationId="FreezeColumnSwitch" />
+        </HorizontalStackLayout>
+
+        <!-- HorizontalScroll puts the header, rows and footer in one sideways scroller, which is
+             what makes freezing meaningful: the pinned columns stay put while the rest slides. -->
+        <shiny:DataGrid Grid.Row="2"
                         ItemsSource="{Binding People}"
                         SelectionMode="Single"
                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
@@ -22,18 +30,25 @@
                         EditMode="Form"
                         AllowColumnResize="False"
                         AllowColumnReorder="False"
+                        HorizontalScroll="True"
+                        DefaultColumnWidth="140"
+                        FrozenColumns="{Binding FrozenCount}"
                         Striped="True"
                         Bordered="True">
             <!-- Widths are explicit (star / absolute) rather than Auto: header, footer and each
                  row are separate Grids, so an Auto column sizes to its own cell's content and the
-                 columns drift out of alignment. -->
-            <shiny:DataGridColumn Title="Name" PropertyName="LastName" Width="1.3*" />
+                 columns drift out of alignment. Under HorizontalScroll a star width resolves to
+                 DefaultColumnWidth x its factor. -->
+            <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="1*" />
+            <shiny:DataGridColumn Title="Last" PropertyName="LastName" Width="1.2*" />
+            <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="0.6*" />
+            <shiny:DataGridColumn Title="Department" PropertyName="Department" Width="1.2*" />
             <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="1.3*">
                 <shiny:DataGridColumn.Aggregate>
                     <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
                 </shiny:DataGridColumn.Aggregate>
             </shiny:DataGridColumn>
-            <shiny:DataGridTemplateColumn Title="Status" Width="96" Editable="False">
+            <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False" Frozen="End">
                 <shiny:DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="local:Person">
                         <shiny:PillView Text="{Binding StatusText}"

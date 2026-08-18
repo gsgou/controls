@@ -318,26 +318,103 @@
     background: var(--shiny-color-surface, #fff);
 }
 
-/* Fixed (sticky) header */
-.shiny-dg-fixedheader .shiny-dg-table thead th {
+/* ---- Sticky header + frozen columns ----
+   The scroller is capped, not the root: position:sticky only engages against the ancestor that
+   actually scrolls, so --shiny-dg-height (set from the Height parameter) has to land here. */
+.shiny-dg-scroll {
+    max-height: var(--shiny-dg-height, none);
+}
+
+/* Cells lose their borders under border-collapse:collapse once they go sticky, so the separate
+   model is switched on only when something is actually pinned. */
+.shiny-dg-sticky .shiny-dg-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Fixed (sticky) header. Only the first header row pins; the filter row pins under it, at the
+   header height datagrid.js measures. */
+.shiny-dg-fixedheader .shiny-dg-table thead tr:first-child th {
     position: sticky;
     top: 0;
+    z-index: 3;
+}
+
+.shiny-dg-fixedheader .shiny-dg-table thead tr.shiny-dg-filter-row th {
+    position: sticky;
+    top: var(--shiny-dg-head-h, 0px);
+    z-index: 3;
+}
+
+/* Frozen columns. The left/right offsets are written per cell (C# up front where the widths are
+   known, then corrected by datagrid.js); the 0 here is only the single-column fallback.
+   Specificity has to beat `.shiny-dg-table thead th { position: relative }` above. */
+.shiny-dg-table th.shiny-dg-frozen,
+.shiny-dg-table td.shiny-dg-frozen {
+    position: sticky;
     z-index: 2;
+    background: var(--shiny-color-surface, #fff);
+    background-clip: padding-box;
 }
 
-/* Sticky columns */
-.shiny-dg-sticky-left {
-    position: sticky;
+.shiny-dg-table th.shiny-dg-frozen-start,
+.shiny-dg-table td.shiny-dg-frozen-start {
     left: 0;
-    z-index: 1;
+}
+
+.shiny-dg-table th.shiny-dg-frozen-end,
+.shiny-dg-table td.shiny-dg-frozen-end {
+    right: 0;
+}
+
+/* A frozen header cell has to sit above both the frozen body cells and the rest of the header.
+   Specificity has to clear the .shiny-dg-fixedheader rule above, which is three classes deep. */
+.shiny-dg .shiny-dg-table thead tr th.shiny-dg-frozen {
+    z-index: 4;
+}
+
+/* Frozen cells paint their own background, so the row states have to be repeated on them -
+   composited over the surface rather than layered on it, since a translucent pin would let the
+   scrolled content show through. */
+.shiny-dg-striped tbody tr:nth-of-type(odd) td.shiny-dg-frozen {
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 3%, var(--shiny-color-surface, #fff));
+}
+
+.shiny-dg-table tbody tr.shiny-dg-selected td.shiny-dg-frozen {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 14%, var(--shiny-color-surface, #fff));
+}
+
+.shiny-dg-table tbody tr.shiny-dg-group-footer td.shiny-dg-frozen {
+    background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 2%, var(--shiny-color-surface, #fff));
+}
+
+.shiny-dg-table tfoot td.shiny-dg-frozen {
     background: var(--shiny-color-surface, #fff);
 }
 
-.shiny-dg-sticky-right {
-    position: sticky;
-    right: 0;
-    z-index: 1;
-    background: var(--shiny-color-surface, #fff);
+.shiny-dg-hover tbody tr.shiny-dg-clickable:hover td.shiny-dg-frozen {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 8%, var(--shiny-color-surface, #fff));
+}
+
+/* The outer edge of each pinned block gets a shadow so content visibly slides underneath it. */
+.shiny-dg-frozen-start-edge::after,
+.shiny-dg-frozen-end-edge::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    pointer-events: none;
+}
+
+.shiny-dg-frozen-start-edge::after {
+    right: -8px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--shiny-color-on-surface, #000) 14%, transparent), transparent);
+}
+
+.shiny-dg-frozen-end-edge::after {
+    left: -8px;
+    background: linear-gradient(to left, color-mix(in srgb, var(--shiny-color-on-surface, #000) 14%, transparent), transparent);
 }
 
 /* Loading overlay */

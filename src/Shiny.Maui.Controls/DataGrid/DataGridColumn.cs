@@ -36,6 +36,9 @@ public class DataGridColumn : BindableObject
     public static readonly BindableProperty StringFormatProperty = BindableProperty.Create(
         nameof(StringFormat), typeof(string), typeof(DataGridColumn), null);
 
+    public static readonly BindableProperty FrozenProperty = BindableProperty.Create(
+        nameof(Frozen), typeof(DataGridFrozen), typeof(DataGridColumn), DataGridFrozen.None);
+
     public string Title
     {
         get => (string)this.GetValue(TitleProperty);
@@ -94,6 +97,18 @@ public class DataGridColumn : BindableObject
     {
         get => (string?)this.GetValue(StringFormatProperty);
         set => this.SetValue(StringFormatProperty, value);
+    }
+
+    /// <summary>
+    /// Freezes (pins) this column to the leading or trailing edge so it stays put while the grid
+    /// scrolls horizontally. Only a contiguous run at each edge can be frozen - see
+    /// <see cref="DataGrid.FrozenColumns"/> / <see cref="DataGrid.FrozenEndColumns"/> for the
+    /// count-based form. Requires <see cref="DataGrid.HorizontalScroll"/>.
+    /// </summary>
+    public DataGridFrozen Frozen
+    {
+        get => (DataGridFrozen)this.GetValue(FrozenProperty);
+        set => this.SetValue(FrozenProperty, value);
     }
 
     /// <summary>Custom cell content. When null, a default <see cref="Label"/> bound to <see cref="PropertyName"/> is used.</summary>

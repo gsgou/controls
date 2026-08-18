@@ -5,8 +5,12 @@
 
 <CascadingValue Value="this" IsFixed="true">
     @Columns
+    @{
+        // Resolve the pinned blocks once per render - every frozen helper below is then a lookup.
+        RefreshFrozenLayout();
+    }
 
-    <div class="@RootCssClass" style="@RootStyle" @attributes="AdditionalAttributes">
+    <div @ref="rootRef" class="@RootCssClass" style="@RootStyle" @attributes="AdditionalAttributes">
         @if (ToolbarContent is not null || FilterMode == DataGridFilterMode.Toolbar)
         {
             <div class="shiny-dg-toolbar">
@@ -41,7 +45,8 @@
                         <tr>
                             @if (HasMultiSelect)
                             {
-                                <th class="shiny-dg-checkcol">
+                                <th class="shiny-dg-checkcol@(FrozenCssClass(null))"
+                                    style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)">
                                     <input type="checkbox" checked="@AllSelected"
                                            @onchange="e => ToggleSelectAllAsync(e.Value is true)" />
                                 </th>
@@ -53,6 +58,7 @@
                                 var badge = SortOrderBadge(col);
                                 <th class="@HeaderCssClass(col) @(sortable ? "shiny-dg-sortable" : "")"
                                     style="@ColumnWidthStyle(col)"
+                                    data-dg-frozen="@FrozenAttr(col)"
                                     draggable="@(DragDropColumnReordering ? "true" : "false")"
                                     @ondragstart="() => OnColumnDragStart(col)"
                                     @ondragover:preventDefault="true"
@@ -119,11 +125,13 @@
                             <tr class="shiny-dg-filter-row">
                                 @if (HasMultiSelect)
                                 {
-                                    <th></th>
+                                    <th class="@FrozenCssClass(null)" style="@FrozenOffsetStyle(null)"
+                                        data-dg-frozen="@FrozenAttr(null)"></th>
                                 }
                                 @foreach (var col in VisibleColumns)
                                 {
-                                    <th>
+                                    <th class="@FrozenCssClass(col)" style="@ColumnWidthStyle(col)"
+                                        data-dg-frozen="@FrozenAttr(col)">
                                         @if (EffectiveFilterable(col))
                                         {
                                             var def = GetOrCreateFilter(col);
@@ -143,7 +151,9 @@
                             @<tr class="@RowCssClass(rowItem)" @onclick="() => RowClickedAsync(rowItem)">
                                 @if (HasMultiSelect)
                                 {
-                                    <td class="shiny-dg-checkcol" @onclick:stopPropagation="true">
+                                    <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
+                                        style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"
+                                        @onclick:stopPropagation="true">
                                         <input type="checkbox" checked="@IsSelected(rowItem)"
                                                @onchange="() => ToggleRowAsync(rowItem)" />
                                     </td>
@@ -152,8 +162,9 @@
                                 {
                                     var editingThisCell = IsEditingCell(rowItem, col);
                                     var editingFormCell = EditMode == DataGridEditMode.Form && IsEditingRow(rowItem) && EffectiveEditable(col);
-                                    <td class="shiny-dg-cell @(col.StickyLeft ? "shiny-dg-sticky-left" : "") @(col.StickyRight ? "shiny-dg-sticky-right" : "")"
+                                    <td class="shiny-dg-cell@(FrozenCssClass(col))"
                                         style="@ColumnWidthStyle(col)"
+                                        data-dg-frozen="@FrozenAttr(col)"
                                         @onclick="() => OnCellClickAsync(rowItem, col)"
                                         @onclick:stopPropagation="@(EditMode == DataGridEditMode.Cell && EffectiveEditable(col))">
                                         @if (editingThisCell || editingFormCell)
@@ -226,11 +237,13 @@
                                     <tr class="shiny-dg-group-footer">
                                         @if (HasMultiSelect)
                                         {
-                                            <td class="shiny-dg-checkcol"></td>
+                                            <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
+                                                style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"></td>
                                         }
                                         @foreach (var c in VisibleColumns)
                                         {
-                                            <td class="shiny-dg-footer-cell">@GroupAggregateText(c, group.Items)</td>
+                                            <td class="shiny-dg-footer-cell@(FrozenCssClass(c))"
+                                                style="@ColumnWidthStyle(c)" data-dg-frozen="@FrozenAttr(c)">@GroupAggregateText(c, group.Items)</td>
                                         }
                                     </tr>
                                 }
@@ -277,11 +290,13 @@
                         <tr>
                             @if (HasMultiSelect)
                             {
-                                <td class="shiny-dg-checkcol"></td>
+                                <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
+                                    style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"></td>
                             }
                             @foreach (var col in VisibleColumns)
                             {
-                                <td class="shiny-dg-footer-cell">
+                                <td class="shiny-dg-footer-cell@(FrozenCssClass(col))"
+                                    style="@ColumnWidthStyle(col)" data-dg-frozen="@FrozenAttr(col)">
                                     @if (col.FooterTemplate is not null)
                                     {
                                         @col.FooterTemplate

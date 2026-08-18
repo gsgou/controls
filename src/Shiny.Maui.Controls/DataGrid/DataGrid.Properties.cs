@@ -118,6 +118,35 @@ public partial class DataGrid
                 ((DataGrid)b).RebuildHeader();
             }));
 
+    public static readonly BindableProperty HorizontalScrollProperty = BindableProperty.Create(
+        nameof(HorizontalScroll), typeof(bool), typeof(DataGrid), false,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).ApplyLayoutMode();
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    public static readonly BindableProperty DefaultColumnWidthProperty = BindableProperty.Create(
+        nameof(DefaultColumnWidth), typeof(double), typeof(DataGrid), 150d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    public static readonly BindableProperty FrozenColumnsProperty = BindableProperty.Create(
+        nameof(FrozenColumns), typeof(int), typeof(DataGrid), 0,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    public static readonly BindableProperty FrozenEndColumnsProperty = BindableProperty.Create(
+        nameof(FrozenEndColumns), typeof(int), typeof(DataGrid), 0,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
     public static readonly BindableProperty SelectionChangedCommandProperty = BindableProperty.Create(
         nameof(SelectionChangedCommand), typeof(ICommand), typeof(DataGrid), null);
 
@@ -249,6 +278,41 @@ public partial class DataGrid
     {
         get => (bool)this.GetValue(AllowColumnReorderProperty);
         set => this.SetValue(AllowColumnReorderProperty, value);
+    }
+
+    /// <summary>
+    /// Scrolls the header, rows and footer sideways as one when the columns are wider than the
+    /// grid. Star widths cannot survive an unbounded measure, so in this mode every star column
+    /// resolves to <see cref="DefaultColumnWidth"/> x its star factor. Required for frozen columns.
+    /// </summary>
+    public bool HorizontalScroll
+    {
+        get => (bool)this.GetValue(HorizontalScrollProperty);
+        set => this.SetValue(HorizontalScrollProperty, value);
+    }
+
+    /// <summary>Width a star/auto column resolves to under <see cref="HorizontalScroll"/> (default 150).</summary>
+    public double DefaultColumnWidth
+    {
+        get => (double)this.GetValue(DefaultColumnWidthProperty);
+        set => this.SetValue(DefaultColumnWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Freezes the first N visible columns (plus the multi-select checkbox column) to the leading
+    /// edge. Overridden upward by any leading columns that set <see cref="DataGridColumn.Frozen"/>.
+    /// </summary>
+    public int FrozenColumns
+    {
+        get => (int)this.GetValue(FrozenColumnsProperty);
+        set => this.SetValue(FrozenColumnsProperty, value);
+    }
+
+    /// <summary>Freezes the last N visible columns to the trailing edge.</summary>
+    public int FrozenEndColumns
+    {
+        get => (int)this.GetValue(FrozenEndColumnsProperty);
+        set => this.SetValue(FrozenEndColumnsProperty, value);
     }
 
     /// <summary>Optional server-side data delegate (paging/sort/filter handled remotely).</summary>

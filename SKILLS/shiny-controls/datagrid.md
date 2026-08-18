@@ -8,8 +8,8 @@ behaves the same on iOS/Android/Windows/Mac.
 Feature surface (both hosts): typed columns (`PropertyColumn` + `TemplateColumn`), sorting (single +
 multi), column **filtering** (menu / row / toolbar quick-search), **grouping** with expandable groups,
 footer & group **aggregates**, single/multi **selection** with checkboxes, inline **editing**
-(cell + form), **paging**, **virtualization**, column **resize / reorder**, sticky header, loading +
-empty states, a `ServerData` delegate, and density/striped/bordered/hover styling. Colors follow the
+(cell + form), **paging**, **virtualization**, column **resize / reorder**, **frozen columns** and a
+frozen (sticky) header, loading + empty states, a `ServerData` delegate, and density/striped/bordered/hover styling. Colors follow the
 theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI).
 
 ## Blazor
@@ -26,6 +26,7 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
           EditMode="DataGridEditMode.Form"
           Dense="true" Striped="true" Hover="true" Bordered="true"
           FixedHeader="true" Height="420px"
+          FrozenColumns="1" FrozenEndColumns="1"
           ColumnResizeMode="DataGridColumnResizeMode.Column"
           DragDropColumnReordering="true"
           CommittedItemChanges="OnSaved">
@@ -54,7 +55,8 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
 - **Columns**: `PropertyColumn<TItem,TProperty>` (`Property="x => x.Name"`, `Format`, derives Title) and
   `TemplateColumn<TItem>` (`CellTemplate`/`EditTemplate`/`HeaderTemplate`/`FooterTemplate` with
   `context.Item`). Per-column flags: `Sortable`, `Filterable`, `Groupable`, `Editable`, `Hidden`,
-  `Width`, `Resizable`, `StickyLeft`/`StickyRight`, `Aggregate`.
+  `Width`, `Resizable`, `Frozen` (`DataGridFrozen.Start`/`End`; `StickyLeft`/`StickyRight` are legacy
+  aliases), `Aggregate`.
 - **Grid params**: `Items`, `ServerData` (`Func<GridState, Task<GridData<TItem>>>`), `SelectionMode`,
   `SelectedItem(s)`, `SortMode`, `FilterMode`, `QuickFilter`, `Groupable`, `Virtualize`, `EditMode`,
   `EditTrigger`, `ReadOnly`, `RowsPerPage`, `FixedHeader`, `Height`, `Dense`, `Striped`, `Bordered`,
@@ -78,6 +80,9 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
                 EditMode="Form"
                 AllowColumnResize="True"
                 AllowColumnReorder="True"
+                HorizontalScroll="True"
+                DefaultColumnWidth="140"
+                FrozenColumns="1"
                 Striped="True" Bordered="True">
     <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
     <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
@@ -86,7 +91,7 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
             <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
         </shiny:DataGridColumn.Aggregate>
     </shiny:DataGridColumn>
-    <shiny:DataGridTemplateColumn Title="Status" Width="Auto" Editable="False">
+    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False" Frozen="End">
         <shiny:DataGridTemplateColumn.CellTemplate>
             <DataTemplate><shiny:PillView Text="{Binding StatusText}" /></DataTemplate>
         </shiny:DataGridTemplateColumn.CellTemplate>
@@ -96,11 +101,12 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
 
 - **Columns**: `DataGridColumn` (`PropertyName`, `Width` as `GridLength` star/auto/abs, `StringFormat`,
   `CellTemplate`/`HeaderTemplate`/`EditTemplate`/`FooterTemplate`, `Sortable`/`Filterable`/`Groupable`/
-  `Editable`/`Resizable`/`IsVisible`, `Aggregate`). `DataGridTemplateColumn` for custom-only cells.
+  `Editable`/`Resizable`/`IsVisible`, `Frozen`, `Aggregate`). `DataGridTemplateColumn` for custom-only cells.
   Cell templates bind to the data item directly (e.g. `{Binding StatusText}`).
 - **Grid params**: `ItemsSource`, `ServerData`, `SelectionMode`, `SelectedItem`/`SelectedItems`,
   `SortMode`, `FilterMode`, `Groupable`, `PageSize` (0 = no paging), `EditMode`, `EditTrigger`,
-  `ReadOnly`, `AllowColumnResize`, `AllowColumnReorder`, `Dense`, `Striped`, `Bordered`,
+  `ReadOnly`, `AllowColumnResize`, `AllowColumnReorder`, `HorizontalScroll`, `DefaultColumnWidth`,
+  `FrozenColumns`/`FrozenEndColumns`, `Dense`, `Striped`, `Bordered`,
   `ShowColumnHeaders`, `IsLoading`, `EmptyText`, `RowHeight`, `SelectionChanged`/`SelectionChangedCommand`,
   `StartedEditingItem`/`CommittedItemChanges`/`CanceledEditingItem` events.
 
@@ -117,6 +123,20 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
   ‹ › reorder arrows on headers (`AllowColumnReorder`).
 - **Virtualization**: Blazor opt-in via `Virtualize` (uses `<Virtualize>`, best with `FixedHeader`+`Height`,
   not combined with paging/grouping); MAUI gets it free from `CollectionView`.
+- **Frozen header**: Blazor needs `FixedHeader="true"` **and** `Height` (the header sticks against the
+  scroller, and without a capped height nothing scrolls). MAUI's header is always frozen — it sits in
+  its own row above the `CollectionView`.
+- **Frozen columns**: pin a contiguous run at each edge, either per-column (`Frozen="Start"` / `"End"`)
+  or by count on the grid (`FrozenColumns` / `FrozenEndColumns`, which also pins the multi-select
+  checkbox column). Only a leading/trailing run can be pinned; a `Frozen` column in the middle is
+  ignored. Frozen cells paint an opaque background and sit above the scrolling ones.
+  - **MAUI requires `HorizontalScroll="True"`** — without sideways scrolling there is nothing to pin
+    against, so `Frozen` is a no-op. `HorizontalScroll` puts header, rows and footer in one scroller;
+    star widths cannot survive its unbounded measure, so each one resolves to
+    `DefaultColumnWidth` (150 by default) x its star factor.
+  - Blazor needs no extra flag — the table scrolls sideways whenever the columns are wider than the
+    grid. Give frozen columns an explicit px `Width` and the offsets are right on the first paint;
+    otherwise a small JS module measures them after render.
 - **AOT/trimming**: MAUI string-path value access uses reflection (annotated). For full trim/NativeAOT,
   set a column's `ValueGetter`/`ValueSetter`/`Comparer` to avoid reflection.
 

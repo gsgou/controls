@@ -20,11 +20,12 @@ public partial class DataGrid : ContentView
 
     readonly Grid headerGrid;
     readonly Border headerWrapper;
-    readonly CollectionView collection;
+    CollectionView collection;
     readonly Grid loadingOverlay;
     readonly List<DataGridRow> dataRows = new();
     readonly ObservableCollection<object> displayItems = new();
     readonly SelectionBackgroundConverter selectionConverter = new();
+    readonly SelectionBackgroundConverter frozenBackgroundConverter = new() { Opaque = true };
     readonly Grid footerGrid;
     Border? footerWrapper;
     string? groupColumnId;
@@ -49,6 +50,7 @@ public partial class DataGrid : ContentView
     string quickSearch = string.Empty;
     IList? serverItems;
     int serverTotal;
+    string? rowStructure;
 
     public DataGrid()
     {
@@ -73,12 +75,7 @@ public partial class DataGrid : ContentView
         };
         this.headerWrapper.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
-        this.collection = new CollectionView
-        {
-            ItemsSource = this.displayItems,
-            SelectionMode = Microsoft.Maui.Controls.SelectionMode.None,
-            ItemTemplate = this.BuildItemTemplateSelector()
-        };
+        this.collection = this.CreateCollectionView();
 
         this.pagerBar = this.BuildPager();
         (this.toolbarBar, this.quickSearchEntry) = this.BuildToolbar();
@@ -88,7 +85,7 @@ public partial class DataGrid : ContentView
         this.footerWrapper = new Border { Content = this.footerGrid, StrokeThickness = 0, Padding = 0, IsVisible = false };
         this.footerWrapper.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
-        var bodyGrid = new Grid
+        this.bodyGrid = new Grid
         {
             RowDefinitions =
             {
@@ -99,18 +96,14 @@ public partial class DataGrid : ContentView
                 new RowDefinition(GridLength.Auto)
             }
         };
-        bodyGrid.Add(this.toolbarBar, 0, 0);
-        bodyGrid.Add(this.headerWrapper, 0, 1);
-        bodyGrid.Add(this.collection, 0, 2);
-        bodyGrid.Add(this.footerWrapper, 0, 3);
-        bodyGrid.Add(this.pagerBar, 0, 4);
+        this.ApplyLayoutMode();
 
         this.loadingOverlay = this.BuildLoadingOverlay();
 
         this.editActionsBar = this.BuildEditActionsBar();
 
         var host = new Grid();
-        host.Add(bodyGrid);
+        host.Add(this.bodyGrid);
         host.Add(this.loadingOverlay);
         host.Add(this.filterPopup);
         host.Add(this.editActionsBar);
@@ -176,6 +169,7 @@ public partial class DataGrid : ContentView
         this.displayItems.Clear();
 
         this.selectionConverter.StripedEnabled = this.Striped;
+        this.frozenBackgroundConverter.StripedEnabled = this.Striped;
 
         var index = 0;
         if (this.Grouped)
@@ -212,10 +206,68 @@ public partial class DataGrid : ContentView
             }
         }
 
-        // Re-create the item template so density/columns/striping changes take effect.
+        // Re-create the item template so density/striping changes take effect, and swap the whole
+        // CollectionView out when the row *shape* changed - see EnsureRowStructure.
         this.collection.ItemTemplate = this.BuildItemTemplateSelector();
+        this.EnsureRowStructure();
         this.RebuildFooter();
         this.UpdatePager();
+    }
+
+    CollectionView CreateCollectionView()
+        => new()
+        {
+            ItemsSource = this.displayItems,
+            SelectionMode = Microsoft.Maui.Controls.SelectionMode.None,
+            ItemTemplate = this.BuildItemTemplateSelector()
+        };
+
+    /// <summary>
+    /// Everything that changes the *shape* of a row view rather than the data in it - column set and
+    /// widths, the checkbox column, the frozen runs, density.
+    /// </summary>
+    string RowStructure()
+    {
+        var sb = new System.Text.StringBuilder()
+            .Append(this.HorizontalScroll).Append('|')
+            .Append(this.frozenStart).Append('|')
+            .Append(this.frozenEnd).Append('|')
+            .Append(this.HasMultiSelect).Append('|')
+            .Append(this.Dense).Append('|')
+            .Append(this.Bordered).Append('|')
+            .Append(this.RowHeight).Append('|');
+
+        foreach (var column in this.VisibleColumns)
+            sb.Append(column.Id).Append(':').Append(this.ResolveWidth(column)).Append(',');
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Replaces the CollectionView when the row shape changed. Handing it a fresh ItemTemplate is not
+    /// enough - it dequeues the cells it already built and only re-binds them, so a row keeps whatever
+    /// column layout (and frozen panes) it was first created with. Only a new CollectionView reliably
+    /// drops them, so this is gated on the structure actually changing rather than run every reload.
+    /// </summary>
+    void EnsureRowStructure()
+    {
+        var structure = this.RowStructure();
+        if (structure == this.rowStructure)
+            return;
+
+        var first = this.rowStructure is null;
+        this.rowStructure = structure;
+        if (first)
+            return;
+
+        if (this.collection.Parent is not Grid host)
+            return;
+
+        var old = this.collection;
+        var row = Grid.GetRow(old);
+        this.collection = this.CreateCollectionView();
+        host.Children.Remove(old);
+        host.Add(this.collection, 0, row);
     }
 
     DataTemplateSelector BuildItemTemplateSelector()
@@ -299,40 +351,36 @@ public partial class DataGrid : ContentView
         if (this.RowHeight > 0)
             grid.HeightRequest = this.RowHeight;
 
-        var col = 0;
-        if (this.HasMultiSelect)
-            col++;
-
-        foreach (var column in this.VisibleColumns)
-        {
-            View cell;
-            if (this.EffectiveEditable(column))
-            {
-                if (column.EditTemplate is not null)
-                {
-                    cell = (View)column.EditTemplate.CreateContent();
-                    cell.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
-                }
-                else
-                {
-                    var capture = column;
-                    var entry = new Entry
-                    {
-                        Text = this.editValues.TryGetValue(column.Id, out var v) ? v?.ToString() : null,
-                        Margin = new Thickness(8, 2),
-                        VerticalOptions = LayoutOptions.Center
-                    };
-                    entry.TextChanged += (_, e) => this.editValues[capture.Id] = e.NewTextValue;
-                    cell = entry;
-                }
-            }
-            else
-            {
-                cell = this.BuildCellView(column);
-            }
-            grid.Add(cell, col++, 0);
-        }
+        this.LayoutCells(
+            grid,
+            this.HasMultiSelect ? new Grid() : null,
+            this.BuildEditCellView,
+            this.StyleContainerPane
+        );
         return grid;
+    }
+
+    View BuildEditCellView(DataGridColumn column)
+    {
+        if (!this.EffectiveEditable(column))
+            return this.BuildCellView(column);
+
+        if (column.EditTemplate is not null)
+        {
+            var content = (View)column.EditTemplate.CreateContent();
+            content.SetBinding(BindableObject.BindingContextProperty, new Binding(nameof(DataGridRow.Data)));
+            return content;
+        }
+
+        var capture = column;
+        var entry = new Entry
+        {
+            Text = this.editValues.TryGetValue(column.Id, out var v) ? v?.ToString() : null,
+            Margin = new Thickness(8, 2),
+            VerticalOptions = LayoutOptions.Center
+        };
+        entry.TextChanged += (_, e) => this.editValues[capture.Id] = e.NewTextValue;
+        return entry;
     }
 
     bool EffectiveGroupable(DataGridColumn col) => this.Groupable && col.Groupable && col.HasValue;
@@ -365,6 +413,12 @@ public partial class DataGrid : ContentView
         text.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         var layout = new HorizontalStackLayout { Spacing = 4, Padding = this.CellPadding, Children = { caret, text } };
+
+        // The group label spans every column, so it would slide out of view with the rest of the
+        // content; pin it to the leading edge alongside the frozen cells.
+        if (this.FrozenEnabled)
+            this.TrackPane(layout, start: true);
+
         var container = new Grid();
         container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
         container.Add(layout);
@@ -392,34 +446,31 @@ public partial class DataGrid : ContentView
 
         this.footerGrid.ColumnDefinitions = this.BuildColumnDefinitions();
         var items = this.ProcessedData();
-        var col = 0;
-        if (this.HasMultiSelect)
-            col++;
 
-        foreach (var column in this.VisibleColumns)
+        this.LayoutCells(
+            this.footerGrid,
+            this.HasMultiSelect ? new Grid() : null,
+            column => BuildFooterCell(column, items),
+            this.StyleSurfacePane
+        );
+
+        View BuildFooterCell(DataGridColumn column, IReadOnlyList<object> data)
         {
-            View cell;
             if (column.FooterTemplate is not null)
+                return (View)column.FooterTemplate.CreateContent();
+
+            if (column.Aggregate is null)
+                return new Label();
+
+            var lbl = new Label
             {
-                cell = (View)column.FooterTemplate.CreateContent();
-            }
-            else if (column.Aggregate is not null)
-            {
-                var lbl = new Label
-                {
-                    Text = ComputeAggregate(column, items),
-                    FontAttributes = FontAttributes.Bold,
-                    Padding = this.CellPadding,
-                    VerticalOptions = LayoutOptions.Center
-                };
-                lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-                cell = lbl;
-            }
-            else
-            {
-                cell = new Label();
-            }
-            this.footerGrid.Add(cell, col++, 0);
+                Text = ComputeAggregate(column, data),
+                FontAttributes = FontAttributes.Bold,
+                Padding = this.CellPadding,
+                VerticalOptions = LayoutOptions.Center
+            };
+            lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            return lbl;
         }
     }
 
@@ -628,6 +679,8 @@ public partial class DataGrid : ContentView
     // ---------- Build header + rows ----------
     void RebuildAll()
     {
+        this.RefreshFrozenCounts();
+        this.UpdateScrollContentWidth();
         this.RebuildHeader();
         this.RebuildRows();
     }
@@ -640,15 +693,22 @@ public partial class DataGrid : ContentView
         if (!this.ShowColumnHeaders)
             return;
 
-        var col = 0;
+        View? selectAll = null;
         if (this.HasMultiSelect)
         {
-            var selectAll = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
-            selectAll.CheckedChanged += (_, e) => this.ToggleSelectAll(e.Value);
-            this.headerGrid.Add(selectAll, col++, 0);
+            var check = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            check.CheckedChanged += (_, e) => this.ToggleSelectAll(e.Value);
+            selectAll = check;
         }
 
-        foreach (var column in this.VisibleColumns)
+        this.LayoutCells(this.headerGrid, selectAll, this.BuildHeaderCell, this.StyleSurfacePane);
+
+        this.BuildFilterRow();
+        this.toolbarBar.IsVisible = this.FilterMode == DataGridFilterMode.Toolbar;
+    }
+
+    View BuildHeaderCell(DataGridColumn column)
+    {
         {
             var capture = column;
             View headerView;
@@ -785,11 +845,8 @@ public partial class DataGrid : ContentView
                 headerView = container;
             }
 
-            this.headerGrid.Add(headerView, col++, 0);
+            return headerView;
         }
-
-        this.BuildFilterRow();
-        this.toolbarBar.IsVisible = this.FilterMode == DataGridFilterMode.Toolbar;
     }
 
     void BuildFilterRow()
@@ -800,30 +857,32 @@ public partial class DataGrid : ContentView
             return;
 
         this.filterRowGrid.ColumnDefinitions = this.BuildColumnDefinitions();
-        var col = 0;
-        if (this.HasMultiSelect)
-            col++;
+        this.LayoutCells(
+            this.filterRowGrid,
+            this.HasMultiSelect ? new Grid() : null,
+            this.BuildFilterCell,
+            this.StyleSurfacePane
+        );
+    }
 
-        foreach (var column in this.VisibleColumns)
+    View BuildFilterCell(DataGridColumn column)
+    {
+        if (!this.EffectiveFilterable(column))
+            return new Grid();
+
+        var capture = column;
+        var entry = new Entry
         {
-            if (this.EffectiveFilterable(column))
-            {
-                var capture = column;
-                var entry = new Entry
-                {
-                    Placeholder = "Filter",
-                    FontSize = 13,
-                    Margin = new Thickness(8, 2),
-                    Text = this.filterDefs.FirstOrDefault(d => d.ColumnId == column.Id)?.Value?.ToString()
-                };
-                entry.TextChanged += (_, e) => this.ApplyColumnFilter(
-                    capture,
-                    this.DefaultOperator(capture.GetDataType(this.ItemTypeOrString())),
-                    string.IsNullOrEmpty(e.NewTextValue) ? null : e.NewTextValue);
-                this.filterRowGrid.Add(entry, col, 0);
-            }
-            col++;
-        }
+            Placeholder = "Filter",
+            FontSize = 13,
+            Margin = new Thickness(8, 2),
+            Text = this.filterDefs.FirstOrDefault(d => d.ColumnId == column.Id)?.Value?.ToString()
+        };
+        entry.TextChanged += (_, e) => this.ApplyColumnFilter(
+            capture,
+            this.DefaultOperator(capture.GetDataType(this.ItemTypeOrString())),
+            string.IsNullOrEmpty(e.NewTextValue) ? null : e.NewTextValue);
+        return entry;
     }
 
     // ---------- Reorder / resize ----------
@@ -1038,7 +1097,7 @@ public partial class DataGrid : ContentView
             defs.Add(new ColumnDefinition(new GridLength(CheckboxColumnWidth)));
 
         foreach (var column in this.VisibleColumns)
-            defs.Add(new ColumnDefinition(column.Width));
+            defs.Add(new ColumnDefinition(this.ResolveWidth(column)));
 
         return defs;
     }
@@ -1069,19 +1128,20 @@ public partial class DataGrid : ContentView
         var bottomLine = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.End };
         bottomLine.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
 
-        var col = 0;
+        View? check = null;
         if (this.HasMultiSelect)
         {
-            var check = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
-            check.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(DataGridRow.IsSelected), BindingMode.TwoWay));
-            grid.Add(check, col++, 0);
+            var box = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            box.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(DataGridRow.IsSelected), BindingMode.TwoWay));
+            check = box;
         }
 
-        foreach (var column in this.VisibleColumns)
+        this.LayoutCells(grid, check, this.BuildCellView, pane =>
         {
-            var cell = this.BuildCellView(column);
-            grid.Add(cell, col++, 0);
-        }
+            this.StyleRowPane(pane);
+            if (this.Bordered)
+                this.AddVerticalBorders(pane);
+        });
 
         // Wrap so we can overlay the separator line and capture taps without disturbing the cells.
         var container = new Grid();
@@ -1326,6 +1386,10 @@ public partial class DataGrid : ContentView
     {
         this.selectionConverter.Selected = ResolveColor(ShinyThemeKeys.Color.Primary, Color.FromArgb("#7C3AED")).WithAlpha(0.14f);
         this.selectionConverter.Stripe = ResolveColor(ShinyThemeKeys.Color.OnSurface, Colors.Black).WithAlpha(0.04f);
+
+        this.frozenBackgroundConverter.Selected = this.selectionConverter.Selected;
+        this.frozenBackgroundConverter.Stripe = this.selectionConverter.Stripe;
+        this.frozenBackgroundConverter.Surface = ResolveColor(ShinyThemeKeys.Color.Surface, Colors.White);
     }
 
     static Color ResolveColor(string key, Color fallback)

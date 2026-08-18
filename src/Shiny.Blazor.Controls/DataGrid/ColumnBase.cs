@@ -24,8 +24,27 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
 
     /// <summary>CSS width, e.g. <c>"120px"</c> or <c>"20%"</c>.</summary>
     [Parameter] public string? Width { get; set; }
+
+    /// <summary>
+    /// Freezes (pins) this column to the leading or trailing edge so it stays put while the grid
+    /// scrolls horizontally. Only a contiguous run of columns at each edge can be frozen - see
+    /// <see cref="DataGrid{TItem}.FrozenColumns"/> / <see cref="DataGrid{TItem}.FrozenEndColumns"/>
+    /// for the count-based form.
+    /// </summary>
+    [Parameter] public DataGridFrozen Frozen { get; set; }
+
+    /// <summary>Legacy alias for <c>Frozen="DataGridFrozen.Start"</c>.</summary>
     [Parameter] public bool StickyLeft { get; set; }
+
+    /// <summary>Legacy alias for <c>Frozen="DataGridFrozen.End"</c>.</summary>
     [Parameter] public bool StickyRight { get; set; }
+
+    /// <summary><see cref="Frozen"/> with the legacy sticky flags folded in.</summary>
+    internal DataGridFrozen EffectiveFrozen
+        => this.Frozen != DataGridFrozen.None ? this.Frozen
+            : this.StickyLeft ? DataGridFrozen.Start
+            : this.StickyRight ? DataGridFrozen.End
+            : DataGridFrozen.None;
 
     [Parameter] public RenderFragment? HeaderTemplate { get; set; }
     [Parameter] public RenderFragment<CellContext<TItem>>? CellTemplate { get; set; }
@@ -68,7 +87,7 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
     // the grid's StateHasChanged re-renders this column, re-firing OnParametersSet, ad infinitum. Template /
     // comparer / aggregate params are excluded on purpose — they get a fresh delegate identity on every parent
     // render, so including them would re-introduce the loop (and the grid re-renders them as part of its tree).
-    (string?, bool?, bool?, bool?, bool?, bool, bool?, string?, bool, bool) layoutSnapshot;
+    (string?, bool?, bool?, bool?, bool?, bool, bool?, string?, bool, bool, DataGridFrozen) layoutSnapshot;
     bool hasSnapshot;
 
     protected override void OnInitialized()
@@ -83,7 +102,7 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
             return;
 
         var snapshot = (this.Title, this.Sortable, this.Filterable, this.Groupable, this.Editable,
-            this.Hidden, this.Resizable, this.Width, this.StickyLeft, this.StickyRight);
+            this.Hidden, this.Resizable, this.Width, this.StickyLeft, this.StickyRight, this.Frozen);
 
         if (!this.hasSnapshot || !snapshot.Equals(this.layoutSnapshot))
         {

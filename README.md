@@ -2429,21 +2429,22 @@ over a virtualized `CollectionView`, no native handlers). Same feature surface o
 `PropertyColumn` + `TemplateColumn`, sorting (single + multi), column **filtering** (menu / row /
 toolbar quick-search), **grouping** with expandable groups, footer/group **aggregates**
 (Count/Sum/Average/Min/Max/Custom), single/multi **selection** with checkboxes, inline **editing**
-(cell + form), **paging**, **virtualization**, column **resize/reorder**, sticky header, loading +
-empty states, a `ServerData` delegate for server-side data, and density/striped/bordered/hover styling.
-Colors follow the theme tokens.
+(cell + form), **paging**, **virtualization**, column **resize/reorder**, **frozen columns** and a
+frozen (sticky) header, loading + empty states, a `ServerData` delegate for server-side data, and
+density/striped/bordered/hover styling. Colors follow the theme tokens.
 
 ```razor
 @* Blazor *@
 <DataGrid TItem="Person" Items="people" MultiSelection="true"
           SortMode="DataGridSortMode.Multiple" FilterMode="DataGridFilterMode.Menu"
           Groupable="true" EditMode="DataGridEditMode.Form"
-          Dense="true" Striped="true" Hover="true" FixedHeader="true" Height="420px">
+          Dense="true" Striped="true" Hover="true" FixedHeader="true" Height="420px"
+          FrozenColumns="1" FrozenEndColumns="1">
     <Columns>
-        <PropertyColumn Property="x => x.FirstName" Title="First" />
-        <PropertyColumn Property="x => x.Age" Format="N0" />
-        <PropertyColumn Property="x => x.Salary" Format="C0" />
-        <TemplateColumn Title="Status" Sortable="false">
+        <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" />
+        <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
+        <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
+        <TemplateColumn Title="Status" Sortable="false" Width="140px">
             <CellTemplate><Pill Text="@(context.Item.Active ? "Active" : "Inactive")" /></CellTemplate>
         </TemplateColumn>
     </Columns>
@@ -2456,6 +2457,7 @@ Colors follow the theme tokens.
 <shiny:DataGrid ItemsSource="{Binding People}" SelectionMode="Multiple"
                 SortMode="Multiple" FilterMode="Menu" Groupable="True"
                 PageSize="20" EditMode="Form" AllowColumnResize="True" AllowColumnReorder="True"
+                HorizontalScroll="True" DefaultColumnWidth="140" FrozenColumns="1"
                 Striped="True" Bordered="True">
     <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
     <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
@@ -2464,7 +2466,7 @@ Colors follow the theme tokens.
             <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
         </shiny:DataGridColumn.Aggregate>
     </shiny:DataGridColumn>
-    <shiny:DataGridTemplateColumn Title="Status" Width="Auto" Editable="False">
+    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False" Frozen="End">
         <shiny:DataGridTemplateColumn.CellTemplate>
             <DataTemplate><shiny:PillView Text="{Binding StatusText}" /></DataTemplate>
         </shiny:DataGridTemplateColumn.CellTemplate>
@@ -2478,7 +2480,20 @@ Reflection-based string-path columns are annotated for trimming; set a column's 
 Header titles ellipsize and clip to their own column, so budget columns to the width you have: a
 phone-width grid fits roughly **3–4** columns, fewer once `AllowColumnResize`, `AllowColumnReorder`,
 `Groupable`, or `FilterMode="Menu"` add their glyphs to each header. Columns with no `Width` are `*`
-and split whatever the `Auto` columns leave behind.
+and split whatever the `Auto` columns leave behind — or give the grid more room than it has and turn on
+horizontal scrolling instead.
+
+**Frozen header** — MAUI's header is always frozen (it sits in its own row above the `CollectionView`).
+Blazor needs `FixedHeader="true"` **and** a `Height`: the header sticks against the scroller, and
+without a capped height nothing scrolls.
+
+**Frozen columns** — pin a contiguous run at either edge, per column (`Frozen="Start"` / `"End"`) or by
+count on the grid (`FrozenColumns` / `FrozenEndColumns`, which also pins the multi-select checkbox
+column). Content slides underneath the pinned block, which paints an opaque background and repeats the
+row's own stripe/selection state. On **MAUI this needs `HorizontalScroll="True"`** — without sideways
+scrolling there is nothing to pin against — and in that mode star widths cannot survive the scroller's
+unbounded measure, so each resolves to `DefaultColumnWidth` (150 by default) x its star factor. Blazor
+needs no extra flag; give the pinned columns a px `Width` and the offsets are exact on the first paint.
 
 ### TableView
 

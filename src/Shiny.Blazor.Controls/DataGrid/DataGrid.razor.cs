@@ -1,9 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace Shiny.Blazor.Controls;
 
-public partial class DataGrid<TItem>
+public partial class DataGrid<TItem> : IAsyncDisposable
 {
     readonly List<ColumnBase<TItem>> columns = new();
     readonly HashSet<TItem> selected = new();
@@ -112,6 +114,125 @@ public partial class DataGrid<TItem>
     }
 
     internal bool HasMultiSelect => this.SelectionMode == DataGridSelectionMode.Multiple;
+
+    // ---- Frozen (pinned) columns ----
+
+    /// <summary>Freezes the first N visible columns to the leading edge. Overridden upward by any
+    /// leading columns that set <see cref="ColumnBase{TItem}.Frozen"/> themselves.</summary>
+    [Parameter] public int FrozenColumns { get; set; }
+
+    /// <summary>Freezes the last N visible columns to the trailing edge.</summary>
+    [Parameter] public int FrozenEndColumns { get; set; }
+
+    readonly Dictionary<string, FrozenCell> frozenCells = new();
+
+    internal int FrozenStartCount { get; private set; }
+
+    internal int FrozenEndCount { get; private set; }
+
+    internal bool HasFrozenColumns => this.FrozenStartCount > 0 || this.FrozenEndCount > 0;
+
+    /// <summary>The multi-select checkbox column is always leftmost, so it pins with the start block.</summary>
+    internal bool FrozenCheckColumn => this.HasMultiSelect && this.FrozenStartCount > 0;
+
+    readonly record struct FrozenCell(DataGridFrozen Position, bool Edge, double? Offset);
+
+    /// <summary>
+    /// Recomputes which columns are pinned and (where the widths are known up front) how far in.
+    /// Called once at the top of the render so the per-cell helpers below are plain lookups.
+    /// </summary>
+    void RefreshFrozenLayout()
+    {
+        var cols = this.VisibleColumns;
+
+        var start = 0;
+        while (start < cols.Count && cols[start].EffectiveFrozen == DataGridFrozen.Start)
+            start++;
+        start = Math.Clamp(Math.Max(start, this.FrozenColumns), 0, cols.Count);
+
+        var end = 0;
+        while (end < cols.Count && cols[cols.Count - 1 - end].EffectiveFrozen == DataGridFrozen.End)
+            end++;
+        end = Math.Clamp(Math.Max(end, this.FrozenEndColumns), 0, cols.Count - start);
+
+        this.FrozenStartCount = start;
+        this.FrozenEndCount = end;
+
+        this.frozenCells.Clear();
+        if (start == 0 && end == 0)
+            return;
+
+        // Best-effort offsets so the pinning is right on the very first paint (and without JS at
+        // all when every pinned column declares a px width). datagrid.js re-measures and corrects
+        // whatever we could not work out here.
+        double? offset = this.HasMultiSelect ? null : 0;
+        for (var i = 0; i < start; i++)
+        {
+            this.frozenCells[cols[i].Id] = new FrozenCell(DataGridFrozen.Start, i == start - 1, offset);
+            var w = this.PxWidth(cols[i]);
+            offset = offset is null || w is null ? null : offset + w;
+        }
+
+        offset = 0;
+        for (var i = 0; i < end; i++)
+        {
+            var col = cols[cols.Count - 1 - i];
+            this.frozenCells[col.Id] = new FrozenCell(DataGridFrozen.End, i == end - 1, offset);
+            var w = this.PxWidth(col);
+            offset = offset is null || w is null ? null : offset + w;
+        }
+    }
+
+    double? PxWidth(ColumnBase<TItem> col)
+    {
+        var w = this.columnWidths.TryGetValue(col.Id, out var resized) ? resized : col.Width;
+        if (string.IsNullOrWhiteSpace(w))
+            return null;
+
+        w = w.Trim();
+        return w.EndsWith("px", StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(w[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px)
+            ? px
+            : null;
+    }
+
+    /// <summary>The <c>data-dg-frozen</c> marker datagrid.js keys its measurements off.</summary>
+    internal string? FrozenAttr(ColumnBase<TItem>? col)
+    {
+        if (col is null)
+            return this.FrozenCheckColumn ? "start" : null;
+
+        return this.frozenCells.TryGetValue(col.Id, out var f)
+            ? f.Position == DataGridFrozen.Start ? "start" : "end"
+            : null;
+    }
+
+    /// <summary>Pass a null column for the multi-select checkbox cell.</summary>
+    internal string FrozenCssClass(ColumnBase<TItem>? col)
+    {
+        if (col is null)
+            return this.FrozenCheckColumn ? " shiny-dg-frozen shiny-dg-frozen-start" : string.Empty;
+
+        if (!this.frozenCells.TryGetValue(col.Id, out var f))
+            return string.Empty;
+
+        var side = f.Position == DataGridFrozen.Start ? "start" : "end";
+        return f.Edge
+            ? $" shiny-dg-frozen shiny-dg-frozen-{side} shiny-dg-frozen-{side}-edge"
+            : $" shiny-dg-frozen shiny-dg-frozen-{side}";
+    }
+
+    internal string? FrozenOffsetStyle(ColumnBase<TItem>? col)
+    {
+        if (col is null)
+            return this.FrozenCheckColumn ? "left:0;" : null;
+
+        if (!this.frozenCells.TryGetValue(col.Id, out var f) || f.Offset is not { } offset)
+            return null;
+
+        var edge = f.Position == DataGridFrozen.Start ? "left" : "right";
+        return string.Create(CultureInfo.InvariantCulture, $"{edge}:{offset:0.##}px;");
+    }
 
     // ---- Column registration ----
     internal void AddColumn(ColumnBase<TItem> column)
@@ -419,10 +540,74 @@ public partial class DataGrid<TItem>
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await this.SyncStickyLayoutAsync();
+
         if (firstRender && this.ServerData is not null && !this.serverLoaded)
         {
             this.serverLoaded = true;
             await this.ReloadServerDataAsync();
+        }
+    }
+
+    // ---- Sticky header / frozen column measurement ----
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    ElementReference rootRef;
+    IJSObjectReference? stickyModule;
+    bool stickyDisposed;
+
+    bool NeedsStickyLayout => this.FixedHeader || this.HasFrozenColumns;
+
+    async Task SyncStickyLayoutAsync()
+    {
+        if (this.stickyDisposed)
+            return;
+
+        try
+        {
+            if (!this.NeedsStickyLayout)
+            {
+                if (this.stickyModule is not null)
+                    await this.stickyModule.InvokeVoidAsync("dispose", this.rootRef);
+                return;
+            }
+
+            this.stickyModule ??= await this.JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/Shiny.Blazor.Controls/datagrid.js");
+
+            // init is idempotent: it wires the observer once and re-measures on every call, which is
+            // exactly what we want after a re-render changed the columns or their widths.
+            await this.stickyModule.InvokeVoidAsync("init", this.rootRef);
+        }
+        catch (JSDisconnectedException)
+        {
+            // circuit went away mid-render; nothing to clean up
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        this.stickyDisposed = true;
+        if (this.stickyModule is null)
+            return;
+
+        try
+        {
+            await this.stickyModule.InvokeVoidAsync("dispose", this.rootRef);
+            await this.stickyModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        finally
+        {
+            this.stickyModule = null;
         }
     }
 
@@ -735,13 +920,18 @@ public partial class DataGrid<TItem>
             if (this.Hover) sb.Append(" shiny-dg-hover");
             if (this.Outlined) sb.Append(" shiny-dg-outlined");
             if (this.FixedHeader) sb.Append(" shiny-dg-fixedheader");
+            // Sticky cells lose their borders under border-collapse:collapse, so the sticky
+            // variants of the table only switch on when something is actually pinned.
+            if (this.FixedHeader || this.HasFrozenColumns) sb.Append(" shiny-dg-sticky");
             if (!string.IsNullOrEmpty(this.Class)) sb.Append(' ').Append(this.Class);
             return sb.ToString();
         }
     }
 
+    // The height caps the scroller (.shiny-dg-scroll), not the root: position:sticky only engages
+    // against the ancestor that actually scrolls, and capping the root leaves the scroller unbounded.
     string? RootStyle
-        => string.IsNullOrEmpty(this.Height) ? this.Style : $"max-height:{this.Height};{this.Style}";
+        => string.IsNullOrEmpty(this.Height) ? this.Style : $"--shiny-dg-height:{this.Height};{this.Style}";
 
     internal int ColSpan => this.VisibleColumns.Count + (this.HasMultiSelect ? 1 : 0);
 
@@ -749,18 +939,15 @@ public partial class DataGrid<TItem>
 
     string? ColumnWidthStyle(ColumnBase<TItem> col)
     {
-        if (this.columnWidths.TryGetValue(col.Id, out var w))
-            return $"width:{w};min-width:{w};max-width:{w};";
-        return string.IsNullOrEmpty(col.Width) ? null : $"width:{col.Width};";
+        var width = this.columnWidths.TryGetValue(col.Id, out var w)
+            ? $"width:{w};min-width:{w};max-width:{w};"
+            : string.IsNullOrEmpty(col.Width) ? null : $"width:{col.Width};";
+
+        return width + this.FrozenOffsetStyle(col);
     }
 
     string HeaderCssClass(ColumnBase<TItem> col)
-    {
-        var sb = new System.Text.StringBuilder("shiny-dg-header");
-        if (col.StickyLeft) sb.Append(" shiny-dg-sticky-left");
-        if (col.StickyRight) sb.Append(" shiny-dg-sticky-right");
-        return sb.ToString();
-    }
+        => "shiny-dg-header" + this.FrozenCssClass(col);
 
     string RowCssClass(TItem item)
     {
