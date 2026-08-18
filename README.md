@@ -2499,6 +2499,10 @@ needs no extra flag; give the pinned columns a px `Width` and the offsets are ex
 
 A settings-style table view with 14+ built-in cell types, section grouping, drag-to-reorder, and dynamic data binding.
 
+`TableSection.IsVisible` is live and safe to bind — a section that flips re-renders the table, and a
+hidden section draws nothing at all, including no section separator on either side of it. Binding it
+to a feature flag or a mode switch is the intended use.
+
 | Basic | Dynamic | Drag & Sort | Pickers | Styling |
 |:---:|:---:|:---:|:---:|:---:|
 | ![Basic](assets/tableview-basic.png) | ![Dynamic](assets/tableview-dynamic.png) | ![Drag & Sort](assets/tableview-dragsort.png) | ![Pickers](assets/tableview-picker.png) | ![Styling](assets/tableview-styling.png) |

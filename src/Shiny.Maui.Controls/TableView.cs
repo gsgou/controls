@@ -284,16 +284,20 @@ public partial class TableView : ContentView
 
             rootLayout.Children.Clear();
 
-            var allSections = GetAllSections();
+            // Only the visible sections, and the filter has to happen here rather than in the loop.
+            // A hidden section renders as a zero-height placeholder, so counting it would put a
+            // separator on both sides of nothing — two rules together where one section is hidden
+            // between two visible ones, and a rule under the last visible section when the hidden
+            // ones are trailing. Both read as a rendering fault rather than as a hidden section.
+            var sections = GetVisibleSections();
 
-            for (var i = 0; i < allSections.Count; i++)
+            for (var i = 0; i < sections.Count; i++)
             {
-                var section = allSections[i];
-                var sectionView = SectionRenderer.Render(section, this);
+                var sectionView = SectionRenderer.Render(sections[i], this);
                 rootLayout.Children.Add(sectionView);
 
                 // Section separator
-                if (ShowSectionSeparator && i < allSections.Count - 1)
+                if (ShowSectionSeparator && i < sections.Count - 1)
                 {
                     rootLayout.Children.Add(new BoxView
                     {
@@ -307,6 +311,22 @@ public partial class TableView : ContentView
         {
             isRendering = false;
         }
+    }
+
+    /// <summary>
+    /// The sections that will actually draw something, in order. What the separator logic counts.
+    /// </summary>
+    internal IReadOnlyList<TvTableSection> GetVisibleSections()
+    {
+        var all = GetAllSections();
+
+        var visible = new List<TvTableSection>(all.Count);
+        foreach (var section in all)
+        {
+            if (section.IsVisible)
+                visible.Add(section);
+        }
+        return visible;
     }
 
     internal IReadOnlyList<TvTableSection> GetAllSections()
