@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid, TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -2429,7 +2429,8 @@ over a virtualized `CollectionView`, no native handlers). Same feature surface o
 `PropertyColumn` + `TemplateColumn`, sorting (single + multi), column **filtering** (menu / row /
 toolbar quick-search), **grouping** with expandable groups, footer/group **aggregates**
 (Count/Sum/Average/Min/Max/Custom), single/multi **selection** with checkboxes, inline **editing**
-(cell + form), **paging**, **virtualization**, column **resize/reorder**, **frozen columns** and a
+(cell + form), **detail ("breakdown") rows**, a **tree/hierarchy mode** (`TreeDataGrid`) with lazy child
+loading, **paging**, **virtualization**, column **resize/reorder**, **frozen columns** and a
 frozen (sticky) header, loading + empty states, a `ServerData` delegate for server-side data, and
 density/striped/bordered/hover styling. Colors follow the theme tokens.
 
@@ -2494,6 +2495,94 @@ row's own stripe/selection state. On **MAUI this needs `HorizontalScroll="True"`
 scrolling there is nothing to pin against — and in that mode star widths cannot survive the scroller's
 unbounded measure, so each resolves to `DefaultColumnWidth` (150 by default) x its star factor. Blazor
 needs no extra flag; give the pinned columns a px `Width` and the offsets are exact on the first paint.
+
+**Detail ("breakdown") rows** — set a `RowDetailTemplate` and the grid grows a caret column at the
+leading edge; expanding a row opens a full-width row beneath it that can host any controls you like.
+`ExpandMode="Single"` keeps one open at a time, `IsRowExpandable` vetoes rows with nothing to show, and
+`ExpandRow`/`CollapseRow`/`ExpandAll`/`CollapseAll` drive it from code. The breakdown stays pinned to
+the leading edge while the columns scroll sideways, and expansion is keyed on the data item, so it
+survives sorting, filtering and paging.
+
+Give it a `RowDetailLoader` and the breakdown loads on demand: the caret turns into a **spinner** while
+the fetch runs, the detail row shows `RowDetailLoadingTemplate` (a spinner by default), and
+`RowDetailTemplate` is not built until the load completes — so it can assume its data arrived. The
+loader returns no value; fill an observable property on the item and let the template bind to it as
+usual. Each item loads once, `InvalidateRowDetail(item)` refetches, and a throw collapses the row and
+raises `RowDetailLoadFailed`.
+
+**`IsBusy`** is true while any children or detail load is in flight — a read-only bindable on MAUI, a
+property plus `IsBusyChanged` on Blazor, with `IsRowBusy(item)` for a single row. Bind a page-level
+indicator to it; the per-row spinners are drawn either way. It is distinct from `IsLoading`/`Loading`,
+which you set yourself to cover the grid while its own data loads.
+
+```razor
+@* Blazor *@
+<DataGrid TItem="Order" Items="orders" RowDetailLoader="LoadLinesAsync" IsBusyChanged="b => busy = b">
+    <Columns>…</Columns>
+    <RowDetailTemplate>
+        @foreach (var line in lines[context.Id]) { <div>@line.Sku</div> }
+    </RowDetailTemplate>
+    <RowDetailLoadingTemplate><span class="shiny-dg-busy"></span> Loading…</RowDetailLoadingTemplate>
+</DataGrid>
+```
+
+```xml
+<!-- MAUI -->
+<shiny:DataGrid ItemsSource="{Binding People}" RowDetailLoader="{Binding LoadActivity}">
+    <shiny:DataGrid.RowDetailTemplate>
+        <DataTemplate x:DataType="local:Person">
+            <VerticalStackLayout>
+                <Label Text="{Binding FirstName, StringFormat='Breakdown for {0}'}" />
+                <Label Text="{Binding Salary, StringFormat='Salary: {0:C0}'}" />
+            </VerticalStackLayout>
+        </DataTemplate>
+    </shiny:DataGrid.RowDetailTemplate>
+    <shiny:DataGridColumn Title="First" PropertyName="FirstName" />
+</shiny:DataGrid>
+```
+
+### TreeDataGrid
+
+The same grid in hierarchy mode: hand it a `ChildrenSelector` and rows nest, with the indent and expand
+caret carried inline by the first column — every other grid feature (columns, sorting, filtering, frozen
+columns, selection, editing) works exactly as it does on a flat grid. `TreeDataGrid` and `DataGrid` are
+the same type; the name is there so the markup says what the grid is.
+
+```razor
+@* Blazor *@
+<TreeDataGrid TItem="CostNode" Items="accounts"
+              ChildrenSelector="n => n.Lazy ? null : n.Children"
+              ChildrenLoader="LoadChildrenAsync"
+              HasChildrenSelector="n => n.Lazy || n.Children.Count > 0"
+              TreeIndentSize="18">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Account" />
+        <PropertyColumn Property="x => x.Budget" Format="C0" />
+    </Columns>
+</TreeDataGrid>
+```
+
+```xml
+<!-- MAUI -->
+<shiny:TreeDataGrid ItemsSource="{Binding Accounts}"
+                    ChildrenSelector="{Binding ChildrenSelector}"
+                    ChildrenLoader="{Binding ChildrenLoader}"
+                    HasChildrenSelector="{Binding HasChildrenSelector}"
+                    TreeIndentSize="18">
+    <shiny:DataGridColumn Title="Account" PropertyName="Name" Width="2*" />
+    <shiny:DataGridColumn Title="Budget" PropertyName="Budget" StringFormat="{}{0:C0}" Width="1.2*" />
+</shiny:TreeDataGrid>
+```
+
+`ChildrenLoader` fetches a level the first time it is expanded (that row's caret becomes a spinner
+meanwhile) and caches the result; **`ChildrenSelector` gets first refusal**, so the loader only runs for the items it returns
+`null` for and one tree can mix in-memory branches with fetched ones. `HasChildrenSelector` lets leaves
+render caret-free before anything has loaded, and `ChildrenLoadFailed` reports a failed fetch (the row
+collapses again).
+
+Sorting and filtering apply **per level**, so children stay under their parent, and a row is kept when a
+*descendant* matches the filter — otherwise the match would be unreachable. Paging pages the roots, and
+tree mode and `Groupable` are mutually exclusive (grouping wins).
 
 ### TableView
 

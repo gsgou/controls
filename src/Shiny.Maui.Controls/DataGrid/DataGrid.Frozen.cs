@@ -75,7 +75,8 @@ public partial class DataGrid
     {
         get
         {
-            var total = this.HasMultiSelect ? CheckboxColumnWidth : 0;
+            var total = (this.HasMultiSelect ? CheckboxColumnWidth : 0)
+                + (this.HasExpanderColumn ? ExpanderColumnWidth : 0);
             foreach (var column in this.VisibleColumns)
                 total += this.ResolveWidth(column).Value;
             return total;
@@ -193,25 +194,35 @@ public partial class DataGrid
         pane.TranslationX = start ? this.scrollX : this.scrollX - this.MaxScrollX;
     }
 
+    /// <summary>Empty stand-ins for the leading columns, for the rows that have nothing to put there.</summary>
+    IReadOnlyList<View> LeadingPlaceholders()
+    {
+        var cells = new List<View>();
+        for (var i = 0; i < this.LeadingColumnCount; i++)
+            cells.Add(new Grid());
+        return cells;
+    }
+
     /// <summary>
     /// Fills a single-row grid (header, filter row, a data row, the footer) with one cell per column,
-    /// moving the pinned runs into their own panes. <paramref name="leadingCell"/> is the multi-select
-    /// checkbox, which is always leftmost and so travels with the start pane.
+    /// moving the pinned runs into their own panes. <paramref name="leadingCells"/> are the detail
+    /// expander and the multi-select checkbox, which are always leftmost and so travel with the start
+    /// pane.
     /// </summary>
     void LayoutCells(
         Grid grid,
-        View? leadingCell,
+        IReadOnlyList<View> leadingCells,
         Func<DataGridColumn, View> cellFactory,
         Action<Grid>? stylePane = null
     )
     {
         var cols = this.VisibleColumns;
-        var lead = leadingCell is null ? 0 : 1;
+        var lead = leadingCells.Count;
 
         if (!this.FrozenEnabled)
         {
-            if (leadingCell is not null)
-                grid.Add(leadingCell, 0, 0);
+            for (var i = 0; i < lead; i++)
+                grid.Add(leadingCells[i], i, 0);
 
             for (var i = 0; i < cols.Count; i++)
                 grid.Add(cellFactory(cols[i]), lead + i, 0);
@@ -228,17 +239,18 @@ public partial class DataGrid
         {
             var pane = this.CreatePane(grid, 0, lead + startCount);
             var slot = 0;
-            if (leadingCell is not null)
-                pane.Add(leadingCell, slot++, 0);
+            for (var i = 0; i < lead; i++)
+                pane.Add(leadingCells[i], slot++, 0);
             for (var i = 0; i < startCount; i++)
                 pane.Add(cellFactory(cols[i]), slot++, 0);
 
             stylePane?.Invoke(pane);
             this.AddPane(grid, pane, 0, lead + startCount, start: true);
         }
-        else if (leadingCell is not null)
+        else
         {
-            grid.Add(leadingCell, 0, 0);
+            for (var i = 0; i < lead; i++)
+                grid.Add(leadingCells[i], i, 0);
         }
 
         if (endCount > 0)

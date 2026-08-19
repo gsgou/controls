@@ -66,8 +66,9 @@
 <section class="demo-section">
     <h2>Frozen columns + sticky header</h2>
     <p>
-        Scroll sideways and down: the header stays put, the first @frozenStart column(s) stay pinned to
-        the left and the last @frozenEnd to the right. Frozen cells sit above the scrolling ones, so
+        Thirteen columns, ~2,150px wide, so there is plenty to scroll through. Scroll sideways and down:
+        the header stays put, the first @frozenStart column(s) stay pinned to the left and the last
+        @frozenEnd to the right. Frozen cells sit above the scrolling ones, so
         content slides underneath them.
     </p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
@@ -102,6 +103,11 @@
             <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
             <PropertyColumn Property="x => x.Location" Width="180px" />
             <PropertyColumn Property="x => x.CostCentre" Title="Cost centre" Width="180px" />
+            <PropertyColumn Property="x => x.Manager" Width="180px" />
+            <PropertyColumn Property="x => x.Email" Width="240px" />
+            <PropertyColumn Property="x => x.StartDate" Title="Started" Format="d" Width="140px" />
+            <PropertyColumn Property="x => x.Region" Width="160px" />
+            <PropertyColumn Property="x => x.Extension" Title="Ext." Width="110px" />
             <TemplateColumn Title="Status" Sortable="false" Filterable="false" Width="140px">
                 <CellTemplate>
                     <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
@@ -112,8 +118,86 @@
     </DataGrid>
 </section>
 
+<section class="demo-section">
+    <h2>Detail (breakdown) rows</h2>
+    <p>
+        A <code>RowDetailTemplate</code> adds a caret column at the leading edge; expanding a row opens a
+        full-width row underneath it that can host anything. <code>ExpandMode</code> decides whether one
+        row or many stay open. This one also has a <code>RowDetailLoader</code>: the caret becomes a
+        spinner while it runs, the detail row shows <code>RowDetailLoadingTemplate</code>, and the grid's
+        <code>IsBusy</code> is <strong>@busy</strong>.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label>Expand mode
+            <select @bind="expandMode">
+                @foreach (var v in Enum.GetValues<DataGridExpandMode>())
+                {
+                    <option value="@v">@v</option>
+                }
+            </select>
+        </label>
+    </div>
+    <DataGrid TItem="Person"
+              Items="people"
+              ExpandMode="expandMode"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Hover="true"
+              RowDetailLoader="LoadActivityAsync"
+              IsBusyChanged="b => busy = b"
+              RowExpanded="OnRowExpanded">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" />
+            <PropertyColumn Property="x => x.LastName" Title="Last" />
+            <PropertyColumn Property="x => x.Department" />
+            <PropertyColumn Property="x => x.Salary" Format="C0" />
+        </Columns>
+        <RowDetailTemplate>
+            @* Only rendered once RowDetailLoader has finished, so activity is always there. *@
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
+                <strong>Breakdown for @context.FirstName @context.LastName</strong>
+                <div>Location: @context.Location</div>
+                <div>Cost centre: @context.CostCentre</div>
+                <div>Recent activity: @activity[context.CostCentre]</div>
+                <Pill Text="@(context.Active ? "Active" : "Inactive")"
+                      Type="@(context.Active ? PillType.Success : PillType.Caution)" />
+            </div>
+        </RowDetailTemplate>
+        <RowDetailLoadingTemplate>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span class="shiny-dg-busy"></span>
+                <span>Fetching @context.FirstName's activity…</span>
+            </div>
+        </RowDetailLoadingTemplate>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
+    <h2>Tree grid</h2>
+    <p>
+        <code>TreeDataGrid</code> is the same grid with a <code>ChildrenSelector</code>: rows nest and the
+        first column carries the indent and caret. "Field operations" uses <code>ChildrenLoader</code>, so
+        its children are fetched the first time it opens. Filtering keeps a parent whose descendant matches.
+    </p>
+    <TreeDataGrid TItem="CostNode"
+                  Items="accounts"
+                  ChildrenSelector="n => n.Lazy ? null : n.Children"
+                  ChildrenLoader="LoadRegionsAsync"
+                  HasChildrenSelector="n => n.Lazy || n.Children.Count > 0"
+                  TreeIndentSize="18"
+                  FilterMode="DataGridFilterMode.Toolbar"
+                  SortMode="DataGridSortMode.Single"
+                  Striped="true" Bordered="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Name" Title="Account" />
+            <PropertyColumn Property="x => x.Kind" />
+            <PropertyColumn Property="x => x.Budget" Format="C0" />
+        </Columns>
+    </TreeDataGrid>
+</section>
+
 @code {
     string status = "Pick options and interact with the grid";
+    DataGridExpandMode expandMode = DataGridExpandMode.Multiple;
     int frozenStart = 1, frozenEnd = 1;
     bool frozenMultiSelect;
     bool dense, striped = true, bordered, hover = true, loading;
@@ -121,7 +205,65 @@
     DataGridFilterMode filterMode = DataGridFilterMode.Menu;
     DataGridEditMode editMode = DataGridEditMode.Form;
 
+    void OnRowExpanded(Person p) => status = $"Opened {p.FirstName}";
+
+    bool busy;
+    readonly Dictionary<string, string> activity = new();
+
+    // Stands in for an API call - the detail template is not rendered until this completes.
+    async Task LoadActivityAsync(Person p)
+    {
+        await Task.Delay(900);
+        activity[p.CostCentre] = $"{p.LastName.Length + 3} approvals this quarter";
+    }
+
     List<Person> people = Person.Sample();
+    List<CostNode> accounts = CostNode.Sample();
+
+    // Stands in for a network call so the loading caret is actually visible.
+    async Task<IEnumerable<CostNode>> LoadRegionsAsync(CostNode node)
+    {
+        await Task.Delay(600);
+        status = $"Loaded {node.Name}";
+        return new List<CostNode>
+        {
+            new() { Name = "Northern region", Kind = "Team", Budget = 128_000 },
+            new() { Name = "Southern region", Kind = "Team", Budget = 112_000 }
+        };
+    }
+
+    public class CostNode
+    {
+        public string Name { get; set; } = "";
+        public string Kind { get; set; } = "";
+        public decimal Budget { get; set; }
+        public bool Lazy { get; set; }
+        public List<CostNode> Children { get; } = new();
+
+        public static List<CostNode> Sample()
+        {
+            var engineering = new CostNode { Name = "Engineering", Kind = "Division", Budget = 612_000 };
+            var platform = new CostNode { Name = "Platform", Kind = "Team", Budget = 318_000 };
+            platform.Children.Add(new() { Name = "Runtime", Kind = "Squad", Budget = 174_000 });
+            platform.Children.Add(new() { Name = "Tooling", Kind = "Squad", Budget = 144_000 });
+            var mobile = new CostNode { Name = "Mobile", Kind = "Team", Budget = 294_000 };
+            mobile.Children.Add(new() { Name = "iOS", Kind = "Squad", Budget = 151_000 });
+            mobile.Children.Add(new() { Name = "Android", Kind = "Squad", Budget = 143_000 });
+            engineering.Children.Add(platform);
+            engineering.Children.Add(mobile);
+
+            var research = new CostNode { Name = "Research", Kind = "Division", Budget = 388_000 };
+            research.Children.Add(new() { Name = "Applied", Kind = "Team", Budget = 205_000 });
+            research.Children.Add(new() { Name = "Long range", Kind = "Team", Budget = 183_000 });
+
+            return new List<CostNode>
+            {
+                engineering,
+                research,
+                new() { Name = "Field operations", Kind = "Division", Budget = 240_000, Lazy = true }
+            };
+        }
+    }
 
     void OnSelectionChanged(IReadOnlyCollection<Person> selected)
         => status = $"{selected.Count} selected";
@@ -138,17 +280,22 @@
         public bool Active { get; set; }
         public string Location { get; set; } = "";
         public string CostCentre { get; set; } = "";
+        public string Manager { get; set; } = "";
+        public string Email { get; set; } = "";
+        public DateTime StartDate { get; set; }
+        public string Region { get; set; } = "";
+        public string Extension { get; set; } = "";
 
         public static List<Person> Sample() =>
         [
-            new() { FirstName = "Ada", LastName = "Lovelace", Age = 36, Department = "Engineering", Salary = 142000, Active = true, Location = "London", CostCentre = "CC-1180" },
-            new() { FirstName = "Alan", LastName = "Turing", Age = 41, Department = "Research", Salary = 158000, Active = true, Location = "Manchester", CostCentre = "CC-2240" },
-            new() { FirstName = "Grace", LastName = "Hopper", Age = 52, Department = "Engineering", Salary = 165000, Active = false, Location = "Arlington", CostCentre = "CC-1180" },
-            new() { FirstName = "Katherine", LastName = "Johnson", Age = 44, Department = "Mathematics", Salary = 134000, Active = true, Location = "Hampton", CostCentre = "CC-3310" },
-            new() { FirstName = "Margaret", LastName = "Hamilton", Age = 39, Department = "Software", Salary = 151000, Active = true, Location = "Cambridge", CostCentre = "CC-4025" },
-            new() { FirstName = "Edsger", LastName = "Dijkstra", Age = 47, Department = "Research", Salary = 149000, Active = false, Location = "Eindhoven", CostCentre = "CC-2240" },
-            new() { FirstName = "Donald", LastName = "Knuth", Age = 58, Department = "Mathematics", Salary = 172000, Active = true, Location = "Palo Alto", CostCentre = "CC-3310" },
-            new() { FirstName = "Barbara", LastName = "Liskov", Age = 49, Department = "Software", Salary = 161000, Active = true, Location = "Cambridge", CostCentre = "CC-4025" },
+            new() { FirstName = "Ada", LastName = "Lovelace", Age = 36, Department = "Engineering", Salary = 142000, Active = true, Location = "London", CostCentre = "CC-1180", Manager = "Grace Hopper", Email = "ada.lovelace@example.com", StartDate = new DateTime(2019, 3, 4), Region = "EMEA", Extension = "x2041" },
+            new() { FirstName = "Alan", LastName = "Turing", Age = 41, Department = "Research", Salary = 158000, Active = true, Location = "Manchester", CostCentre = "CC-2240", Manager = "Grace Hopper", Email = "alan.turing@example.com", StartDate = new DateTime(2018, 9, 17), Region = "EMEA", Extension = "x2118" },
+            new() { FirstName = "Grace", LastName = "Hopper", Age = 52, Department = "Engineering", Salary = 165000, Active = false, Location = "Arlington", CostCentre = "CC-1180", Manager = "Donald Knuth", Email = "grace.hopper@example.com", StartDate = new DateTime(2016, 1, 12), Region = "AMER", Extension = "x1004" },
+            new() { FirstName = "Katherine", LastName = "Johnson", Age = 44, Department = "Mathematics", Salary = 134000, Active = true, Location = "Hampton", CostCentre = "CC-3310", Manager = "Donald Knuth", Email = "katherine.johnson@example.com", StartDate = new DateTime(2020, 6, 29), Region = "AMER", Extension = "x3310" },
+            new() { FirstName = "Margaret", LastName = "Hamilton", Age = 39, Department = "Software", Salary = 151000, Active = true, Location = "Cambridge", CostCentre = "CC-4025", Manager = "Barbara Liskov", Email = "margaret.hamilton@example.com", StartDate = new DateTime(2017, 11, 6), Region = "AMER", Extension = "x4025" },
+            new() { FirstName = "Edsger", LastName = "Dijkstra", Age = 47, Department = "Research", Salary = 149000, Active = false, Location = "Eindhoven", CostCentre = "CC-2240", Manager = "Grace Hopper", Email = "edsger.dijkstra@example.com", StartDate = new DateTime(2021, 2, 15), Region = "EMEA", Extension = "x2240" },
+            new() { FirstName = "Donald", LastName = "Knuth", Age = 58, Department = "Mathematics", Salary = 172000, Active = true, Location = "Palo Alto", CostCentre = "CC-3310", Manager = "Barbara Liskov", Email = "donald.knuth@example.com", StartDate = new DateTime(2015, 8, 3), Region = "AMER", Extension = "x3311" },
+            new() { FirstName = "Barbara", LastName = "Liskov", Age = 49, Department = "Software", Salary = 161000, Active = true, Location = "Cambridge", CostCentre = "CC-4025", Manager = "Grace Hopper", Email = "barbara.liskov@example.com", StartDate = new DateTime(2014, 5, 19), Region = "AMER", Extension = "x4026" },
         ];
     }
 }

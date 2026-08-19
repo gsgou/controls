@@ -343,7 +343,8 @@
             <FontImageSource Glyph="&#x25A6;" Size="20"
                              Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
         </FlyoutItem.FlyoutIcon>
-        <ShellContent ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
+        <ShellContent Title="Grid" ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
+        <ShellContent Title="Tree" ContentTemplate="{DataTemplate datagrid:TreeDataGridPage}" Route="treedatagrid" />
     </FlyoutItem>
 
     <FlyoutItem Title="Docking">

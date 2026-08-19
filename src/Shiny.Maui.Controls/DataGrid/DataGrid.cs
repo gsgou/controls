@@ -129,6 +129,9 @@ public partial class DataGrid : ContentView
     IReadOnlyList<DataGridColumn> VisibleColumns
         => this.Columns.Where(c => c.IsVisible).ToList();
 
+    /// <summary>The flattened list the CollectionView renders - rows, group headers and detail rows.</summary>
+    internal IReadOnlyList<object> DisplayItems => this.displayItems;
+
     bool HasMultiSelect => this.SelectionMode == DataGridSelectionMode.Multiple;
 
     void OnColumnsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.RebuildAll();
@@ -187,22 +190,28 @@ public partial class DataGrid : ContentView
 
                     foreach (var item in items)
                     {
-                        var row = new DataGridRow(item) { Index = index++ };
-                        row.PropertyChanged += this.OnRowPropertyChanged;
+                        var row = this.CreateRow(item, 0, index++);
                         this.dataRows.Add(row);
                         this.displayItems.Add(row);
+                        this.AppendDetailRow(row);
                     }
                 }
             }
+        }
+        else if (this.TreeEnabled)
+        {
+            // Hierarchy replaces the flat pass entirely: the page is a page of *roots*, and each
+            // expanded root brings its own (separately filtered and sorted) subtree with it.
+            this.AppendTreeRows(this.GetPageData(), 0, index);
         }
         else
         {
             foreach (var item in this.GetPageData())
             {
-                var row = new DataGridRow(item) { Index = index++ };
-                row.PropertyChanged += this.OnRowPropertyChanged;
+                var row = this.CreateRow(item, 0, index++);
                 this.dataRows.Add(row);
                 this.displayItems.Add(row);
+                this.AppendDetailRow(row);
             }
         }
 
@@ -233,6 +242,9 @@ public partial class DataGrid : ContentView
             .Append(this.frozenStart).Append('|')
             .Append(this.frozenEnd).Append('|')
             .Append(this.HasMultiSelect).Append('|')
+            .Append(this.HasExpanderColumn).Append('|')
+            .Append(this.TreeEnabled).Append('|')
+            .Append(this.TreeIndentSize).Append('|')
             .Append(this.Dense).Append('|')
             .Append(this.Bordered).Append('|')
             .Append(this.RowHeight).Append('|');
@@ -275,7 +287,9 @@ public partial class DataGrid : ContentView
         {
             RowTemplate = new DataTemplate(this.BuildRowView),
             GroupTemplate = new DataTemplate(this.BuildGroupHeaderView),
-            EditRowTemplate = new DataTemplate(this.BuildEditRowView)
+            EditRowTemplate = new DataTemplate(this.BuildEditRowView),
+            DetailTemplate = new DataTemplate(this.BuildDetailRowView),
+            DetailLoadingTemplate = new DataTemplate(this.BuildDetailLoadingRowView)
         };
 
     // ---------- Inline editing ----------
@@ -353,7 +367,7 @@ public partial class DataGrid : ContentView
 
         this.LayoutCells(
             grid,
-            this.HasMultiSelect ? new Grid() : null,
+            this.LeadingPlaceholders(),
             this.BuildEditCellView,
             this.StyleContainerPane
         );
@@ -449,7 +463,7 @@ public partial class DataGrid : ContentView
 
         this.LayoutCells(
             this.footerGrid,
-            this.HasMultiSelect ? new Grid() : null,
+            this.LeadingPlaceholders(),
             column => BuildFooterCell(column, items),
             this.StyleSurfacePane
         );
@@ -547,39 +561,67 @@ public partial class DataGrid : ContentView
         ? Math.Max(1, (int)Math.Ceiling(this.TotalItems / (double)Math.Max(1, this.PageSize)))
         : 1;
 
+    /// <summary>
+    /// The rows the grid is working from: in a flat grid every item, in tree mode the *roots*. Both
+    /// go through <see cref="ProcessLevel"/>, which is also what each expanded node's children run
+    /// through - so a tree is filtered and sorted one level at a time.
+    /// </summary>
     IReadOnlyList<object> ProcessedData()
     {
         if (this.serverItems is not null)
             return this.serverItems.Cast<object>().ToList();
 
-        IEnumerable<object> q = this.ItemsSource?.Cast<object>() ?? Enumerable.Empty<object>();
+        return this.ProcessLevel(this.ItemsSource?.Cast<object>() ?? Enumerable.Empty<object>());
+    }
 
+    /// <summary>Filters and sorts one level of items - the roots, or one node's children.</summary>
+    IReadOnlyList<object> ProcessLevel(IEnumerable<object> items)
+        => this.ApplySort(this.HasActiveFilters ? items.Where(this.KeepInResults) : items);
+
+    bool HasActiveFilters => this.filterDefs.Count > 0 || !string.IsNullOrEmpty(this.quickSearch);
+
+    /// <summary>
+    /// A node survives filtering if it matches, or if anything beneath it does - dropping a parent
+    /// whose child matched would hide the match along with it.
+    /// </summary>
+    bool KeepInResults(object item)
+        => this.MatchesFilters(item) || (this.TreeEnabled && this.AnyDescendantMatches(item));
+
+    bool AnyDescendantMatches(object item)
+    {
+        // Children that have not been fetched yet cannot be searched; keep the branch so the user
+        // can still open it rather than silently pruning a subtree that may well match.
+        if (this.NeedsChildrenLoad(item))
+            return true;
+
+        foreach (var child in this.RawChildren(item))
+        {
+            if (this.KeepInResults(child))
+                return true;
+        }
+        return false;
+    }
+
+    bool MatchesFilters(object item)
+    {
         if (!string.IsNullOrEmpty(this.quickSearch))
         {
             var term = this.quickSearch;
-            q = q.Where(item => this.VisibleColumns.Any(c =>
-                c.HasValue && (c.GetText(item)?.Contains(term, StringComparison.CurrentCultureIgnoreCase) ?? false)));
+            var hit = this.VisibleColumns.Any(c =>
+                c.HasValue && (c.GetText(item)?.Contains(term, StringComparison.CurrentCultureIgnoreCase) ?? false));
+            if (!hit)
+                return false;
         }
 
-        q = this.ApplyFilters(q);
-        return this.ApplySort(q);
-    }
-
-    IEnumerable<object> ApplyFilters(IEnumerable<object> source)
-    {
-        if (this.filterDefs.Count == 0)
-            return source;
-
-        var result = source;
         foreach (var def in this.filterDefs)
         {
             var col = this.Columns.FirstOrDefault(c => c.Id == def.ColumnId);
             if (col is null)
                 continue;
-            var capture = def;
-            result = result.Where(item => DataGridFilterEvaluator.Matches(col.GetCellValue(item), capture.Operator, capture.Value));
+            if (!DataGridFilterEvaluator.Matches(col.GetCellValue(item), def.Operator, def.Value))
+                return false;
         }
-        return result;
+        return true;
     }
 
     IReadOnlyList<object> ApplySort(IEnumerable<object> source)
@@ -693,15 +735,18 @@ public partial class DataGrid : ContentView
         if (!this.ShowColumnHeaders)
             return;
 
-        View? selectAll = null;
+        var leading = new List<View>();
+        if (this.HasExpanderColumn)
+            leading.Add(new Grid());
+
         if (this.HasMultiSelect)
         {
             var check = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
             check.CheckedChanged += (_, e) => this.ToggleSelectAll(e.Value);
-            selectAll = check;
+            leading.Add(check);
         }
 
-        this.LayoutCells(this.headerGrid, selectAll, this.BuildHeaderCell, this.StyleSurfacePane);
+        this.LayoutCells(this.headerGrid, leading, this.BuildHeaderCell, this.StyleSurfacePane);
 
         this.BuildFilterRow();
         this.toolbarBar.IsVisible = this.FilterMode == DataGridFilterMode.Toolbar;
@@ -859,7 +904,7 @@ public partial class DataGrid : ContentView
         this.filterRowGrid.ColumnDefinitions = this.BuildColumnDefinitions();
         this.LayoutCells(
             this.filterRowGrid,
-            this.HasMultiSelect ? new Grid() : null,
+            this.LeadingPlaceholders(),
             this.BuildFilterCell,
             this.StyleSurfacePane
         );
@@ -949,7 +994,7 @@ public partial class DataGrid : ContentView
     Type ItemTypeOrString()
         => this.ItemsSource?.Cast<object>().FirstOrDefault()?.GetType() ?? typeof(string);
 
-    void SetQuickSearch(string? text)
+    internal void SetQuickSearch(string? text)
     {
         this.quickSearch = text ?? string.Empty;
         this.currentPage = 0;
@@ -1093,6 +1138,8 @@ public partial class DataGrid : ContentView
     ColumnDefinitionCollection BuildColumnDefinitions()
     {
         var defs = new ColumnDefinitionCollection();
+        if (this.HasExpanderColumn)
+            defs.Add(new ColumnDefinition(new GridLength(ExpanderColumnWidth)));
         if (this.HasMultiSelect)
             defs.Add(new ColumnDefinition(new GridLength(CheckboxColumnWidth)));
 
@@ -1128,15 +1175,18 @@ public partial class DataGrid : ContentView
         var bottomLine = new BoxView { HeightRequest = 1, VerticalOptions = LayoutOptions.End };
         bottomLine.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OutlineVariant);
 
-        View? check = null;
+        var leading = new List<View>();
+        if (this.HasExpanderColumn)
+            leading.Add(this.BuildExpanderCell());
+
         if (this.HasMultiSelect)
         {
             var box = new CheckBox { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
             box.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(DataGridRow.IsSelected), BindingMode.TwoWay));
-            check = box;
+            leading.Add(box);
         }
 
-        this.LayoutCells(grid, check, this.BuildCellView, pane =>
+        this.LayoutCells(grid, leading, this.BuildCellView, pane =>
         {
             this.StyleRowPane(pane);
             if (this.Bordered)
@@ -1172,7 +1222,16 @@ public partial class DataGrid : ContentView
         }
     }
 
+    /// <summary>The column the tree caret and indent live in - the first visible one.</summary>
+    bool IsTreeColumn(DataGridColumn column)
+        => this.TreeEnabled && ReferenceEquals(this.VisibleColumns.FirstOrDefault(), column);
+
     View BuildCellView(DataGridColumn column)
+        => this.IsTreeColumn(column)
+            ? this.WrapTreeCell(this.BuildPlainCellView(column))
+            : this.BuildPlainCellView(column);
+
+    View BuildPlainCellView(DataGridColumn column)
     {
         if (column.CellTemplate is not null)
         {
@@ -1202,6 +1261,12 @@ public partial class DataGrid : ContentView
     // ---------- Selection ----------
     void OnRowTapped(DataGridRow row)
     {
+        if (this.ExpandOnRowTap && this.ExpansionEnabled)
+        {
+            if (row.HasDetail || row.HasChildren)
+                this.ToggleRow(row.Data);
+        }
+
         if (this.EditingEnabled && this.EditTrigger == DataGridEditTrigger.OnRowClick)
         {
             if (!ReferenceEquals(this.editingRow, row))

@@ -43,10 +43,15 @@
                 {
                     <thead>
                         <tr>
+                            @if (HasExpanderColumn)
+                            {
+                                <th class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                    style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></th>
+                            }
                             @if (HasMultiSelect)
                             {
-                                <th class="shiny-dg-checkcol@(FrozenCssClass(null))"
-                                    style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)">
+                                <th class="shiny-dg-checkcol@(LeadFrozenCssClass())"
+                                    style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()">
                                     <input type="checkbox" checked="@AllSelected"
                                            @onchange="e => ToggleSelectAllAsync(e.Value is true)" />
                                 </th>
@@ -123,10 +128,15 @@
                         @if (FilterMode == DataGridFilterMode.Row)
                         {
                             <tr class="shiny-dg-filter-row">
+                                @if (HasExpanderColumn)
+                                {
+                                    <th class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                        style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></th>
+                                }
                                 @if (HasMultiSelect)
                                 {
-                                    <th class="@FrozenCssClass(null)" style="@FrozenOffsetStyle(null)"
-                                        data-dg-frozen="@FrozenAttr(null)"></th>
+                                    <th class="@LeadFrozenCssClass()" style="@LeadFrozenOffsetStyle(CheckColumnIndex)"
+                                        data-dg-frozen="@LeadFrozenAttr()"></th>
                                 }
                                 @foreach (var col in VisibleColumns)
                                 {
@@ -147,12 +157,32 @@
 
                 <tbody>
                     @{
-                        RenderFragment<TItem> rowFragment = rowItem =>
-                            @<tr class="@RowCssClass(rowItem)" @onclick="() => RowClickedAsync(rowItem)">
+                        var treeColumn = TreeEnabled ? VisibleColumns.FirstOrDefault() : null;
+
+                        RenderFragment<RowNode> rowFragment = node =>
+                            @<tr class="@RowCssClass(node.Item)" @onclick="() => RowClickedAsync(node.Item)">
+                                @{ var rowItem = node.Item; }
+                                @if (HasExpanderColumn)
+                                {
+                                    <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                        style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="() => OnExpanderClickAsync(rowItem)">
+                                        @if (IsRowDetailLoading(rowItem))
+                                        {
+                                            @* The caret is the button, so the progress belongs on it. *@
+                                            <span class="shiny-dg-busy" role="progressbar" aria-label="Loading"></span>
+                                        }
+                                        else if (CanShowDetail(rowItem))
+                                        {
+                                            <span class="shiny-dg-expander">@(IsRowExpanded(rowItem) ? "▾" : "▸")</span>
+                                        }
+                                    </td>
+                                }
                                 @if (HasMultiSelect)
                                 {
-                                    <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
-                                        style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"
+                                    <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
+                                        style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"
                                         @onclick:stopPropagation="true">
                                         <input type="checkbox" checked="@IsSelected(rowItem)"
                                                @onchange="() => ToggleRowAsync(rowItem)" />
@@ -167,6 +197,22 @@
                                         data-dg-frozen="@FrozenAttr(col)"
                                         @onclick="() => OnCellClickAsync(rowItem, col)"
                                         @onclick:stopPropagation="@(EditMode == DataGridEditMode.Cell && EffectiveEditable(col))">
+                                        @if (col == treeColumn)
+                                        {
+                                            <span class="shiny-dg-tree-indent" style="width:@(node.Level * TreeIndentSize)px"></span>
+                                            <span class="shiny-dg-tree-caret@(node.HasChildren ? "" : " shiny-dg-tree-leaf")"
+                                                  @onclick:stopPropagation="true"
+                                                  @onclick="() => OnExpanderClickAsync(rowItem)">
+                                                @if (node.IsLoading)
+                                                {
+                                                    <span class="shiny-dg-busy" role="progressbar" aria-label="Loading"></span>
+                                                }
+                                                else
+                                                {
+                                                    @node.CaretGlyph
+                                                }
+                                            </span>
+                                        }
                                         @if (editingThisCell || editingFormCell)
                                         {
                                             @if (col.EditTemplate is not null)
@@ -198,15 +244,43 @@
                                 }
                             </tr>;
 
-                        RenderFragment<TItem> rowWithEdit = rowItem =>
+                        RenderFragment<RowNode> rowWithEdit = node =>
                             @<text>
-                                @rowFragment(rowItem)
-                                @if (EditMode == DataGridEditMode.Form && IsEditingRow(rowItem))
+                                @rowFragment(node)
+                                @if (EditMode == DataGridEditMode.Form && IsEditingRow(node.Item))
                                 {
                                     <tr class="shiny-dg-edit-actions">
                                         <td colspan="@ColSpan">
                                             <button type="button" class="shiny-dg-edit-save" @onclick="CommitEditAsync">Save</button>
                                             <button type="button" class="shiny-dg-edit-cancel" @onclick="CancelEditAsync">Cancel</button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (RowDetailTemplate is not null && CanShowDetail(node.Item) && IsRowExpanded(node.Item))
+                                {
+                                    <tr class="shiny-dg-detail">
+                                        <td colspan="@ColSpan">
+                                            @* Sticky + fit-content keeps the breakdown at the leading edge while the
+                                               columns scroll sideways underneath it. *@
+                                            <div class="shiny-dg-detail-inner">
+                                                @if (IsRowDetailLoading(node.Item))
+                                                {
+                                                    @* The loaded template is never rendered mid-load, so it can assume
+                                                       its data arrived. *@
+                                                    @if (RowDetailLoadingTemplate is not null)
+                                                    {
+                                                        @RowDetailLoadingTemplate(node.Item)
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="shiny-dg-busy shiny-dg-busy-lg" role="progressbar" aria-label="Loading"></span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    @RowDetailTemplate(node.Item)
+                                                }
+                                            </div>
                                         </td>
                                     </tr>
                                 }
@@ -228,17 +302,22 @@
                             </tr>
                             @if (!collapsed)
                             {
-                                @foreach (var item in group.Items)
+                                @foreach (var node in Flatten(group.Items))
                                 {
-                                    @rowWithEdit(item)
+                                    @rowWithEdit(node)
                                 }
                                 @if (HasFooter)
                                 {
                                     <tr class="shiny-dg-group-footer">
+                                        @if (HasExpanderColumn)
+                                        {
+                                            <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                                style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></td>
+                                        }
                                         @if (HasMultiSelect)
                                         {
-                                            <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
-                                                style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"></td>
+                                            <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
+                                                style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"></td>
                                         }
                                         @foreach (var c in VisibleColumns)
                                         {
@@ -252,7 +331,7 @@
                     }
                     else
                     {
-                        var items = GetRenderedItems();
+                        var items = GetRenderedRows();
                         @if (items.Count == 0 && !Loading)
                         {
                             <tr class="shiny-dg-norecords">
@@ -270,15 +349,15 @@
                         }
                         else if (CanVirtualize)
                         {
-                            <Virtualize Items="@items.ToList()" Context="vitem">
-                                @rowWithEdit(vitem)
+                            <Virtualize Items="@items.ToList()" Context="vnode">
+                                @rowWithEdit(vnode)
                             </Virtualize>
                         }
                         else
                         {
-                            @foreach (var item in items)
+                            @foreach (var node in items)
                             {
-                                @rowWithEdit(item)
+                                @rowWithEdit(node)
                             }
                         }
                     }
@@ -288,10 +367,15 @@
                 {
                     <tfoot>
                         <tr>
+                            @if (HasExpanderColumn)
+                            {
+                                <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                    style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></td>
+                            }
                             @if (HasMultiSelect)
                             {
-                                <td class="shiny-dg-checkcol@(FrozenCssClass(null))"
-                                    style="@FrozenOffsetStyle(null)" data-dg-frozen="@FrozenAttr(null)"></td>
+                                <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
+                                    style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"></td>
                             }
                             @foreach (var col in VisibleColumns)
                             {

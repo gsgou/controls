@@ -440,3 +440,120 @@
 @keyframes shiny-dg-spin {
     to { transform: rotate(360deg); }
 }
+
+/* ---- Expander column, tree carets and the detail (breakdown) row ---- */
+.shiny-dg-expandcol {
+    width: 44px;
+    min-width: 44px;
+    text-align: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    cursor: pointer;
+}
+
+/* A real target, not just a glyph: 28px is comfortably clickable with a mouse and close to the 44px
+   the cell around it gives a finger. */
+.shiny-dg-expander {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--shiny-color-on-surface-variant, #777);
+    font-size: calc(15px * var(--shiny-type-scale, 1));
+    line-height: 1;
+    user-select: none;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.shiny-dg-expandcol:hover .shiny-dg-expander {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 12%, transparent);
+    color: var(--shiny-color-primary, #7c3aed);
+}
+
+.shiny-dg-dense .shiny-dg-expandcol {
+    width: 36px;
+    min-width: 36px;
+}
+
+.shiny-dg-dense .shiny-dg-expander {
+    width: 22px;
+    height: 22px;
+}
+
+.shiny-dg-tree-indent {
+    display: inline-block;
+    flex: none;
+}
+
+.shiny-dg-tree-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 2px;
+    border-radius: 50%;
+    vertical-align: middle;
+    cursor: pointer;
+    color: var(--shiny-color-on-surface-variant, #777);
+    font-size: calc(15px * var(--shiny-type-scale, 1));
+    line-height: 1;
+    user-select: none;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.shiny-dg-tree-caret:not(.shiny-dg-tree-leaf):hover {
+    background: color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 12%, transparent);
+    color: var(--shiny-color-primary, #7c3aed);
+}
+
+/* A leaf keeps the caret's width so its text lines up with its siblings' - it just has nothing
+   to show and nothing to click. */
+.shiny-dg-tree-leaf {
+    cursor: default;
+}
+
+.shiny-dg-detail > td {
+    padding: 0;
+    background: var(--shiny-color-surface-container-low, color-mix(in srgb, var(--shiny-color-on-surface, #000) 3%, var(--shiny-color-surface, #fff)));
+}
+
+/* The detail cell spans every column, so it would slide out of view with them. Sticky + fit-content
+   pins the content to the leading edge instead, which is what the MAUI grid does with its panes. */
+.shiny-dg-detail-inner {
+    position: sticky;
+    left: 0;
+    width: fit-content;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: var(--shiny-spacing-3, 12px) var(--shiny-spacing-4, 16px);
+}
+
+/* The busy spinner that takes an expand caret's place while that row's loader runs. Sized to the
+   caret it replaces so the column does not twitch when it swaps in. */
+.shiny-dg-busy {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    vertical-align: middle;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--shiny-color-primary, #7c3aed) 30%, transparent);
+    border-top-color: var(--shiny-color-primary, #7c3aed);
+    border-radius: 50%;
+    animation: shiny-dg-spin 0.7s linear infinite;
+}
+
+.shiny-dg-busy-lg {
+    width: 18px;
+    height: 18px;
+    border-width: var(--shiny-border-thick, 3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-dg-busy {
+        animation-duration: 2s;
+    }
+}

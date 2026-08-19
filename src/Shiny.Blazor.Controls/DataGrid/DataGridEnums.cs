@@ -104,3 +104,15 @@ public enum DataGridFrozen
     /// <summary>Pinned to the trailing edge (right in LTR).</summary>
     End
 }
+
+/// <summary>
+/// How many rows can be expanded (detail row / tree children) at once.
+/// </summary>
+public enum DataGridExpandMode
+{
+    /// <summary>Expanding a row collapses whatever was expanded before it.</summary>
+    Single,
+
+    /// <summary>Any number of rows can be expanded at the same time.</summary>
+    Multiple
+}

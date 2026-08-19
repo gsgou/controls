@@ -34,6 +34,18 @@ public partial class DataGridViewModel : ObservableObject
         new("Barbara", "Liskov", 49, "Software", 161000, true),
     ];
 
+    /// <summary>
+    /// Stands in for an API call. The loader returns nothing - it fills an observable property on the
+    /// item, and the detail template binds to it as usual (and is not built until this completes).
+    /// </summary>
+    public Func<object, Task> LoadActivity
+        => async item =>
+        {
+            var person = (Person)item;
+            await Task.Delay(900);
+            person.RecentActivity = $"{person.LastName.Length + 3} approvals this quarter";
+        };
+
     partial void OnSelectedItemChanged(object? value)
     {
         if (value is Person p)
@@ -49,6 +61,9 @@ public partial class Person(string firstName, string lastName, int age, string d
     [ObservableProperty] string department = department;
     [ObservableProperty] decimal salary = salary;
     [ObservableProperty] bool active = active;
+
+    /// <summary>Filled by the grid's RowDetailLoader the first time this row is expanded.</summary>
+    [ObservableProperty] string recentActivity = "";
 
     public string StatusText => this.Active ? "Active" : "Inactive";
     public PillType StatusPill => this.Active ? PillType.Success : PillType.Caution;

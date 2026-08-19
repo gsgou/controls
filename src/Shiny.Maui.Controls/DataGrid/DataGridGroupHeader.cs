@@ -27,11 +27,15 @@ sealed class DataGridItemTemplateSelector : DataTemplateSelector
     public DataTemplate RowTemplate { get; set; } = default!;
     public DataTemplate GroupTemplate { get; set; } = default!;
     public DataTemplate EditRowTemplate { get; set; } = default!;
+    public DataTemplate DetailTemplate { get; set; } = default!;
+    public DataTemplate DetailLoadingTemplate { get; set; } = default!;
 
     protected override DataTemplate OnSelectTemplate(object item, BindableObject container)
     {
         if (item is DataGridGroupHeader)
             return this.GroupTemplate;
+        if (item is DataGridDetailRow detail)
+            return detail.IsLoading ? this.DetailLoadingTemplate : this.DetailTemplate;
         if (item is DataGridRow { IsEditing: true })
             return this.EditRowTemplate;
         return this.RowTemplate;

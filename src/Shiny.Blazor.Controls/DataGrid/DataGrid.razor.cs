@@ -132,8 +132,27 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
     internal bool HasFrozenColumns => this.FrozenStartCount > 0 || this.FrozenEndCount > 0;
 
-    /// <summary>The multi-select checkbox column is always leftmost, so it pins with the start block.</summary>
-    internal bool FrozenCheckColumn => this.HasMultiSelect && this.FrozenStartCount > 0;
+    /// <summary>
+    /// The expander and multi-select columns are always leftmost, so they pin with the start block.
+    /// </summary>
+    internal bool FrozenLeadColumns => this.LeadColumnCount > 0 && this.FrozenStartCount > 0;
+
+    /// <summary>Lead-column index: the expander comes first, then the checkbox.</summary>
+    internal int CheckColumnIndex => this.HasExpanderColumn ? 1 : 0;
+
+    internal string? LeadFrozenAttr() => this.FrozenLeadColumns ? "start" : null;
+
+    internal string LeadFrozenCssClass()
+        => this.FrozenLeadColumns ? " shiny-dg-frozen shiny-dg-frozen-start" : string.Empty;
+
+    /// <summary>
+    /// First-paint offset for a pinned lead cell. The expander column has a fixed CSS width so its
+    /// neighbour can be placed up front; datagrid.js re-measures and corrects both after render.
+    /// </summary>
+    internal string? LeadFrozenOffsetStyle(int index)
+        => this.FrozenLeadColumns
+            ? string.Create(CultureInfo.InvariantCulture, $"left:{(index == 0 ? 0 : ExpanderWidthPx):0.##}px;")
+            : null;
 
     readonly record struct FrozenCell(DataGridFrozen Position, bool Edge, double? Offset);
 
@@ -165,7 +184,9 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         // Best-effort offsets so the pinning is right on the very first paint (and without JS at
         // all when every pinned column declares a px width). datagrid.js re-measures and corrects
         // whatever we could not work out here.
-        double? offset = this.HasMultiSelect ? null : 0;
+        // The checkbox column is sized by content, so anything after it has to wait for the JS
+        // measurement; the fixed-width expander column can be resolved here.
+        double? offset = this.HasMultiSelect ? null : this.HasExpanderColumn ? ExpanderWidthPx : 0;
         for (var i = 0; i < start; i++)
         {
             this.frozenCells[cols[i].Id] = new FrozenCell(DataGridFrozen.Start, i == start - 1, offset);
@@ -197,22 +218,15 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     }
 
     /// <summary>The <c>data-dg-frozen</c> marker datagrid.js keys its measurements off.</summary>
-    internal string? FrozenAttr(ColumnBase<TItem>? col)
+    internal string? FrozenAttr(ColumnBase<TItem> col)
     {
-        if (col is null)
-            return this.FrozenCheckColumn ? "start" : null;
-
         return this.frozenCells.TryGetValue(col.Id, out var f)
             ? f.Position == DataGridFrozen.Start ? "start" : "end"
             : null;
     }
 
-    /// <summary>Pass a null column for the multi-select checkbox cell.</summary>
-    internal string FrozenCssClass(ColumnBase<TItem>? col)
+    internal string FrozenCssClass(ColumnBase<TItem> col)
     {
-        if (col is null)
-            return this.FrozenCheckColumn ? " shiny-dg-frozen shiny-dg-frozen-start" : string.Empty;
-
         if (!this.frozenCells.TryGetValue(col.Id, out var f))
             return string.Empty;
 
@@ -222,11 +236,8 @@ public partial class DataGrid<TItem> : IAsyncDisposable
             : $" shiny-dg-frozen shiny-dg-frozen-{side}";
     }
 
-    internal string? FrozenOffsetStyle(ColumnBase<TItem>? col)
+    internal string? FrozenOffsetStyle(ColumnBase<TItem> col)
     {
-        if (col is null)
-            return this.FrozenCheckColumn ? "left:0;" : null;
-
         if (!this.frozenCells.TryGetValue(col.Id, out var f) || f.Offset is not { } offset)
             return null;
 
@@ -254,6 +265,17 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
     protected override void OnParametersSet()
     {
+        // Same for expansion - a caller can drive it from the outside.
+        if (this.ExpandedItems.Count > 0 || this.expandedItems.Count > 0)
+        {
+            if (!this.expandedItems.SetEquals(this.ExpandedItems))
+            {
+                this.expandedItems.Clear();
+                foreach (var item in this.ExpandedItems)
+                    this.expandedItems.Add(item);
+            }
+        }
+
         // Keep the internal selection set in sync with bound parameters.
         if (this.SelectionMode == DataGridSelectionMode.Multiple)
         {
@@ -430,25 +452,71 @@ public partial class DataGrid<TItem> : IAsyncDisposable
             : type == typeof(bool) || type.IsEnum ? DataGridFilterOperator.Is
             : DataGridFilterOperator.Equals;
 
+    /// <summary>
+    /// The rows the grid is working from: in a flat grid every item, in tree mode the *roots*. Both go
+    /// through <see cref="ProcessLevel"/>, which is also what each expanded node's children run through
+    /// - so a tree is filtered and sorted one level at a time.
+    /// </summary>
     internal IReadOnlyList<TItem> ProcessedItems()
     {
         if (this.serverItems is not null)
             return this.serverItems;
 
-        IEnumerable<TItem> q = this.Items ?? Enumerable.Empty<TItem>();
+        return this.ProcessLevel(this.Items ?? Enumerable.Empty<TItem>());
+    }
 
-        if (this.QuickFilter is not null)
-            q = q.Where(this.QuickFilter);
+    /// <summary>Filters and sorts one level of items - the roots, or one node's children.</summary>
+    internal IReadOnlyList<TItem> ProcessLevel(IEnumerable<TItem> items)
+        => this.ApplySort(this.HasActiveFilters ? items.Where(this.KeepInResults) : items);
+
+    bool HasActiveFilters
+        => this.filterDefs.Count > 0 || !string.IsNullOrEmpty(this.quickSearch) || this.QuickFilter is not null;
+
+    /// <summary>
+    /// A node survives filtering if it matches, or if anything beneath it does - dropping a parent
+    /// whose child matched would hide the match along with it.
+    /// </summary>
+    bool KeepInResults(TItem item)
+        => this.MatchesFilters(item) || (this.TreeEnabled && this.AnyDescendantMatches(item));
+
+    bool AnyDescendantMatches(TItem item)
+    {
+        // Children that have not been fetched yet cannot be searched; keep the branch so the user can
+        // still open it rather than silently pruning a subtree that may well match.
+        if (this.NeedsChildrenLoad(item))
+            return true;
+
+        foreach (var child in this.RawChildren(item))
+        {
+            if (this.KeepInResults(child))
+                return true;
+        }
+        return false;
+    }
+
+    bool MatchesFilters(TItem item)
+    {
+        if (this.QuickFilter is not null && !this.QuickFilter(item))
+            return false;
 
         if (!string.IsNullOrEmpty(this.quickSearch))
         {
             var term = this.quickSearch;
-            q = q.Where(item => this.VisibleColumns.Any(c =>
-                c.HasValue && (c.GetText(item)?.Contains(term, StringComparison.CurrentCultureIgnoreCase) ?? false)));
+            var hit = this.VisibleColumns.Any(c =>
+                c.HasValue && (c.GetText(item)?.Contains(term, StringComparison.CurrentCultureIgnoreCase) ?? false));
+            if (!hit)
+                return false;
         }
 
-        q = this.ApplyColumnFilters(q);
-        return this.ApplySort(q);
+        foreach (var def in this.filterDefs)
+        {
+            var col = this.columns.FirstOrDefault(c => c.Id == def.ColumnId);
+            if (col is null)
+                continue;
+            if (!DataGridFilterEvaluator.Matches(col.GetValue(item), def.Operator, def.Value))
+                return false;
+        }
+        return true;
     }
 
     IReadOnlyList<TItem> ApplySort(IEnumerable<TItem> source)
@@ -515,24 +583,6 @@ public partial class DataGrid<TItem> : IAsyncDisposable
             start = this.CurrentPage * this.RowsPerPage;
         }
         return processed.Skip(start).Take(this.RowsPerPage).ToList();
-    }
-
-    // ---- Column filters (operators applied in Phase 3 via FilterDefinitions) ----
-    IEnumerable<TItem> ApplyColumnFilters(IEnumerable<TItem> source)
-    {
-        if (this.filterDefs.Count == 0)
-            return source;
-
-        var result = source;
-        foreach (var def in this.filterDefs)
-        {
-            var col = this.columns.FirstOrDefault(c => c.Id == def.ColumnId);
-            if (col is null)
-                continue;
-            var capture = def;
-            result = result.Where(item => DataGridFilterEvaluator.Matches(col.GetValue(item), capture.Operator, capture.Value));
-        }
-        return result;
     }
 
     // ---- Server-side data ----
@@ -682,6 +732,9 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     {
         if (this.RowClick.HasDelegate)
             await this.RowClick.InvokeAsync(item);
+
+        if (this.ExpandOnRowClick && this.CanExpand(item))
+            await this.ToggleExpandAsync(item);
 
         if (this.EditMode == DataGridEditMode.Form && this.EditTrigger == DataGridEditTrigger.OnRowClick && this.EditingEnabled)
         {
@@ -933,17 +986,39 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     string? RootStyle
         => string.IsNullOrEmpty(this.Height) ? this.Style : $"--shiny-dg-height:{this.Height};{this.Style}";
 
-    internal int ColSpan => this.VisibleColumns.Count + (this.HasMultiSelect ? 1 : 0);
+    internal int ColSpan => this.VisibleColumns.Count + this.LeadColumnCount;
 
     internal bool HasFooter => this.VisibleColumns.Any(c => c.FooterTemplate is not null || c.Aggregate is not null);
 
-    string? ColumnWidthStyle(ColumnBase<TItem> col)
+    /// <summary>
+    /// A declared width has to carry a <c>min-width</c> with it. Under <c>table-layout: auto</c> the
+    /// browser treats <c>width</c> on a cell as a *suggestion* and happily compresses every column to
+    /// fit the container - so a grid asking for 1320px of columns inside an 810px scroller rendered at
+    /// 810px, never overflowed, and its frozen columns had nothing to stay put against. Percentages are
+    /// left alone: they are asking to be relative to the container, which is exactly what shrinking is.
+    /// </summary>
+    internal string? ColumnWidthStyle(ColumnBase<TItem> col)
     {
-        var width = this.columnWidths.TryGetValue(col.Id, out var w)
-            ? $"width:{w};min-width:{w};max-width:{w};"
-            : string.IsNullOrEmpty(col.Width) ? null : $"width:{col.Width};";
+        string? width;
+        if (this.columnWidths.TryGetValue(col.Id, out var resized))
+        {
+            width = $"width:{resized};min-width:{resized};max-width:{resized};";
+        }
+        else if (string.IsNullOrEmpty(col.Width))
+        {
+            width = null;
+        }
+        else
+        {
+            width = col.Width.Contains('%', StringComparison.Ordinal)
+                ? $"width:{col.Width};"
+                : $"width:{col.Width};min-width:{col.Width};";
+        }
 
-        return width + this.FrozenOffsetStyle(col);
+        // Concatenating two nulls gives "", which Blazor renders as a pointless style="" on every cell
+        // of an unsized column; null is skipped entirely.
+        var style = width + this.FrozenOffsetStyle(col);
+        return string.IsNullOrEmpty(style) ? null : style;
     }
 
     string HeaderCssClass(ColumnBase<TItem> col)

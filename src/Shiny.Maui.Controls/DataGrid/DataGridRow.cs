@@ -3,13 +3,16 @@ using System.ComponentModel;
 namespace Shiny.Maui.Controls.DataGrid;
 
 /// <summary>
-/// Internal per-row wrapper so the grid can track selection/edit state without mutating the user's
-/// data objects. Row cell content binds to <see cref="Data"/>.
+/// Internal per-row wrapper so the grid can track selection/edit/expansion state without mutating the
+/// user's data objects. Row cell content binds to <see cref="Data"/>.
 /// </summary>
 sealed class DataGridRow : INotifyPropertyChanged
 {
     bool isSelected;
     bool isEditing;
+    bool isExpanded;
+    bool isLoadingChildren;
+    bool isLoadingDetail;
 
     public DataGridRow(object data) => this.Data = data;
 
@@ -17,6 +20,15 @@ sealed class DataGridRow : INotifyPropertyChanged
 
     /// <summary>Row position used for striping.</summary>
     public int Index { get; init; }
+
+    /// <summary>Depth in the hierarchy (0 for a flat grid or a root row).</summary>
+    public int Level { get; init; }
+
+    /// <summary>True when the row has (or may lazily load) child rows.</summary>
+    public bool HasChildren { get; init; }
+
+    /// <summary>True when the row can show a detail row - <see cref="DataGrid.IsRowExpandable"/> said so.</summary>
+    public bool HasDetail { get; init; }
 
     public bool IsSelected
     {
@@ -42,8 +54,80 @@ sealed class DataGridRow : INotifyPropertyChanged
         }
     }
 
+    public bool IsExpanded
+    {
+        get => this.isExpanded;
+        set
+        {
+            if (this.isExpanded == value)
+                return;
+            this.isExpanded = value;
+            this.PropertyChanged?.Invoke(this, IsExpandedArgs);
+            this.RaiseGlyphs();
+        }
+    }
+
+    public bool IsLoadingChildren
+    {
+        get => this.isLoadingChildren;
+        set
+        {
+            if (this.isLoadingChildren == value)
+                return;
+            this.isLoadingChildren = value;
+            this.PropertyChanged?.Invoke(this, IsLoadingChildrenArgs);
+            this.RaiseGlyphs();
+        }
+    }
+
+    public bool IsLoadingDetail
+    {
+        get => this.isLoadingDetail;
+        set
+        {
+            if (this.isLoadingDetail == value)
+                return;
+            this.isLoadingDetail = value;
+            this.PropertyChanged?.Invoke(this, IsLoadingDetailArgs);
+            this.RaiseGlyphs();
+        }
+    }
+
+    /// <summary>Caret shown inline in the tree column. Empty for a leaf, so the cell reads as plain text.</summary>
+    public string TreeCaretGlyph
+        => !this.HasChildren ? string.Empty : this.isExpanded ? "▾" : "▸";
+
+    /// <summary>Caret shown in the detail expander column.</summary>
+    public string DetailCaretGlyph => this.isExpanded ? "▾" : "▸";
+
+    // The caret and the busy spinner swap places rather than sitting side by side, so each side of
+    // the swap gets its own flag to bind IsVisible to.
+    public bool ShowTreeCaret => this.HasChildren && !this.isLoadingChildren;
+
+    public bool ShowDetailCaret => this.HasDetail && !this.isLoadingDetail;
+
+    /// <summary>True while this row is waiting on a children or detail load.</summary>
+    public bool IsBusy => this.isLoadingChildren || this.isLoadingDetail;
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    void RaiseGlyphs()
+    {
+        this.PropertyChanged?.Invoke(this, TreeCaretGlyphArgs);
+        this.PropertyChanged?.Invoke(this, DetailCaretGlyphArgs);
+        this.PropertyChanged?.Invoke(this, ShowTreeCaretArgs);
+        this.PropertyChanged?.Invoke(this, ShowDetailCaretArgs);
+        this.PropertyChanged?.Invoke(this, IsBusyArgs);
+    }
 
     static readonly PropertyChangedEventArgs IsSelectedArgs = new(nameof(IsSelected));
     static readonly PropertyChangedEventArgs IsEditingArgs = new(nameof(IsEditing));
+    static readonly PropertyChangedEventArgs IsExpandedArgs = new(nameof(IsExpanded));
+    static readonly PropertyChangedEventArgs IsLoadingChildrenArgs = new(nameof(IsLoadingChildren));
+    static readonly PropertyChangedEventArgs TreeCaretGlyphArgs = new(nameof(TreeCaretGlyph));
+    static readonly PropertyChangedEventArgs DetailCaretGlyphArgs = new(nameof(DetailCaretGlyph));
+    static readonly PropertyChangedEventArgs IsLoadingDetailArgs = new(nameof(IsLoadingDetail));
+    static readonly PropertyChangedEventArgs ShowTreeCaretArgs = new(nameof(ShowTreeCaret));
+    static readonly PropertyChangedEventArgs ShowDetailCaretArgs = new(nameof(ShowDetailCaret));
+    static readonly PropertyChangedEventArgs IsBusyArgs = new(nameof(IsBusy));
 }

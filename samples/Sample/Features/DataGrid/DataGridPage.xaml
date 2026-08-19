@@ -33,8 +33,36 @@
                         HorizontalScroll="True"
                         DefaultColumnWidth="140"
                         FrozenColumns="{Binding FrozenCount}"
+                        RowDetailLoader="{Binding LoadActivity}"
                         Striped="True"
                         Bordered="True">
+            <!-- The breakdown row. Setting it adds the caret column at the leading edge; the
+                 template's BindingContext is the row's item, so it can host anything. Under
+                 HorizontalScroll it stays pinned to the left while the columns slide underneath. -->
+            <!-- The loader runs once per row on first expand; the caret turns into a spinner while
+                 it does, and RowDetailTemplate is not built until it lands. -->
+            <shiny:DataGrid.RowDetailLoadingTemplate>
+                <DataTemplate x:DataType="local:Person">
+                    <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                        <ActivityIndicator IsRunning="True" WidthRequest="16" HeightRequest="16" />
+                        <Label Text="{Binding FirstName, StringFormat='Fetching activity for {0}…'}"
+                               FontSize="13" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </DataTemplate>
+            </shiny:DataGrid.RowDetailLoadingTemplate>
+            <shiny:DataGrid.RowDetailTemplate>
+                <DataTemplate x:DataType="local:Person">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{Binding FirstName, StringFormat='Breakdown for {0}'}"
+                               FontAttributes="Bold" FontSize="14" />
+                        <Label Text="{Binding Department, StringFormat='Department: {0}'}" FontSize="13" />
+                        <Label Text="{Binding Salary, StringFormat='Salary: {0:C0}'}" FontSize="13" />
+                        <Label Text="{Binding RecentActivity, StringFormat='Recent activity: {0}'}" FontSize="13" />
+                        <shiny:PillView Text="{Binding StatusText}" HorizontalOptions="Start" />
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </shiny:DataGrid.RowDetailTemplate>
+
             <!-- Widths are explicit (star / absolute) rather than Auto: header, footer and each
                  row are separate Grids, so an Auto column sizes to its own cell's content and the
                  columns drift out of alignment. Under HorizontalScroll a star width resolves to
