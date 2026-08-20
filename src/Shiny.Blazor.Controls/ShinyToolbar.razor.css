@@ -45,15 +45,35 @@
     min-width: 0;
 }
 
+.shiny-toolbar-trailing {
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-2, 8px);
+    /* one auto margin, not one per region - two of them would share the slack instead of pinning right */
+    margin-left: auto;
+    min-width: 0;
+}
+
 .shiny-toolbar-end {
     display: flex;
     align-items: center;
     gap: var(--shiny-spacing-1, 4px);
-    margin-left: auto;
+    flex: 0 0 auto;
 }
 
 .shiny-toolbar-items {
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-1, 4px);
+    flex: 0 0 auto;
+}
+
+/* anchor for an item's own dropdown */
+.shiny-toolbar-item-wrap {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
 }
 
 /* off-screen mirror of every item used purely to measure intrinsic widths */
@@ -82,7 +102,14 @@
 
 .shiny-toolbar-menu {
     position: absolute;
-    right: 0;
+    left: 0;
+    /* the UA's popover rules stretch the panel with inset:0 and centre it with margin:auto - undo both,
+       the panel is anchored to its button (or placed outright by JS once it is in the top layer) */
+    right: auto;
+    top: auto;
+    bottom: auto;
+    margin: 0;
+    overflow: visible;
     z-index: 2;
     min-width: 180px;
     max-width: 280px;
@@ -92,15 +119,61 @@
     flex-direction: column;
     gap: calc(2px * var(--shiny-density-scale, 1));
     border-radius: var(--shiny-shape-corner-medium, 12px);
+    /* the hairline keeps a submenu readable where it overlaps the panel it came from */
+    border: 1px solid var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.10));
     box-shadow: var(--shiny-elevation-4, 0 8px 24px rgba(0, 0, 0, 0.18));
 }
 
-.shiny-toolbar--top .shiny-toolbar-menu {
+.shiny-toolbar--top > .shiny-toolbar-inner .shiny-toolbar-item-wrap > .shiny-toolbar-menu {
     top: calc(100% + 6px);
 }
 
-.shiny-toolbar--bottom .shiny-toolbar-menu {
+.shiny-toolbar--bottom > .shiny-toolbar-inner .shiny-toolbar-item-wrap > .shiny-toolbar-menu {
     bottom: calc(100% + 6px);
+}
+
+/* JS adds these when the panel would run past a viewport edge */
+.shiny-toolbar-menu.shiny-toolbar-menu--flip-x {
+    left: auto;
+    right: 0;
+}
+
+/* submenus fly out beside their row rather than under it */
+.shiny-toolbar-menu-item-wrap {
+    position: relative;
+    display: flex;
+}
+
+.shiny-toolbar-submenu {
+    top: calc(-6px * var(--shiny-density-scale, 1));
+    bottom: auto;
+    left: 100%;
+    right: auto;
+    margin-left: 4px;
+}
+
+.shiny-toolbar-submenu.shiny-toolbar-menu--flip-x {
+    left: auto;
+    right: 100%;
+    margin-left: 0;
+    margin-right: 4px;
+}
+
+.shiny-toolbar-submenu.shiny-toolbar-menu--flip-y {
+    top: auto;
+    bottom: calc(-6px * var(--shiny-density-scale, 1));
+}
+
+/* in the top layer a long panel has nothing to scroll inside, so give it its own scroll region */
+.shiny-toolbar-menu--floating {
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+}
+
+.shiny-toolbar-menu-separator {
+    height: 1px;
+    margin: calc(4px * var(--shiny-density-scale, 1)) var(--shiny-spacing-2, 8px);
+    background: var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.12));
 }
 
 .shiny-toolbar-menu-item {
@@ -139,6 +212,23 @@
 .shiny-toolbar-menu-item-text {
     flex: 1 1 auto;
     font-size: var(--shiny-type-body-medium-size, 14px);
+}
+
+.shiny-toolbar-menu-item--parent {
+    padding-right: var(--shiny-spacing-2, 8px);
+}
+
+.shiny-toolbar-menu-item-caret {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+}
+
+.shiny-toolbar-menu-item-caret svg {
+    width: 100%;
+    height: 100%;
 }
 
 .shiny-toolbar-menu-item-badge {
@@ -204,6 +294,50 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+/* a menu button lays its icon and caret out side by side, even in a labelled (stacked) bar */
+.shiny-toolbar-item--menu {
+    flex-direction: row;
+    gap: calc(4px * var(--shiny-density-scale, 1));
+}
+
+/* labelled bars stack icon over label, so the caret goes beside the label rather than under it */
+.shiny-toolbar--labelled .shiny-toolbar-item--menu {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-areas:
+        "icon  icon"
+        "label caret";
+    align-items: center;
+    justify-items: center;
+    column-gap: calc(2px * var(--shiny-density-scale, 1));
+}
+
+.shiny-toolbar--labelled .shiny-toolbar-item--menu > .shiny-toolbar-item-icon {
+    grid-area: icon;
+}
+
+.shiny-toolbar--labelled .shiny-toolbar-item--menu > .shiny-toolbar-item-label {
+    grid-area: label;
+}
+
+.shiny-toolbar--labelled .shiny-toolbar-item--menu > .shiny-toolbar-item-caret {
+    grid-area: caret;
+    width: 12px;
+    height: 12px;
+}
+
+.shiny-toolbar-item-caret {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+.shiny-toolbar-item-caret svg {
+    width: 100%;
+    height: 100%;
 }
 
 .shiny-toolbar-item-label {

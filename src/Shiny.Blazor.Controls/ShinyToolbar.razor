@@ -2,7 +2,20 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div class="@RootClass" style="@RootStyle" @ref="rootEl">
+@*
+    The scrim sits OUTSIDE the bar: backdrop-filter on a frosted toolbar would make it the containing
+    block for position:fixed children, so a scrim rendered inside it would only cover the bar itself.
+*@
+@if (AnyMenuOpen)
+{
+    <div class="shiny-toolbar-menu-backdrop"
+         popover="manual"
+         style="z-index:@(ZIndex - 1);"
+         @ref="backdropEl"
+         @onclick="CloseMenus"></div>
+}
+
+<div class="@RootClass" style="@RootStyle" @ref="rootEl" @onkeydown="OnKeyDown">
     <div class="shiny-toolbar-inner">
         @if (StartContent != null)
         {
@@ -18,67 +31,65 @@
             <div class="shiny-toolbar-content">@ChildContent</div>
         }
 
-        @if (EndContent != null)
-        {
-            <div class="shiny-toolbar-end">@EndContent</div>
-        }
-        else if (Items is { Count: > 0 })
-        {
-            <div class="shiny-toolbar-end shiny-toolbar-items">
-                @foreach (var item in (UseOverflow ? VisibleItems : Items))
-                {
-                    @ItemTemplate(item)
-                }
-
-                @if (HasOverflow)
-                {
-                    <button type="button"
-                            class="shiny-toolbar-item shiny-toolbar-more"
-                            aria-haspopup="true"
-                            aria-expanded="@menuOpen"
-                            aria-label="@OverflowAriaLabel"
-                            @onclick="ToggleMenu"
-                            @onclick:stopPropagation="true">
-                        <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
-                        @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
-                        {
-                            <span class="shiny-toolbar-item-label">@OverflowText</span>
-                        }
-                    </button>
-
-                    @if (menuOpen)
+        <div class="shiny-toolbar-trailing">
+            @if (BarItems.Count > 0)
+            {
+                <div class="shiny-toolbar-items">
+                    @foreach (var item in VisibleItems)
                     {
-                        <div class="shiny-toolbar-menu-backdrop" @onclick="CloseMenu"></div>
-                        <div class="shiny-toolbar-menu" role="menu"
-                             style="background-color:@MenuBackgroundColor;color:@MenuTextColor;">
-                            @foreach (var item in OverflowItems)
+                        @ItemTemplate(item, false)
+                    }
+
+                    @if (HasOverflow)
+                    {
+                        <div class="shiny-toolbar-item-wrap">
+                            <button type="button"
+                                    class="shiny-toolbar-item shiny-toolbar-more"
+                                    aria-haspopup="true"
+                                    aria-expanded="@overflowOpen"
+                                    aria-label="@OverflowAriaLabel"
+                                    @onclick="ToggleOverflow"
+                                    @onclick:stopPropagation="true">
+                                <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
+                                @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
+                                {
+                                    <span class="shiny-toolbar-item-label">@OverflowText</span>
+                                }
+                            </button>
+
+                            @if (overflowOpen)
                             {
-                                @MenuItemTemplate(item)
+                                @MenuPanel(OverflowItems, 0, false)
                             }
                         </div>
                     }
-                }
-            </div>
 
-            @if (UseOverflow)
-            {
-                <div class="shiny-toolbar-measure" aria-hidden="true">
-                    @foreach (var item in Items)
+                    @if (UseOverflow)
                     {
-                        <div data-measure-item>@ItemTemplate(item)</div>
-                    }
-                    <div data-measure-toggle>
-                        <button type="button" class="shiny-toolbar-item shiny-toolbar-more" tabindex="-1">
-                            <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
-                            @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
+                        <div class="shiny-toolbar-measure" aria-hidden="true">
+                            @foreach (var item in BarItems)
                             {
-                                <span class="shiny-toolbar-item-label">@OverflowText</span>
+                                <div data-measure-item>@ItemTemplate(item, true)</div>
                             }
-                        </button>
-                    </div>
+                            <div data-measure-toggle>
+                                <button type="button" class="shiny-toolbar-item shiny-toolbar-more" tabindex="-1">
+                                    <span class="shiny-toolbar-item-icon" style="@ItemStyle(null)">@((MarkupString)OverflowIcon)</span>
+                                    @if (ShowItemLabels && !string.IsNullOrEmpty(OverflowText))
+                                    {
+                                        <span class="shiny-toolbar-item-label">@OverflowText</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
-        }
+
+            @if (EndContent != null)
+            {
+                <div class="shiny-toolbar-end">@EndContent</div>
+            }
+        </div>
     </div>
 </div>
 
@@ -93,6 +104,11 @@
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? StartContent { get; set; }
+
+    /// <summary>
+    /// Arbitrary markup pinned to the trailing edge. It sits outside the overflow calculation and is never
+    /// collapsed - <see cref="Items"/> given alongside it still fold into the dropdown as the bar narrows.
+    /// </summary>
     [Parameter] public RenderFragment? EndContent { get; set; }
 
     [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
@@ -117,6 +133,9 @@
     [Parameter] public string MenuBackgroundColor { get; set; } = "#FFFFFF";
     [Parameter] public string MenuTextColor { get; set; } = "#1F2937";
 
+    /// <summary>Chevron drawn on items that open a dropdown. Set to an empty string to drop it.</summary>
+    [Parameter] public string DropdownIcon { get; set; } = ChevronDownIcon;
+
     // frosted glass
     [Parameter] public bool Frosted { get; set; }
     [Parameter] public double BlurRadius { get; set; } = 20;
@@ -132,33 +151,50 @@
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public string? Style { get; set; }
 
+    /// <summary>Raised for the item that was actually invoked - a bar button, or a leaf inside a dropdown.</summary>
     [Parameter] public EventCallback<ToolbarItem> ItemClicked { get; set; }
 
     const string HamburgerIcon = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M3 6h18M3 12h18M3 18h18'/></svg>";
+    const string ChevronDownIcon = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>";
+    const string ChevronRightIcon = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>";
 
     ElementReference rootEl;
+    ElementReference backdropEl;
     IJSObjectReference? module;
     DotNetObjectReference<ShinyToolbar>? selfRef;
-    bool menuOpen;
+    bool loadingModule;
+    bool observerAttached;
+
+    bool overflowOpen;
+
+    // the chain of items whose dropdowns are currently open, outermost first. Index == menu depth, so a
+    // menu at depth d is open when openChain[d] is the item it hangs off.
+    readonly List<ToolbarItem> openChain = new();
 
     // how many items currently fit; int.MaxValue == "show everything" until JS measures
     int visibleCount = int.MaxValue;
 
     bool IsTop => Dock == ToolbarDock.Top;
 
-    bool UseOverflow => OverflowEnabled && EndContent == null && Items is { Count: > 0 };
+    // separators only mean something inside a menu - one on the bar itself would just be a stray line
+    List<ToolbarItem> barItems = new();
 
-    int VisibleItemCount => Items == null ? 0 : Math.Min(visibleCount, Items.Count);
+    List<ToolbarItem> BarItems => barItems;
 
-    bool HasOverflow => UseOverflow && Items != null && VisibleItemCount < Items.Count;
+    protected override void OnParametersSet()
+        => barItems = Items?.Where(x => !x.IsSeparator).ToList() ?? new List<ToolbarItem>();
 
-    IEnumerable<ToolbarItem> VisibleItems => Items == null
-        ? Enumerable.Empty<ToolbarItem>()
-        : Items.Take(VisibleItemCount);
+    bool UseOverflow => OverflowEnabled && BarItems.Count > 0;
 
-    IEnumerable<ToolbarItem> OverflowItems => Items == null
-        ? Enumerable.Empty<ToolbarItem>()
-        : Items.Skip(VisibleItemCount);
+    int VisibleItemCount => Math.Min(UseOverflow ? visibleCount : int.MaxValue, BarItems.Count);
+
+    bool HasOverflow => VisibleItemCount < BarItems.Count;
+
+    IEnumerable<ToolbarItem> VisibleItems => BarItems.Take(VisibleItemCount);
+
+    IEnumerable<ToolbarItem> OverflowItems => BarItems.Skip(VisibleItemCount);
+
+    bool AnyMenuOpen => overflowOpen || openChain.Count > 0;
 
     string RootClass
     {
@@ -218,14 +254,46 @@
         return sb.ToString();
     }
 
-    RenderFragment ItemTemplate(ToolbarItem item) =>
+    string MenuStyle => $"background-color:{MenuBackgroundColor};color:{MenuTextColor};";
+
+    // measuring == the off-screen mirror row, which wants the button's width and nothing else:
+    // no open dropdown, no click handlers, nothing focusable.
+    RenderFragment ItemTemplate(ToolbarItem item, bool measuring) =>
         @<text>
-            @if (!string.IsNullOrEmpty(item.Href))
+            @if (item.HasChildren)
+            {
+                <div class="shiny-toolbar-item-wrap">
+                    <button type="button"
+                            class="shiny-toolbar-item shiny-toolbar-item--menu"
+                            style="@ItemStyle(item)"
+                            title="@(item.Tooltip ?? item.Text)"
+                            disabled="@item.IsDisabled"
+                            tabindex="@(measuring ? "-1" : null)"
+                            aria-haspopup="true"
+                            aria-expanded="@(!measuring && IsOpenAt(0, item))"
+                            @onclick="@(_ => ToggleRootMenu(item))"
+                            @onclick:stopPropagation="true">
+                        @ItemBody(item)
+                        @if (!string.IsNullOrEmpty(DropdownIcon))
+                        {
+                            <span class="shiny-toolbar-item-caret">@((MarkupString)DropdownIcon)</span>
+                        }
+                    </button>
+
+                    @if (!measuring && IsOpenAt(0, item))
+                    {
+                        @MenuPanel(item.Children!, 1, false)
+                    }
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(item.Href))
             {
                 <a class="shiny-toolbar-item"
                    href="@item.Href"
                    target="@item.Target"
                    style="@ItemStyle(item)"
+                   title="@(item.Tooltip ?? item.Text)"
+                   tabindex="@(measuring ? "-1" : null)"
                    @onclick="@(_ => OnItemClicked(item))">
                     @ItemBody(item)
                 </a>
@@ -235,7 +303,9 @@
                 <button type="button"
                         class="shiny-toolbar-item"
                         style="@ItemStyle(item)"
+                        title="@(item.Tooltip ?? item.Text)"
                         disabled="@item.IsDisabled"
+                        tabindex="@(measuring ? "-1" : null)"
                         @onclick="@(_ => OnItemClicked(item))"
                         @onclick:stopPropagation="true">
                     @ItemBody(item)
@@ -268,31 +338,71 @@
             }
         </text>;
 
-    RenderFragment MenuItemTemplate(ToolbarItem item) =>
-        @<text>
-            @if (!string.IsNullOrEmpty(item.Href))
+    /// <summary>One dropdown panel. <paramref name="depth"/> is its index in <c>openChain</c>.</summary>
+    RenderFragment MenuPanel(IEnumerable<ToolbarItem> items, int depth, bool submenu) =>
+        @*
+            The panel is a manual popover so it lands in the browser's top layer: a dropdown inside a
+            panel or scroller would otherwise be clipped by that ancestor's overflow. JS places it and
+            falls back to plain absolute positioning where the API is missing.
+        *@
+        @<div class="shiny-toolbar-menu @(submenu ? "shiny-toolbar-submenu" : null)"
+              role="menu"
+              popover="manual"
+              data-menu-depth="@depth"
+              style="@MenuStyle">
+            @foreach (var item in items)
             {
-                <a class="shiny-toolbar-menu-item"
-                   role="menuitem"
-                   href="@item.Href"
-                   target="@item.Target"
-                   style="@ItemStyle(item)"
-                   @onclick="@(_ => OnMenuItemClicked(item))">
-                    @MenuItemBody(item)
-                </a>
+                if (item.IsSeparator)
+                {
+                    <div class="shiny-toolbar-menu-separator" role="separator"></div>
+                }
+                else if (item.HasChildren)
+                {
+                    <div class="shiny-toolbar-menu-item-wrap">
+                        <button type="button"
+                                class="shiny-toolbar-menu-item shiny-toolbar-menu-item--parent"
+                                role="menuitem"
+                                style="@ItemStyle(item)"
+                                disabled="@item.IsDisabled"
+                                aria-haspopup="true"
+                                aria-expanded="@IsOpenAt(depth, item)"
+                                @onclick="@(_ => ToggleSubmenu(item, depth))"
+                                @onclick:stopPropagation="true">
+                            @MenuItemBody(item)
+                            <span class="shiny-toolbar-menu-item-caret">@((MarkupString)ChevronRightIcon)</span>
+                        </button>
+
+                        @if (IsOpenAt(depth, item))
+                        {
+                            @MenuPanel(item.Children!, depth + 1, true)
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(item.Href))
+                {
+                    <a class="shiny-toolbar-menu-item"
+                       role="menuitem"
+                       href="@item.Href"
+                       target="@item.Target"
+                       style="@ItemStyle(item)"
+                       @onclick="@(_ => OnMenuItemClicked(item))">
+                        @MenuItemBody(item)
+                    </a>
+                }
+                else
+                {
+                    <button type="button"
+                            class="shiny-toolbar-menu-item"
+                            role="menuitem"
+                            style="@ItemStyle(item)"
+                            disabled="@item.IsDisabled"
+                            @onclick="@(_ => OnMenuItemClicked(item))"
+                            @onclick:stopPropagation="true">
+                        @MenuItemBody(item)
+                    </button>
+                }
             }
-            else
-            {
-                <button type="button"
-                        class="shiny-toolbar-menu-item"
-                        role="menuitem"
-                        style="@ItemStyle(item)"
-                        disabled="@item.IsDisabled"
-                        @onclick="@(_ => OnMenuItemClicked(item))">
-                    @MenuItemBody(item)
-                </button>
-            }
-        </text>;
+        </div>;
 
     RenderFragment MenuItemBody(ToolbarItem item) =>
         @<text>
@@ -316,13 +426,55 @@
             }
         </text>;
 
-    void ToggleMenu() => menuOpen = !menuOpen;
+    bool IsOpenAt(int depth, ToolbarItem item) => openChain.Count > depth && ReferenceEquals(openChain[depth], item);
 
-    void CloseMenu() => menuOpen = false;
+    void ToggleOverflow()
+    {
+        var wasOpen = overflowOpen;
+        CloseMenus();
+        overflowOpen = !wasOpen;
+    }
+
+    void ToggleRootMenu(ToolbarItem item)
+    {
+        if (item.IsDisabled) return;
+
+        var wasOpen = IsOpenAt(0, item);
+        CloseMenus();
+        if (!wasOpen)
+            openChain.Add(item);
+    }
+
+    void ToggleSubmenu(ToolbarItem item, int depth)
+    {
+        if (item.IsDisabled) return;
+
+        var wasOpen = IsOpenAt(depth, item);
+
+        // anything deeper than this menu belongs to a sibling that is now closing
+        if (openChain.Count > depth)
+            openChain.RemoveRange(depth, openChain.Count - depth);
+
+        if (!wasOpen)
+            openChain.Add(item);
+    }
+
+    void CloseMenus()
+    {
+        overflowOpen = false;
+        openChain.Clear();
+    }
+
+    void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && AnyMenuOpen)
+            CloseMenus();
+    }
 
     async Task OnItemClicked(ToolbarItem item)
     {
         if (item.IsDisabled) return;
+        CloseMenus();
         if (ItemClicked.HasDelegate)
             await ItemClicked.InvokeAsync(item);
     }
@@ -330,26 +482,39 @@
     async Task OnMenuItemClicked(ToolbarItem item)
     {
         if (item.IsDisabled) return;
-        menuOpen = false;
+        CloseMenus();
         if (ItemClicked.HasDelegate)
             await ItemClicked.InvokeAsync(item);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!UseOverflow)
+        // the module is loaded on demand - a bar with no items and no dropdowns never needs JS at all,
+        // and one that gets its items later still picks it up
+        if (module == null && !loadingModule && (UseOverflow || AnyMenuOpen))
+        {
+            loadingModule = true;
+            selfRef ??= DotNetObjectReference.Create(this);
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls/toolbar.js");
+            loadingModule = false;
+        }
+
+        if (module == null)
             return;
 
-        if (firstRender)
+        if (UseOverflow && !observerAttached)
         {
-            selfRef = DotNetObjectReference.Create(this);
-            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls/toolbar.js");
+            observerAttached = true;
             await module.InvokeVoidAsync("init", rootEl, selfRef);
         }
-        else if (module != null)
+        else if (UseOverflow)
         {
             await module.InvokeVoidAsync("remeasure", rootEl);
         }
+
+        // open dropdowns are raised into the top layer and placed against their button
+        if (AnyMenuOpen)
+            await module.InvokeVoidAsync("placeMenus", rootEl, backdropEl);
     }
 
     [JSInvokable]
@@ -358,7 +523,8 @@
         if (count != visibleCount)
         {
             visibleCount = count;
-            // a smaller bar may no longer have room for the open menu's anchor; keep it sane
+            // items just moved between the bar and the menu - whatever was open no longer points anywhere sane
+            CloseMenus();
             StateHasChanged();
         }
         return Task.CompletedTask;

@@ -66,6 +66,48 @@
 </section>
 
 <section class="demo-section">
+    <h2>Dropdown buttons &amp; submenus</h2>
+    <p>Give a <code>ToolbarItem</code> <code>Children</code> and it stops raising clicks and opens a dropdown
+       instead. Children can have children of their own, which fly out as submenus (and flip to the other side
+       when they'd run off the screen). <code>IsSeparator</code> draws a divider between groups.</p>
+    <div class="scroll-demo scroll-demo--resizable">
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Title="Document"
+                      Items="@menuItems"
+                      ItemClicked="OnItemClicked" />
+        <div class="scroll-body">
+            @for (var i = 1; i <= 10; i++)
+            {
+                <div class="fake-row">Paragraph @i</div>
+            }
+        </div>
+    </div>
+    <p class="state">Last tapped: <strong>@lastAction</strong></p>
+</section>
+
+<section class="demo-section">
+    <h2>Items beside pinned EndContent</h2>
+    <p><code>EndContent</code> is pinned and never collapses - the <code>Items</code> next to it still fold into
+       the overflow menu as the bar narrows, submenus and all.</p>
+    <div class="scroll-demo scroll-demo--resizable">
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Title="Reports"
+                      Items="@menuItems"
+                      ItemClicked="OnItemClicked">
+            <EndContent>
+                <Pill Text="Live" PillColor="#10B981" PillTextColor="#06281B" />
+            </EndContent>
+        </ShinyToolbar>
+        <div class="scroll-body">
+            @for (var i = 1; i <= 8; i++)
+            {
+                <div class="fake-row">Report @i</div>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
     <h2>Custom content (StartContent / ChildContent / EndContent)</h2>
     <div class="scroll-demo">
         <ShinyToolbar Dock="ToolbarDock.Top" BackgroundColor="#0F172A" TextColor="#E2E8F0">
@@ -88,6 +130,7 @@
 
 <section class="demo-section">
     <h2>Bottom-docked action bar</h2>
+    <p>A dropdown on a bottom bar opens upwards.</p>
     <div class="scroll-demo">
         <div class="scroll-body">
             @for (var i = 1; i <= 10; i++)
@@ -134,9 +177,76 @@
 
     List<ToolbarItem> bottomItems = new()
     {
-        new() { Icon = IconShare, Text = "Share" },
+        new()
+        {
+            Icon = IconShare,
+            Text = "Share",
+            Children = new()
+            {
+                new() { Text = "Copy link" },
+                new() { Text = "Email" },
+                new() { IsSeparator = true },
+                new() { Text = "More apps", Children = new()
+                    {
+                        new() { Text = "Messages" },
+                        new() { Text = "Slack" }
+                    }
+                }
+            }
+        },
         new() { Icon = IconStar, Text = "Favorite" },
         new() { Icon = IconTrash, Text = "Delete", IconColor = "#EF4444" }
+    };
+
+    List<ToolbarItem> menuItems = new()
+    {
+        new()
+        {
+            Icon = IconCompose,
+            Text = "File",
+            Children = new()
+            {
+                new() { Icon = IconCompose, Text = "New" },
+                new() { Icon = IconStar, Text = "Open recent", Children = new()
+                    {
+                        new() { Text = "Quarterly review.md" },
+                        new() { Text = "Roadmap.md" },
+                        new() { Text = "Older", Children = new()
+                            {
+                                new() { Text = "2024 notes.md" },
+                                new() { Text = "2023 notes.md" }
+                            }
+                        }
+                    }
+                },
+                new() { IsSeparator = true },
+                new() { Icon = IconShare, Text = "Export", Children = new()
+                    {
+                        new() { Text = "PDF" },
+                        new() { Text = "Markdown" },
+                        new() { Text = "HTML" }
+                    }
+                },
+                new() { IsSeparator = true },
+                new() { Icon = IconTrash, Text = "Delete", IconColor = "#EF4444" }
+            }
+        },
+        new()
+        {
+            Icon = IconStar,
+            Text = "View",
+            Children = new()
+            {
+                new() { Text = "Zoom in" },
+                new() { Text = "Zoom out" },
+                new() { IsSeparator = true },
+                new() { Text = "Full screen" },
+                new() { Text = "Presenter mode", IsDisabled = true }
+            }
+        },
+        new() { Icon = IconSearch, Text = "Search" },
+        new() { Icon = IconBell, Text = "Alerts", Badge = "2" },
+        new() { Icon = IconShare, Text = "Share" }
     };
 
     List<ToolbarItem> manyItems = new()

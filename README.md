@@ -2050,6 +2050,12 @@ scroll container as an action bar (icons with links/actions, title, custom slots
 mobile-style tab bar pinned to the bottom of the viewport with a selected state and badges. Both support a
 **frosted-glass** toggle (`Frosted`) backed by `backdrop-filter`.
 
+Toolbar items that don't fit the bar collapse into an **overflow dropdown** automatically, and any item can
+be a **menu button** of its own — give it `Children` and it opens a dropdown instead of raising a click,
+nested as deep as you like with `IsSeparator` dividers between groups. Every panel is drawn in the browser's
+**top layer** (the popover API), so a bar living inside a panel, a card or a scroller is never clipped by
+that ancestor's `overflow`.
+
 The top toolbar uses `position: sticky`, so it reserves its own height (content never starts *underneath*
 it) yet page content scrolls *under* it as you scroll — the classic translucent-header effect. The tab bar
 uses `position: fixed` so it stays pinned regardless of scroll.
@@ -2077,7 +2083,26 @@ uses `position: fixed` so it stays pinned regardless of scroll.
     {
         new() { Icon = "<svg>…search…</svg>", Text = "Search" },
         new() { Icon = "<svg>…bell…</svg>", Text = "Alerts", Badge = "3" },
-        new() { Icon = "compose.png", Text = "Compose", Href = "/compose" }
+        new() { Icon = "compose.png", Text = "Compose", Href = "/compose" },
+
+        // a menu button: opens a dropdown instead of raising ItemClicked
+        new()
+        {
+            Icon = "<svg>…file…</svg>",
+            Text = "File",
+            Children = new()
+            {
+                new() { Text = "New" },
+                new() { Text = "Export", Children = new()
+                    {
+                        new() { Text = "PDF" },
+                        new() { Text = "Markdown" }
+                    }
+                },
+                new() { IsSeparator = true },
+                new() { Text = "Delete", IconColor = "#EF4444" }
+            }
+        }
     };
 
     List<TabBarItem> tabs = new()
@@ -2100,8 +2125,12 @@ uses `position: fixed` so it stays pinned regardless of scroll.
 | Dock | ToolbarDock | Top | Docks to the `Top` or `Bottom` edge |
 | Sticky | bool | true | `position:sticky` (content scrolls under); set false for a normal in-flow bar |
 | Title | string? | null | Convenience leading title text (used when `StartContent` is not set) |
-| Items | `List<ToolbarItem>?` | null | Trailing action/link items (used when `EndContent` is not set) |
-| StartContent / ChildContent / EndContent | RenderFragment? | null | Custom leading / center / trailing content |
+| Items | `List<ToolbarItem>?` | null | Trailing action/link/menu items; these are the ones that collapse into the overflow dropdown |
+| StartContent / ChildContent / EndContent | RenderFragment? | null | Custom leading / center / trailing content (`EndContent` is pinned beside `Items` and never collapses) |
+| OverflowEnabled | bool | true | Collapse items that don't fit into a dropdown behind a "more" button |
+| OverflowIcon / OverflowText / OverflowAriaLabel | string / string? / string | hamburger SVG / "More" / "More actions" | The overflow button's glyph, label and accessible name |
+| DropdownIcon | string | chevron SVG | Caret drawn on items that open a dropdown (empty string removes it) |
+| MenuBackgroundColor / MenuTextColor | string / string | #FFFFFF / #1F2937 | Dropdown panel colors |
 | BackgroundColor | string | #FFFFFF | Solid fill (ignored when `Frosted`) |
 | TextColor | string | #1F2937 | Foreground color |
 | Height | double | 56 | Bar height (min-height) |
@@ -2118,7 +2147,8 @@ uses `position: fixed` so it stays pinned regardless of scroll.
 
 Events: `ItemClicked` — fires the `ToolbarItem` that was tapped (items with an `Href` also navigate).
 
-**ToolbarItem** properties: `Icon`, `Text`, `Href`, `Target`, `Badge`, `IconColor`, `IsDisabled`, `Tag`.
+**ToolbarItem** properties: `Icon`, `Text`, `Tooltip`, `Href`, `Target`, `Badge`, `IconColor`, `IsDisabled`,
+`Children` (a dropdown, nestable into submenus), `IsSeparator` (a divider inside a dropdown), `Tag`.
 
 **ShinyTabBar** parameters:
 
