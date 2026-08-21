@@ -804,6 +804,35 @@ Blazor mirrors the MAUI single-analyzer shape: assign a typed **`Analyzer`** (to
 - **Analyzer geometry maps cleanly into the recorded frame.** `OverlayBox` / `RecognizedText.BoundingBox` are normalized upright coordinates and `IVideoOverlayRenderer` draws in encoded-frame pixel space, so drawing a detection into the recording is `box.X * context.Width`, `box.Y * context.Height`. That is only correct because the analyzed frame and the encoded frame share a field of view: on iOS/macOS they are literally the same sample buffer, and on Android the handler binds a shared **`ViewPort`** whenever `ImageAnalysis` and `VideoCapture` are bound together (without it CameraX sizes analysis 4:3 and the recorder 16:9, and a box would sit visibly off the thing it is boxing). The ViewPort is applied *only* in that combined case, so no existing single-use-case setup has its recorded field of view moved.
 - **Android: video + analyzer together works, but costs `ImageCapture`** — `Preview + VideoCapture + ImageAnalysis` is a guaranteed CameraX combination at LIMITED hardware level, so recording while an analyzer runs is supported (a dash cam reading signs or plates off its own feed). A *fourth* use case needs LEVEL_3, which most phones are not, so `ImageCapture` is dropped for the duration of a recording that has an enabled analyzer attached — `CapturePhotoAsync` throws a message saying exactly that, and photo capture returns automatically when the recording stops. Outside a recording, nothing changes: analyzer + `ImageCapture` bind together as before.
 - **Burn-in video overlay ≠ live overlay** — the `CameraOverlayView` / `CameraOverlayDrawable` only paint the on-screen preview; nothing they draw reaches the saved file. To composite into the *recording*, set `VideoRecordingOptions.Overlay` (`IVideoOverlayRenderer` / `DelegateVideoOverlay` / `DrawableVideoOverlay`). `DrawOverlay` runs **off the UI thread** once per encoded frame — read UI state via a volatile/immutable snapshot, never touch UI objects — and draws in **frame pixel space** (`ctx.Width`/`Height`), origin top-left, front camera already un-mirrored. Supported on iOS / Mac Catalyst / macOS / Android; **Windows throws `PlatformNotSupportedException`** for now (record without the overlay, or use the on-preview overlay). Omitting `Overlay` keeps the fast native recorder.
+
+- **An overlay that caches its own output should say so.** Implement `ICompositedVideoOverlayRenderer` alongside `IVideoOverlayRenderer` and return `VideoOverlayLayer`s from `GetLayers(context)` — each is an `IImage`, the `RectF` it lands on in frame pixels, and a `Version` that changes when (and only when) the image's contents change. A HUD, watermark or telemetry panel typically repaints once or twice a second while being drawn onto thirty frames, and this is what lets the platform stop redrawing it: on Apple the recorder then composites with Core Image on the GPU and **never maps the capture buffer into CPU memory at all**, which is a fixed per-frame cost that does not scale down with how little of the frame the overlay covers. On Android the recording surface is already hardware-composited, so it changes the draw calls but not the cost.
+  - ⚠️ **`null` and empty are different answers.** `null` means "draw me the ordinary way this frame" and falls back to `DrawOverlay`; an **empty list** means "there is genuinely nothing to draw" and leaves the frame untouched. Returning empty when you meant null produces a recording with no overlay on it and no error anywhere.
+  - ⚠️ **A `Version` that never moves burns the first frame into the whole recording** — the platform caches its own representation of the layer against it. Derive it from whatever already tells the renderer it must repaint.
+  - Layers are **borrowed**: the images must stay alive and unmodified until the next `GetLayers` call.
+  - Bottom-most first; the platform composites in the order given.
+  - Any `IDrawEffect` in `CameraView.Effects` is arbitrary canvas code, so a chain containing one keeps the ordinary draw path.
+
+```csharp
+sealed class HudOverlay : ICompositedVideoOverlayRenderer
+{
+    IImage? panel;          // re-rendered a couple of times a second, not per frame
+    long version;
+
+    public void DrawOverlay(ICanvas canvas, RectF frame, VideoOverlayContext ctx)
+        => canvas.DrawImage(this.panel!, 32, 32, this.panel!.Width, this.panel.Height);
+
+    public IReadOnlyList<VideoOverlayLayer>? GetLayers(VideoOverlayContext ctx)
+        => this.panel is null
+            ? null   // nothing cached yet — let the platform call DrawOverlay
+            : [new VideoOverlayLayer(this.panel, new RectF(32, 32, this.panel.Width, this.panel.Height), this.version)];
+
+    void Repaint(IImage rendered)
+    {
+        this.panel = rendered;
+        this.version++;   // ⚠️ without this the platform keeps compositing the old image
+    }
+}
+```
 - **Effect coverage differs by platform and surface** — check `CameraView.GetEffectSupport(effect)` and grey the control out rather than shipping one that silently does nothing. Specifics: **Apple** applies everything everywhere, including into recorded video. **Android** applies colour effects to the preview from API 31 and to photos on every API level; spatial *shaders* need API 33 (Blur only needs 31, since it maps to `RenderEffect.CreateBlurEffect`), and below that the preview is unfiltered while the photo still comes back filtered via a managed CPU pass. Recorded video on Android gets **draw effects only** — the preview's `RenderEffect` lives on `PreviewView`, not on the `VideoCapture` use case, so pixel effects do not reach the file. **Windows** has no live-preview effect hook at all (`StillOnly`). The Android preview renders in `PreviewView` *Compatible* (TextureView) mode so the effect can be applied — *Performance* mode (SurfaceView) ignores it.
 - **Effect order is meaningful and preserved** — `[Comic, Mono]` is not `[Mono, Comic]`. Consecutive *colour* effects are collapsed into a single matrix for speed, but a spatial effect between them stops the fold, so nothing is silently reordered.
 - **Draw effects run off the UI thread, once per frame, on three surfaces** — read mutable state through a volatile field or an immutable snapshot, never touch UI objects, and expect to be called concurrently for the preview and an in-progress recording. `FaceMaskEffect` keeps per-surface smoothing state for exactly this reason.

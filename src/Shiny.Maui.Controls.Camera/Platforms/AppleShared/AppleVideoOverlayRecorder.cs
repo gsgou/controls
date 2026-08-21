@@ -48,6 +48,13 @@ sealed class AppleVideoOverlayRecorder
     readonly object gate = new();
     readonly TaskCompletionSource<CameraVideo> tcs = new();
 
+    /// <summary>
+    /// Present when the overlay can hand over pre-rendered layers and there are no draw effects to run —
+    /// see <see cref="AppleLayerCompositor"/>. Draw effects are arbitrary caller code holding a canvas, so
+    /// their presence rules the fast path out entirely rather than merely complicating it.
+    /// </summary>
+    readonly AppleLayerCompositor? layerCompositor;
+
     AVAssetWriter? writer;
     AVAssetWriterInput? videoInput;
     AVAssetWriterInput? audioInput;
@@ -74,8 +81,13 @@ sealed class AppleVideoOverlayRecorder
         this.videoBitrate = videoBitrate;
         this.filters = AppleCameraFilters.Create(chain);
 
-        // Only pay for a CIContext when there is actually a pixel chain to render through it.
+        // Only pay for a CIContext when there is actually a pixel chain to render through it. The layer
+        // compositor owns a second one; it is Metal-backed and is built lazily on its first frame.
         this.ciContext = this.filters.Length > 0 ? new CIContext() : null;
+
+        this.layerCompositor = chain.DrawEffects.Count == 0 && overlay is ICompositedVideoOverlayRenderer c
+            ? new AppleLayerCompositor(c)
+            : null;
     }
 
     /// <summary>
@@ -201,7 +213,24 @@ sealed class AppleVideoOverlayRecorder
         if (this.chain.DrawEffects.Count == 0 && this.overlay == null)
             return;
 
-        // Stage 2 — compositing. Read-write lock (flags 0) so the draws land in the buffer we then encode.
+        // Stage 2a — the GPU path, where the overlay can describe itself as images. This returns before the
+        // Lock below ever happens, which is the point: that lock maps the whole IOSurface for CPU access on
+        // every frame regardless of how little of it the overlay covers.
+        if (this.layerCompositor is { Unavailable: false } compositor)
+        {
+            var elapsedForLayers = this.startPts == CMTime.Invalid
+                ? TimeSpan.Zero
+                : TimeSpan.FromSeconds(CMTime.Subtract(pts, this.startPts).Seconds);
+
+            var layerContext = new VideoOverlayContext(
+                elapsedForLayers, this.frameIndex, (int)pixelBuffer.Width, (int)pixelBuffer.Height, this.facing);
+
+            if (compositor.TryComposite(pixelBuffer, layerContext))
+                return;
+        }
+
+        // Stage 2b — compositing on the CPU. Read-write lock (flags 0) so the draws land in the buffer we
+        // then encode.
         pixelBuffer.Lock((CVPixelBufferLock)0);
         try
         {
@@ -286,6 +315,8 @@ sealed class AppleVideoOverlayRecorder
             this.videoInput?.MarkAsFinished();
             this.audioInput?.MarkAsFinished();
         }
+
+        this.layerCompositor?.Dispose();
 
         if (w == null)
         {

@@ -42,11 +42,29 @@ sealed class OverlayDrawListener : Java.Lang.Object, AndroidX.Arch.Core.Util.IFu
                 this.startNanos = ts;
             var elapsed = TimeSpan.FromTicks(Math.Max(0, ts - this.startNanos) / 100); // 100ns per tick
 
+            var overlayContext = new VideoOverlayContext(elapsed, this.frameIndex++, w, h, this.facing);
             var canvas = new PlatformCanvas(this.context) { Canvas = frame.OverlayCanvas, DisplayScale = 1 };
-            this.overlay.DrawOverlay(
-                canvas,
-                new MauiGraphics.RectF(0, 0, w, h),
-                new VideoOverlayContext(elapsed, this.frameIndex++, w, h, this.facing));
+
+            // A renderer that caches its own output describes itself as images, and drawing those is both
+            // cheaper here and the same code path the caller uses on Apple. Unlike Apple this is not a
+            // change of pipeline — OverlayCanvas is already hardware-composited, so what it saves is the
+            // renderer's own per-frame drawing, not a CPU blend. Null means "draw me the ordinary way".
+            if (this.overlay is ICompositedVideoOverlayRenderer composited
+                && composited.GetLayers(overlayContext) is { } layers)
+            {
+                foreach (var layer in layers)
+                {
+                    canvas.DrawImage(
+                        layer.Image,
+                        layer.Destination.X,
+                        layer.Destination.Y,
+                        layer.Destination.Width,
+                        layer.Destination.Height);
+                }
+                return Java.Lang.Boolean.True!;
+            }
+
+            this.overlay.DrawOverlay(canvas, new MauiGraphics.RectF(0, 0, w, h), overlayContext);
         }
         catch
         {
