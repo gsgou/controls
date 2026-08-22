@@ -90,7 +90,12 @@ public class BarcodeView : ContentView
         set => SetValue(BarcodeBackgroundColorProperty, value);
     }
 
-    void Rebuild()
+    /// <summary>
+    /// Re-encodes and re-applies the image. Call this from a subclass whose own property changed
+    /// the render options - never by writing to <see cref="Value"/>, which stamps a manual value
+    /// that permanently outranks any binding the caller put on it.
+    /// </summary>
+    protected void Rebuild()
     {
         if (string.IsNullOrEmpty(Value))
         {

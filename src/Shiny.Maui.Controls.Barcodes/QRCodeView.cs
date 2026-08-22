@@ -31,20 +31,12 @@ public class QRCodeView : BarcodeView
 
     public static readonly BindableProperty ErrorCorrectionProperty = BindableProperty.Create(
         nameof(ErrorCorrection), typeof(QRErrorCorrection), typeof(QRCodeView), QRErrorCorrection.Medium,
-        propertyChanged: (b, _, _) => ((QRCodeView)b).Refresh());
+        propertyChanged: (b, _, _) => ((QRCodeView)b).Rebuild());
 
     public QRErrorCorrection ErrorCorrection
     {
         get => (QRErrorCorrection)GetValue(ErrorCorrectionProperty);
         set => SetValue(ErrorCorrectionProperty, value);
-    }
-
-    void Refresh()
-    {
-        // Force a rebuild by re-poking Value (no public re-render hook on base).
-        var v = Value;
-        Value = string.Empty;
-        Value = v;
     }
 
     protected override void ApplyExtraOptions(BarcodeRenderOptions options)
