@@ -229,6 +229,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, NSView>, ICamer
     // to follow and nothing an explicit CameraOrientation could usefully mean here.
     static partial void MapOrientation(CameraViewHandler handler, CameraView view) { }
 
+    // The capture format is an Apple concern — its data output is the only one asked for a pixel format.
+    static partial void MapCaptureFormat(CameraViewHandler handler, CameraView view) { }
+
     // Same session-level reconfiguration as iOS, and refused mid-recording for the same reason — the
     // preset renegotiates the active format underneath whatever is writing the file.
     static partial void MapVideoQuality(CameraViewHandler handler, CameraView view)

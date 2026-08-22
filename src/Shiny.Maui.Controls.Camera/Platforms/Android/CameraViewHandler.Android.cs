@@ -443,6 +443,9 @@ public partial class CameraViewHandler : ViewHandler<CameraView, AWidget.FrameLa
     // No rebind: target rotation is settable on a bound use case, so this costs nothing and does not blink
     // the preview. Unlike VideoQuality it is therefore safe to call mid-recording — ApplyTargetRotation skips
     // VideoCapture while one is running.
+    // CameraX picks the format for each use case; there is no equivalent knob to turn here.
+    static partial void MapCaptureFormat(CameraViewHandler handler, CameraView view) { }
+
     static partial void MapOrientation(CameraViewHandler handler, CameraView view)
         => handler.ApplyTargetRotation();
 

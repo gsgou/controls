@@ -59,6 +59,12 @@ sealed class AppleLayerCompositor : IDisposable
             var ciContext = this.EnsureContext();
             var cs = this.colorSpace ??= CGColorSpace.CreateDeviceRGB();
 
+            // One wrapper for the frame, not one per layer. It is the background of every composite below,
+            // and at four layers and 30fps the per-layer version was 120 native images a second that
+            // nothing disposed — allocated on the capture queue, which is the one thread that cannot
+            // afford to wait for a finalizer.
+            using var background = new CIImage(pixelBuffer);
+
             for (var i = 0; i < layers.Count; i++)
             {
                 var layer = layers[i];
@@ -69,27 +75,33 @@ sealed class AppleLayerCompositor : IDisposable
                 // space, so the flip is part of placing it — not a detail that can be left to the caller,
                 // which would put every overlay in the wrong half of the frame.
                 var y = pixelBuffer.Height - layer.Destination.Bottom;
-                var placed = image.ImageByApplyingTransform(
+
+                // Both are per-frame transients rather than cached like the layer images: the transform
+                // moves with the destination rect and the composite is one recipe over one frame.
+                using var placed = image.ImageByApplyingTransform(
                     CGAffineTransform.MakeTranslation(layer.Destination.X, y));
 
                 using var filter = new CISourceOverCompositing
                 {
                     InputImage = placed,
-                    BackgroundImage = new CIImage(pixelBuffer)
+                    BackgroundImage = background
                 };
 
                 if (filter.OutputImage is not { } composed)
                     return false;
 
-                // The destination rect is what keeps this cheap: Core Image renders the region we ask for
-                // and leaves the rest of the surface alone, so a HUD covering a sixth of the frame costs a
-                // sixth of a frame rather than a full-frame pass per layer.
-                ciContext.Render(
-                    composed,
-                    pixelBuffer,
-                    new CGRect(layer.Destination.X, y, layer.Destination.Width, layer.Destination.Height),
-                    cs
-                );
+                using (composed)
+                {
+                    // The destination rect is what keeps this cheap: Core Image renders the region we ask
+                    // for and leaves the rest of the surface alone, so a HUD covering a sixth of the frame
+                    // costs a sixth of a frame rather than a full-frame pass per layer.
+                    ciContext.Render(
+                        composed,
+                        pixelBuffer,
+                        new CGRect(layer.Destination.X, y, layer.Destination.Width, layer.Destination.Height),
+                        cs
+                    );
+                }
             }
 
             return true;

@@ -384,4 +384,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, WGrid>, ICamera
 
     // Nothing to do: no rotating display behind the capture device on desktop Windows.
     static partial void MapOrientation(CameraViewHandler handler, CameraView view) { }
+
+    // The capture format is an Apple concern — its data output is the only one asked for a pixel format.
+    static partial void MapCaptureFormat(CameraViewHandler handler, CameraView view) { }
 }

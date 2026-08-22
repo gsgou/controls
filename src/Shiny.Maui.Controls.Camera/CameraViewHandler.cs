@@ -68,6 +68,7 @@ public partial class CameraViewHandler
             [nameof(CameraView.VideoBitrate)] = MapVideoQuality,
             [nameof(CameraView.VideoFrameRate)] = MapVideoQuality,
             [nameof(CameraView.Orientation)] = MapOrientation,
+            [nameof(CameraView.CaptureFormat)] = MapCaptureFormat,
         };
 
     static void MapAnalyzer(CameraViewHandler handler, CameraView view) => handler.SyncAnalyzer();
@@ -100,5 +101,9 @@ public partial class CameraViewHandler
     // Implemented on Android and Apple only; macOS and Windows have no rotating display behind the capture
     // device, so the partial is elided there rather than being a no-op body on each.
     static partial void MapOrientation(CameraViewHandler handler, CameraView view);
+
+    // Apple only: it is the one platform whose capture output is asked for a pixel format at all. Android's
+    // CameraX and Windows' MediaCapture each deliver what they deliver.
+    static partial void MapCaptureFormat(CameraViewHandler handler, CameraView view);
 }
 #endif

@@ -181,6 +181,29 @@ public partial class CameraView
     public static readonly BindableProperty OrientationProperty = BindableProperty.Create(
         nameof(Orientation), typeof(CameraOrientation), typeof(CameraView), CameraOrientation.Device);
 
+    /// <summary>
+    /// The pixel format the capture pipeline is asked for. Defaults to
+    /// <see cref="CameraCaptureFormat.Bgra32"/>, which is what every release before this one delivered.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// See <see cref="CameraCaptureFormat"/> for what this actually costs. In short: on Apple, BGRA is a
+    /// full-frame colour conversion per frame for as long as the preview is running, and
+    /// <see cref="CameraCaptureFormat.Yuv420"/> is the format the sensor and the encoder both wanted.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>Only opt in when the overlay is a <see cref="ICompositedVideoOverlayRenderer"/> and there are
+    /// no draw effects.</b> Anything that has to draw on the CPU makes the recorder convert to a scratch
+    /// BGRA surface and back on every frame, which is a worse trade than never leaving BGRA.
+    /// </para>
+    /// <para>
+    /// Applied when the capture session is configured, and re-applied live if it changes afterwards. A
+    /// device that does not offer the requested format keeps BGRA rather than failing.
+    /// </para>
+    /// </remarks>
+    public static readonly BindableProperty CaptureFormatProperty = BindableProperty.Create(
+        nameof(CaptureFormat), typeof(CameraCaptureFormat), typeof(CameraView), CameraCaptureFormat.Bgra32);
+
     /// <summary>Whether a video recording is currently in progress (updated by the control).</summary>
     public static readonly BindableProperty IsRecordingProperty = BindableProperty.Create(
         nameof(IsRecording), typeof(bool), typeof(CameraView), false, BindingMode.OneWayToSource);
@@ -308,6 +331,13 @@ public partial class CameraView
     {
         get => (bool)this.GetValue(MixWithOtherAudioProperty);
         set => this.SetValue(MixWithOtherAudioProperty, value);
+    }
+
+    /// <inheritdoc cref="CaptureFormatProperty"/>
+    public CameraCaptureFormat CaptureFormat
+    {
+        get => (CameraCaptureFormat)this.GetValue(CaptureFormatProperty);
+        set => this.SetValue(CaptureFormatProperty, value);
     }
 
     /// <inheritdoc cref="OrientationProperty"/>

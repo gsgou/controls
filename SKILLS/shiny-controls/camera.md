@@ -119,6 +119,14 @@ await this.Camera.StartVideoRecordingAsync(new VideoRecordingOptions
 });
 CameraVideo overlaid = await this.Camera.StopVideoRecordingAsync();
 
+// Apple writes movie fragments every 10s on BOTH recording paths — the raw one (AVCaptureMovieFileOutput's
+// own default) and the burn-in one — so a recording the process never gets to finish is still playable up to
+// the last fragment. That matters for long captures: a crash, a force-quit or a battery pull would otherwise
+// leave a file with no moov atom that nothing will decode, however many minutes went into it.
+// Android has NO equivalent: CameraX's Recorder muxes through MediaMuxer, which cannot write fragmented MP4,
+// so an unfinished recording there is lost. If a hard kill mid-capture is a real risk on Android, record in
+// segments — a run of short StartVideoRecordingAsync/StopVideoRecordingAsync calls — rather than one long one.
+
 // Recording quality is a SESSION setting, not a per-recording one — set it before/independently of a
 // recording, not inside VideoRecordingOptions. Default is High (1080p) on every platform.
 this.Camera.VideoQuality = VideoQuality.Medium;   // 720p
@@ -811,6 +819,14 @@ Blazor mirrors the MAUI single-analyzer shape: assign a typed **`Analyzer`** (to
   - Layers are **borrowed**: the images must stay alive and unmodified until the next `GetLayers` call.
   - Bottom-most first; the platform composites in the order given.
   - Any `IDrawEffect` in `CameraView.Effects` is arbitrary canvas code, so a chain containing one keeps the ordinary draw path.
+  - **Pair it with `CaptureFormat = CameraCaptureFormat.Yuv420` on Apple** — see the next bullet. Layers are what make that format worth asking for.
+
+- **Apple: the capture pixel format is a per-frame cost you can stop paying.** `CameraView.CaptureFormat` defaults to `Bgra32`, which is not what the camera produces — the sensor delivers biplanar YCbCr, so BGRA means the capture pipeline colour-converts every frame for as long as the preview is up (idle, not recording, no analyzer — it does not matter), and the hardware encoder converts it back to YUV to write the file. Set `CameraCaptureFormat.Yuv420` to ask for the native format; a device that does not list it silently keeps BGRA.
+  - ⚠️ **Only opt in when the overlay is layer-composited and there are no draw effects.** A `CGBitmapContext` cannot be built over a biplanar buffer, so anything drawing on the CPU makes the recorder convert to a scratch BGRA surface and back on every frame — worse than never leaving BGRA. `ICompositedVideoOverlayRenderer` never touches the CPU and is unaffected.
+  - `CameraFrame.Format` reports what the frame actually holds, and luminance gets **cheaper**: NV12's first plane already *is* luminance, so `SampleLuminance` reads one byte per sample instead of four plus arithmetic. `ToCGImage()` becomes a GPU conversion, paid only on frames an analyzer actually takes.
+  - Android (CameraX) and Windows pick their own formats; the property is ignored there.
+
+- **Frames are only delivered while something wants them.** An attached analyzer, a live effect chain, or a burn-in recording — any one is enough, and with none of the three the sample-buffer delegate is detached entirely on Apple. This is a layer below `IFrameAnalyzer.WantsFrame()`, which decides whether a *delivered* frame is worth wrapping. Nothing to do for it; it matters because a plain preview now costs nothing on the video queue.
 
 ```csharp
 sealed class HudOverlay : ICompositedVideoOverlayRenderer

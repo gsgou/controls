@@ -169,7 +169,13 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
                 this.EnsureAudioDataOutput(recorder);
             }
             this.overlayRecorder = recorder;
-            this.frameDelegate.Recorder = recorder; // frames already flowing on the data output start feeding it
+            this.frameDelegate.Recorder = recorder;
+
+            // ⚠️ Load-bearing, not tidy-up. Frames are only delivered while something wants them, and a
+            // burn-in recording is the one consumer that can appear with no analyzer and no effects
+            // attached — without this the writer would sit waiting for frames that never arrive and the
+            // recording would finish empty.
+            this.UpdateFrameDelivery();
             return Task.CompletedTask;
         }
 
@@ -192,6 +198,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
             if (this.audioDelegate != null)
                 this.audioDelegate.Recorder = null;
             this.overlayRecorder = null;
+            this.UpdateFrameDelivery();
             return this.ReorientWhenDone(recorder.FinishAsync());
         }
 
@@ -436,13 +443,13 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         if (this.session.CanAddOutput(this.photoOutput))
             this.session.AddOutput(this.photoOutput);
 
-        this.dataOutput = new AVCaptureVideoDataOutput
-        {
-            AlwaysDiscardsLateVideoFrames = true,
-            WeakVideoSettings = new CVPixelBufferAttributes { PixelFormatType = CVPixelFormatType.CV32BGRA }.Dictionary
-        };
+        this.dataOutput = new AVCaptureVideoDataOutput { AlwaysDiscardsLateVideoFrames = true };
         if (this.session.CanAddOutput(this.dataOutput))
             this.session.AddOutput(this.dataOutput);
+
+        // After AddOutput, not before: AvailableVideoCVPixelFormatTypes is a question about this output on
+        // this session with this input, and it answers nothing until the output is attached to all three.
+        this.ApplyCaptureFormat();
 
         this.movieOutput = new AVCaptureMovieFileOutput();
         if (this.session.CanAddOutput(this.movieOutput))
@@ -465,7 +472,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
                 pv.PreviewLayer.Session = s;
                 this.SetupFilterView();
-                this.dataOutput?.SetSampleBufferDelegate(this.frameDelegate, this.videoQueue);
+                this.UpdateFrameDelivery();
                 this.OrientConnections();
                 this.ReportZoomRange();
                 this.ApplyZoom(this.VirtualView.Zoom);
@@ -703,6 +710,119 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
         };
     }
 
+    /// <summary>
+    /// Attaches the sample-buffer delegate only while something actually consumes frames, and detaches it
+    /// again when nothing does.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⚠️ <b>Not the same saving as <c>CameraPipeline.WantsFrame</c>, and it sits a layer below it.</b> That
+    /// gate decides whether a delivered frame is worth wrapping — it runs <i>inside</i> the delegate, so the
+    /// capture pipeline has already produced, converted and handed over the buffer by the time it is asked.
+    /// This decides whether AVFoundation delivers at all.
+    /// </para>
+    /// <para>
+    /// Three things consume frames and any one of them is enough: an attached analyzer, a live effect chain
+    /// (the filtered preview is rendered from these frames), and a burn-in recording. A camera showing a
+    /// plain preview with none of the three now costs nothing on the video queue — the preview layer draws
+    /// itself from the session and never went through here.
+    /// </para>
+    /// </remarks>
+    void UpdateFrameDelivery()
+    {
+        if (this.dataOutput is not { } output || this.frameDelegate is not { } frames)
+            return;
+
+        var wanted = this.Pipeline.HasAnalyzer
+            || frames.Filters.Length > 0
+            || this.overlayRecorder != null;
+
+        if (wanted == this.frameDeliveryAttached)
+            return;
+
+        try
+        {
+            output.SetSampleBufferDelegate(wanted ? frames : null, wanted ? this.videoQueue : null);
+            this.frameDeliveryAttached = wanted;
+        }
+        catch (Exception ex)
+        {
+            // Detaching is an optimisation; attaching is not. A failure to attach has to be visible, because
+            // the analyzer or the recording behind it will otherwise be silently starved.
+            if (wanted)
+                this.MaybeVirtualView?.OnCameraError("Camera frame delivery could not be started", ex);
+        }
+    }
+
+    bool frameDeliveryAttached;
+
+    // The pipeline reports an analyzer being attached, detached or toggled. Apple gates frame delivery on
+    // exactly that, so unlike the comment on the shared declaration suggests, it is not a no-op here.
+    partial void OnAnalyzersSynced() => this.MainThread(this.UpdateFrameDelivery);
+
+    /// <summary>
+    /// Asks the data output for the pixel format the control wants, falling back to BGRA where the device
+    /// does not offer it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <b>A format the hardware does not list is not a request, it is a stall</b> —
+    /// <c>AVCaptureVideoDataOutput</c> validates its video settings and an unsupported one throws out of the
+    /// session configuration. So the availability list decides, and an unavailable format silently keeps the
+    /// format that has always worked rather than taking the camera down.
+    /// </remarks>
+    void ApplyCaptureFormat()
+    {
+        if (this.dataOutput is not { } output)
+            return;
+
+        var requested = this.MaybeVirtualView?.CaptureFormat ?? CameraCaptureFormat.Bgra32;
+        var wanted = requested == CameraCaptureFormat.Yuv420 && Supports(output, BiplanarFormat)
+            ? BiplanarFormat
+            : CVPixelFormatType.CV32BGRA;
+
+        try
+        {
+            output.WeakVideoSettings = new CVPixelBufferAttributes { PixelFormatType = wanted }.Dictionary;
+        }
+        catch (Exception ex)
+        {
+            this.MaybeVirtualView?.OnCameraError("Camera capture format could not be applied", ex);
+        }
+    }
+
+    /// <summary>Full range rather than video range: its luma is already 0–255, so nothing has to rescale it.</summary>
+    const CVPixelFormatType BiplanarFormat = CVPixelFormatType.CV420YpCbCr8BiPlanarFullRange;
+
+    // A live change reconfigures the running output. Cheap next to what it saves, and rare: this is a
+    // property a page sets once, not one anything animates.
+    static partial void MapCaptureFormat(CameraViewHandler handler, CameraView view)
+    {
+        if (handler.session is not { } session || handler.dataOutput is null)
+            return;
+
+        session.BeginConfiguration();
+        try
+        {
+            handler.ApplyCaptureFormat();
+        }
+        finally
+        {
+            session.CommitConfiguration();
+        }
+    }
+
+    static bool Supports(AVCaptureVideoDataOutput output, CVPixelFormatType format)
+    {
+        try
+        {
+            return output.AvailableVideoCVPixelFormatTypes?.Contains(format) == true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     int frameErrorReported;
 
     void OnFrameError(Exception ex)
@@ -720,6 +840,7 @@ public partial class CameraViewHandler : ViewHandler<CameraView, CameraPreviewVi
 
         var filters = AppleCameraFilters.Create(chain);
         this.frameDelegate.Filters = filters;
+        this.UpdateFrameDelivery();
 
         // Show the filtered-frame overlay on top of the live preview while any effect is active. We must NOT
         // hide the preview layer to reveal it: PreviewLayer is the view's *backing* layer and the overlay is

@@ -188,6 +188,19 @@ sealed class AppleVideoOverlayRecorder
                     this.writer.AddInput(this.audioInput);
             }
 
+            // Write movie fragments as capture proceeds, so a recording the process never gets to finish is
+            // still playable up to the last fragment. Without it the moov atom is only written by
+            // FinishWriting, and a crash, a force-quit or a battery pull leaves a file nothing will decode —
+            // however many minutes went into it.
+            //
+            // Ten seconds because that is exactly what AVCaptureMovieFileOutput defaults to, and this class
+            // exists to be the same recording with an overlay burned in. It was the same inconsistency the
+            // bitrate field above documents: attaching an overlay silently swapped a crash-recoverable file
+            // for one that was all-or-nothing, for reasons nothing in the API hinted at.
+            //
+            // Must be set before StartWriting — AVFoundation ignores it afterwards.
+            this.writer.MovieFragmentInterval = new CMTime(10, 1);
+
             if (!this.writer.StartWriting())
             {
                 this.Fail(this.writer.Error?.LocalizedDescription ?? "AVAssetWriter failed to start");
@@ -229,8 +242,61 @@ sealed class AppleVideoOverlayRecorder
                 return;
         }
 
-        // Stage 2b — compositing on the CPU. Read-write lock (flags 0) so the draws land in the buffer we
-        // then encode.
+        // Stage 2b — compositing on the CPU.
+        //
+        // ⚠️ A biplanar capture buffer cannot host a CGBitmapContext: there is no interleaved RGB to point
+        // one at, and BaseAddress on a planar buffer is not the image. So the frame is converted to a BGRA
+        // scratch surface, drawn on there, and converted back — two GPU passes on top of the CPU blend.
+        // That is a worse trade than never leaving BGRA, which is exactly why CameraCaptureFormat.Yuv420 is
+        // documented as being for layer-composited overlays and is not the default.
+        if (AppleCameraFrame.IsBiplanarFormat(pixelBuffer.PixelFormatType))
+        {
+            this.DrawViaScratch(pixelBuffer, pts);
+            return;
+        }
+
+        this.DrawInto(pixelBuffer, pts);
+    }
+
+    CVPixelBuffer? scratch;
+    CIContext? scratchContext;
+
+    /// <summary>
+    /// Draws this frame's overlay through a BGRA scratch surface, for a capture format the CPU cannot draw
+    /// on directly.
+    /// </summary>
+    void DrawViaScratch(CVPixelBuffer pixelBuffer, CMTime pts)
+    {
+        int w = (int)pixelBuffer.Width, h = (int)pixelBuffer.Height;
+
+        // Allocated once and reused for the life of the recording. A per-frame surface would be an IOSurface
+        // allocation thirty times a second on the capture queue.
+        this.scratch ??= new CVPixelBuffer(w, h, CVPixelFormatType.CV32BGRA, new CVPixelBufferAttributes
+        {
+            PixelFormatType = CVPixelFormatType.CV32BGRA,
+            Width = w,
+            Height = h
+        });
+
+        this.scratchContext ??= Metal.MTLDevice.SystemDefault is { } device
+            ? CIContext.FromMetalDevice(device)
+            : new CIContext();
+
+        using (var source = new CIImage(pixelBuffer))
+            this.scratchContext.Render(source, this.scratch);
+
+        this.DrawInto(this.scratch, pts);
+
+        // Back into the buffer that is about to be appended — the sample buffer the encoder receives is the
+        // capture's own, so a composite left in the scratch would never reach the file.
+        using (var drawn = new CIImage(this.scratch))
+            this.scratchContext.Render(drawn, pixelBuffer);
+    }
+
+    /// <summary>The CPU composite itself, over any BGRA buffer.</summary>
+    void DrawInto(CVPixelBuffer pixelBuffer, CMTime pts)
+    {
+        // Read-write lock (flags 0) so the draws land in the buffer we then encode.
         pixelBuffer.Lock((CVPixelBufferLock)0);
         try
         {
@@ -317,6 +383,13 @@ sealed class AppleVideoOverlayRecorder
         }
 
         this.layerCompositor?.Dispose();
+
+        // The scratch surface and its context only exist for a biplanar recording that had to draw on the
+        // CPU. Released with the recording rather than kept: it is a full frame of IOSurface.
+        this.scratch?.Dispose();
+        this.scratch = null;
+        this.scratchContext?.Dispose();
+        this.scratchContext = null;
 
         if (w == null)
         {

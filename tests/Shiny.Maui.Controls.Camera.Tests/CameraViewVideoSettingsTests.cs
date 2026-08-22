@@ -91,4 +91,23 @@ public class CameraViewVideoSettingsTests
         ((int)VideoQuality.High).ShouldBeLessThan((int)VideoQuality.UltraHigh);
         ((int)VideoQuality.UltraHigh).ShouldBeLessThan((int)VideoQuality.Highest);
     }
+
+    [Fact]
+    public void Capture_format_defaults_to_bgra()
+    {
+        // ⚠️ Not a taste question. BGRA is the only format the CPU composite path can draw on, and every
+        // release before this one delivered it — so an app that draws its overlay through DrawOverlay or an
+        // IDrawEffect must keep working untouched after upgrading. The efficient format is opt-in for
+        // exactly that reason, and a change to this default is a breaking change to those apps.
+        new CameraView().CaptureFormat.ShouldBe(CameraCaptureFormat.Bgra32);
+    }
+
+
+    [Fact]
+    public void Capture_format_is_settable()
+    {
+        var view = new CameraView { CaptureFormat = CameraCaptureFormat.Yuv420 };
+
+        view.CaptureFormat.ShouldBe(CameraCaptureFormat.Yuv420);
+    }
 }
