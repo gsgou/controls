@@ -26,6 +26,9 @@
                     <Label Text="The popup's default content — orb, prompt, suggestions, response area. Type and press Enter; ↑ ↓ move through the suggestions."
                            FontSize="12"
                            TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                    <Label Text="A PromptTextToSpeechTool from the SpeechAddins package is docked in TrailingTools — the 🔊 appears once an answer lands, and reads it aloud."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
                     <ContentView Content="{Binding Preview}" AutomationId="QuickEntryPreview" />
                 </VerticalStackLayout>
             </Border>

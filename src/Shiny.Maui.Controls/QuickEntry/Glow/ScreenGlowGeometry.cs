@@ -16,6 +16,19 @@ readonly record struct ScreenGlowBlob(float X, float Y, float Radius, Color Colo
 static class ScreenGlowGeometry
 {
     /// <summary>
+    /// How far one pool reaches from its centre. The pool fades to nothing at this radius and is
+    /// centred *on* the edge, so this is also how far the glow reaches inward — which is what
+    /// <see cref="ScreenGlowOptions.Thickness"/> means. A much larger pool reaches most of the way
+    /// across a phone and reads as a flat wash of colour rather than as an edge.
+    /// </summary>
+    /// <remarks>
+    /// A renderer that gives the glow its own surface has to size that surface by this, not by
+    /// <c>Thickness</c>: a surface only <c>Thickness</c> deep cuts the pool off before it has faded
+    /// out, and the cut is a hard line down the screen.
+    /// </remarks>
+    public static double RadiusFor(double thickness) => thickness * 1.15d;
+
+    /// <summary>
     /// Positions <paramref name="count"/> pools evenly around the perimeter of a
     /// <paramref name="width"/> × <paramref name="height"/> rectangle, offset by
     /// <paramref name="phase"/> (0–1 is one full lap), and colours them from the palette at
@@ -29,9 +42,16 @@ static class ScreenGlowGeometry
     /// </remarks>
     public static ScreenGlowBlob[] Compute(double width, double height, double thickness, double phase, double colorPhase, ScreenGlowOptions options)
     {
-        var count = Math.Max(1, options.BlobCount);
+        var radius = (float)RadiusFor(thickness);
+
+        // BlobCount is a floor, not the count. Pools spaced further apart than their own radius
+        // leave unlit gaps between them, and how many it takes to rim a screen depends on the
+        // screen: five is a continuous edge on a phone and a string of separate lights on a
+        // desktop display.
+        var perimeter = 2d * (width + height);
+        var spacing = Math.Max(1d, radius);
+        var count = Math.Max(Math.Max(1, options.BlobCount), (int)Math.Ceiling(perimeter / spacing));
         var blobs = new ScreenGlowBlob[count];
-        var radius = (float)(thickness * 2.4d);
 
         for (var i = 0; i < count; i++)
         {

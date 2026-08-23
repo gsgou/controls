@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 
 namespace Shiny.Blazor.Controls.QuickEntry;
 
@@ -97,6 +98,15 @@ public class PromptViewState
         get => this.dropdownHeight;
         set => this.Set(ref this.dropdownHeight, value);
     }
+
+    /// <summary>
+    /// Tools docked beside the orb. Observable, so adding one after the popup has been built shows
+    /// up without reconfiguring anything.
+    /// </summary>
+    public ObservableCollection<PromptTool> LeadingTools { get; } = new();
+
+    /// <summary>Tools docked at the trailing edge, before the microphone and submit buttons.</summary>
+    public ObservableCollection<PromptTool> TrailingTools { get; } = new();
 
     /// <summary>Raised when the user submits — Enter, the submit button, or picking a suggestion.</summary>
     public event EventHandler<PromptSubmittedEventArgs>? Submitted;

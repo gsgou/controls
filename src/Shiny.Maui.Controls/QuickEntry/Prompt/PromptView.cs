@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
 using Microsoft.Maui.Controls.Shapes;
@@ -106,11 +107,12 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     public static readonly BindableProperty ResponseContentProperty = BindableProperty.Create(
         nameof(ResponseContent), typeof(View), typeof(PromptView), null,
-        propertyChanged: (b, _, n) => ((PromptView)b).Apply(v =>
-        {
-            v.responseHost.Content = (View?)n;
-            v.UpdateBodyVisibility();
-        })
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateResponse())
+    );
+
+    public static readonly BindableProperty ResponseProperty = BindableProperty.Create(
+        nameof(Response), typeof(string), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateResponse())
     );
 
     public static readonly BindableProperty FooterProperty = BindableProperty.Create(
@@ -151,6 +153,22 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     public static readonly BindableProperty ClearOnSubmitProperty = BindableProperty.Create(
         nameof(ClearOnSubmit), typeof(bool), typeof(PromptView), true
+    );
+
+    // -----------------------------------------------------------------------------------------
+    // Tools
+    // -----------------------------------------------------------------------------------------
+
+    public static readonly BindableProperty LeadingToolsProperty = BindableProperty.Create(
+        nameof(LeadingTools), typeof(IList<PromptTool>), typeof(PromptView), null,
+        propertyChanged: (b, o, n) => ((PromptView)b).Apply(v => v.OnToolsChanged(
+            (IList<PromptTool>?)o, (IList<PromptTool>?)n, v.leadingToolsLayout))
+    );
+
+    public static readonly BindableProperty TrailingToolsProperty = BindableProperty.Create(
+        nameof(TrailingTools), typeof(IList<PromptTool>), typeof(PromptView), null,
+        propertyChanged: (b, o, n) => ((PromptView)b).Apply(v => v.OnToolsChanged(
+            (IList<PromptTool>?)o, (IList<PromptTool>?)n, v.trailingToolsLayout))
     );
 
     // -----------------------------------------------------------------------------------------
@@ -213,6 +231,9 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     readonly VerticalStackLayout cardContent;
     readonly RoundRectangle cardShape;
     readonly Grid inputRow;
+    readonly HorizontalStackLayout leadingSlot;
+    readonly HorizontalStackLayout leadingToolsLayout;
+    readonly HorizontalStackLayout trailingToolsLayout;
     readonly ContentView leadingHost;
     readonly PromptOrbView orb;
     readonly BorderlessEntry entry;
@@ -229,6 +250,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     readonly ScrollView dropdownScroll;
     readonly VerticalStackLayout dropdownStack;
     readonly ContentView responseHost;
+    readonly Label responseLabel;
     readonly ContentView dropdownHost;
     readonly VerticalStackLayout suggestionList;
     readonly ContentView footerHost;
@@ -243,6 +265,10 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     readonly List<View> suggestionRows = new();
     readonly List<object> suggestionItems = new();
     INotifyCollectionChanged? observedSuggestions;
+    NotifyCollectionChangedEventHandler? leadingToolsChangedHandler;
+    NotifyCollectionChangedEventHandler? trailingToolsChangedHandler;
+    readonly List<PromptTool> attachedLeadingTools = new();
+    readonly List<PromptTool> attachedTrailingTools = new();
     int highlightIndex = -1;
     bool built;
     bool measuring;
@@ -260,6 +286,18 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         // well below the prompt it belongs to. Anchoring the whole row to the top keeps the three
         // pieces level whatever the native field does with the space.
         this.leadingHost = new ContentView { VerticalOptions = LayoutOptions.Start };
+        this.leadingToolsLayout = new HorizontalStackLayout
+        {
+            Spacing = 2,
+            IsVisible = false,
+            VerticalOptions = LayoutOptions.Start
+        };
+        this.leadingSlot = new HorizontalStackLayout
+        {
+            Spacing = 6,
+            VerticalOptions = LayoutOptions.Start,
+            Children = { this.leadingHost, this.leadingToolsLayout }
+        };
 
         this.entry = new BorderlessEntry
         {
@@ -289,11 +327,18 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
             VerticalOptions = LayoutOptions.Start
         };
 
+        this.trailingToolsLayout = new HorizontalStackLayout
+        {
+            Spacing = 2,
+            IsVisible = false,
+            VerticalOptions = LayoutOptions.Start
+        };
+
         var trailing = new HorizontalStackLayout
         {
             Spacing = 6,
             VerticalOptions = LayoutOptions.Start,
-            Children = { this.busyIndicator, this.micButton, this.submitButton }
+            Children = { this.busyIndicator, this.trailingToolsLayout, this.micButton, this.submitButton }
         };
 
         this.inputRow = new Grid
@@ -308,7 +353,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
             Padding = new Thickness(18, 14, 12, 14),
             MinimumHeightRequest = 44
         };
-        this.inputRow.Add(this.leadingHost, 0);
+        this.inputRow.Add(this.leadingSlot, 0);
         this.inputRow.Add(this.entry, 1);
         this.inputRow.Add(trailing, 2);
 
@@ -325,6 +370,8 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         };
 
         this.responseHost = new ContentView { Padding = new Thickness(18, 6, 18, 12) };
+        this.responseLabel = new Label { LineHeight = 1.35 }
+            .WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         this.dropdownHost = new ContentView { IsVisible = false };
         this.suggestionList = new VerticalStackLayout { Padding = new Thickness(8, 6) };
         this.footerHost = new ContentView { IsVisible = false, Padding = new Thickness(18, 8) };
@@ -378,6 +425,10 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.card.MeasureInvalidated += (_, _) => this.RaiseDesiredHeightChanged();
 
         this.built = true;
+
+        // After `built`, so the property callbacks that hang the collections off their layouts run.
+        this.LeadingTools = new ObservableCollection<PromptTool>();
+        this.TrailingTools = new ObservableCollection<PromptTool>();
 
         this.ApplyThemeDefaults();
         this.ApplyAll();
@@ -500,10 +551,39 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     }
 
     /// <summary>The response area. Assign anything — a Label, a MarkdownView, a ChatView. Null collapses it.</summary>
+    /// <remarks>Wins over <see cref="Response"/> when both are set.</remarks>
     public View? ResponseContent
     {
         get => (View?)this.GetValue(ResponseContentProperty);
         set => this.SetValue(ResponseContentProperty, value);
+    }
+
+    /// <summary>
+    /// The answer as plain text, rendered in a built-in label. For rich content use
+    /// <see cref="ResponseContent"/>, which wins when both are set.
+    /// </summary>
+    /// <remarks>
+    /// This is also what a read-aloud tool speaks — a <see cref="View"/> has no text to hand it, so
+    /// content pushed through <see cref="ResponseContent"/> alone is invisible to one.
+    /// </remarks>
+    public string? Response
+    {
+        get => (string?)this.GetValue(ResponseProperty);
+        set => this.SetValue(ResponseProperty, value);
+    }
+
+    /// <summary>Tools docked beside the orb, at the leading edge of the prompt row.</summary>
+    public IList<PromptTool>? LeadingTools
+    {
+        get => (IList<PromptTool>?)this.GetValue(LeadingToolsProperty);
+        set => this.SetValue(LeadingToolsProperty, value);
+    }
+
+    /// <summary>Tools docked at the trailing edge, before the built-in microphone and submit glyphs.</summary>
+    public IList<PromptTool>? TrailingTools
+    {
+        get => (IList<PromptTool>?)this.GetValue(TrailingToolsProperty);
+        set => this.SetValue(TrailingToolsProperty, value);
     }
 
     /// <summary>Optional strip along the bottom — a model picker, token count, keyboard legend.</summary>
@@ -630,6 +710,13 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     /// <summary>Raised when the stop button is pressed while <see cref="IsBusy"/> is set. Cancel your request here.</summary>
     public event EventHandler? Cancelled;
 
+    /// <summary>
+    /// Raised whenever the response area changes — <see cref="Response"/> or
+    /// <see cref="ResponseContent"/>, set or cleared. A tool that reacts to the answer arriving
+    /// listens here.
+    /// </summary>
+    public event EventHandler? ResponseChanged;
+
     /// <inheritdoc />
     public event EventHandler? BusyChanged;
 
@@ -741,6 +828,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.Text = String.Empty;
         this.SetHighlight(-1);
         this.ResponseContent = null;
+        this.Response = null;
     }
 
     void ChooseSuggestion(object item)
@@ -797,9 +885,10 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
                     this.SetHighlight(-1);
                     return true;
                 }
-                if (this.ResponseContent != null)
+                if (this.responseHost.Content != null)
                 {
                     this.ResponseContent = null;
+                    this.Response = null;
                     return true;
                 }
                 if (!String.IsNullOrEmpty(this.Text))
@@ -918,7 +1007,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.busyLabel.Text = this.BusyText;
         this.micButton.IsVisible = this.ShowMicrophone;
         this.UpdateCornerRadius();
-        this.responseHost.Content = this.ResponseContent;
+        this.UpdateResponse();
         this.dropdownHost.Content = this.DropdownContent;
         this.dropdownHost.IsVisible = this.DropdownContent != null;
         this.footerHost.Content = this.Footer;
@@ -983,6 +1072,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.entry.TextColor = text;
         this.busyLabel.TextColor = subtle;
         this.micGlyph.TextColor = subtle;
+        this.responseLabel.TextColor = text;
 
         foreach (var row in this.suggestionRows)
         {
@@ -996,13 +1086,39 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         }
     }
 
+    /// <summary>
+    /// Fills the response area: a caller's view wins, then a caller's text in the built-in label,
+    /// then nothing at all.
+    /// </summary>
+    void UpdateResponse()
+    {
+        if (this.ResponseContent is { } view)
+        {
+            this.responseHost.Content = view;
+        }
+        else if (!String.IsNullOrEmpty(this.Response))
+        {
+            this.responseLabel.Text = this.Response;
+            this.responseHost.Content = this.responseLabel;
+        }
+        else
+        {
+            this.responseHost.Content = null;
+        }
+
+        // Busy first: the "Thinking…" row is only shown while there is nothing to read, and that
+        // just changed. UpdateBusy ends in UpdateBodyVisibility, so the area is laid out once.
+        this.UpdateBusy();
+        this.ResponseChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     void UpdateBusy()
     {
         var busy = this.IsBusy;
         this.orb.IsBusy = busy;
         this.busyIndicator.IsVisible = busy;
         this.busyIndicator.IsRunning = busy;
-        this.busyRow.IsVisible = busy && this.ResponseContent == null;
+        this.busyRow.IsVisible = busy && this.responseHost.Content == null;
         this.submitButton.IsVisible = this.ShowSubmitButton;
         this.submitGlyph.Text = busy ? "■" : "↵";
         this.UpdateBodyVisibility();
@@ -1167,6 +1283,78 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         row.Content = grid;
         AddTap(row, () => this.ChooseSuggestion(item));
         return row;
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Tools
+    // -----------------------------------------------------------------------------------------
+
+    void OnToolsChanged(IList<PromptTool>? oldTools, IList<PromptTool>? newTools, HorizontalStackLayout layout)
+    {
+        var isLeading = ReferenceEquals(layout, this.leadingToolsLayout);
+        ref var handler = ref isLeading ? ref this.leadingToolsChangedHandler : ref this.trailingToolsChangedHandler;
+
+        if (oldTools is INotifyCollectionChanged oldNcc && handler is not null)
+            oldNcc.CollectionChanged -= handler;
+
+        this.SyncTools(newTools, layout);
+
+        if (newTools is INotifyCollectionChanged ncc)
+        {
+            handler = (_, _) => this.SyncTools(newTools, layout);
+            ncc.CollectionChanged += handler;
+        }
+        else
+        {
+            handler = null;
+        }
+    }
+
+    /// <summary>
+    /// Reconciles the slot against the collection as it stands now.
+    /// </summary>
+    /// <remarks>
+    /// Diffed against what is actually attached rather than against the event's OldItems: a
+    /// <c>Reset</c> carries neither list, and the collection the change handler closes over is
+    /// already the post-change one — walking it would never find the tool that was just removed, so
+    /// that tool would keep whatever it subscribed to in <see cref="IPromptAwareTool.Attach"/>.
+    /// </remarks>
+    void SyncTools(IList<PromptTool>? tools, HorizontalStackLayout layout)
+    {
+        var attached = ReferenceEquals(layout, this.leadingToolsLayout)
+            ? this.attachedLeadingTools
+            : this.attachedTrailingTools;
+
+        var current = tools?.ToList() ?? new List<PromptTool>();
+
+        foreach (var gone in attached.Where(t => !current.Contains(t)).ToList())
+        {
+            if (gone is IPromptAwareTool aware)
+                aware.Detach();
+
+            gone.ParentPrompt = null;
+        }
+
+        layout.Children.Clear();
+        layout.IsVisible = current.Count > 0;
+
+        // Parented before anything is attached, so a tool can reach the prompt from its own Attach.
+        foreach (var tool in current)
+        {
+            tool.ParentPrompt = this;
+            layout.Children.Add(tool);
+        }
+
+        foreach (var added in current.Where(t => !attached.Contains(t)))
+        {
+            if (added is IPromptAwareTool aware)
+                aware.Attach(this);
+        }
+
+        attached.Clear();
+        attached.AddRange(current);
+
+        this.RaiseDesiredHeightChanged();
     }
 
     static void AddTap(View view, Action action)

@@ -198,7 +198,10 @@ sealed class WindowsScreenGlow : IScreenGlowPresenter, IDisposable
 
     void LayoutBands()
     {
-        var thickness = Math.Max(1, (int)Math.Round(this.Options.Thickness * this.scale));
+        // Deep enough to hold a whole pool, not just Thickness: the bands are the only surface the
+        // glow has, so a band that stops at Thickness slices the pool off while it is still
+        // painting and leaves a hard line running down the screen.
+        var thickness = Math.Max(1, (int)Math.Ceiling(ScreenGlowGeometry.RadiusFor(this.Options.Thickness) * this.scale));
         thickness = Math.Min(thickness, Math.Min(this.screen.Width, this.screen.Height) / 2);
 
         var middleHeight = Math.Max(0, this.screen.Height - thickness * 2);
@@ -241,7 +244,9 @@ sealed class WindowsScreenGlow : IScreenGlowPresenter, IDisposable
             ? 1d
             : 1d - pulseDepth * (0.5d - 0.5d * Math.Cos(this.pulsePhase * Math.PI * 2));
 
-        var baseAlpha = Math.Clamp(this.Options.Intensity, 0d, 1d) * breath * this.fade * 0.45d;
+        // Split across the passes so stacking them lands near Intensity rather than several times
+        // over it — the pools overlap each other along the edge as well.
+        var baseAlpha = Math.Clamp(this.Options.Intensity, 0d, 1d) * breath * this.fade * 0.45d / layers;
 
         foreach (var band in this.bands)
         {
@@ -252,23 +257,21 @@ sealed class WindowsScreenGlow : IScreenGlowPresenter, IDisposable
 
             for (var layer = 0; layer < layers; layer++)
             {
-                var depth = (float)(thicknessPx * (layer + 1) / layers);
-                var clip = band.Edge switch
-                {
-                    Edge.Top => new RectangleF(0, 0, band.Bounds.Width, depth),
-                    Edge.Bottom => new RectangleF(0, band.Bounds.Height - depth, band.Bounds.Width, depth),
-                    Edge.Left => new RectangleF(0, 0, depth, band.Bounds.Height),
-                    _ => new RectangleF(band.Bounds.Width - depth, 0, depth, band.Bounds.Height)
-                };
+                // Each pass is a tighter pool over the same centres, so the colour piles up at the
+                // edge and thins out inward. Clipping each pass a little further in, which is the
+                // obvious way to build the same falloff, cannot work: a clip has a hard edge, so
+                // every pass leaves a visible rectangle outline across the screen.
+                var tighten = 1f - layer / (layers * 1.5f);
 
-                band.Canvas.SetClip(clip);
                 foreach (var blob in blobs)
                 {
                     // Blobs are positioned in screen space; each band draws the part of them that
                     // reaches into its own rectangle.
                     var cx = blob.X - (band.Bounds.Left - this.screen.Left);
                     var cy = blob.Y - (band.Bounds.Top - this.screen.Top);
-                    var r = blob.Radius;
+                    var r = blob.Radius * tighten;
+                    if (r <= 0)
+                        continue;
 
                     if (cx + r < 0 || cy + r < 0 || cx - r > band.Bounds.Width || cy - r > band.Bounds.Height)
                         continue;
@@ -289,7 +292,6 @@ sealed class WindowsScreenGlow : IScreenGlowPresenter, IDisposable
                     };
                     band.Canvas.FillPath(brush, path);
                 }
-                band.Canvas.ResetClip();
             }
 
             this.Push(band);

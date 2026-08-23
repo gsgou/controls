@@ -50,6 +50,21 @@ public partial class QuickEntryViewModel : ObservableObject
         }
     };
 
+    /// <summary>
+    /// Read-aloud, from Shiny.Maui.Controls.SpeechAddins. It hides itself until there is an answer,
+    /// so the row looks the same as it did until the first response lands.
+    /// </summary>
+    /// <remarks>
+    /// Resolved by name, like the hotkey service above, so this page still compiles and runs in a
+    /// head that does not reference the add-on — SpeechAddins is iOS/Android/MacCatalyst/Windows only.
+    /// </remarks>
+    static void AddTools(PromptView prompt)
+    {
+        var toolType = Type.GetType("Shiny.Maui.Controls.SpeechAddins.QuickEntry.PromptTextToSpeechTool, Shiny.Maui.Controls.SpeechAddins");
+        if (toolType != null && Activator.CreateInstance(toolType) is PromptTool tool)
+            prompt.TrailingTools?.Add(tool);
+    }
+
     public QuickEntryViewModel(IServiceProvider services)
     {
         this.quickEntry = services.GetService(typeof(IQuickEntryService)) as IQuickEntryService;
@@ -75,6 +90,7 @@ public partial class QuickEntryViewModel : ObservableObject
             _ = this.PreloadAndWireAsync();
         }
 
+        AddTools(this.Preview);
         Wire(this.Preview, this.Log);
         this.HotKeyStatus = this.HotKeysAvailable
             ? "Available — press Register"
@@ -100,6 +116,7 @@ public partial class QuickEntryViewModel : ObservableObject
                     new("Explain this error", "Paste a stack trace and get a plain-English read", "🐞"),
                     new("Draft a reply", "Turns a few bullet points into a message", "✉️")
                 };
+                AddTools(prompt);
                 Wire(prompt, this.Log);
             }
             this.ResolvedPresentation = this.quickEntry.ResolvedPresentation.ToString();
@@ -120,18 +137,17 @@ public partial class QuickEntryViewModel : ObservableObject
         prompt.Submitted += async (_, e) =>
         {
             log($"Submitted: \"{e.Text}\"");
-            prompt.ResponseContent = null;
+            prompt.Response = null;
             prompt.IsBusy = true;
 
             await Task.Delay(1800);
 
             prompt.IsBusy = false;
-            prompt.ResponseContent = new Label
-            {
-                Text = $"You asked \"{e.Text}\". Wire Submitted to your own IChatClient and put the streamed answer here — a Label, a MarkdownView, a ChatView, whatever fits.",
-                FontSize = 14,
-                LineHeight = 1.35
-            };
+
+            // Response rather than ResponseContent: plain text renders in the built-in label and is
+            // also the only thing a read-aloud tool can speak. Rich answers go through
+            // ResponseContent (a MarkdownView, a ChatView) and give the tool a TextSelector.
+            prompt.Response = $"You asked \"{e.Text}\". Wire Submitted to your own IChatClient and put the streamed answer here — plain text, a MarkdownView, a ChatView, whatever fits.";
         };
 
         prompt.Cancelled += (_, _) =>

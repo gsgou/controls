@@ -6,10 +6,15 @@ namespace Shiny.Maui.Controls.QuickEntry;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The inward falloff comes from stacking <see cref="ScreenGlowOptions.Layers"/> passes, each
-/// clipped a little further in than the last. They accumulate towards the screen edge, which is
-/// both cheaper and softer than trying to express a two-dimensional gradient — colour along the
-/// edge, opacity across it — with a single paint.
+/// The inward falloff comes from stacking <see cref="ScreenGlowOptions.Layers"/> passes of the same
+/// pools, each drawn a little tighter than the last, so brightness accumulates towards the screen
+/// edge and thins away inward. The pools are radial and centred *on* the edge, so their own falloff
+/// is the soft boundary — nothing is clipped.
+/// </para>
+/// <para>
+/// Clipping each pass to a rectangle a little further in, which is the obvious way to build the
+/// same accumulation, cannot work: a clip has a hard edge, so every pass leaves a visible rectangle
+/// outline across the screen and the result reads as stacked coloured boxes rather than as a glow.
 /// </para>
 /// <para>
 /// Three motions run at once, and they do different jobs. The colour cycle is the one you notice —
@@ -99,23 +104,25 @@ class ScreenGlowView : GraphicsView
                 ? 1d
                 : 1d - depth * (0.5d - 0.5d * Math.Cos(this.pulsePhase * Math.PI * 2));
 
-            var alpha = (float)(Math.Clamp(this.options.Intensity, 0d, 1d) * breath) * 0.45f;
+            // Split across the passes so stacking them lands near Intensity rather than several
+            // times over it — the pools overlap each other along the edge as well.
+            var alpha = (float)(Math.Clamp(this.options.Intensity, 0d, 1d) * breath) * 0.45f / layers;
 
             canvas.Antialias = true;
             for (var layer = 0; layer < layers; layer++)
             {
-                var inset = thickness * (layer + 1) / layers;
-                var innerWidth = rect.Width - inset * 2;
-                var innerHeight = rect.Height - inset * 2;
-                if (innerWidth <= 0 || innerHeight <= 0)
-                    continue;
-
-                canvas.SaveState();
-                canvas.SubtractFromClip(inset, inset, innerWidth, innerHeight);
+                // Each pass is a tighter pool over the same centres. The tightest one only ever
+                // covers ground the widest already did, so the colour piles up at the edge and
+                // thins out inward, which is the falloff.
+                var tighten = 1f - layer / (layers * 1.5f);
 
                 foreach (var blob in blobs)
                 {
-                    var bounds = new RectF(blob.X - blob.Radius, blob.Y - blob.Radius, blob.Radius * 2, blob.Radius * 2);
+                    var radius = blob.Radius * tighten;
+                    if (radius <= 0)
+                        continue;
+
+                    var bounds = new RectF(blob.X - radius, blob.Y - radius, radius * 2, radius * 2);
                     var colour = blob.Color.WithAlpha(alpha);
                     var paint = new RadialGradientPaint(
                         new PaintGradientStop[]
@@ -132,8 +139,6 @@ class ScreenGlowView : GraphicsView
                     canvas.SetFillPaint(paint, bounds);
                     canvas.FillRectangle(bounds);
                 }
-
-                canvas.RestoreState();
             }
         }
     }

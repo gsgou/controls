@@ -1,4 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!-- Razor SDK, like every other Blazor add-on here: without it wwwroot is not published as a
+     static web asset and the package's JS modules 404 under /_content/. -->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <TargetFramework>$(BaseTargetFramework)</TargetFramework>

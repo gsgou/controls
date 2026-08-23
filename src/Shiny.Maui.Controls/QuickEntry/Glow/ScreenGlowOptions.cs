@@ -39,7 +39,11 @@ public sealed class ScreenGlowOptions
         Color.FromArgb("#35D6B0")
     };
 
-    /// <summary>How many colour pools travel around the border. Default 5. More is smoother and costs more to draw.</summary>
+    /// <summary>
+    /// Minimum number of colour pools travelling around the border. Default 5. This is a floor, not
+    /// the count: enough pools to rim the screen without gaps between them are always drawn, which
+    /// on a large display is considerably more than five. Raise it for a busier edge.
+    /// </summary>
     public int BlobCount { get; set; } = 5;
 
     /// <summary>
@@ -70,9 +74,10 @@ public sealed class ScreenGlowOptions
     public double Intensity { get; set; } = 0.9d;
 
     /// <summary>
-    /// How many stacked passes build the inward falloff. Default 3. Each pass is clipped a little
-    /// further in, so they accumulate towards the edge and fade out smoothly; 1 gives a hard inner
-    /// border, 5 is very soft and noticeably more expensive on a large display.
+    /// How many stacked passes build the inward falloff. Default 3. Each pass draws the same pools
+    /// a little tighter than the last, so the colour piles up towards the edge and thins away
+    /// inward; 1 is a single flat wash, 5 is a deeper edge and noticeably more expensive on a large
+    /// display.
     /// </summary>
     public int Layers { get; set; } = 3;
 

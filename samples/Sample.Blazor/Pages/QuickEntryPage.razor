@@ -1,5 +1,6 @@
 @page "/quickentry"
 @using Shiny.Blazor.Controls.QuickEntry
+@using Shiny.Blazor.Controls.SpeechAddins
 @inject IQuickEntryService QuickEntry
 @implements IDisposable
 
@@ -16,6 +17,11 @@
         The control on its own, on an ordinary page. Type and press Enter; ↑ ↓ move through the
         suggestions and Escape backs out one step at a time.
     </p>
+    <p class="muted">
+        A <code>PromptTextToSpeechTool</code> from the SpeechAddins package is docked in
+        <code>TrailingTools</code> — the 🔊 appears once an answer lands, and reads it aloud through
+        the browser's speech synthesiser.
+    </p>
 
     <PromptView Width="640"
                 @bind-Text="inline.Text"
@@ -25,6 +31,7 @@
                 ShowMicrophone="true"
                 Suggestions="Suggestions"
                 Response="@inline.Response"
+                TrailingTools="inlineTools"
                 Submitted="OnInlineSubmitted"
                 Cancelled="() => inline.IsBusy = false" />
 </section>
@@ -88,6 +95,10 @@
 
     readonly InlineState inline = new();
 
+    // Plain objects, so a tool can be built here and handed to the prompt as a parameter — which is
+    // also how the popup's own prompt, configured through the service, gets one.
+    readonly List<PromptTool> inlineTools = new() { new PromptTextToSpeechTool() };
+
     static readonly List<PromptSuggestion> Suggestions = new()
     {
         new("Summarise my clipboard", "Reads whatever you last copied", "📋"),
@@ -126,6 +137,7 @@
         QuickEntry.ConfigurePrompt(prompt =>
         {
             prompt.Suggestions = Suggestions;
+            prompt.TrailingTools.Add(new PromptTextToSpeechTool());
             prompt.Submitted += OnPopupSubmitted;
             prompt.Cancelled += (_, _) => prompt.IsBusy = false;
         });

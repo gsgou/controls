@@ -120,6 +120,32 @@
     font-size: var(--shiny-type-title-medium-size, 16px);
 }
 
+/*
+   Tools. The leading rail sits between the orb and the prompt, the trailing ones inside the action
+   row — so only the rail needs its own box; a trailing tool inherits the row's gap.
+*/
+.shiny-prompt-tools-leading {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-1, 6px);
+}
+
+.shiny-prompt-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.shiny-prompt-tool:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.shiny-prompt-tool-text {
+    font-size: var(--shiny-type-body-medium-size, 14px);
+}
+
 .shiny-prompt-spinner {
     width: 16px;
     height: 16px;

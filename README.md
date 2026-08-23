@@ -3518,9 +3518,33 @@ public class QuickEntryHost(IQuickEntryService quickEntry, IChatClient chat)
 
 The popup's default content, and an ordinary control in its own right — put it on a page and it works there too, on every platform.
 
-`Text`, `Placeholder`, `IsBusy`, `BusyText`, the leading icon (`Icon` for an image, `IconContent` for any view, `ShowIcon`, `IconSize` — leave them alone for the built-in animated orb), the dropdown (`Suggestions` + `SuggestionTemplate`, `MaxVisibleSuggestions`, `DropdownContent` to replace that area entirely, `DropdownHeight` to pin it), `ResponseContent`, `Footer`, `SubmitCommand` / `SuggestionCommand` / `MicrophoneCommand`, `ShowMicrophone`, `ShowSubmitButton`, `ClearOnSubmit`, and a full colour surface (`AccentColor`, `SurfaceColor`, `OutlineColor`, `TextColor`, `PlaceholderColor`, `SubtleTextColor`, `HighlightColor`, `CornerRadius`, `PromptFontSize`) that follows the theme tokens until you assign one. Events: `Submitted`, `SuggestionSelected`, `Cancelled`.
+`Text`, `Placeholder`, `IsBusy`, `BusyText`, the leading icon (`Icon` for an image, `IconContent` for any view, `ShowIcon`, `IconSize` — leave them alone for the built-in animated orb), the dropdown (`Suggestions` + `SuggestionTemplate`, `MaxVisibleSuggestions`, `DropdownContent` to replace that area entirely, `DropdownHeight` to pin it), the response (`Response` for plain text, `ResponseContent` for any view/markup — the latter wins when both are set), `Footer`, tools (`LeadingTools` / `TrailingTools`), `SubmitCommand` / `SuggestionCommand` / `MicrophoneCommand`, `ShowMicrophone`, `ShowSubmitButton`, `ClearOnSubmit`, and a full colour surface (`AccentColor`, `SurfaceColor`, `OutlineColor`, `TextColor`, `PlaceholderColor`, `SubtleTextColor`, `HighlightColor`, `CornerRadius`, `PromptFontSize`) that follows the theme tokens until you assign one. Events: `Submitted`, `SuggestionSelected`, `Cancelled`, `ResponseChanged`.
 
 **It does no AI itself.** Handle `Submitted`, set `IsBusy`, assign the response.
+
+#### Prompt tools
+
+`LeadingTools` (beside the orb) and `TrailingTools` (before the microphone and submit glyphs) take `PromptTool`s — the prompt-bar equivalent of `TextEntry`'s tool slots. A tool that needs to read or drive the prompt implements `IPromptAwareTool` on MAUI (`Attach`/`Detach`), or overrides `OnAttached`/`OnDetached` on Blazor, where it is also handed the app's `IServiceProvider` so it can resolve what it needs without the hosting page wiring it.
+
+`PromptTextToSpeechTool` ships in **`Shiny.Maui.Controls.SpeechAddins`** and **`Shiny.Blazor.Controls.SpeechAddins`** and reads the answer aloud through `Shiny.Speech`. It hides itself until there is something to read, turns into a stop button while speaking, and takes `AutoSpeak`, `SpeechRate`, `Pitch`, `Volume`, `VoiceName`, `Culture` and `HideWhenEmpty`.
+
+```xml
+<qe:PromptView>
+    <qe:PromptView.TrailingTools>
+        <speech:PromptTextToSpeechTool AutoSpeak="True" Culture="en-US" />
+    </qe:PromptView.TrailingTools>
+</qe:PromptView>
+```
+
+```razor
+<PromptView Response="@answer" TrailingTools="tools" />
+
+@code {
+    readonly List<PromptTool> tools = new() { new PromptTextToSpeechTool() };
+}
+```
+
+It speaks `Response`, the plain-text half of the answer. A rich answer set through `ResponseContent` is a view with no text to read, so give the tool a `TextSelector` to pull the words out of what you rendered. Blazor needs `AddTextToSpeech()` registered and a WebAssembly host — the synthesiser is the browser's.
 
 The dropdown sizes itself to whatever is in it — the popup grows and shrinks to match — unless you set `DropdownHeight`, which pins it and scrolls instead (what you want for a list that changes length as the user types and would otherwise make the popup jump under the pointer).
 

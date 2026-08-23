@@ -20,6 +20,13 @@
             </div>
         }
 
+        @if (this.LeadingTools is not null)
+        {
+            <div class="shiny-prompt-tools shiny-prompt-tools-leading">
+                @this.RenderTools(this.LeadingTools)
+            </div>
+        }
+
         <input class="shiny-prompt-field"
                type="text"
                placeholder="@this.Placeholder"
@@ -33,6 +40,10 @@
             @if (this.IsBusy)
             {
                 <span class="shiny-prompt-spinner" aria-hidden="true"></span>
+            }
+            @if (this.TrailingTools is not null)
+            {
+                @this.RenderTools(this.TrailingTools)
             }
             @if (this.ShowMicrophone)
             {
@@ -114,3 +125,35 @@
         }
     }
 </div>
+
+@code {
+    /// <summary>
+    /// Declared here rather than built with a RenderTreeBuilder in the code-behind: CSS isolation
+    /// scopes rules to elements that appear in .razor markup, so a builder-made button would render
+    /// unstyled.
+    /// </summary>
+    RenderFragment RenderTools(IEnumerable<PromptTool> tools) => @<text>
+        @foreach (var tool in tools)
+        {
+            var current = tool;
+            @if (current.IsVisible)
+            {
+                <button type="button"
+                        class="shiny-prompt-button shiny-prompt-tool @current.CssClass"
+                        style="@(current.ToolColor is null ? null : $"color:{current.ToolColor};")"
+                        title="@current.Title"
+                        disabled="@(!current.IsEnabled)"
+                        @onclick="() => this.OnToolClickAsync(current)">
+                    @if (!String.IsNullOrEmpty(current.Icon))
+                    {
+                        <span class="shiny-prompt-tool-icon">@current.Icon</span>
+                    }
+                    @if (!String.IsNullOrEmpty(current.Text))
+                    {
+                        <span class="shiny-prompt-tool-text">@current.Text</span>
+                    }
+                </button>
+            }
+        }
+    </text>;
+}

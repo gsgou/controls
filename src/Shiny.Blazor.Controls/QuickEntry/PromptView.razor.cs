@@ -16,12 +16,21 @@ namespace Shiny.Blazor.Controls.QuickEntry;
 /// <see cref="ResponseContent"/> when you have something to show. Usable on an ordinary page as well
 /// as inside <c>QuickEntryHost</c> — the popup is just where it usually lives.
 /// </remarks>
-public partial class PromptView : ComponentBase
+public partial class PromptView : ComponentBase, IDisposable
 {
     ElementReference field;
     int highlightIndex = -1;
     bool preventDefault;
     INotifyCollectionChanged? observedSuggestions;
+    readonly List<PromptTool> attachedLeadingTools = new();
+    readonly List<PromptTool> attachedTrailingTools = new();
+    INotifyCollectionChanged? observedLeadingTools;
+    INotifyCollectionChanged? observedTrailingTools;
+    string? lastResponse;
+    RenderFragment? lastResponseContent;
+    bool responseSeen;
+
+    [Inject] IServiceProvider Services { get; set; } = null!;
 
     [Parameter] public string? Class { get; set; }
 
@@ -86,6 +95,16 @@ public partial class PromptView : ComponentBase
     /// <summary>Optional strip along the bottom — a model picker, a keyboard legend.</summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
+    /// <summary>
+    /// Tools docked beside the orb, at the leading edge of the prompt row. An
+    /// <c>ObservableCollection</c> is honoured, so a tool added later shows up without a re-render
+    /// of the parent.
+    /// </summary>
+    [Parameter] public IEnumerable<PromptTool>? LeadingTools { get; set; }
+
+    /// <summary>Tools docked at the trailing edge, before the built-in microphone and submit buttons.</summary>
+    [Parameter] public IEnumerable<PromptTool>? TrailingTools { get; set; }
+
     /// <summary>Show the microphone button. Default false — there is no speech engine in this package.</summary>
     [Parameter] public bool ShowMicrophone { get; set; }
 
@@ -109,6 +128,13 @@ public partial class PromptView : ComponentBase
 
     /// <summary>Raised by the microphone button.</summary>
     [Parameter] public EventCallback Microphone { get; set; }
+
+    /// <summary>
+    /// Raised whenever the response area changes — <see cref="Response"/> or
+    /// <see cref="ResponseContent"/>, set or cleared. A tool that reacts to the answer arriving
+    /// listens here.
+    /// </summary>
+    public event EventHandler? ResponseChanged;
 
     /// <summary>The index of the keyboard-highlighted suggestion, or -1 when the prompt itself has focus.</summary>
     public int HighlightedIndex => this.highlightIndex;
@@ -148,6 +174,117 @@ public partial class PromptView : ComponentBase
     {
         this.RebuildSuggestions();
         this.Observe(this.Suggestions);
+        this.SyncTools();
+        this.RaiseResponseChanged();
+    }
+
+    // ---- Tools -------------------------------------------------------------------------------
+
+    // Internal rather than private so the behaviour OnParametersSet drives can be pinned without a
+    // renderer — the same reason this project suppresses BL0005.
+    internal void SyncTools()
+    {
+        this.Observe(this.LeadingTools, ref this.observedLeadingTools, this.OnLeadingToolsChanged);
+        this.Observe(this.TrailingTools, ref this.observedTrailingTools, this.OnTrailingToolsChanged);
+
+        this.SyncTools(this.LeadingTools, this.attachedLeadingTools);
+        this.SyncTools(this.TrailingTools, this.attachedTrailingTools);
+    }
+
+    void Observe(
+        IEnumerable<PromptTool>? tools,
+        ref INotifyCollectionChanged? observed,
+        NotifyCollectionChangedEventHandler handler
+    )
+    {
+        var incoming = tools as INotifyCollectionChanged;
+        if (ReferenceEquals(observed, incoming))
+            return;
+
+        if (observed is not null)
+            observed.CollectionChanged -= handler;
+
+        observed = incoming;
+
+        if (observed is not null)
+            observed.CollectionChanged += handler;
+    }
+
+    /// <summary>
+    /// Reconciles what is attached against what is in the collection now. Diffed rather than torn
+    /// down and rebuilt because <see cref="OnParametersSet"/> runs on every render of the parent —
+    /// re-attaching a tool that never left would double whatever it subscribed to.
+    /// </summary>
+    void SyncTools(IEnumerable<PromptTool>? tools, List<PromptTool> attached)
+    {
+        var current = tools?.ToList() ?? new List<PromptTool>();
+
+        foreach (var gone in attached.Where(t => !current.Contains(t)).ToList())
+            gone.InternalDetach();
+
+        foreach (var added in current.Where(t => !attached.Contains(t)))
+            added.InternalAttach(this, this.Services);
+
+        attached.Clear();
+        attached.AddRange(current);
+    }
+
+    void OnLeadingToolsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => this.InvokeAsync(() =>
+        {
+            this.SyncTools(this.LeadingTools, this.attachedLeadingTools);
+            this.StateHasChanged();
+        });
+
+    void OnTrailingToolsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => this.InvokeAsync(() =>
+        {
+            this.SyncTools(this.TrailingTools, this.attachedTrailingTools);
+            this.StateHasChanged();
+        });
+
+    async Task OnToolClickAsync(PromptTool tool)
+    {
+        await tool.InternalClickAsync();
+        this.StateHasChanged();
+    }
+
+    /// <summary>Re-render after a tool has changed its own appearance from off the renderer.</summary>
+    internal Task RefreshToolsAsync() => this.InvokeAsync(this.StateHasChanged);
+
+    internal void RaiseResponseChanged()
+    {
+        var changed = !String.Equals(this.lastResponse, this.Response, StringComparison.Ordinal)
+            || !ReferenceEquals(this.lastResponseContent, this.ResponseContent);
+
+        this.lastResponse = this.Response;
+        this.lastResponseContent = this.ResponseContent;
+
+        // The first pass is the initial parameter set, not a change — a tool reads the current
+        // answer in OnAttached, and firing here would make AutoSpeak read whatever was already there.
+        if (!this.responseSeen)
+        {
+            this.responseSeen = true;
+            return;
+        }
+
+        if (changed)
+            this.ResponseChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Dispose()
+    {
+        if (this.observedSuggestions is not null)
+            this.observedSuggestions.CollectionChanged -= this.OnSuggestionsChanged;
+
+        if (this.observedLeadingTools is not null)
+            this.observedLeadingTools.CollectionChanged -= this.OnLeadingToolsChanged;
+
+        if (this.observedTrailingTools is not null)
+            this.observedTrailingTools.CollectionChanged -= this.OnTrailingToolsChanged;
+
+        this.SyncTools(null, this.attachedLeadingTools);
+        this.SyncTools(null, this.attachedTrailingTools);
     }
 
     void Observe(IEnumerable? suggestions)

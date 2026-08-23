@@ -60,6 +60,12 @@ sealed class MacTrayIcon : TrayIconBase
             using var data = NSData.FromArray(bytes);
             var image = new NSImage(data);
             image.Template = isTemplate;
+
+            // An NSImage built from raw bytes takes the *bitmap's* pixel size, and the status item
+            // draws it at exactly that — so an ordinary app icon (512px and up) paints hundreds of
+            // points tall and swamps the whole menu bar. Scale it down to the status bar's own
+            // thickness, keeping the aspect ratio. The menu-item images below already do this.
+            ScaleToStatusBar(image);
             // Same rationale as OnMenuChanged: release the outgoing image's native
             // backing now rather than leaving it for a GC that the small managed
             // footprint won't promptly trigger.
@@ -67,6 +73,26 @@ sealed class MacTrayIcon : TrayIconBase
             this.statusItem.Button.Image = image;
             previous?.Dispose();
         });
+    }
+
+    /// <summary>
+    /// Fits an image to the menu bar. The inset leaves the button its own padding, which is what
+    /// keeps the glyph from touching the top and bottom edges of the bar.
+    /// </summary>
+    static void ScaleToStatusBar(NSImage image)
+    {
+        const double Inset = 4d;
+
+        var size = image.Size;
+        if (size.Width <= 0 || size.Height <= 0)
+            return;
+
+        var target = Math.Max(1d, (double)NSStatusBar.SystemStatusBar.Thickness - Inset);
+        var scale = target / Math.Max((double)size.Width, (double)size.Height);
+        if (scale >= 1d)
+            return;
+
+        image.Size = new CGSize(size.Width * scale, size.Height * scale);
     }
 
     protected override void OnTooltipChanged(string? value)

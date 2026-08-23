@@ -276,8 +276,14 @@ public class PromptViewTests
         ((IQuickEntryAutoSize)view).GetDesiredHeight(0).ShouldBe(0d);
     }
 
+    // The leading slot is a stack — the orb's host, then any leading tools — so the walk goes one
+    // level deeper than the input Grid.
     static View? LeadingContent(PromptView view)
-        => Descendants(view).OfType<Grid>().SelectMany(g => g.Children.OfType<ContentView>()).FirstOrDefault()?.Content;
+        => Descendants(view)
+            .OfType<Grid>()
+            .SelectMany(g => g.Children.OfType<Microsoft.Maui.Controls.Layout>())
+            .SelectMany(slot => slot.Children.OfType<ContentView>())
+            .FirstOrDefault()?.Content;
 
     static ContentView DropdownContainer(PromptView view)
         => Descendants(view)
@@ -332,6 +338,156 @@ public class PromptViewTests
 public class PromptApplicationCollection
 {
     public const string Name = "PromptApplicationResources";
+}
+
+/// <summary>
+/// Prompt tools: the docked glyphs a package like SpeechAddins adds to a <see cref="PromptView"/>,
+/// and the attach/detach contract they hang their subscriptions off.
+/// </summary>
+[Collection(PromptApplicationCollection.Name)]
+public class PromptToolTests
+{
+    public PromptToolTests()
+    {
+        TestDispatcherProvider.Install();
+        _ = new Application();
+    }
+
+    sealed class ProbeTool : PromptTool, IPromptAwareTool
+    {
+        public int Attached { get; private set; }
+        public int Detached { get; private set; }
+        public int Responses { get; private set; }
+
+        void IPromptAwareTool.Attach(PromptView prompt)
+        {
+            this.Attached++;
+            prompt.ResponseChanged += this.OnResponseChanged;
+        }
+
+        void IPromptAwareTool.Detach()
+        {
+            this.Detached++;
+            if (this.ParentPrompt is not null)
+                this.ParentPrompt.ResponseChanged -= this.OnResponseChanged;
+        }
+
+        void OnResponseChanged(object? sender, EventArgs e) => this.Responses++;
+    }
+
+    [Fact]
+    public void Both_tool_collections_exist_without_being_assigned()
+    {
+        // A consumer adds to them in XAML without first creating one, the way TextEntry works.
+        var view = new PromptView();
+        view.LeadingTools.ShouldNotBeNull();
+        view.TrailingTools.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void A_tool_added_later_is_attached_and_knows_its_prompt()
+    {
+        var view = new PromptView();
+        var tool = new ProbeTool();
+
+        view.TrailingTools!.Add(tool);
+
+        tool.Attached.ShouldBe(1);
+        tool.ParentPrompt.ShouldBeSameAs(view);
+    }
+
+    [Fact]
+    public void Removing_a_tool_detaches_it_and_drops_the_prompt()
+    {
+        var view = new PromptView();
+        var tool = new ProbeTool();
+
+        view.TrailingTools!.Add(tool);
+        view.TrailingTools!.Remove(tool);
+
+        tool.Detached.ShouldBe(1);
+        tool.ParentPrompt.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Replacing_the_collection_detaches_what_was_in_the_old_one()
+    {
+        var view = new PromptView();
+        var tool = new ProbeTool();
+        view.LeadingTools!.Add(tool);
+
+        view.LeadingTools = new List<PromptTool>();
+
+        tool.Detached.ShouldBe(1);
+    }
+
+    [Fact]
+    public void A_tool_hears_the_answer_arrive()
+    {
+        var view = new PromptView();
+        var tool = new ProbeTool();
+        view.TrailingTools!.Add(tool);
+
+        view.Response = "42";
+
+        tool.Responses.ShouldBe(1, "this is what a read-aloud tool reacts to");
+    }
+}
+
+/// <summary>
+/// The plain-text half of the response area. It exists so the answer is something a tool can read —
+/// a <see cref="View"/> handed to ResponseContent has no text to speak.
+/// </summary>
+[Collection(PromptApplicationCollection.Name)]
+public class PromptResponseTests
+{
+    public PromptResponseTests()
+    {
+        TestDispatcherProvider.Install();
+        _ = new Application();
+    }
+
+    [Fact]
+    public void Text_and_content_are_both_empty_to_start()
+    {
+        var view = new PromptView();
+        view.Response.ShouldBeNull();
+        view.ResponseContent.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Clearing_the_text_raises_the_change_as_well()
+    {
+        var view = new PromptView();
+        var raised = 0;
+        view.ResponseChanged += (_, _) => raised++;
+
+        view.Response = "answer";
+        view.Response = null;
+
+        raised.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Escape_clears_a_plain_text_answer_before_it_reaches_the_host()
+    {
+        var view = new PromptView { Response = "answer" };
+
+        view.HandleKey(QuickEntryKey.Escape).ShouldBeTrue("the key is consumed while there is something to back out of");
+
+        view.Response.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Reset_clears_both_halves()
+    {
+        var view = new PromptView { Response = "answer", ResponseContent = new Label() };
+
+        view.Reset();
+
+        view.Response.ShouldBeNull();
+        view.ResponseContent.ShouldBeNull();
+    }
 }
 
 /// <summary>

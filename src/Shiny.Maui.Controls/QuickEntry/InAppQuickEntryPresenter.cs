@@ -31,12 +31,21 @@ namespace Shiny.Maui.Controls.QuickEntry;
 /// </remarks>
 sealed class InAppQuickEntryPresenter : IQuickEntryPresenter
 {
+    // The popup never runs closer than this to either edge of the host when the requested width
+    // does not fit — a phone is narrower than any sensible desktop popup width.
+    const double SideMargin = 16d;
+
     ContentPage? page;
     OverlayHost? host;
     Overlay? overlay;
     ContentView? contentHost;
     View? content;
     bool opened;
+
+    // The last layout arguments, replayed when the host finally reports a width. Show() can run
+    // before the host has been measured, and the clamp needs a real width to work from.
+    QuickEntryOptions? lastOptions;
+    double lastWidth;
 
     public QuickEntryPresentation Kind => QuickEntryPresentation.InApp;
 
@@ -102,6 +111,9 @@ sealed class InAppQuickEntryPresenter : IQuickEntryPresenter
         if (this.contentHost != null)
             this.contentHost.Content = null;
 
+        if (this.host != null)
+            this.host.SizeChanged -= this.OnHostSizeChanged;
+
         this.overlay = null;
         this.contentHost = null;
         this.host = null;
@@ -140,7 +152,21 @@ sealed class InAppQuickEntryPresenter : IQuickEntryPresenter
         };
         this.overlay.PropertyChanged += this.OnOverlayPropertyChanged;
         this.host.Children.Add(this.overlay);
+        this.host.SizeChanged -= this.OnHostSizeChanged;
+        this.host.SizeChanged += this.OnHostSizeChanged;
         this.ApplyLayout(options, options.Width);
+    }
+
+    /// <summary>
+    /// The host is usually unmeasured on the first <c>Show</c>, so the clamp in
+    /// <see cref="ApplyLayout"/> has no width to work from. Replaying the layout once the host has a
+    /// size is what keeps the very first open from being the one that overflows — and it re-clamps
+    /// on rotation for free.
+    /// </summary>
+    void OnHostSizeChanged(object? sender, EventArgs e)
+    {
+        if (this.lastOptions != null)
+            this.ApplyLayout(this.lastOptions, this.lastWidth);
     }
 
     /// <summary>
@@ -196,8 +222,24 @@ sealed class InAppQuickEntryPresenter : IQuickEntryPresenter
         if (this.contentHost == null || this.overlay == null)
             return;
 
-        this.contentHost.WidthRequest = width;
+        this.lastOptions = options;
+        this.lastWidth = width;
+
+        // Width in the options is a desktop *window* width. In-app the popup is laid out inside the
+        // page, so a request wider than the host centres the card off both edges at once — on a
+        // phone 720 against a 420 host puts it at x=-150 and almost all of it off-screen. Clamp to
+        // what the host actually has. The content carries its own WidthRequest (the service sets it
+        // when it builds the view), so both have to come down or the inner view overflows anyway.
+        var hostWidth = this.host?.Width ?? 0;
+        var effective = hostWidth > 0
+            ? Math.Min(width, Math.Max(0, hostWidth - (SideMargin * 2)))
+            : width;
+
+        this.contentHost.WidthRequest = effective;
         this.contentHost.MaximumHeightRequest = options.MaxHeight;
+
+        if (this.content != null)
+            this.content.WidthRequest = effective;
 
         var available = this.host?.Height > 0 ? this.host.Height : 0;
 

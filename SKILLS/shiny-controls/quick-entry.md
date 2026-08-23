@@ -196,17 +196,81 @@ It is an ordinary `ContentView`, so it also works inline on a normal page — in
 | `MaxVisibleSuggestions` | Default 6 — it is a HUD, not a list view |
 | `DropdownContent` | Any view for the expanding area under the prompt — a command palette, recent items, your own list. Renders above `Suggestions`, so both can be used together |
 | `DropdownHeight` | Unset (-1) sizes the dropdown to its content and the window follows. Set a value to pin it and scroll instead — right for a list that changes length as the user types |
-| `ResponseContent` | Any `View`: a `Label`, a `MarkdownView`, a `ChatView`. Null collapses it |
+| `Response` | The answer as plain text, rendered in a built-in label. This is what a read-aloud tool speaks |
+| `ResponseContent` | Any `View`: a `Label`, a `MarkdownView`, a `ChatView`. Wins over `Response`; null collapses it |
 | `Footer` | Optional bottom strip — a model picker, a keyboard legend |
+| `LeadingTools` / `TrailingTools` | `IList<PromptTool>`, created for you. Leading sits beside the orb, trailing before the microphone and submit glyphs |
 | `SubmitCommand` / `SuggestionCommand` / `MicrophoneCommand` | Command equivalents of the events |
 | `ShowMicrophone` | Default false — there is no speech engine in this package |
 | `ShowSubmitButton` | Default true |
 | `ClearOnSubmit` | Default true |
 | `AccentColor`, `SurfaceColor`, `OutlineColor`, `TextColor`, `PlaceholderColor`, `SubtleTextColor`, `HighlightColor`, `CornerRadius`, `PromptFontSize` | Appearance. The colours default to app-theme bindings, so they follow light/dark until you assign one |
 
-Events: `Submitted` (`PromptSubmittedEventArgs` — `Text` and the chosen `Suggestion`, or null for a typed submit), `SuggestionSelected`, `Cancelled`.
+Events: `Submitted` (`PromptSubmittedEventArgs` — `Text` and the chosen `Suggestion`, or null for a typed submit), `SuggestionSelected`, `Cancelled`, `ResponseChanged`.
 
 `PromptSuggestion` is `Text`, `Description`, `Glyph` (any string — emoji or an icon-font character), and `Value` (anything you want carried to the handler).
+
+### Tools
+
+`LeadingTools` and `TrailingTools` are the prompt-bar equivalent of `TextEntry`'s tool slots. `PromptTool` derives from the same `IconTextTool` base, so `Text`, `Icon`, `ToolColor`, `FontSize`, `Command`/`CommandParameter` and `Clicked` all work the way they do on a `TextEntryTool`.
+
+```xml
+<qe:PromptView>
+    <qe:PromptView.TrailingTools>
+        <speech:PromptTextToSpeechTool AutoSpeak="True" />
+        <qe:PromptTool Text="⚙" Command="{Binding SettingsCommand}" />
+    </qe:PromptView.TrailingTools>
+</qe:PromptView>
+```
+
+A tool that needs the prompt implements `IPromptAwareTool`:
+
+```csharp
+public class MyTool : PromptTool, IPromptAwareTool
+{
+    PromptView? prompt;
+
+    void IPromptAwareTool.Attach(PromptView view)
+    {
+        this.prompt = view;
+        this.prompt.ResponseChanged += this.OnResponse;   // drop it again in Detach
+    }
+
+    void IPromptAwareTool.Detach()
+    {
+        if (this.prompt is not null)
+            this.prompt.ResponseChanged -= this.OnResponse;
+
+        this.prompt = null;
+    }
+}
+```
+
+`Detach` runs when the tool leaves the collection *and* when the whole collection is replaced — the tool object outlives the prompt, so anything subscribed in `Attach` has to come off there.
+
+#### Read aloud (`Shiny.Maui.Controls.SpeechAddins`)
+
+`PromptTextToSpeechTool` speaks the answer through `Shiny.Speech`'s `ITextToSpeechService`. Hidden while there is nothing to read, a stop button while speaking.
+
+| Property | Notes |
+|---|---|
+| `AutoSpeak` | Read the answer the moment it lands, instead of waiting for a tap. Default false |
+| `HideWhenEmpty` | Hide the tool until there is something to read. Default true |
+| `TextSelector` | `Func<PromptView, string?>`. Set this when the answer only lives in `ResponseContent` — a `View` has no text to speak |
+| `SpeechRate` / `Pitch` / `Volume` / `VoiceName` / `Culture` | Passed through to `TextToSpeechOptions` |
+| `SpeakingText` / `SpeakingColor` | The stop-state glyph and tint |
+
+`Speak()` and `Stop()` are callable directly. Register the engine with `AddSpeechServices()` (or `AddTextToSpeech()`).
+
+```csharp
+prompt.TrailingTools!.Add(new PromptTextToSpeechTool { AutoSpeak = true });
+prompt.Submitted += async (_, e) =>
+{
+    prompt.IsBusy = true;
+    prompt.Response = await AskAsync(e.Text);   // Response, not ResponseContent - the tool needs text
+    prompt.IsBusy = false;
+};
+```
 
 ### Keyboard
 
@@ -265,6 +329,21 @@ The popup's *own* prompt is configured through the service instead, because a se
     });
 }
 ```
+
+Blazor tools are plain objects rather than components, so a tool can be built in a view model and handed over as a parameter — which is also the only way the popup's own prompt gets one:
+
+```razor
+<PromptView Response="@answer" TrailingTools="tools" />
+
+@code {
+    readonly List<PromptTool> tools = new() { new PromptTextToSpeechTool() };
+
+    protected override void OnInitialized() => QuickEntry.ConfigurePrompt(prompt =>
+        prompt.TrailingTools.Add(new PromptTextToSpeechTool()));
+}
+```
+
+`PromptViewState.LeadingTools` / `TrailingTools` are `ObservableCollection<PromptTool>`, so a tool added after the popup has been built still shows up. Override `OnAttached` / `OnDetached` instead of `IPromptAwareTool`; both hand over `Prompt` and the app's `Services`, and `RefreshAsync()` re-renders after a tool changes its own glyph. `PromptTextToSpeechTool` ships in `Shiny.Blazor.Controls.SpeechAddins` and needs `AddTextToSpeech()` plus a WebAssembly host — the synthesiser is the browser's `speechSynthesis`, which a Blazor Server box does not have.
 
 `IQuickEntryService.SetContent(RenderFragment)` replaces the built-in prompt with your own markup for every open; `Show(RenderFragment)` does it for one.
 
