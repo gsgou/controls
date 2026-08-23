@@ -55,8 +55,9 @@ public partial class QuickEntryViewModel : ObservableObject
     /// so the row looks the same as it did until the first response lands.
     /// </summary>
     /// <remarks>
-    /// Resolved by name, like the hotkey service above, so this page still compiles and runs in a
-    /// head that does not reference the add-on — SpeechAddins is iOS/Android/MacCatalyst/Windows only.
+    /// Resolved by name, like the hotkey service above, so this page still compiles and runs in the
+    /// GTK head. SpeechAddins covers iOS, Android, MacCatalyst, macOS and Windows; Linux is the one
+    /// head with no speech engine behind it, and it shares these source files.
     /// </remarks>
     static void AddTools(PromptView prompt)
     {

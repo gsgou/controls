@@ -81,6 +81,8 @@ services.AddShinyControls(cfg => cfg.ConfigureQuickEntry(o =>
 <QuickEntryHost />
 ```
 
+⚠️ **`Shiny.Blazor.Controls.QuickEntry` must be in scope where you place the host** — in `_Imports.razor` or as an `@using` on the layout itself. Razor does not fail on a tag it cannot resolve: `<QuickEntryHost />` compiles to a literal `<quickentryhost>` element, renders nothing, and the service goes on reporting the popup as open. It looks exactly like a broken popup rather than a missing import.
+
 ## Driving the popup
 
 ```csharp
@@ -131,7 +133,7 @@ The popup is a real OS window, so it does **not** resize itself to its content t
 | `ContentFactory` | `null` | Builds the content. Defaults to a new `PromptView` |
 | `RecreateContentOnShow` | `false` | Off, so a half-typed prompt survives an accidental dismiss |
 | `ScreenGlow` | `None` | `None` / `WhileOpen` / `WhileBusy` |
-| `Glow` | — | The glow's appearance: thickness, palette, speed, intensity, layers, frame rate |
+| `Glow` | — | The glow's appearance: thickness, palette, speed, intensity, blob count, layers, frame rate |
 | `ScrimColor` | 35% black | In-app backdrop dimming the page. Transparent disables it |
 | `DismissOnScrimTap` | `true` | In-app: the touch equivalent of `DismissOnFocusLost`, which needs a window manager |
 | `WindowTitle` | `"Quick Entry"` | Desktop only. Never visible; shows in accessibility tooling |
@@ -260,7 +262,9 @@ public class MyTool : PromptTool, IPromptAwareTool
 | `SpeechRate` / `Pitch` / `Volume` / `VoiceName` / `Culture` | Passed through to `TextToSpeechOptions` |
 | `SpeakingText` / `SpeakingColor` | The stop-state glyph and tint |
 
-`Speak()` and `Stop()` are callable directly. Register the engine with `AddSpeechServices()` (or `AddTextToSpeech()`).
+`Speak()`, `Stop()` and `StopAsync()` are callable directly. Register the engine with `AddSpeechServices()` (or `AddTextToSpeech()`) — the tool resolves it from DI and no-ops when nothing is registered.
+
+`Shiny.Maui.Controls.SpeechAddins` targets iOS, Android, Mac Catalyst, macOS (AppKit) and Windows. There is no plain `net10.0` target, so the GTK/Linux head cannot reference it — `Shiny.Speech`'s `net10.0` assembly implements only the browser engine, so there would be nothing behind it. Resolve the tool by name if a page is shared with that head.
 
 ```csharp
 prompt.TrailingTools!.Add(new PromptTextToSpeechTool { AutoSpeak = true });
@@ -381,14 +385,19 @@ An animated colour wash around the edge of the display, in the style of Siri on 
 ```csharp
 cfg.ConfigureQuickEntry(o =>
 {
-    o.Glow.Thickness = 130;
+    o.Glow.Thickness = 130;    // how far the colour reaches in from the edge
     o.Glow.Palette   = new List<Color> { Colors.DeepSkyBlue, Colors.MediumPurple, Colors.HotPink };
     o.Glow.Speed     = 0.22;   // laps of the perimeter per second
     o.Glow.Intensity = 0.9;
-    o.Glow.Layers    = 3;      // inward-falloff passes: more is softer and costs more
+    o.Glow.BlobCount = 5;      // *minimum* pools; enough to rim the screen are always drawn
+    o.Glow.Layers    = 3;      // falloff passes: more is a deeper edge and costs more
     o.Glow.FrameRate = 30;
 });
 ```
+
+`Thickness` is the reach inward, and it is absolute — 110 is a band on a desktop display and most of the width of a phone. Turn it down for a tight rim on a small screen.
+
+`BlobCount` is a floor rather than the count: enough colour pools to rim the screen without gaps between them are always drawn, which on a large display is well over five.
 
 `UseQuickEntry()` calls `UseScreenGlow()` for you; call it directly to configure the appearance, or to use the glow without the popup.
 

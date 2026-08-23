@@ -36,6 +36,9 @@ public static class MauiProgram
 
             });
 
+        // The speech engine behind the prompt's read-aloud tool. The Catalyst head gets this from
+        // Sample's MauiProgram; this head has its own and needs it too.
+        builder.Services.AddSpeechServices();
         builder.Services.AddSingleton<global::Sample.AppSettings>();
 
 #if DEBUG

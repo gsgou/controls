@@ -31,7 +31,8 @@
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MermaidDiagrams\Shiny.Maui.Controls.MermaidDiagrams.csproj" />
         <!-- The GTK4 backend is its own package: there is no Linux TFM, so it can't live in the main one. -->
         <ProjectReference Include="..\..\src\Shiny.Maui.Controls.MediaElement.Linux\Shiny.Maui.Controls.MediaElement.Linux.csproj" />
-        <!-- SpeechAddins is mobile-only — Chat & speech pages are excluded below -->
+        <!-- SpeechAddins has no plain net10.0 TFM: Shiny.Speech's net10.0 asset only implements the
+             browser engine, so there is nothing behind it on GTK. Chat & speech pages are excluded below. -->
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">

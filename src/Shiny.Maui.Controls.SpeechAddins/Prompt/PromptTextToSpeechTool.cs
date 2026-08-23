@@ -304,6 +304,11 @@ public class PromptTextToSpeechTool : PromptTool, IPromptAwareTool
         }
     }
 
+    // IPlatformApplication rather than Application.Current.Handler: the alternate app heads (macOS
+    // AppKit, GTK) ship their own handler types, so the Application handler is not a MauiContext
+    // carrier there and the older lookup comes back null on exactly the desktops this package now
+    // targets. The handler path stays as a fallback.
     static T? ResolveService<T>() where T : class
-        => Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
+        => IPlatformApplication.Current?.Services?.GetService<T>()
+            ?? Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
 }

@@ -3482,7 +3482,7 @@ public class QuickEntryHost(IQuickEntryService quickEntry, IChatClient chat)
 }
 ```
 
-**Blazor** — in-app only, since a web page cannot make an OS window. Place one `<QuickEntryHost />` in your root layout, then drive `IQuickEntryService` from anywhere:
+**Blazor** — in-app only, since a web page cannot make an OS window. Place one `<QuickEntryHost />` in your root layout, then drive `IQuickEntryService` from anywhere. Import `Shiny.Blazor.Controls.QuickEntry` where you place it: Razor renders a tag it cannot resolve as a literal element rather than failing the build, so a missing `@using` gives you a popup that never appears while the service still reports it open.
 
 ```razor
 @inject IQuickEntryService QuickEntry
@@ -3512,7 +3512,7 @@ public class QuickEntryHost(IQuickEntryService quickEntry, IChatClient chat)
 | `ShowGlow()` / `HideGlow()` / `PulseGlowAsync()` | The glow is on the same service — the two are almost always used together |
 | `Opened` / `Closed` | Fire however the popup was dismissed |
 
-`QuickEntryOptions` covers `Presentation`, `Placement`, `Width`, `CollapsedHeight`, `MaxHeight`, `TopMarginRatio` / `BottomMarginRatio`, `AutoSize`, `DismissOnFocusLost`, `DismissOnScrimTap`, `DismissOnEscape`, `ActivateOnShow`, `ScrimColor`, `ContentFactory`, `RecreateContentOnShow`, `ScreenGlow`, and `Glow` (thickness, palette, speed, intensity, layers, frame rate). `HotKey`, `ShowInTaskbar` and `JoinAllSpaces` only apply to the desktop presentation.
+`QuickEntryOptions` covers `Presentation`, `Placement`, `Width`, `CollapsedHeight`, `MaxHeight`, `TopMarginRatio` / `BottomMarginRatio`, `AutoSize`, `DismissOnFocusLost`, `DismissOnScrimTap`, `DismissOnEscape`, `ActivateOnShow`, `ScrimColor`, `ContentFactory`, `RecreateContentOnShow`, `ScreenGlow`, and `Glow` (thickness, palette, speed, intensity, blob count, layers, frame rate). `HotKey`, `ShowInTaskbar` and `JoinAllSpaces` only apply to the desktop presentation.
 
 #### PromptView
 
@@ -3544,7 +3544,9 @@ The popup's default content, and an ordinary control in its own right — put it
 }
 ```
 
-It speaks `Response`, the plain-text half of the answer. A rich answer set through `ResponseContent` is a view with no text to read, so give the tool a `TextSelector` to pull the words out of what you rendered. Blazor needs `AddTextToSpeech()` registered and a WebAssembly host — the synthesiser is the browser's.
+It speaks `Response`, the plain-text half of the answer. A rich answer set through `ResponseContent` is a view with no text to read, so give the tool a `TextSelector` to pull the words out of what you rendered.
+
+MAUI needs `AddSpeechServices()` (or `AddTextToSpeech()`) registered — the tool resolves its engine from DI and no-ops otherwise. The package targets iOS, Android, Mac Catalyst, macOS (AppKit) and Windows; there is no plain `net10.0` target, so the GTK/Linux head cannot reference it (`Shiny.Speech`'s `net10.0` assembly implements only the browser engine). Blazor needs nothing registered but does need a WebAssembly host — the synthesiser is the browser's own.
 
 The dropdown sizes itself to whatever is in it — the popup grows and shrinks to match — unless you set `DropdownHeight`, which pins it and scrolls instead (what you want for a list that changes length as the user types and would otherwise make the popup jump under the pointer).
 
@@ -3559,6 +3561,8 @@ await quickEntry.PulseGlowAsync(TimeSpan.FromSeconds(3));   // one-shot acknowle
 ```
 
 It rims the **display** in desktop presentation and the **page** in-app — the same thing on a phone, and not the same thing on a desktop with your app in a window. On macOS and Linux/X11 the desktop glow is a transparent click-through window; on Windows a WinUI 3 window has no per-pixel alpha, so it is rendered with GDI+ into four layered Win32 windows, one per screen edge, which is why the Windows glow has square corners.
+
+`Glow.Thickness` is how far the colour reaches inward, and it is absolute — 110 is a band around a desktop display and most of the width of a phone, so turn it down for a tight rim on a small screen. `Glow.BlobCount` is a *floor*, not the count: enough colour pools to rim the screen without unlit gaps between them are always drawn, which on a large display is well over five.
 
 ### Desktop (Tray Icon + Docking + Desktop Quick Entry) &amp; the On-Screen Keyboard
 
