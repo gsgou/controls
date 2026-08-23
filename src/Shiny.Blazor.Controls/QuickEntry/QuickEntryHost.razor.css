@@ -1,0 +1,151 @@
+/*
+   The popup layer. Fixed rather than absolute so it is placed against the viewport whatever the
+   layout underneath is doing, and above the dialog layer — quick entry is summoned over whatever is
+   on screen, including a dialog.
+*/
+.shiny-quick-entry {
+    position: fixed;
+    inset: 0;
+    z-index: 10500;
+    display: flex;
+    justify-content: center;
+    outline: none;
+}
+
+.shiny-quick-entry.is-top {
+    align-items: flex-start;
+    padding-top: var(--shiny-qe-top, 18%);
+}
+
+.shiny-quick-entry.is-bottom {
+    align-items: flex-end;
+    padding-bottom: var(--shiny-qe-bottom, 12%);
+}
+
+.shiny-quick-entry.is-center {
+    align-items: center;
+}
+
+.shiny-quick-entry-scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--shiny-color-scrim, rgba(0, 0, 0, 0.35));
+    animation: shiny-qe-fade 140ms ease-out;
+}
+
+.shiny-quick-entry-card {
+    position: relative;
+    width: min(var(--shiny-qe-width, 720px), calc(100vw - 32px));
+    max-height: var(--shiny-qe-max-height, 560px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: shiny-qe-enter 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* The card is the scroll boundary, so content past MaxHeight is reachable rather than clipped. */
+.shiny-quick-entry-card > * {
+    min-height: 0;
+    overflow: auto;
+}
+
+@keyframes shiny-qe-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes shiny-qe-enter {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.shiny-quick-entry.is-bottom .shiny-quick-entry-card {
+    animation-name: shiny-qe-enter-up;
+}
+
+@keyframes shiny-qe-enter-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/*
+   The screen glow. A conic gradient spun by an animation, masked to a band around the edge — the
+   mask is what keeps the middle of the screen untouched, and the blur is what makes it read as a
+   glow rather than a coloured border. pointer-events: none throughout, so it never takes a click
+   meant for the page underneath.
+
+   Three motions, and they do different jobs. The fade-in is long enough to read as the glow
+   arriving rather than appearing. The breath — the opacity pulse on this element — is what makes it
+   read as alive. The conic spin underneath is a slow drift; on its own it reads as a chase light,
+   which is not the effect.
+*/
+.shiny-glow {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    pointer-events: none;
+    opacity: var(--shiny-glow-opacity, 0.9);
+    animation:
+        shiny-glow-in var(--shiny-glow-fade, 600ms) ease-out,
+        shiny-glow-breathe var(--shiny-glow-pulse, 2.8s) ease-in-out var(--shiny-glow-fade, 600ms) infinite;
+}
+
+/* Fades from nothing to the configured intensity, rather than to 1 — otherwise the glow flashes
+   brighter than its own setting on the way in. */
+@keyframes shiny-glow-in {
+    from { opacity: 0; }
+    to { opacity: var(--shiny-glow-opacity, 0.9); }
+}
+
+@keyframes shiny-glow-breathe {
+    0%, 100% { opacity: var(--shiny-glow-opacity, 0.9); }
+    50% { opacity: var(--shiny-glow-opacity-low, 0.58); }
+}
+
+.shiny-glow-ring {
+    position: absolute;
+    inset: calc(var(--shiny-glow-thickness, 110px) * -1);
+    background: conic-gradient(from 0deg, var(--shiny-glow-stops, #4f7dff, #a24bff, #ff4fa3, #ff9a3d, #35d6b0, #4f7dff));
+    filter: blur(calc(var(--shiny-glow-thickness, 110px) * 0.45));
+    animation:
+        shiny-glow-spin var(--shiny-glow-lap, 14s) linear infinite,
+        shiny-glow-hue calc(var(--shiny-glow-lap, 14s) / 2) ease-in-out infinite;
+
+    /*
+       Cut the middle out: an opaque band of `thickness` around the edge, fading inward. Masking the
+       gradient beats drawing four edge elements — the corners blend for free.
+    */
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    padding: calc(var(--shiny-glow-thickness, 110px) * 2);
+    box-sizing: border-box;
+}
+
+@keyframes shiny-glow-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* The colour change you actually notice — the whole edge working through the palette in place,
+   rather than the gradient racing around it. */
+@keyframes shiny-glow-hue {
+    0%, 100% { filter: blur(calc(var(--shiny-glow-thickness, 110px) * 0.45)) hue-rotate(0deg) saturate(1); }
+    50% { filter: blur(calc(var(--shiny-glow-thickness, 110px) * 0.45)) hue-rotate(38deg) saturate(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-glow-ring {
+        animation: none;
+    }
+
+    .shiny-quick-entry-scrim,
+    .shiny-quick-entry-card,
+    .shiny-glow {
+        animation: none;
+    }
+}

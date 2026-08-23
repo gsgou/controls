@@ -1,0 +1,330 @@
+using System.Collections;
+using System.Collections.Specialized;
+using System.Globalization;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+
+namespace Shiny.Blazor.Controls.QuickEntry;
+
+/// <summary>
+/// An assistant-style prompt bar — animated orb, single-line prompt, and an expanding area beneath
+/// it for suggestions and a response.
+/// </summary>
+/// <remarks>
+/// Deliberately AI-shaped but AI-agnostic: it raises <see cref="Submitted"/> and leaves the request
+/// to you. Push results back by setting <see cref="IsBusy"/> while you work and
+/// <see cref="ResponseContent"/> when you have something to show. Usable on an ordinary page as well
+/// as inside <c>QuickEntryHost</c> — the popup is just where it usually lives.
+/// </remarks>
+public partial class PromptView : ComponentBase
+{
+    ElementReference field;
+    int highlightIndex = -1;
+    bool preventDefault;
+    INotifyCollectionChanged? observedSuggestions;
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IDictionary<string, object>? Attributes { get; set; }
+
+    /// <summary>The prompt text. Two-way via <c>@bind-Text</c>.</summary>
+    [Parameter] public string Text { get; set; } = String.Empty;
+
+    [Parameter] public EventCallback<string> TextChanged { get; set; }
+
+    /// <summary>Placeholder shown in the empty prompt.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Ask anything…";
+
+    /// <summary>Spins the orb, shows a spinner and swaps submit for a stop button.</summary>
+    [Parameter] public bool IsBusy { get; set; }
+
+    /// <summary>Status line shown while busy and no response has arrived.</summary>
+    [Parameter] public string BusyText { get; set; } = "Thinking…";
+
+    /// <summary>Leading glyph in place of the animated orb — an emoji or an icon-font character.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>Arbitrary markup in the leading slot. Wins over <see cref="Icon"/>.</summary>
+    [Parameter] public RenderFragment? IconContent { get; set; }
+
+    /// <summary>Show the leading slot at all. Default true.</summary>
+    [Parameter] public bool ShowIcon { get; set; } = true;
+
+    /// <summary>Size of the orb or icon in CSS pixels. Default 26.</summary>
+    [Parameter] public double IconSize { get; set; } = 26;
+
+    /// <summary>
+    /// Suggestion rows. <see cref="PromptSuggestion"/> renders with the built-in template; any other
+    /// type needs <see cref="SuggestionTemplate"/>. Honours <see cref="INotifyCollectionChanged"/>,
+    /// so an <c>ObservableCollection</c> updated as the user types behaves like autocomplete.
+    /// </summary>
+    [Parameter] public IEnumerable? Suggestions { get; set; }
+
+    /// <summary>Render your own suggestion rows.</summary>
+    [Parameter] public RenderFragment<object>? SuggestionTemplate { get; set; }
+
+    /// <summary>How many suggestion rows to render. Default 6 — it is a HUD, not a list view.</summary>
+    [Parameter] public int MaxVisibleSuggestions { get; set; } = 6;
+
+    /// <summary>Arbitrary content for the expanding dropdown area. Renders above the suggestions.</summary>
+    [Parameter] public RenderFragment? DropdownContent { get; set; }
+
+    /// <summary>
+    /// Fixed height for the dropdown in CSS pixels. Null (the default) sizes it to its content; a
+    /// value pins it and scrolls, which is what you want for a list that changes length as the user
+    /// types and would otherwise make the popup jump under the pointer.
+    /// </summary>
+    [Parameter] public double? DropdownHeight { get; set; }
+
+    /// <summary>The answer as plain text. For rich content use <see cref="ResponseContent"/>.</summary>
+    [Parameter] public string? Response { get; set; }
+
+    /// <summary>The answer as markup — a rendered markdown component, a chat transcript, anything.</summary>
+    [Parameter] public RenderFragment? ResponseContent { get; set; }
+
+    /// <summary>Optional strip along the bottom — a model picker, a keyboard legend.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    /// <summary>Show the microphone button. Default false — there is no speech engine in this package.</summary>
+    [Parameter] public bool ShowMicrophone { get; set; }
+
+    /// <summary>Show the submit / stop button. Default true.</summary>
+    [Parameter] public bool ShowSubmitButton { get; set; } = true;
+
+    /// <summary>Empty the prompt after a successful submit. Default true.</summary>
+    [Parameter] public bool ClearOnSubmit { get; set; } = true;
+
+    /// <summary>Card width in CSS pixels. Null stretches to the container.</summary>
+    [Parameter] public double? Width { get; set; }
+
+    /// <summary>Raised on submit — Enter, the submit button, or picking a suggestion.</summary>
+    [Parameter] public EventCallback<PromptSubmittedEventArgs> Submitted { get; set; }
+
+    /// <summary>Raised when a suggestion is chosen, before <see cref="Submitted"/>.</summary>
+    [Parameter] public EventCallback<PromptSubmittedEventArgs> SuggestionSelected { get; set; }
+
+    /// <summary>Raised when the stop button is pressed while busy. Cancel your request here.</summary>
+    [Parameter] public EventCallback Cancelled { get; set; }
+
+    /// <summary>Raised by the microphone button.</summary>
+    [Parameter] public EventCallback Microphone { get; set; }
+
+    /// <summary>The index of the keyboard-highlighted suggestion, or -1 when the prompt itself has focus.</summary>
+    public int HighlightedIndex => this.highlightIndex;
+
+    internal List<object> VisibleSuggestions { get; private set; } = new();
+
+    bool HasBody =>
+        this.DropdownContent is not null
+        || this.VisibleSuggestions.Count > 0
+        || this.ResponseContent is not null
+        || !String.IsNullOrEmpty(this.Response)
+        || this.Footer is not null
+        || (this.IsBusy && this.ResponseContent is null && String.IsNullOrEmpty(this.Response));
+
+    string RootStyle
+    {
+        get
+        {
+            var width = this.Width is null
+                ? null
+                : $"width:{this.Width.Value.ToString(CultureInfo.InvariantCulture)}px;";
+
+            return $"{width}--shiny-prompt-icon-size:{this.IconSize.ToString(CultureInfo.InvariantCulture)}px;";
+        }
+    }
+
+    /// <summary>
+    /// No height at all when unset, so the dropdown shrink-wraps its content. A height turns it into
+    /// a scroller — the two cannot both be expressed by one rule, which is why this is a style rather
+    /// than a class.
+    /// </summary>
+    string? DropdownStyle => this.DropdownHeight is null
+        ? null
+        : $"height:{this.DropdownHeight.Value.ToString(CultureInfo.InvariantCulture)}px;overflow-y:auto;";
+
+    protected override void OnParametersSet()
+    {
+        this.RebuildSuggestions();
+        this.Observe(this.Suggestions);
+    }
+
+    void Observe(IEnumerable? suggestions)
+    {
+        if (ReferenceEquals(this.observedSuggestions, suggestions))
+            return;
+
+        if (this.observedSuggestions is not null)
+            this.observedSuggestions.CollectionChanged -= this.OnSuggestionsChanged;
+
+        this.observedSuggestions = suggestions as INotifyCollectionChanged;
+        if (this.observedSuggestions is not null)
+            this.observedSuggestions.CollectionChanged += this.OnSuggestionsChanged;
+    }
+
+    void OnSuggestionsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => this.InvokeAsync(() =>
+        {
+            this.RebuildSuggestions();
+            this.StateHasChanged();
+        });
+
+    void RebuildSuggestions()
+    {
+        var rows = new List<object>();
+        if (this.Suggestions is not null)
+        {
+            var max = Math.Max(0, this.MaxVisibleSuggestions);
+            foreach (var item in this.Suggestions)
+            {
+                if (rows.Count >= max)
+                    break;
+                if (item is null)
+                    continue;
+
+                rows.Add(item);
+            }
+        }
+
+        this.VisibleSuggestions = rows;
+        if (this.highlightIndex >= rows.Count)
+            this.highlightIndex = -1;
+    }
+
+    async Task OnInput(ChangeEventArgs e)
+    {
+        this.Text = e.Value?.ToString() ?? String.Empty;
+        await this.TextChanged.InvokeAsync(this.Text);
+
+        // A new prompt invalidates whatever row was highlighted for the old one.
+        this.highlightIndex = -1;
+    }
+
+    async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // Arrow keys move the caret in a text input, so they have to be cancelled to navigate the
+        // list instead. Everything else must stay cancellable-free or typing breaks.
+        this.preventDefault = e.Key is "ArrowDown" or "ArrowUp";
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                this.MoveHighlight(1);
+                break;
+
+            case "ArrowUp":
+                this.MoveHighlight(-1);
+                break;
+
+            case "Enter":
+                await this.SubmitAsync();
+                break;
+
+            case "Escape":
+                await this.HandleEscapeAsync();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Escape peels one layer of state at a time and only bubbles — letting the host close the popup —
+    /// once there is nothing left to back out of.
+    /// </summary>
+    /// <returns>True when the key was consumed here.</returns>
+    public async Task<bool> HandleEscapeAsync()
+    {
+        if (this.IsBusy)
+        {
+            await this.Cancelled.InvokeAsync();
+            return true;
+        }
+
+        if (this.highlightIndex >= 0)
+        {
+            this.highlightIndex = -1;
+            this.StateHasChanged();
+            return true;
+        }
+
+        if (this.ResponseContent is not null || !String.IsNullOrEmpty(this.Response))
+        {
+            this.Response = null;
+            this.ResponseContent = null;
+            this.StateHasChanged();
+            return true;
+        }
+
+        if (!String.IsNullOrEmpty(this.Text))
+        {
+            this.Text = String.Empty;
+            await this.TextChanged.InvokeAsync(this.Text);
+            return true;
+        }
+
+        return false;
+    }
+
+    void MoveHighlight(int delta)
+    {
+        if (this.VisibleSuggestions.Count == 0)
+            return;
+
+        var next = this.highlightIndex + delta;
+        if (next < -1)
+            next = this.VisibleSuggestions.Count - 1;
+        else if (next >= this.VisibleSuggestions.Count)
+            next = -1;
+
+        this.highlightIndex = next;
+    }
+
+    /// <summary>Submit the current prompt. Same path as pressing Enter.</summary>
+    public async Task SubmitAsync()
+    {
+        if (this.IsBusy)
+        {
+            await this.Cancelled.InvokeAsync();
+            return;
+        }
+
+        if (this.highlightIndex >= 0 && this.highlightIndex < this.VisibleSuggestions.Count)
+        {
+            await this.ChooseAsync(this.VisibleSuggestions[this.highlightIndex]);
+            return;
+        }
+
+        if (String.IsNullOrWhiteSpace(this.Text))
+            return;
+
+        await this.RaiseSubmitAsync(this.Text, null);
+    }
+
+    async Task ChooseAsync(object item)
+    {
+        var text = item is PromptSuggestion s ? s.Text : item.ToString() ?? String.Empty;
+        await this.SuggestionSelected.InvokeAsync(new PromptSubmittedEventArgs(text, item));
+
+        this.Text = text;
+        await this.TextChanged.InvokeAsync(text);
+        this.highlightIndex = -1;
+
+        await this.RaiseSubmitAsync(text, item);
+    }
+
+    async Task RaiseSubmitAsync(string text, object? suggestion)
+    {
+        await this.Submitted.InvokeAsync(new PromptSubmittedEventArgs(text, suggestion));
+
+        if (this.ClearOnSubmit)
+        {
+            this.Text = String.Empty;
+            await this.TextChanged.InvokeAsync(this.Text);
+        }
+    }
+
+    Task OnMicrophone() => this.Microphone.InvokeAsync();
+
+    /// <summary>Move keyboard focus into the prompt.</summary>
+    public ValueTask FocusAsync() => this.field.FocusAsync();
+}

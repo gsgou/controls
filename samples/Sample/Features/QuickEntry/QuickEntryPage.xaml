@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Sample.Features.QuickEntry"
+             x:Class="Sample.Features.QuickEntry.QuickEntryPage"
+             x:DataType="local:QuickEntryViewModel"
+             Title="Quick Entry"
+             AutomationId="QuickEntryPage">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="20">
+
+            <Label Text="Quick Entry &amp; Screen Glow"
+                   FontSize="22"
+                   FontAttributes="Bold" />
+            <Label Text="A prompt surface summoned over whatever the user is looking at. On desktop it can be a real always-on-top OS window that opens over other applications; everywhere else — and on desktop if you prefer — it is an in-app overlay. Same API either way." />
+
+
+            <!-- The control itself, inline. Works on every platform, popup or not. -->
+            <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="PromptView" FontAttributes="Bold" FontSize="14" />
+                    <Label Text="The popup's default content — orb, prompt, suggestions, response area. Type and press Enter; ↑ ↓ move through the suggestions."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                    <ContentView Content="{Binding Preview}" AutomationId="QuickEntryPreview" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Popup -->
+            <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Popup" FontAttributes="Bold" FontSize="14" />
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <Button Grid.Column="0" Text="Show" Command="{Binding ShowPopupCommand}" AutomationId="ShowPopup" />
+                        <Button Grid.Column="1" Text="Hide" Command="{Binding HidePopupCommand}" AutomationId="HidePopup" />
+                        <Button Grid.Column="2" Text="Toggle" Command="{Binding TogglePopupCommand}" AutomationId="TogglePopup" />
+                    </Grid>
+
+                    <Label Text="Presentation" FontSize="12" />
+                    <Picker ItemsSource="{Binding Presentations}"
+                            SelectedItem="{Binding SelectedPresentation}"
+                            AutomationId="PresentationPicker" />
+                    <Label FontSize="12"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
+                           AutomationId="ResolvedPresentation">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="Resolves to: " />
+                                <Span Text="{Binding ResolvedPresentation}" FontAttributes="Bold" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+
+                    <Label Text="Placement" FontSize="12" />
+                    <Picker ItemsSource="{Binding Placements}"
+                            SelectedItem="{Binding SelectedPlacement}"
+                            AutomationId="PlacementPicker" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Global hotkey -->
+            <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Global hotkey" FontAttributes="Bold" FontSize="14" />
+                    <Label Text="Desktop only. Register the combination, then switch to another application and press it."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Entry Grid.Column="0" Text="{Binding HotKey}" Placeholder="Ctrl+Alt+Space" AutomationId="HotKeyEntry" />
+                        <Button Grid.Column="1" Text="Register" Command="{Binding RegisterHotKeyCommand}" IsEnabled="{Binding HotKeysAvailable}" AutomationId="RegisterHotKey" />
+                    </Grid>
+                    <Label Text="{Binding HotKeyStatus}" FontSize="12" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Screen glow -->
+            <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Screen glow" FontAttributes="Bold" FontSize="14" />
+                    <Label Text="The Siri-style colour wash around the edge. It rims the whole display in desktop presentation and the page in-app — which is the same thing on a phone."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+
+                    <Label IsVisible="{Binding GlowNotSupported}"
+                           Text="Not available in this session."
+                           FontSize="12"
+                           TextColor="#B45309" />
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10" IsVisible="{Binding GlowSupported}">
+                        <Button Grid.Column="0" Text="Show" Command="{Binding ShowGlowCommand}" AutomationId="ShowGlow" />
+                        <Button Grid.Column="1" Text="Hide" Command="{Binding HideGlowCommand}" AutomationId="HideGlow" />
+                        <Button Grid.Column="2" Text="Pulse 3s" Command="{Binding PulseGlowCommand}" AutomationId="PulseGlow" />
+                    </Grid>
+
+                    <Label Text="Popup trigger" FontSize="12" />
+                    <Picker ItemsSource="{Binding GlowTriggers}"
+                            SelectedItem="{Binding SelectedGlowTrigger}"
+                            AutomationId="GlowTriggerPicker" />
+
+                    <Label Text="Thickness" FontSize="12" />
+                    <Slider Minimum="40" Maximum="260" Value="{Binding GlowThickness}" AutomationId="GlowThickness" />
+
+                    <Label Text="Intensity" FontSize="12" />
+                    <Slider Minimum="0.1" Maximum="1" Value="{Binding GlowIntensity}" AutomationId="GlowIntensity" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Log -->
+            <Border Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#374151}"
+                    StrokeThickness="1"
+                    Padding="14"
+                    StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Events" FontAttributes="Bold" FontSize="14" />
+                    <CollectionView ItemsSource="{Binding EventLog}" HeightRequest="180">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding .}" FontSize="12" Padding="0,2" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -6,6 +6,7 @@ using Shiny.Blazor.Controls.Dialogs;
 using Shiny.Blazor.Controls.Docking;
 using Shiny.Blazor.Controls.Images;
 using Shiny.Blazor.Controls.OnScreenKeyboard;
+using Shiny.Blazor.Controls.QuickEntry;
 using Shiny.Blazor.Controls.Splash;
 using Shiny.Blazor.Controls.Toast;
 
@@ -50,6 +51,7 @@ public static class ShinyControlsServiceCollectionExtensions
         services.AddShinyWalkthrough();
         services.AddShinyDocking();
         services.AddShinyOnScreenKeyboard(cfg.KeyboardConfigure);
+        services.AddShinyQuickEntry(cfg.QuickEntryConfigure);
 
         return services;
     }
@@ -64,6 +66,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
 {
     internal Action<DialogOptions>? DialogConfigure { get; private set; }
     internal Action<OnScreenKeyboardOptions>? KeyboardConfigure { get; private set; }
+    internal Action<QuickEntryOptions>? QuickEntryConfigure { get; private set; }
 
     /// <summary>
     /// App-wide dialog defaults — the default animation, and a <see cref="DialogOptions.ConfigureDefaults"/>
@@ -72,6 +75,17 @@ public class ShinyControlConfiguration(IServiceCollection services)
     public ShinyControlConfiguration ConfigureDialogs(Action<DialogOptions> configure)
     {
         this.DialogConfigure = configure;
+        return this;
+    }
+
+    /// <summary>
+    /// Quick entry defaults — placement, sizing, dismissal, and the screen-edge glow's trigger and
+    /// appearance. The popup is registered whether or not this is called; this only changes its
+    /// settings.
+    /// </summary>
+    public ShinyControlConfiguration ConfigureQuickEntry(Action<QuickEntryOptions> configure)
+    {
+        this.QuickEntryConfigure = configure;
         return this;
     }
 

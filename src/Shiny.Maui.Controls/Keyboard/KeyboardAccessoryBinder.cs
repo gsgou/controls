@@ -2,7 +2,7 @@ namespace Shiny.Maui.Controls;
 
 /// <summary>
 /// Implemented by a control that can carry a <see cref="KeyboardAccessoryView"/> — currently
-/// <see cref="TextEntry"/> and <see cref="Cells.EntryCell"/>.
+/// <see cref="TextEntry"/>, <see cref="Cells.EntryCell"/> and the markdown editor.
 ///
 /// <para>
 /// It exists because the two differ in exactly the two ways the bar cares about: which element the
@@ -29,13 +29,15 @@ public interface IKeyboardAccessoryHost
 /// the activity's content frame on Android — so none of this is something MAUI would do for us.
 /// </para>
 /// </summary>
-partial class KeyboardAccessoryBinder
+public partial class KeyboardAccessoryBinder
 {
     readonly IKeyboardAccessoryHost host;
-    readonly Entry input;
+    // InputView, not Entry: a multi-line editor carries a bar the same way, and on the multi-line
+    // keyboard the return key inserts a newline, so a Done item is the only way to dismiss it.
+    readonly InputView input;
     KeyboardAccessoryView? bar;
 
-    public KeyboardAccessoryBinder(IKeyboardAccessoryHost host, Entry input, VisualElement lifetime)
+    public KeyboardAccessoryBinder(IKeyboardAccessoryHost host, InputView input, VisualElement lifetime)
     {
         this.host = host;
         this.input = input;

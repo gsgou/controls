@@ -6,6 +6,7 @@ using Sample.Features.FloatingPanel;
 using Sample.Features.Scheduler;
 using Sample.Features.TableView;
 using Shiny;
+using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Scheduler;
 #if DEBUG
 using Microsoft.Maui.DevFlow.Agent;
@@ -30,10 +31,19 @@ public static class MauiProgram
                 // show the queued state - with a normal budget the thirty-image grid never has
                 // enough cells waiting to see one.
                 cfg.ConfigureImages(o => o.MaxConcurrentDownloads = 2);
+
+                cfg.ConfigureQuickEntry(o =>
+                {
+                    o.HotKey = OperatingSystem.IsMacOS() ? "Cmd+Opt+Space" : "Ctrl+Alt+Space";
+                    o.Placement = QuickEntryPlacement.TopCenter;
+                    o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
+                });
+
             })
             .UseShinyCamera()
             .UseShinyMediaElement()
             .UseTrayIcon()
+            .UseDesktopQuickEntry()
             .UseShinyDocking()
             .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")
             .AddDockPanel<OutputPanel>("output", "Output", "🖥️")

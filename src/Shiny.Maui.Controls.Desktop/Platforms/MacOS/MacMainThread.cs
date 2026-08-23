@@ -22,6 +22,14 @@ static class MacMainThread
         }
     }
 
+    /// <summary>
+    /// Queues work for the <b>next</b> run-loop turn, even when already on the main thread —
+    /// <see cref="Invoke(Action)"/> runs inline there. Needed when something must land after AppKit
+    /// has finished processing what is already in flight, such as re-asserting key window once app
+    /// activation has settled.
+    /// </summary>
+    public static void Post(Action action) => Dispatcher.BeginInvokeOnMainThread(action);
+
     public static T Invoke<T>(Func<T> func)
     {
         if (NSThread.IsMain)

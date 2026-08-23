@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.QuickEntry;
 namespace Shiny.Maui.Controls;
 
 public partial class Overlay
@@ -35,6 +36,45 @@ public partial class Overlay
                 ((Overlay)b).UpdateOverlayContent();
             }));
     public DataTemplate? OverlayContentTemplate { get => (DataTemplate?)GetValue(OverlayContentTemplateProperty); set => SetValue(OverlayContentTemplateProperty, value); }
+
+    public static readonly BindableProperty ShowEdgeGlowProperty = BindableProperty.Create(
+        nameof(ShowEdgeGlow), typeof(bool), typeof(Overlay), false);
+    /// <summary>
+    /// Rims the page with an animated colour wash while the overlay is shown — the Siri-style glow.
+    /// Sits behind the content and in front of the backdrop, and is click-through, so it is purely a
+    /// signal that something is happening. Configure it with <see cref="GlowOptions"/>.
+    /// </summary>
+    public bool ShowEdgeGlow { get => (bool)GetValue(ShowEdgeGlowProperty); set => SetValue(ShowEdgeGlowProperty, value); }
+
+    public static readonly BindableProperty GlowOptionsProperty = BindableProperty.Create(
+        nameof(GlowOptions), typeof(ScreenGlowOptions), typeof(Overlay), null);
+    /// <summary>
+    /// Appearance of the <see cref="ShowEdgeGlow"/> wash — thickness, palette, speed, pulse and
+    /// intensity. Leave null for the defaults.
+    /// </summary>
+    public ScreenGlowOptions? GlowOptions { get => (ScreenGlowOptions?)GetValue(GlowOptionsProperty); set => SetValue(GlowOptionsProperty, value); }
+
+    public static readonly BindableProperty ContentAlignmentProperty = BindableProperty.Create(
+        nameof(ContentAlignment), typeof(LayoutOptions), typeof(Overlay), LayoutOptions.Center,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Overlay), () =>
+            {
+                ((Overlay)b).UpdateContentPlacement();
+            }));
+    /// <summary>
+    /// Where the overlay's content sits vertically. Centred by default, which is right for a dialog;
+    /// <c>Start</c> and <c>End</c> put it near the top or bottom edge, for a command bar or a prompt
+    /// summoned over the page.
+    /// </summary>
+    public LayoutOptions ContentAlignment { get => (LayoutOptions)GetValue(ContentAlignmentProperty); set => SetValue(ContentAlignmentProperty, value); }
+
+    public static readonly BindableProperty ContentMarginProperty = BindableProperty.Create(
+        nameof(ContentMargin), typeof(Thickness), typeof(Overlay), new Thickness(0),
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Overlay), () =>
+            {
+                ((Overlay)b).UpdateContentPlacement();
+            }));
+    /// <summary>Inset applied to the content, so a <see cref="ContentAlignment"/> of Start or End can be offset from the edge.</summary>
+    public Thickness ContentMargin { get => (Thickness)GetValue(ContentMarginProperty); set => SetValue(ContentMarginProperty, value); }
 
     public static readonly BindableProperty CloseOnBackdropTapProperty = BindableProperty.Create(
         nameof(CloseOnBackdropTap), typeof(bool), typeof(Overlay), true);

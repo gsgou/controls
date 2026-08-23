@@ -10,21 +10,23 @@ partial class KeyboardAccessoryBinder
 
     // iOS is the one platform with a real API for this: a view assigned to the responder's
     // InputAccessoryView is docked to the keyboard by the OS and rides its animation exactly.
+    // InputAccessoryView is only settable on UITextField and UITextView - on UIResponder itself it is
+    // get-only - so both are handled by hand rather than through the base type.
     partial void ApplyPlatform(KeyboardAccessoryView? bar)
     {
-        if (input.Handler?.PlatformView is not UITextField field)
+        if (PlatformInput is not UIView field)
             return;
 
         if (bar is null)
         {
-            field.InputAccessoryView = null;
+            SetInputAccessory(field, null);
             accessoryPlatformView = null;
             if (input.IsFocused)
                 field.ReloadInputViews();
             return;
         }
 
-        var context = input.Handler.MauiContext;
+        var context = input.Handler?.MauiContext;
         if (context is null)
             return;
 
@@ -41,7 +43,7 @@ partial class KeyboardAccessoryBinder
         native.Frame = new CGRect(0, 0, width, height);
         native.AutoresizingMask = UIViewAutoresizing.FlexibleWidth;
 
-        field.InputAccessoryView = native;
+        SetInputAccessory(field, native);
         accessoryPlatformView = native;
 
         // Swapping the accessory while the field already has focus does nothing until the responder
@@ -50,13 +52,36 @@ partial class KeyboardAccessoryBinder
             field.ReloadInputViews();
     }
 
+    // Either half of the pair, or null for anything else - a handler that has not been created yet,
+    // or a platform view that is neither (which simply cannot carry an accessory).
+    UIView? PlatformInput => input.Handler?.PlatformView switch
+    {
+        UITextField field => field,
+        UITextView text => text,
+        _ => null
+    };
+
+    static void SetInputAccessory(UIView view, UIView? accessory)
+    {
+        switch (view)
+        {
+            case UITextField field:
+                field.InputAccessoryView = accessory;
+                break;
+
+            case UITextView text:
+                text.InputAccessoryView = accessory;
+                break;
+        }
+    }
+
     partial void OnFocusChangedPlatform(bool focused)
     {
         if (!focused || accessoryPlatformView is null)
             return;
 
         // Re-measure on focus: rotation while the field was unfocused leaves a stale width.
-        if (input.Handler?.PlatformView is UITextField field && bar is KeyboardAccessoryView current)
+        if (PlatformInput is UIView field && bar is KeyboardAccessoryView current)
         {
             var width = field.Window?.Bounds.Width ?? UIScreen.MainScreen.Bounds.Width;
             if (Math.Abs(accessoryPlatformView.Frame.Width - width) > 0.5)

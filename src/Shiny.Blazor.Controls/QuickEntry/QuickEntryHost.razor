@@ -1,0 +1,42 @@
+@namespace Shiny.Blazor.Controls.QuickEntry
+@implements IDisposable
+
+@if (this.Service.IsGlowVisible)
+{
+    <div class="shiny-glow" style="@this.GlowStyle" aria-hidden="true">
+        <div class="shiny-glow-ring"></div>
+    </div>
+}
+
+@if (this.Service.IsOpen)
+{
+    <div class="shiny-quick-entry @this.PlacementClass" @onkeydown="this.OnKeyDown" tabindex="-1">
+        @if (this.Options.ShowScrim)
+        {
+            <div class="shiny-quick-entry-scrim" @onclick="this.OnScrimClick"></div>
+        }
+
+        <div class="shiny-quick-entry-card" style="@this.CardStyle">
+            @if (this.Service.Content is not null)
+            {
+                @this.Service.Content
+            }
+            else
+            {
+                <PromptView @ref="this.prompt"
+                            Text="@this.Service.Prompt.Text"
+                            TextChanged="this.OnPromptTextChanged"
+                            Placeholder="@this.Service.Prompt.Placeholder"
+                            IsBusy="this.Service.Prompt.IsBusy"
+                            BusyText="@this.Service.Prompt.BusyText"
+                            Icon="@this.Service.Prompt.Icon"
+                            ShowIcon="this.Service.Prompt.ShowIcon"
+                            Suggestions="this.Service.Prompt.Suggestions"
+                            DropdownHeight="this.Service.Prompt.DropdownHeight"
+                            Response="@this.Service.Prompt.Response"
+                            Submitted="this.OnPromptSubmitted"
+                            Cancelled="this.OnPromptCancelled" />
+            }
+        </div>
+    </div>
+}

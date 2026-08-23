@@ -1,0 +1,206 @@
+/*
+   Every colour, radius and type size comes from the theme tokens, so the prompt follows a theme
+   pack swap and the OS light/dark switch without the consumer doing anything — the same contract
+   the MAUI twin gets from SetDynamicResource.
+*/
+.shiny-prompt {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    max-width: 100%;
+    background: var(--shiny-color-surface-container-high, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.12));
+    border-radius: var(--shiny-shape-corner-extra-large, 18px);
+    box-shadow: var(--shiny-elevation-3, 0 12px 28px rgba(0, 0, 0, 0.28));
+    color: var(--shiny-color-on-surface, #15151a);
+    overflow: hidden;
+}
+
+.shiny-prompt-input {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--shiny-spacing-3, 12px);
+    padding: 14px var(--shiny-spacing-3, 12px) 14px var(--shiny-spacing-4, 18px);
+}
+
+.shiny-prompt-icon {
+    flex: 0 0 auto;
+    width: var(--shiny-prompt-icon-size, 26px);
+    height: var(--shiny-prompt-icon-size, 26px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shiny-prompt-glyph {
+    font-size: calc(var(--shiny-prompt-icon-size, 26px) * 0.72);
+    line-height: 1;
+}
+
+/*
+   The orb: three tinted pools drifting inside a soft ring, built from layered radial gradients so it
+   needs no canvas and no script. `is-busy` only speeds the same animation up and adds a pulse —
+   rotation alone reads as decoration at this size, rotation plus breathing reads as activity.
+*/
+.shiny-prompt-orb {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 30% 32%, color-mix(in srgb, var(--shiny-color-primary, #6d4aff) 85%, transparent), transparent 55%),
+        radial-gradient(circle at 70% 38%, color-mix(in srgb, var(--shiny-color-tertiary, #ff4fa3) 75%, transparent), transparent 55%),
+        radial-gradient(circle at 50% 72%, color-mix(in srgb, var(--shiny-color-secondary, #35d6b0) 75%, transparent), transparent 55%),
+        radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--shiny-color-primary, #6d4aff) 18%, transparent), transparent 70%);
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--shiny-color-primary, #6d4aff) 45%, transparent);
+    animation: shiny-prompt-orb-drift 6s linear infinite;
+}
+
+.shiny-prompt-orb.is-busy {
+    animation: shiny-prompt-orb-drift 1.6s linear infinite, shiny-prompt-orb-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes shiny-prompt-orb-drift {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes shiny-prompt-orb-pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-prompt-orb,
+    .shiny-prompt-orb.is-busy,
+    .shiny-prompt-spinner {
+        animation: none;
+    }
+}
+
+.shiny-prompt-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--shiny-type-title-medium-size, 17px);
+    line-height: 1.4;
+    padding: 0;
+}
+
+.shiny-prompt-field::placeholder {
+    color: var(--shiny-color-on-surface-variant, #8b8b95);
+}
+
+.shiny-prompt-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-1, 6px);
+}
+
+.shiny-prompt-button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    color: var(--shiny-color-on-surface-variant, #65656f);
+    font-size: var(--shiny-type-body-large-size, 15px);
+    line-height: 1;
+}
+
+.shiny-prompt-button:hover {
+    background: var(--shiny-color-surface-container-highest, rgba(0, 0, 0, 0.06));
+}
+
+.shiny-prompt-submit {
+    color: var(--shiny-color-primary, #6d4aff);
+    font-size: var(--shiny-type-title-medium-size, 16px);
+}
+
+.shiny-prompt-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--shiny-color-primary, #6d4aff) 30%, transparent);
+    border-top-color: var(--shiny-color-primary, #6d4aff);
+    animation: shiny-prompt-spin 0.8s linear infinite;
+}
+
+@keyframes shiny-prompt-spin {
+    to { transform: rotate(360deg); }
+}
+
+.shiny-prompt-separator {
+    height: 1px;
+    background: var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.12));
+}
+
+.shiny-prompt-busy {
+    padding: 10px var(--shiny-spacing-4, 18px);
+    font-size: var(--shiny-type-body-medium-size, 13px);
+    color: var(--shiny-color-on-surface-variant, #65656f);
+}
+
+/* No height of its own by default, so the card shrink-wraps the dropdown. A DropdownHeight adds
+   height + overflow inline, which turns exactly this element into the scroller. */
+.shiny-prompt-dropdown {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.shiny-prompt-suggestions {
+    display: flex;
+    flex-direction: column;
+    padding: var(--shiny-spacing-1, 6px) var(--shiny-spacing-2, 8px);
+}
+
+.shiny-prompt-suggestion {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--shiny-spacing-2, 10px);
+    padding: 8px 10px;
+    border-radius: var(--shiny-shape-corner-small, 10px);
+    cursor: pointer;
+}
+
+.shiny-prompt-suggestion:hover,
+.shiny-prompt-suggestion.is-highlighted {
+    background: var(--shiny-color-surface-container-highest, rgba(0, 0, 0, 0.07));
+}
+
+.shiny-prompt-suggestion-glyph {
+    flex: 0 0 auto;
+    font-size: var(--shiny-type-body-medium-size, 14px);
+    line-height: 1.3;
+}
+
+.shiny-prompt-suggestion-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.shiny-prompt-suggestion-title {
+    font-size: var(--shiny-type-body-medium-size, 14px);
+    color: var(--shiny-color-on-surface, #15151a);
+}
+
+.shiny-prompt-suggestion-description {
+    font-size: var(--shiny-type-body-small-size, 12px);
+    color: var(--shiny-color-on-surface-variant, #65656f);
+}
+
+.shiny-prompt-response {
+    padding: var(--shiny-spacing-1, 6px) var(--shiny-spacing-4, 18px) var(--shiny-spacing-3, 12px);
+    font-size: var(--shiny-type-body-medium-size, 14px);
+    line-height: 1.35;
+}
+
+.shiny-prompt-footer {
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-4, 18px);
+    border-top: 1px solid var(--shiny-color-outline-variant, rgba(0, 0, 0, 0.12));
+}

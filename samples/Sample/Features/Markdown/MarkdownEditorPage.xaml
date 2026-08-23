@@ -7,8 +7,21 @@
              x:DataType="local:MarkdownEditorViewModel"
              Title="Markdown Editor">
 
-    <md:MarkdownEditor Markdown="{Binding Markdown, Mode=TwoWay}"
-                       Placeholder="Start writing markdown..."
-                       Padding="8" />
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- The accessory bar only exists on iOS/Android, so the switch is a no-op on desktop. -->
+        <HorizontalStackLayout Padding="12,8" Spacing="10">
+            <Switch IsToggled="{Binding ShowToolbarInKeyboard, Mode=TwoWay}"
+                    VerticalOptions="Center" />
+            <Label Text="Toolbar on the keyboard"
+                   VerticalOptions="Center" />
+        </HorizontalStackLayout>
+
+        <md:MarkdownEditor Grid.Row="1"
+                           Markdown="{Binding Markdown, Mode=TwoWay}"
+                           ShowToolbarInKeyboard="{Binding ShowToolbarInKeyboard}"
+                           Placeholder="Start writing markdown..."
+                           Padding="8" />
+    </Grid>
 
 </ContentPage>

@@ -4,6 +4,7 @@ using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Dialogs;
 using Shiny.Maui.Controls.Images;
+using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Toast;
 #if ANDROID || IOS || MACCATALYST || WINDOWS
@@ -29,6 +30,15 @@ public static class ControlsMauiAppBuilderExtensions
             cfg.UseBasicTheme();
 
         builder.Services.TryAddSingleton<IFeedbackService, HapticFeedbackService>();
+
+        // Quick entry is always registered, in its in-app form. The Desktop add-on adds a second
+        // presenter for the native-window form and the service picks between them at open time, so
+        // an app that ships to phones and desktops configures this once and nothing else.
+        builder.Services.TryAddSingleton(cfg.QuickEntryOptions);
+        builder.Services.AddSingleton<IQuickEntryPresenter, InAppQuickEntryPresenter>();
+        builder.Services.AddSingleton<IScreenGlowPresenter, InAppScreenGlowPresenter>();
+        builder.Services.TryAddSingleton<QuickEntryService>();
+        builder.Services.TryAddSingleton<IQuickEntryService>(sp => sp.GetRequiredService<QuickEntryService>());
         builder.Services.TryAddSingleton<IToaster, Toaster>();
         builder.Services.TryAddSingleton(cfg.DialogOptions);
         builder.Services.TryAddSingleton<IDialogService, DialogService>();
@@ -192,6 +202,25 @@ public class ShinyControlConfiguration(IServiceCollection services)
     internal DialogOptions DialogOptions { get; } = new();
 
     internal ImageOptions ImageOptions { get; } = new();
+
+    internal QuickEntryOptions QuickEntryOptions { get; } = new();
+
+    /// <summary>
+    /// Configure the quick entry popup and its screen-edge glow — placement, sizing, dismissal, and
+    /// whether it opens as an in-app overlay or a native desktop window.
+    /// </summary>
+    /// <remarks>
+    /// The popup is registered whether or not this is called; this only changes its settings.
+    /// <see cref="QuickEntryOptions.Presentation"/> defaults to
+    /// <see cref="QuickEntryPresentation.Auto"/>, so the same configuration gives a real OS window on
+    /// desktop (with the <c>Shiny.Maui.Controls.Desktop</c> add-on registered) and an overlay on
+    /// phones, with no platform check at the call site.
+    /// </remarks>
+    public ShinyControlConfiguration ConfigureQuickEntry(Action<QuickEntryOptions> configure)
+    {
+        configure(this.QuickEntryOptions);
+        return this;
+    }
 
     /// <summary>
     /// Configure <see cref="ShinyImage"/>'s loading: download concurrency, cache expiry, and the

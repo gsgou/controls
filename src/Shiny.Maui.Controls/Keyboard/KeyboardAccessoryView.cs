@@ -165,7 +165,36 @@ public class KeyboardAccessoryView : ContentView
             item.OnOwnerChanged(host);
     }
 
-    IEnumerable<View> EnumerateItems() => Items ?? Enumerable.Empty<View>();
+    // Items set through BarContent are nested inside whatever layout the caller built, so the flat
+    // Items list is not enough to find them - and an item that is never found is an item whose Owner
+    // stays null, which reads as a dead Done button.
+    IEnumerable<View> EnumerateItems()
+        => BarContent is View custom
+            ? Flatten(custom)
+            : Items ?? Enumerable.Empty<View>();
+
+    static IEnumerable<View> Flatten(View view)
+    {
+        yield return view;
+
+        IEnumerable<View> children = view switch
+        {
+            // A KeyboardAccessoryItem is itself a ContentView, so stop at one rather than walking the
+            // glyph and label it is built from.
+            KeyboardAccessoryItem => Enumerable.Empty<View>(),
+            Layout layout => layout.Children.OfType<View>(),
+            ScrollView { Content: View scrolled } => [scrolled],
+            ContentView { Content: View content } => [content],
+            Border { Content: View bordered } => [bordered],
+            _ => Enumerable.Empty<View>()
+        };
+
+        foreach (var child in children)
+        {
+            foreach (var descendant in Flatten(child))
+                yield return descendant;
+        }
+    }
 
     void OnItemsChanged(IList<View>? oldItems, IList<View>? newItems)
     {
@@ -195,6 +224,12 @@ public class KeyboardAccessoryView : ContentView
         {
             itemsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
             itemsGrid.Add(custom, 0, 0);
+
+            foreach (var nested in Flatten(custom).OfType<KeyboardAccessoryItem>())
+            {
+                nested.Bar = this;
+                nested.OnOwnerChanged(CurrentOwner);
+            }
             return;
         }
 

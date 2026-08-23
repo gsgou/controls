@@ -38,6 +38,7 @@
                   xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
+                  xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry"
                   xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
@@ -1004,6 +1005,14 @@
                              Color="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Quick Entry">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2727;" Size="20"
+                             Color="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate quickentry:QuickEntryPage}" Route="quickentry" />
     </FlyoutItem>
 
     <!-- Spacer so footer doesn't overlap last items -->

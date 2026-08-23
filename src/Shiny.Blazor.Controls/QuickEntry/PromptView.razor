@@ -1,0 +1,116 @@
+@namespace Shiny.Blazor.Controls.QuickEntry
+
+<div class="shiny-prompt @Class" style="@this.RootStyle" @attributes="this.Attributes">
+    <div class="shiny-prompt-input">
+        @if (this.ShowIcon)
+        {
+            <div class="shiny-prompt-icon">
+                @if (this.IconContent is not null)
+                {
+                    @this.IconContent
+                }
+                else if (!String.IsNullOrEmpty(this.Icon))
+                {
+                    <span class="shiny-prompt-glyph">@this.Icon</span>
+                }
+                else
+                {
+                    <span class="shiny-prompt-orb @(this.IsBusy ? "is-busy" : null)"></span>
+                }
+            </div>
+        }
+
+        <input class="shiny-prompt-field"
+               type="text"
+               placeholder="@this.Placeholder"
+               value="@this.Text"
+               @ref="this.field"
+               @oninput="this.OnInput"
+               @onkeydown="this.OnKeyDown"
+               @onkeydown:preventDefault="this.preventDefault" />
+
+        <div class="shiny-prompt-actions">
+            @if (this.IsBusy)
+            {
+                <span class="shiny-prompt-spinner" aria-hidden="true"></span>
+            }
+            @if (this.ShowMicrophone)
+            {
+                <button type="button" class="shiny-prompt-button" title="Dictate" @onclick="this.OnMicrophone">🎙</button>
+            }
+            @if (this.ShowSubmitButton)
+            {
+                <button type="button"
+                        class="shiny-prompt-button shiny-prompt-submit"
+                        title="@(this.IsBusy ? "Stop" : "Submit")"
+                        @onclick="this.SubmitAsync">@(this.IsBusy ? "■" : "↵")</button>
+            }
+        </div>
+    </div>
+
+    @if (this.HasBody)
+    {
+        <div class="shiny-prompt-separator"></div>
+
+        @if (this.IsBusy && this.ResponseContent is null && String.IsNullOrEmpty(this.Response))
+        {
+            <div class="shiny-prompt-busy">@this.BusyText</div>
+        }
+
+        <div class="shiny-prompt-dropdown" style="@this.DropdownStyle">
+            @if (this.DropdownContent is not null)
+            {
+                @this.DropdownContent
+            }
+
+            @if (this.VisibleSuggestions.Count > 0)
+            {
+                <div class="shiny-prompt-suggestions" role="listbox">
+                    @for (var i = 0; i < this.VisibleSuggestions.Count; i++)
+                    {
+                        var index = i;
+                        var item = this.VisibleSuggestions[index];
+                        <div class="shiny-prompt-suggestion @(index == this.highlightIndex ? "is-highlighted" : null)"
+                             role="option"
+                             aria-selected="@(index == this.highlightIndex)"
+                             @onclick="() => this.ChooseAsync(item)">
+                            @if (this.SuggestionTemplate is not null)
+                            {
+                                @this.SuggestionTemplate(item)
+                            }
+                            else
+                            {
+                                var suggestion = item as PromptSuggestion;
+                                @if (!String.IsNullOrEmpty(suggestion?.Glyph))
+                                {
+                                    <span class="shiny-prompt-suggestion-glyph">@suggestion!.Glyph</span>
+                                }
+                                <span class="shiny-prompt-suggestion-text">
+                                    <span class="shiny-prompt-suggestion-title">@(suggestion?.Text ?? item?.ToString())</span>
+                                    @if (!String.IsNullOrEmpty(suggestion?.Description))
+                                    {
+                                        <span class="shiny-prompt-suggestion-description">@suggestion!.Description</span>
+                                    }
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (this.ResponseContent is not null)
+            {
+                <div class="shiny-prompt-response">@this.ResponseContent</div>
+            }
+            else if (!String.IsNullOrEmpty(this.Response))
+            {
+                <div class="shiny-prompt-response">@this.Response</div>
+            }
+        </div>
+
+        @if (this.Footer is not null)
+        {
+            <div class="shiny-prompt-footer">@this.Footer</div>
+        }
+    }
+</div>

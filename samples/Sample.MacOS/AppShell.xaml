@@ -1,83 +1,241 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Mirrors the main Sample gallery's menu, so the two do not drift. Every page that
+    compiles into this head is reachable from here.
+
+    Omitted, because the csproj excludes them from this head: CameraPage, ChatPage, ChatTemplatePage, DocumentSessionPage, KitchenSinkPage.
+
+    The MenuItem section headers do not render in the flyout on this head today — they are
+    kept because they document the grouping and ordering, and cost nothing if it gains
+    support. A FlyoutItem holding several ShellContents titles each one, or the group
+    repeats the same label once per route.
+-->
 <shiny:ShinyShell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
-       xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon;assembly=Sample.MacOS"
-       xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard;assembly=Sample.MacOS"
-       xmlns:home="clr-namespace:Sample.Features.Home;assembly=Sample.MacOS"
-       xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.MacOS"
-       xmlns:pills="clr-namespace:Sample.Features.Pills;assembly=Sample.MacOS"
-       xmlns:toast="clr-namespace:Sample.Features.Toast;assembly=Sample.MacOS"
-       xmlns:textentry="clr-namespace:Sample.Features.TextEntry;assembly=Sample.MacOS"
        xmlns:autocomplete="clr-namespace:Sample.Features.AutoComplete;assembly=Sample.MacOS"
-       xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.MacOS"
+       xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.MacOS"
+       xmlns:barcodes="clr-namespace:Sample.Features.Barcodes;assembly=Sample.MacOS"
+       xmlns:buttons="clr-namespace:Sample.Features.Buttons;assembly=Sample.MacOS"
+       xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery;assembly=Sample.MacOS"
        xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker;assembly=Sample.MacOS"
-       xmlns:slider="clr-namespace:Sample.Features.Slider;assembly=Sample.MacOS"
-       xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar;assembly=Sample.MacOS"
-       xmlns:skeleton="clr-namespace:Sample.Features.Skeleton;assembly=Sample.MacOS"
-       xmlns:imgviewer="clr-namespace:Sample.Features.ImageViewer;assembly=Sample.MacOS"
+       xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.MacOS"
+       xmlns:datagrid="clr-namespace:Sample.Features.DataGrid;assembly=Sample.MacOS"
+       xmlns:diagrams="clr-namespace:Sample.Features.Diagrams;assembly=Sample.MacOS"
+       xmlns:dialogs="clr-namespace:Sample.Features.Dialogs;assembly=Sample.MacOS"
+       xmlns:docking="clr-namespace:Sample.Features.Docking;assembly=Sample.MacOS"
+       xmlns:fab="clr-namespace:Sample.Features.Fab;assembly=Sample.MacOS"
+       xmlns:feedback="clr-namespace:Sample.Features.Feedback;assembly=Sample.MacOS"
+       xmlns:fp="clr-namespace:Sample.Features.FloatingPanel;assembly=Sample.MacOS"
+       xmlns:glass="clr-namespace:Sample.Features.FrostedGlass;assembly=Sample.MacOS"
+       xmlns:home="clr-namespace:Sample.Features.Home;assembly=Sample.MacOS"
+       xmlns:images="clr-namespace:Sample.Features.Images;assembly=Sample.MacOS"
        xmlns:imgeditor="clr-namespace:Sample.Features.ImageEditor;assembly=Sample.MacOS"
-       xmlns:sigpad="clr-namespace:Sample.Features.SignaturePad;assembly=Sample.MacOS"
-       xmlns:tv="clr-namespace:Sample.Features.TableView;assembly=Sample.MacOS"
-       xmlns:overlay="clr-namespace:Sample.Features.Overlay;assembly=Sample.MacOS"
-       xmlns:treeview="clr-namespace:Sample.Features.TreeView;assembly=Sample.MacOS"
-       xmlns:markdown="clr-namespace:Sample.Features.Markdown;assembly=Sample.MacOS"
+       xmlns:imgviewer="clr-namespace:Sample.Features.ImageViewer;assembly=Sample.MacOS"
        xmlns:keyframe="clr-namespace:Sample.Features.Keyframe;assembly=Sample.MacOS"
+       xmlns:markdown="clr-namespace:Sample.Features.Markdown;assembly=Sample.MacOS"
+       xmlns:mediaelement="clr-namespace:Sample.Features.Media;assembly=Sample.MacOS"
+       xmlns:mediapicker="clr-namespace:Sample.Features.Media;assembly=Sample.MacOS"
+       xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons;assembly=Sample.MacOS"
+       xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard;assembly=Sample.MacOS"
+       xmlns:overlay="clr-namespace:Sample.Features.Overlay;assembly=Sample.MacOS"
+       xmlns:parallax="clr-namespace:Sample.Features.ParallaxCollectionView;assembly=Sample.MacOS"
+       xmlns:pickers="clr-namespace:Sample.Features.Pickers;assembly=Sample.MacOS"
+       xmlns:pills="clr-namespace:Sample.Features.Pills;assembly=Sample.MacOS"
+       xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar;assembly=Sample.MacOS"
+       xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry;assembly=Sample.MacOS"
+       xmlns:scheduler="clr-namespace:Sample.Features.Scheduler;assembly=Sample.MacOS"
+       xmlns:securitypin="clr-namespace:Sample.Features.SecurityPin;assembly=Sample.MacOS"
+       xmlns:sigpad="clr-namespace:Sample.Features.SignaturePad;assembly=Sample.MacOS"
+       xmlns:skeleton="clr-namespace:Sample.Features.Skeleton;assembly=Sample.MacOS"
+       xmlns:slider="clr-namespace:Sample.Features.Slider;assembly=Sample.MacOS"
+       xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid;assembly=Sample.MacOS"
+       xmlns:textentry="clr-namespace:Sample.Features.TextEntry;assembly=Sample.MacOS"
+       xmlns:toast="clr-namespace:Sample.Features.Toast;assembly=Sample.MacOS"
+       xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon;assembly=Sample.MacOS"
+       xmlns:treeview="clr-namespace:Sample.Features.TreeView;assembly=Sample.MacOS"
+       xmlns:tv="clr-namespace:Sample.Features.TableView;assembly=Sample.MacOS"
+       xmlns:virtualizedgrid="clr-namespace:Sample.Features.VirtualizedGrid;assembly=Sample.MacOS"
+       xmlns:walkthrough="clr-namespace:Sample.Features.Walkthrough;assembly=Sample.MacOS"
+       xmlns:wizard="clr-namespace:Sample.Features.Wizard;assembly=Sample.MacOS"
        x:Class="Sample.MacOS.AppShell"
        Title="Shiny Controls (macOS)"
        FlyoutBehavior="Locked"
        FlyoutWidth="220">
 
+    <MenuItem Text="GET STARTED" IsEnabled="False" />
+
     <FlyoutItem Title="Home">
         <ShellContent ContentTemplate="{DataTemplate home:HomePage}" Route="home" />
     </FlyoutItem>
 
-    <FlyoutItem Title="🖥 System Tray">
-        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    <MenuItem Text="LAYOUT &amp; COLLECTIONS" IsEnabled="False" />
+
+    <FlyoutItem Title="Carousel Gallery">
+        <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
+    </FlyoutItem>
+    <FlyoutItem Title="Staggered Grid">
+        <ShellContent ContentTemplate="{DataTemplate staggeredgrid:StaggeredGridPage}" Route="staggeredgrid" />
+    </FlyoutItem>
+    <FlyoutItem Title="Virtualized Grid">
+        <ShellContent ContentTemplate="{DataTemplate virtualizedgrid:VirtualizedGridPage}" Route="virtualizedgrid" />
+    </FlyoutItem>
+    <FlyoutItem Title="Parallax Collection">
+        <ShellContent ContentTemplate="{DataTemplate parallax:ParallaxCollectionViewPage}" Route="parallaxcollectionview" />
+    </FlyoutItem>
+    <FlyoutItem Title="Tree View">
+        <ShellContent ContentTemplate="{DataTemplate treeview:TreeViewPage}" Route="treeview" />
+    </FlyoutItem>
+    <FlyoutItem Title="Data Grid">
+        <ShellContent Title="Data Grid" ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
+        <ShellContent Title="Tree Data Grid" ContentTemplate="{DataTemplate datagrid:TreeDataGridPage}" Route="treedatagrid" />
+    </FlyoutItem>
+    <FlyoutItem Title="Docking">
+        <ShellContent ContentTemplate="{DataTemplate docking:DockingPage}" Route="docking" />
     </FlyoutItem>
 
-    <FlyoutItem Title="⌨ On-Screen Keyboard">
-        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
+    <MenuItem Text="TABLE VIEW" IsEnabled="False" />
+
+    <FlyoutItem Title="Basic">
+        <ShellContent ContentTemplate="{DataTemplate tv:BasicSettingsPage}" Route="basic" />
+    </FlyoutItem>
+    <FlyoutItem Title="Dynamic">
+        <ShellContent ContentTemplate="{DataTemplate tv:DynamicSectionsPage}" Route="dynamic" />
+    </FlyoutItem>
+    <FlyoutItem Title="Drag &amp; Sort">
+        <ShellContent ContentTemplate="{DataTemplate tv:DragSortPage}" Route="dragsort" />
+    </FlyoutItem>
+    <FlyoutItem Title="Picker">
+        <ShellContent ContentTemplate="{DataTemplate tv:PickerDemoPage}" Route="picker" />
+    </FlyoutItem>
+    <FlyoutItem Title="Styling">
+        <ShellContent ContentTemplate="{DataTemplate tv:StylingPage}" Route="styling" />
     </FlyoutItem>
 
-    <MenuItem Text="CONTROLS" IsEnabled="False" />
+    <MenuItem Text="PANELS &amp; OVERLAYS" IsEnabled="False" />
 
-    <FlyoutItem Title="Badge">
-        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    <FlyoutItem Title="Floating Panel">
+        <ShellContent ContentTemplate="{DataTemplate fp:SheetPage}" Route="sheet" />
     </FlyoutItem>
-    <FlyoutItem Title="Pills">
-        <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
+    <FlyoutItem Title="Header Peek">
+        <ShellContent ContentTemplate="{DataTemplate fp:MinimizedSheetStandalonePage}" Route="minimizedsheetstandalone" />
     </FlyoutItem>
-    <FlyoutItem Title="Toast">
-        <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
+    <FlyoutItem Title="Bottom Tabs">
+        <ShellContent Title="Bottom Tabs" ContentTemplate="{DataTemplate fp:MinimizedSheetPage}" Route="minimizedsheet" />
+        <ShellContent Title="Music Browse" ContentTemplate="{DataTemplate fp:MusicBrowsePage}" Route="musicbrowse" />
+        <ShellContent Title="Music Library" ContentTemplate="{DataTemplate fp:MusicLibraryPage}" Route="musiclibrary" />
     </FlyoutItem>
+    <FlyoutItem Title="Top Panel">
+        <ShellContent ContentTemplate="{DataTemplate fp:TopSheetPage}" Route="topsheet" />
+    </FlyoutItem>
+    <FlyoutItem Title="Dual Panels">
+        <ShellContent ContentTemplate="{DataTemplate fp:DualPanelPage}" Route="dualpanel" />
+    </FlyoutItem>
+    <FlyoutItem Title="Overlay">
+        <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
+    </FlyoutItem>
+    <FlyoutItem Title="Frosted Glass">
+        <ShellContent ContentTemplate="{DataTemplate glass:FrostedGlassPage}" Route="frostedglass" />
+    </FlyoutItem>
+
+    <MenuItem Text="INPUT" IsEnabled="False" />
+
     <FlyoutItem Title="Text Entry">
         <ShellContent ContentTemplate="{DataTemplate textentry:TextEntryPage}" Route="textentry" />
     </FlyoutItem>
     <FlyoutItem Title="AutoComplete">
         <ShellContent ContentTemplate="{DataTemplate autocomplete:AutoCompletePage}" Route="autocomplete" />
     </FlyoutItem>
-    <FlyoutItem Title="Country / Address">
-        <ShellContent ContentTemplate="{DataTemplate countryaddress:CountryAddressPage}" Route="countryaddress" />
-    </FlyoutItem>
     <FlyoutItem Title="Color Picker">
         <ShellContent ContentTemplate="{DataTemplate colorpicker:ColorPickerPage}" Route="colorpicker" />
+    </FlyoutItem>
+    <FlyoutItem Title="Country &amp; Address">
+        <ShellContent ContentTemplate="{DataTemplate countryaddress:CountryAddressPage}" Route="countryaddress" />
+    </FlyoutItem>
+    <FlyoutItem Title="Duration Picker">
+        <ShellContent ContentTemplate="{DataTemplate pickers:DurationPickerPage}" Route="durationpicker" />
+    </FlyoutItem>
+    <FlyoutItem Title="Font Picker">
+        <ShellContent ContentTemplate="{DataTemplate pickers:FontPickerPage}" Route="fontpicker" />
     </FlyoutItem>
     <FlyoutItem Title="Slider">
         <ShellContent ContentTemplate="{DataTemplate slider:SliderPage}" Route="slider" />
     </FlyoutItem>
-    <FlyoutItem Title="ProgressBar">
+    <FlyoutItem Title="Range Slider">
+        <ShellContent ContentTemplate="{DataTemplate slider:RangeSliderPage}" Route="rangeslider" />
+    </FlyoutItem>
+    <FlyoutItem Title="Security Pin">
+        <ShellContent ContentTemplate="{DataTemplate securitypin:SecurityPinPage}" Route="securitypin" />
+    </FlyoutItem>
+    <FlyoutItem Title="Signature Pad">
+        <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />
+    </FlyoutItem>
+    <FlyoutItem Title="On-Screen Keyboard">
+        <ShellContent ContentTemplate="{DataTemplate osk:OnScreenKeyboardPage}" Route="onscreenkeyboard" />
+    </FlyoutItem>
+
+    <MenuItem Text="ACTIONS &amp; NAVIGATION" IsEnabled="False" />
+
+    <FlyoutItem Title="ShinyButton">
+        <ShellContent ContentTemplate="{DataTemplate buttons:ButtonsPage}" Route="buttons" />
+    </FlyoutItem>
+    <FlyoutItem Title="FAB &amp; FabMenu">
+        <ShellContent ContentTemplate="{DataTemplate fab:FabPage}" Route="fab" />
+    </FlyoutItem>
+    <FlyoutItem Title="State View">
+        <ShellContent ContentTemplate="{DataTemplate wizard:StateViewPage}" Route="stateview" />
+    </FlyoutItem>
+    <FlyoutItem Title="Wizard">
+        <ShellContent ContentTemplate="{DataTemplate wizard:WizardPage}" Route="wizard" />
+    </FlyoutItem>
+    <FlyoutItem Title="Walkthrough">
+        <ShellContent ContentTemplate="{DataTemplate walkthrough:WalkthroughPage}" Route="walkthrough" />
+    </FlyoutItem>
+    <FlyoutItem Title="Tooltip">
+        <ShellContent ContentTemplate="{DataTemplate walkthrough:TooltipPage}" Route="tooltip" />
+    </FlyoutItem>
+
+    <MenuItem Text="STATUS &amp; FEEDBACK" IsEnabled="False" />
+
+    <FlyoutItem Title="Pills">
+        <ShellContent ContentTemplate="{DataTemplate pills:PillPage}" Route="pills" />
+    </FlyoutItem>
+    <FlyoutItem Title="Badge">
+        <ShellContent ContentTemplate="{DataTemplate badge:BadgePage}" Route="badge" />
+    </FlyoutItem>
+    <FlyoutItem Title="Toast">
+        <ShellContent ContentTemplate="{DataTemplate toast:ToastPage}" Route="toast" />
+    </FlyoutItem>
+    <FlyoutItem Title="Dialogs">
+        <ShellContent ContentTemplate="{DataTemplate dialogs:DialogsPage}" Route="dialogs" />
+    </FlyoutItem>
+    <FlyoutItem Title="Feedback">
+        <ShellContent ContentTemplate="{DataTemplate feedback:FeedbackPage}" Route="feedback" />
+    </FlyoutItem>
+    <FlyoutItem Title="Progress Bar">
         <ShellContent ContentTemplate="{DataTemplate progressbar:ProgressBarPage}" Route="progressbar" />
     </FlyoutItem>
     <FlyoutItem Title="Skeleton">
         <ShellContent ContentTemplate="{DataTemplate skeleton:SkeletonPage}" Route="skeleton" />
     </FlyoutItem>
-    <FlyoutItem Title="Overlay">
-        <ShellContent ContentTemplate="{DataTemplate overlay:OverlayPage}" Route="overlay" />
+
+    <MenuItem Text="ANIMATION" IsEnabled="False" />
+
+    <FlyoutItem Title="Keyframe">
+        <ShellContent ContentTemplate="{DataTemplate keyframe:KeyframePage}" Route="keyframe" />
+    </FlyoutItem>
+    <FlyoutItem Title="Motion Icons">
+        <ShellContent ContentTemplate="{DataTemplate motionicons:MotionIconsPage}" Route="motionicons" />
     </FlyoutItem>
 
     <MenuItem Text="MEDIA" IsEnabled="False" />
 
+    <FlyoutItem Title="Media Element">
+        <ShellContent ContentTemplate="{DataTemplate mediaelement:MediaElementPage}" Route="mediaelement" />
+    </FlyoutItem>
+    <FlyoutItem Title="Shiny Image">
+        <ShellContent ContentTemplate="{DataTemplate images:ImagesPage}" Route="shinyimage" />
+    </FlyoutItem>
     <FlyoutItem Title="Image Viewer">
         <ShellContent ContentTemplate="{DataTemplate imgviewer:ImageViewerPage}" Route="imageviewer" />
     </FlyoutItem>
@@ -87,23 +245,23 @@
     <FlyoutItem Title="Image Editor">
         <ShellContent ContentTemplate="{DataTemplate imgeditor:ImageEditorPage}" Route="imageeditor" />
     </FlyoutItem>
-    <FlyoutItem Title="Signature Pad">
-        <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />
+    <FlyoutItem Title="Media Picker">
+        <ShellContent ContentTemplate="{DataTemplate mediapicker:MediaPickerPage}" Route="mediapicker" />
     </FlyoutItem>
 
-    <MenuItem Text="TABLE / TREE" IsEnabled="False" />
+    <MenuItem Text="SCHEDULER" IsEnabled="False" />
 
-    <FlyoutItem Title="TableView (Basic)">
-        <ShellContent ContentTemplate="{DataTemplate tv:BasicSettingsPage}" Route="tablebasic" />
+    <FlyoutItem Title="Calendar">
+        <ShellContent ContentTemplate="{DataTemplate scheduler:CalendarPage}" Route="calendar" />
     </FlyoutItem>
-    <FlyoutItem Title="TableView (Picker)">
-        <ShellContent ContentTemplate="{DataTemplate tv:PickerDemoPage}" Route="tablepicker" />
+    <FlyoutItem Title="Agenda">
+        <ShellContent ContentTemplate="{DataTemplate scheduler:AgendaPage}" Route="agenda" />
     </FlyoutItem>
-    <FlyoutItem Title="TableView (Styling)">
-        <ShellContent ContentTemplate="{DataTemplate tv:StylingPage}" Route="tablestyling" />
+    <FlyoutItem Title="Calendar Picker">
+        <ShellContent ContentTemplate="{DataTemplate scheduler:AgendaCalendarPickerPage}" Route="agendacalendarpicker" />
     </FlyoutItem>
-    <FlyoutItem Title="TreeView">
-        <ShellContent ContentTemplate="{DataTemplate treeview:TreeViewPage}" Route="treeview" />
+    <FlyoutItem Title="Event List">
+        <ShellContent ContentTemplate="{DataTemplate scheduler:CalendarListPage}" Route="calendarlist" />
     </FlyoutItem>
 
     <MenuItem Text="CONTENT" IsEnabled="False" />
@@ -115,9 +273,40 @@
         <ShellContent ContentTemplate="{DataTemplate markdown:MarkdownEditorPage}" Route="markdowneditor" />
     </FlyoutItem>
 
-    <MenuItem Text="ANIMATION" IsEnabled="False" />
+    <MenuItem Text="DIAGRAMS" IsEnabled="False" />
 
-    <FlyoutItem Title="Keyframe">
-        <ShellContent ContentTemplate="{DataTemplate keyframe:KeyframePage}" Route="keyframe" />
+    <FlyoutItem Title="Flowchart">
+        <ShellContent ContentTemplate="{DataTemplate diagrams:BasicFlowchartPage}" Route="flowchart" />
     </FlyoutItem>
+    <FlyoutItem Title="Directions">
+        <ShellContent ContentTemplate="{DataTemplate diagrams:DirectionsPage}" Route="directions" />
+    </FlyoutItem>
+    <FlyoutItem Title="Themes">
+        <ShellContent ContentTemplate="{DataTemplate diagrams:ThemesPage}" Route="themes" />
+    </FlyoutItem>
+    <FlyoutItem Title="Subgraphs">
+        <ShellContent ContentTemplate="{DataTemplate diagrams:SubgraphsPage}" Route="subgraphs" />
+    </FlyoutItem>
+    <FlyoutItem Title="Editor">
+        <ShellContent ContentTemplate="{DataTemplate diagrams:InteractiveEditorPage}" Route="editor" />
+    </FlyoutItem>
+
+    <MenuItem Text="BARCODES" IsEnabled="False" />
+
+    <FlyoutItem Title="QR Code">
+        <ShellContent ContentTemplate="{DataTemplate barcodes:QRCodePage}" Route="qrcode" />
+    </FlyoutItem>
+    <FlyoutItem Title="Barcode Gallery">
+        <ShellContent ContentTemplate="{DataTemplate barcodes:BarcodeGalleryPage}" Route="barcodegallery" />
+    </FlyoutItem>
+
+    <MenuItem Text="DESKTOP" IsEnabled="False" />
+
+    <FlyoutItem Title="System Tray">
+        <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+    <FlyoutItem Title="Quick Entry">
+        <ShellContent ContentTemplate="{DataTemplate quickentry:QuickEntryPage}" Route="quickentry" />
+    </FlyoutItem>
+
 </shiny:ShinyShell>

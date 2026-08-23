@@ -1,0 +1,185 @@
+@page "/quickentry"
+@using Shiny.Blazor.Controls.QuickEntry
+@inject IQuickEntryService QuickEntry
+@implements IDisposable
+
+<h3>Quick Entry &amp; Screen Glow</h3>
+<p class="muted">
+    An assistant-style prompt summoned over the page, and the Siri-style colour wash around the edge
+    of the viewport that goes with it. The MAUI twin of this can also open as a real always-on-top OS
+    window on desktop; in a browser it is always an in-app overlay.
+</p>
+
+<section class="demo-card">
+    <h4>PromptView</h4>
+    <p class="muted">
+        The control on its own, on an ordinary page. Type and press Enter; ↑ ↓ move through the
+        suggestions and Escape backs out one step at a time.
+    </p>
+
+    <PromptView Width="640"
+                @bind-Text="inline.Text"
+                Placeholder="Ask anything…"
+                IsBusy="inline.IsBusy"
+                BusyText="Thinking…"
+                ShowMicrophone="true"
+                Suggestions="Suggestions"
+                Response="@inline.Response"
+                Submitted="OnInlineSubmitted"
+                Cancelled="() => inline.IsBusy = false" />
+</section>
+
+<section class="demo-card">
+    <h4>Popup</h4>
+    <div class="row">
+        <button class="btn" @onclick="QuickEntry.Show">Show</button>
+        <button class="btn" @onclick="QuickEntry.Hide">Hide</button>
+        <button class="btn" @onclick="QuickEntry.Toggle">Toggle</button>
+    </div>
+
+    <label>Placement</label>
+    <select @bind="Placement">
+        <option value="TopCenter">TopCenter</option>
+        <option value="BottomCenter">BottomCenter</option>
+        <option value="Center">Center</option>
+    </select>
+</section>
+
+<section class="demo-card">
+    <h4>Screen glow</h4>
+    <div class="row">
+        <button class="btn" @onclick="QuickEntry.ShowGlow">Show</button>
+        <button class="btn" @onclick="QuickEntry.HideGlow">Hide</button>
+        <button class="btn" @onclick="() => QuickEntry.PulseGlowAsync(TimeSpan.FromSeconds(3))">Pulse 3s</button>
+    </div>
+
+    <label>Popup trigger</label>
+    <select @bind="GlowTrigger">
+        <option value="None">None</option>
+        <option value="WhileOpen">WhileOpen</option>
+        <option value="WhileBusy">WhileBusy</option>
+    </select>
+
+    <label>Thickness: @QuickEntry.Options.Glow.Thickness.ToString("0")px</label>
+    <input type="range" min="40" max="260" step="10"
+           value="@QuickEntry.Options.Glow.Thickness"
+           @oninput="OnThicknessChanged" />
+</section>
+
+<section class="demo-card">
+    <h4>Events</h4>
+    <ul class="log">
+        @foreach (var entry in log)
+        {
+            <li>@entry</li>
+        }
+    </ul>
+</section>
+
+@code {
+    readonly List<string> log = new();
+
+    sealed class InlineState
+    {
+        public string Text { get; set; } = String.Empty;
+        public bool IsBusy { get; set; }
+        public string? Response { get; set; }
+    }
+
+    readonly InlineState inline = new();
+
+    static readonly List<PromptSuggestion> Suggestions = new()
+    {
+        new("Summarise my clipboard", "Reads whatever you last copied", "📋"),
+        new("Explain this error", "Paste a stack trace and get a plain-English read", "🐞"),
+        new("Draft a reply", "Turns a few bullet points into a message", "✉️")
+    };
+
+    string Placement
+    {
+        get => QuickEntry.Options.Placement.ToString();
+        set
+        {
+            if (Enum.TryParse<QuickEntryPlacement>(value, out var placement))
+                QuickEntry.Options.Placement = placement;
+        }
+    }
+
+    string GlowTrigger
+    {
+        get => QuickEntry.Options.ScreenGlow.ToString();
+        set
+        {
+            if (Enum.TryParse<ScreenGlowTrigger>(value, out var trigger))
+                QuickEntry.Options.ScreenGlow = trigger;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        QuickEntry.Options.ScreenGlow = ScreenGlowTrigger.WhileBusy;
+        QuickEntry.Opened += OnOpened;
+        QuickEntry.Closed += OnClosed;
+
+        // The popup's own prompt is configured through the service, since a service cannot hand a
+        // component parameters directly. Using PromptView on a page (above) needs none of this.
+        QuickEntry.ConfigurePrompt(prompt =>
+        {
+            prompt.Suggestions = Suggestions;
+            prompt.Submitted += OnPopupSubmitted;
+            prompt.Cancelled += (_, _) => prompt.IsBusy = false;
+        });
+    }
+
+    void OnOpened(object? sender, EventArgs e) => Log("Popup opened");
+    void OnClosed(object? sender, EventArgs e) => Log("Popup closed");
+
+    async void OnPopupSubmitted(object? sender, PromptSubmittedEventArgs e)
+    {
+        var prompt = QuickEntry.Prompt;
+        Log($"Submitted: \"{e.Text}\"");
+        prompt.Response = null;
+        prompt.IsBusy = true;
+
+        await Task.Delay(1800);
+
+        prompt.IsBusy = false;
+        prompt.Response = $"You asked \"{e.Text}\". Wire Submitted to your own AI client and put the answer here.";
+    }
+
+    async Task OnInlineSubmitted(PromptSubmittedEventArgs e)
+    {
+        Log($"Inline submitted: \"{e.Text}\"");
+        inline.Response = null;
+        inline.IsBusy = true;
+        StateHasChanged();
+
+        await Task.Delay(1800);
+
+        inline.IsBusy = false;
+        inline.Response = $"You asked \"{e.Text}\". Same control, no popup involved.";
+        StateHasChanged();
+    }
+
+    void OnThicknessChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var thickness))
+            QuickEntry.Options.Glow.Thickness = thickness;
+    }
+
+    void Log(string message)
+    {
+        log.Insert(0, $"{DateTime.Now:HH:mm:ss}  {message}");
+        while (log.Count > 15)
+            log.RemoveAt(log.Count - 1);
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        QuickEntry.Opened -= OnOpened;
+        QuickEntry.Closed -= OnClosed;
+        QuickEntry.Prompt.Submitted -= OnPopupSubmitted;
+    }
+}

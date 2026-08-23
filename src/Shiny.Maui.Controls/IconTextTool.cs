@@ -98,6 +98,18 @@ public abstract class IconTextTool : ContentView
         }));
     public double FontSize { get => (double)GetValue(FontSizeProperty); set => SetValue(FontSizeProperty, value); }
 
+    /// <summary>
+    /// Bold/italic for the label. The reason it exists is glyph labels that mean their own styling —
+    /// a markdown bar's <c>B</c> and <c>I</c> read as broken drawn in the regular face.
+    /// </summary>
+    public static readonly BindableProperty FontAttributesProperty = BindableProperty.Create(
+        nameof(FontAttributes), typeof(FontAttributes), typeof(IconTextTool), FontAttributes.None,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(IconTextTool), () =>
+        {
+            ((IconTextTool)b).textLabel.FontAttributes = (FontAttributes)n;
+        }));
+    public FontAttributes FontAttributes { get => (FontAttributes)GetValue(FontAttributesProperty); set => SetValue(FontAttributesProperty, value); }
+
     public static readonly BindableProperty IconSizeProperty = BindableProperty.Create(
         nameof(IconSize), typeof(double), typeof(IconTextTool), 20.0,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(IconTextTool), () =>

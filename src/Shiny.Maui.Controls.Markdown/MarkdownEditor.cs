@@ -1,6 +1,6 @@
 namespace Shiny.Maui.Controls.Markdown;
 
-public class MarkdownEditor : ContentView
+public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
 {
     readonly Grid rootGrid;
     readonly Grid toolbarRow;
@@ -13,6 +13,9 @@ public class MarkdownEditor : ContentView
     readonly BoxView toolbarSeparator;
     bool isPreviewMode;
     bool isUpdating;
+
+    KeyboardAccessoryBinder? accessoryBinder;
+    KeyboardAccessoryView? toolbarAccessory;
 
     public MarkdownEditor()
     {
@@ -98,6 +101,7 @@ public class MarkdownEditor : ContentView
         Content = rootGrid;
         ApplyThemeColors();
         BuildToolbar(MarkdownToolbarItems.Default);
+        SyncAccessory();
     }
 
     public static readonly BindableProperty MarkdownProperty = BindableProperty.Create(
@@ -160,6 +164,7 @@ public class MarkdownEditor : ContentView
         {
             var me = (MarkdownEditor)b;
             me.BuildToolbar(n as IReadOnlyList<MarkdownToolbarItem> ?? MarkdownToolbarItems.Default);
+            me.ResetToolbarAccessory();
         });
 
     public IReadOnlyList<MarkdownToolbarItem>? ToolbarItems
@@ -214,6 +219,42 @@ public class MarkdownEditor : ContentView
     {
         get => (Color?)GetValue(EditorBackgroundColorProperty);
         set => SetValue(EditorBackgroundColorProperty, value);
+    }
+
+    /// <summary>
+    /// Repeats <see cref="ToolbarItems"/> as icons on a bar docked to the top of the soft keyboard
+    /// while the editor has focus (iOS + Android; no-op everywhere else). On by default — on a phone
+    /// the keyboard covers the toolbar at the exact moment you want it. Set <see cref="Accessory"/>
+    /// to replace the generated bar with your own.
+    /// </summary>
+    public static readonly BindableProperty ShowToolbarInKeyboardProperty = BindableProperty.Create(
+        nameof(ShowToolbarInKeyboard),
+        typeof(bool),
+        typeof(MarkdownEditor),
+        true,
+        propertyChanged: (b, _, _) => ((MarkdownEditor)b).SyncAccessory());
+
+    public bool ShowToolbarInKeyboard
+    {
+        get => (bool)GetValue(ShowToolbarInKeyboardProperty);
+        set => SetValue(ShowToolbarInKeyboardProperty, value);
+    }
+
+    /// <summary>
+    /// Your own keyboard accessory bar, used instead of the one generated from
+    /// <see cref="ToolbarItems"/>. Set this and <see cref="ShowToolbarInKeyboard"/> is ignored.
+    /// </summary>
+    public static readonly BindableProperty AccessoryProperty = BindableProperty.Create(
+        nameof(Accessory),
+        typeof(KeyboardAccessoryView),
+        typeof(MarkdownEditor),
+        null,
+        propertyChanged: (b, _, _) => ((MarkdownEditor)b).SyncAccessory());
+
+    public KeyboardAccessoryView? Accessory
+    {
+        get => (KeyboardAccessoryView?)GetValue(AccessoryProperty);
+        set => SetValue(AccessoryProperty, value);
     }
 
     public event EventHandler<LinkTappedEventArgs>? LinkTapped
@@ -337,6 +378,119 @@ public class MarkdownEditor : ContentView
             toolbar.Children.Add(button);
         }
     }
+
+    // ---- Keyboard accessory ---------------------------------------------------------------
+
+    // Created on first use, so an editor with no accessory costs nothing. The binder subscribes to the
+    // inner editor's handler/focus events itself, so creating it late is safe.
+    KeyboardAccessoryBinder AccessoryBinder => accessoryBinder ??= new KeyboardAccessoryBinder(this, editor, this);
+
+    // An explicit Accessory always wins; the generated bar is materialized once and cached, because on
+    // iOS a UIView can only have one superview and rebuilding it per focus would churn it.
+    void SyncAccessory()
+    {
+        var bar = Accessory;
+        if (bar is null && ShowToolbarInKeyboard)
+            bar = toolbarAccessory ??= BuildAccessory(ToolbarItems ?? MarkdownToolbarItems.Default);
+
+        if (bar is null && accessoryBinder is null)
+            return;
+
+        AccessoryBinder.SetBar(bar);
+    }
+
+    void ResetToolbarAccessory()
+    {
+        toolbarAccessory = null;
+        SyncAccessory();
+    }
+
+    // The bar is BarContent rather than Items because the accessory's own item row is a Grid of Auto
+    // columns - a dozen format icons would be squeezed, not scrolled. So: a horizontal scroller for
+    // the items, and a Done pinned outside it, which on a multi-line editor is the only way to put the
+    // keyboard away (the return key inserts a newline).
+    KeyboardAccessoryView BuildAccessory(IReadOnlyList<MarkdownToolbarItem> items)
+    {
+        var row = new HorizontalStackLayout
+        {
+            Spacing = 0,
+            VerticalOptions = LayoutOptions.Fill
+        };
+
+        string? lastGroup = null;
+        foreach (var item in items)
+        {
+            var group = GetToolbarGroup(item);
+            if (lastGroup is not null && group != lastGroup)
+                row.Children.Add(BuildAccessorySeparator());
+
+            lastGroup = group;
+            row.Children.Add(BuildAccessoryItem(item));
+        }
+
+        var scroll = new ScrollView
+        {
+            Orientation = ScrollOrientation.Horizontal,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
+            Content = row,
+            VerticalOptions = LayoutOptions.Fill
+        };
+
+        var content = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            },
+            ColumnSpacing = 0
+        };
+        content.Add(scroll, 0, 0);
+        content.Add(new KeyboardDismissItem(), 1, 0);
+
+        return new KeyboardAccessoryView { BarContent = content };
+    }
+
+    KeyboardAccessoryItem BuildAccessoryItem(MarkdownToolbarItem item)
+    {
+        var tool = new KeyboardAccessoryItem
+        {
+            Text = item.Icon,
+            Padding = new Thickness(6, 0),
+            MinimumWidthRequest = 40,
+            FontSize = 16
+        };
+
+        // The glyphs for bold and italic are just "B" and "I" - drawn in the regular face they read as
+        // two random letters rather than as the thing they do.
+        if (ReferenceEquals(item, MarkdownToolbarItems.Bold))
+            tool.FontAttributes = FontAttributes.Bold;
+        else if (ReferenceEquals(item, MarkdownToolbarItems.Italic))
+            tool.FontAttributes = FontAttributes.Italic;
+
+        // The label, not the glyph - a screen reader saying "H with subscript one" helps nobody.
+        SemanticProperties.SetDescription(tool, item.Label);
+
+        tool.Clicked += (_, _) => InsertFormatting(item);
+        return tool;
+    }
+
+    static BoxView BuildAccessorySeparator()
+    {
+        var separator = new BoxView
+        {
+            WidthRequest = 1,
+            HeightRequest = 22,
+            VerticalOptions = LayoutOptions.Center,
+            Margin = new Thickness(4, 0)
+        };
+        separator.SetDynamicResource(BoxView.ColorProperty, Themes.ShinyThemeKeys.Color.OutlineVariant);
+        return separator;
+    }
+
+    VisualElement IKeyboardAccessoryHost.NavigationElement => editor;
+
+    void IKeyboardAccessoryHost.DismissKeyboard() => editor.Unfocus();
 
     static string GetToolbarGroup(MarkdownToolbarItem item)
     {

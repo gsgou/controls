@@ -1,5 +1,6 @@
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.QuickEntry;
 
 namespace Shiny.Maui.Controls;
 
@@ -12,6 +13,7 @@ public partial class Overlay : ContentView
 {
     readonly ContentView overlayContainer;
     FrostedGlassView? blurBackdrop;
+    ScreenGlowView? edgeGlow;
     bool latestTarget;
     bool workerRunning;
 
@@ -27,6 +29,10 @@ public partial class Overlay : ContentView
         };
 
         Content = overlayContainer;
+
+        // Lets the overlay host something that is not a dialog — a prompt bar pinned near the top,
+        // say — without every such caller re-implementing the backdrop, blur and show/hide worker.
+        UpdateContentPlacement();
 
         // Last line: replays any styled property that was applied before the children
         // existed. Only fires for a plain Overlay - LoadingOverlay and friends mark
@@ -72,6 +78,75 @@ public partial class Overlay : ContentView
         }
     }
 
+    /// <summary>
+    /// Inserts the edge glow into the host, behind this overlay and in front of the backdrop.
+    /// </summary>
+    /// <remarks>
+    /// Placed in the host rather than inside this view for the same reason the blur backdrop is: it
+    /// has to span the whole page, and this view is only as big as its content. Input-transparent
+    /// throughout — the glow is a signal, never a target.
+    /// </remarks>
+    void ShowEdgeGlowLayer(OverlayHost? overlayHost)
+    {
+        if (!this.ShowEdgeGlow || overlayHost == null)
+            return;
+
+        this.edgeGlow ??= new ScreenGlowView(this.GlowOptions ?? new ScreenGlowOptions())
+        {
+            InputTransparent = true,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            Opacity = 0
+        };
+
+        if (!overlayHost.Children.Contains(this.edgeGlow))
+        {
+            var myIndex = overlayHost.Children.IndexOf(this);
+            if (myIndex >= 0)
+                overlayHost.Children.Insert(myIndex, this.edgeGlow);
+            else
+                overlayHost.Children.Add(this.edgeGlow);
+        }
+
+        this.edgeGlow.IsVisible = true;
+        this.edgeGlow.Start();
+        _ = this.edgeGlow.FadeToAsync(1, AnimationDuration);
+    }
+
+    void HideEdgeGlowLayer()
+    {
+        if (this.edgeGlow == null)
+            return;
+
+        var glow = this.edgeGlow;
+        _ = HideAsync();
+
+        async Task HideAsync()
+        {
+            try
+            {
+                await glow.FadeToAsync(0, AnimationDuration);
+            }
+            catch
+            {
+                // Detached mid-animation — snap to hidden below, same as the overlay itself does.
+            }
+
+            glow.Opacity = 0;
+            glow.Stop();
+            glow.IsVisible = false;
+
+            if (GetOverlayHost() is { } host && host.Children.Contains(glow))
+                host.Children.Remove(glow);
+        }
+    }
+
+    void UpdateContentPlacement()
+    {
+        this.overlayContainer.VerticalOptions = this.ContentAlignment;
+        this.overlayContainer.Margin = this.ContentMargin;
+    }
+
     void UpdateOverlayContent()
     {
         if (OverlayContentTemplate == null)
@@ -81,6 +156,13 @@ public partial class Overlay : ContentView
         }
 
         var content = OverlayContentTemplate.CreateContent() as View;
+
+        // Detach whatever was there first. A template that hands back a view it already returned —
+        // which is how a caller hosts one long-lived instance rather than rebuilding it per show —
+        // would otherwise be refused for still having a parent.
+        if (!ReferenceEquals(overlayContainer.Content, content))
+            overlayContainer.Content = null;
+
         overlayContainer.Content = content;
     }
 
@@ -136,6 +218,8 @@ public partial class Overlay : ContentView
             _ = blurBackdrop.FadeToAsync(1, AnimationDuration);
         }
 
+        this.ShowEdgeGlowLayer(overlayHost);
+
         IsVisible = true;
         Opacity = 0;
         try
@@ -160,6 +244,8 @@ public partial class Overlay : ContentView
 
         if (blurBackdrop != null)
             _ = blurBackdrop.FadeToAsync(0, AnimationDuration);
+
+        this.HideEdgeGlowLayer();
 
         try
         {

@@ -26,6 +26,16 @@ static class PageOverlay
     internal sealed class WalkthroughLayer : AbsoluteLayout;
 
     /// <summary>
+    /// Grid-based, unlike the layers above. An <see cref="AbsoluteLayout"/> child sized with
+    /// <c>AutoSize</c> and positioned proportionally is not reliably arranged across MAUI's heads —
+    /// it comes back unmeasured, so the popup is present in the tree, reports itself visible, and
+    /// paints nothing. Alignment plus a margin is boring and works everywhere.
+    /// </summary>
+    internal sealed class QuickEntryLayer : Grid;
+
+    internal sealed class ScreenGlowLayer : Grid;
+
+    /// <summary>
     /// Z-order for the layers, so the intent is stated once rather than guessed at each call site.
     /// A tooltip sits above page content, a walkthrough dims everything including tooltips, and a
     /// modal dialog wins outright.
@@ -35,6 +45,12 @@ static class PageOverlay
         public const int Tooltip = 9_000;
         public const int Walkthrough = 9_500;
         public const int Dialog = 10_000;
+
+        /// <summary>Above a dialog: the quick entry popup is summoned over whatever is on screen, including one.</summary>
+        public const int QuickEntry = 10_500;
+
+        /// <summary>Above everything. The glow rims the screen and is never the thing being interacted with.</summary>
+        public const int ScreenGlow = 11_000;
     }
 
 

@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. **Desktop-only** features — system tray / status-bar icon and Visual-Studio-style docking — ship in a separate `Shiny.Maui.Controls.Desktop` add-on (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1172,6 +1172,8 @@ A bar docked to the **top edge of the soft keyboard** while the field has focus 
 ```
 
 iOS uses the real `UIResponder.InputAccessoryView`, so it rides the keyboard animation exactly. Android has no accessory API at all (the IME is a separate process), so the same bar is rendered in the activity's content view and driven by the IME window insets — frame-synced on API 30+, and shown only while the IME is genuinely up, so a hardware keyboard correctly shows no bar. Windows, macOS, Linux and Blazor have no soft keyboard to decorate; the property compiles and does nothing. This is *not* the [on-screen keyboard](#on-screen-keyboard) — that one draws keys; this one decorates the OS keyboard.
+
+The same bar also serves multi-line inputs — it is what puts the markdown editor's formatting toolbar on the keyboard (see [Markdown Controls](#markdown-controls)). `KeyboardAccessoryView.BarContent` replaces the item row with a layout of your own (a horizontal scroller, say, when there are more items than fit); `KeyboardAccessoryItem`s inside it are wired to the focused field exactly like the ones in `Items`.
 
 ### Slider
 
@@ -2820,9 +2822,25 @@ Events: `LinkTapped` — fired when a link is tapped; set `Handled = true` to pr
 | IsPreviewVisible | bool | Toggle preview pane (TwoWay) |
 | ToolbarBackgroundColor | Color? | Toolbar background |
 | EditorBackgroundColor | Color? | Editor background |
+| ShowToolbarInKeyboard | bool | Repeat `ToolbarItems` on the keyboard accessory bar (default `true`; MAUI iOS/Android) |
+| Accessory | KeyboardAccessoryView? | Your own accessory bar instead of the generated one |
+
+**Keyboard toolbar (MAUI, iOS + Android)** — on a phone the toolbar above the editor is covered by the
+soft keyboard the moment you start typing, so the same `ToolbarItems` are also rendered as icons on a
+`KeyboardAccessoryView` docked to the top of the keyboard: a horizontally scrolling row of the enabled
+items (grouped exactly like the toolbar) with a pinned **Done** — the only way to dismiss a multi-line
+keyboard, whose return key inserts a newline. On by default; set `ShowToolbarInKeyboard="False"` to opt
+out, or set `Accessory` to supply your own bar.
+
+```xml
+<md:MarkdownEditor Markdown="{Binding NoteContent, Mode=TwoWay}"
+                   ToolbarItems="{Binding MyItems}"
+                   ShowToolbarInKeyboard="True" />
+```
 
 **Features:**
 - Formatting toolbar: bold, italic, headings, lists, code, links, blockquotes
+- The same toolbar on the keyboard accessory bar (iOS/Android)
 - Live preview toggle
 - Auto-growing editor
 - Full Markdig support: tables, task lists, strikethrough, fenced code blocks
@@ -3410,9 +3428,117 @@ Inherits all `CollectionControlBase` properties: `ItemsSource`, `ItemTemplate`, 
 - Item visibility tracking for analytics or lazy loading
 - Full header, footer, and empty view templates
 
-### Desktop (Tray Icon + Docking) &amp; the On-Screen Keyboard
+### Quick Entry
 
-`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator) and Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows). A touch / kiosk **on-screen keyboard** is planned for it but not built. On the Blazor side there is no equivalent add-on — docking *and* the on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+An assistant-style prompt summoned over whatever the user is looking at — `PromptView` in a popup, plus an optional Siri-style glow around the screen edge. Ships in the **core** packages on both hosts.
+
+It is presented one of two ways, and the API is identical either way:
+
+| Presentation | What it is | Where |
+|---|---|---|
+| **In-app** | An overlay drawn over the current page | Everywhere — iOS, Android, Mac Catalyst, Windows, macOS, Linux, Blazor |
+| **Desktop** | A borderless, always-on-top OS window opening over *other applications* | Windows, macOS (AppKit), Linux — with the `Shiny.Maui.Controls.Desktop` add-on |
+
+`QuickEntryOptions.Presentation` defaults to `Auto`: the native window where one is available, the overlay everywhere else. So a shared codebase configures this once, with no platform checks at the call site. `InApp` and `Desktop` force it either way; `Desktop` where it isn't available falls back to the overlay and logs why.
+
+**MAUI**
+
+```csharp
+using Shiny;
+using Shiny.Maui.Controls.QuickEntry;
+
+builder.UseShinyControls(cfg => cfg.ConfigureQuickEntry(o =>
+{
+    o.Presentation = QuickEntryPresentation.Auto;
+    o.Placement    = QuickEntryPlacement.TopCenter;   // or BottomCenter / Center / NearCursor / Manual
+    o.ScreenGlow   = ScreenGlowTrigger.WhileBusy;
+}));
+```
+
+Then wire the prompt to your AI of choice:
+
+```csharp
+public class QuickEntryHost(IQuickEntryService quickEntry, IChatClient chat)
+{
+    public async Task StartAsync()
+    {
+        await quickEntry.PreloadAsync();          // optional — also how you reach Content before first open
+
+        var prompt = (PromptView)quickEntry.Content!;
+        prompt.Suggestions = new List<PromptSuggestion>
+        {
+            new("Summarise my clipboard", "Reads whatever you last copied", "📋"),
+            new("Explain this error",     "Paste a stack trace",            "🐞")
+        };
+
+        prompt.Submitted += async (_, e) =>
+        {
+            prompt.IsBusy = true;
+            var answer = await chat.GetResponseAsync(e.Text);
+            prompt.IsBusy = false;
+            prompt.ResponseContent = new MarkdownView { Markdown = answer.Text };
+        };
+    }
+}
+```
+
+**Blazor** — in-app only, since a web page cannot make an OS window. Place one `<QuickEntryHost />` in your root layout, then drive `IQuickEntryService` from anywhere:
+
+```razor
+@inject IQuickEntryService QuickEntry
+
+<button @onclick="QuickEntry.Toggle">Ask</button>
+
+@code {
+    protected override void OnInitialized() => QuickEntry.ConfigurePrompt(prompt =>
+    {
+        prompt.Suggestions = suggestions;
+        prompt.Submitted += async (_, e) =>
+        {
+            prompt.IsBusy = true;
+            prompt.Response = await AskAsync(e.Text);
+            prompt.IsBusy = false;
+        };
+    });
+}
+```
+
+| Member | Notes |
+|---|---|
+| `Show()` / `Hide()` / `Toggle()` | `Toggle` is what a hotkey, tray click or button binds to |
+| `PreloadAsync()` (MAUI) | Builds the popup ahead of first use |
+| `Resize(width, height)` (MAUI) | Manual sizing; content implementing `IQuickEntryAutoSize` drives it for you |
+| `IsOpen` / `Content` / `ResolvedPresentation` | `ResolvedPresentation` has `Auto` and any fallback already applied |
+| `ShowGlow()` / `HideGlow()` / `PulseGlowAsync()` | The glow is on the same service — the two are almost always used together |
+| `Opened` / `Closed` | Fire however the popup was dismissed |
+
+`QuickEntryOptions` covers `Presentation`, `Placement`, `Width`, `CollapsedHeight`, `MaxHeight`, `TopMarginRatio` / `BottomMarginRatio`, `AutoSize`, `DismissOnFocusLost`, `DismissOnScrimTap`, `DismissOnEscape`, `ActivateOnShow`, `ScrimColor`, `ContentFactory`, `RecreateContentOnShow`, `ScreenGlow`, and `Glow` (thickness, palette, speed, intensity, layers, frame rate). `HotKey`, `ShowInTaskbar` and `JoinAllSpaces` only apply to the desktop presentation.
+
+#### PromptView
+
+The popup's default content, and an ordinary control in its own right — put it on a page and it works there too, on every platform.
+
+`Text`, `Placeholder`, `IsBusy`, `BusyText`, the leading icon (`Icon` for an image, `IconContent` for any view, `ShowIcon`, `IconSize` — leave them alone for the built-in animated orb), the dropdown (`Suggestions` + `SuggestionTemplate`, `MaxVisibleSuggestions`, `DropdownContent` to replace that area entirely, `DropdownHeight` to pin it), `ResponseContent`, `Footer`, `SubmitCommand` / `SuggestionCommand` / `MicrophoneCommand`, `ShowMicrophone`, `ShowSubmitButton`, `ClearOnSubmit`, and a full colour surface (`AccentColor`, `SurfaceColor`, `OutlineColor`, `TextColor`, `PlaceholderColor`, `SubtleTextColor`, `HighlightColor`, `CornerRadius`, `PromptFontSize`) that follows the theme tokens until you assign one. Events: `Submitted`, `SuggestionSelected`, `Cancelled`.
+
+**It does no AI itself.** Handle `Submitted`, set `IsBusy`, assign the response.
+
+The dropdown sizes itself to whatever is in it — the popup grows and shrinks to match — unless you set `DropdownHeight`, which pins it and scrolls instead (what you want for a list that changes length as the user types and would otherwise make the popup jump under the pointer).
+
+Keyboard: ↑ / ↓ walk the suggestions, Enter submits (or picks the highlighted row), and Escape unwinds one layer of state at a time — cancel the request, drop the highlight, clear the response, clear the prompt — and only closes the popup once there is nothing left to back out of. Host your own content and implement `IQuickEntryKeyHandler` to take part; content that changes size should also implement `IQuickEntryAutoSize` so a desktop window can follow it.
+
+#### Screen glow
+
+An animated colour wash around the edge, click-through and always-on-top. `ScreenGlowTrigger.WhileBusy` is the Siri-like one — it lights only while your content reports itself working, rather than the whole time the popup is up. Custom content joins in via `IQuickEntryBusyState`; `PromptView` already does.
+
+```csharp
+await quickEntry.PulseGlowAsync(TimeSpan.FromSeconds(3));   // one-shot acknowledgement
+```
+
+It rims the **display** in desktop presentation and the **page** in-app — the same thing on a phone, and not the same thing on a desktop with your app in a window. On macOS and Linux/X11 the desktop glow is a transparent click-through window; on Windows a WinUI 3 window has no per-pixel alpha, so it is rendered with GDI+ into four layered Win32 windows, one per screen edge, which is why the Windows glow has square corners.
+
+### Desktop (Tray Icon + Docking + Desktop Quick Entry) &amp; the On-Screen Keyboard
+
+`Shiny.Maui.Controls.Desktop` is a single desktop-only add-on that combines a cross-platform **system tray / status-bar icon** (Windows, macOS AppKit, MacCatalyst, Linux ayatana-appindicator), Visual-Studio-style **window docking** (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), and the **desktop presentation of Quick Entry** — the borderless always-on-top prompt window that opens over any application from a global hotkey, in the style of Claude Desktop's quick entry or the Copilot key. Quick Entry itself ships in the core packages. A touch / kiosk **on-screen keyboard** is planned for it but not built. On the Blazor side there is no equivalent add-on — docking *and* the on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 ```bash
 dotnet add package Shiny.Maui.Controls.Desktop
@@ -3429,10 +3555,11 @@ builder
     .UseTrayIcon()         // tray / status-bar icon
     .UseShinyDocking()     // docking host
     .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
-    .AddDockPanel<OutputPanel>("output");
+    .AddDockPanel<OutputPanel>("output")
+    .UseDesktopQuickEntry();   // native-window quick entry + global hotkeys
 ```
 
-> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API and `using Shiny.Maui.Controls.Desktop.Docking;` for docking. The extension methods themselves live in the `Shiny` namespace. There is no `UseOnScreenKeyboard` — see below.
+> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API, `using Shiny.Maui.Controls.Desktop.Docking;` for docking, and `using Shiny.Maui.Controls.Desktop.QuickEntry;` for global hotkeys (the popup's own API is in `Shiny.Maui.Controls.QuickEntry`). The extension methods themselves live in the `Shiny` namespace. There is no `UseOnScreenKeyboard` — see below.
 
 #### Tray Icon
 
@@ -3503,6 +3630,48 @@ public class MyTrayHost
 | macOS (AppKit) | `NSMenuItem.KeyEquivalent` + modifier mask | App-wide while your app is foreground |
 | MacCatalyst | Same as AppKit via `objc_msgSend` | App-wide while your app is foreground |
 | Linux | `gtk_widget_add_accelerator` on a `GtkAccelGroup` | Best-effort — fires while the indicator menu is open or focused |
+
+#### Quick Entry (desktop window + global hotkeys)
+
+The quick entry popup itself lives in the core package — see [Quick Entry](#quick-entry) — and already works on every platform as an in-app overlay. What this add-on adds is the *desktop* half:
+
+```csharp
+using Shiny;
+using Shiny.Maui.Controls.QuickEntry;
+
+builder
+    .UseShinyControls(cfg => cfg.ConfigureQuickEntry(o =>
+    {
+        o.HotKey = OperatingSystem.IsMacOS() ? "Cmd+Opt+Space" : "Ctrl+Alt+Space";
+        o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
+    }))
+    .UseDesktopQuickEntry();
+```
+
+`UseDesktopQuickEntry()` registers three things:
+
+- a **native-window presentation** — borderless, always-on-top, opening over *other applications*. The core service picks it whenever `QuickEntryOptions.Presentation` allows, which `Auto` (the default) does on Windows, macOS AppKit and Linux
+- the **screen glow across the whole display** rather than just your page
+- **`IGlobalHotKeyService`** — system-wide shortcuts, useful on its own
+
+It is safe to call unconditionally: on MacCatalyst (and anywhere else that isn't a desktop) the presenters report themselves unsupported and the core service quietly stays with the overlay.
+
+##### Global hotkeys
+
+```csharp
+var registration = hotKeys.Register("Ctrl+Shift+K", () => DoSomething());
+// null means the combination could not be claimed — that is a normal outcome, not an exception
+```
+
+| Platform | Mechanism | Notes |
+|---|---|---|
+| Windows | `RegisterHotKey` on a message-only window | Reliable; fails if another process already owns the combination |
+| macOS (AppKit) | Carbon `RegisterEventHotKey` | No Accessibility permission prompt, unlike an `NSEvent` global monitor |
+| Linux / X11 | `XGrabKey` on the root window | Full support, including window placement and always-on-top |
+| Linux / Wayland | `org.freedesktop.portal.GlobalShortcuts` | GNOME 45+ / KDE Plasma 6+. Binding shows the user a confirmation prompt, so the hotkey starts working asynchronously, and the compositor may bind a different trigger than the one you asked for |
+| MacCatalyst | — | Not supported |
+
+> **Wayland caveats.** A Wayland client cannot position its own toplevel or raise itself above other windows, so under Wayland the desktop popup is undecorated but the compositor decides where it appears and it is an ordinary window in the stack; the whole-display glow is unavailable and the in-app one is used instead. Under X11 everything behaves as it does on Windows and macOS.
 
 #### Docking
 

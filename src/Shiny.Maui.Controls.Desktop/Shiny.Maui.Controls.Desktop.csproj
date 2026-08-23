@@ -1,19 +1,50 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-maccatalyst;$(TargetFrameworks);$(BaseTargetFramework)-macos</TargetFrameworks>
-        <!-- Windows packaging (MakePri) only runs on Windows; add the Windows TFM only there so the solution still builds on macOS/Linux. -->
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <!--
+            Windows packaging (MakePri) only runs on Windows, so the Windows TFM is normally added
+            only there and the solution still builds on macOS/Linux. ForceWindowsTfm=true adds it
+            anyway, which is how Platforms/Windows gets *compile*-verified off Windows:
+
+                dotnet restore -p:ForceWindowsTfm=true
+                dotnet build -p:ForceWindowsTfm=true -f net10.0-windows10.0.19041.0 -t:Compile
+
+            A full build still fails in MakePri.exe on a non-Windows host; -t:Compile stops before it.
+            Since this package took a ProjectReference on Shiny.Maui.Controls, that reference drags
+            core's *full* Windows build in — MakePri included — so verifying this one off Windows is
+            now two steps: compile core first, drop its assembly where the reference expects it, then
+            compile here with project references off.
+
+                dotnet build ../Shiny.Maui.Controls -p:ForceWindowsTfm=true -p:ProduceReferenceAssembly=false \
+                    -f net10.0-windows10.0.19041.0 -t:Compile
+                cp ../Shiny.Maui.Controls/obj/Debug/net10.0-windows10.0.19041.0/Shiny.Maui.Controls.dll \
+                    ../Shiny.Maui.Controls/bin/Debug/net10.0-windows10.0.19041.0/
+                dotnet build -p:ForceWindowsTfm=true -p:ProduceReferenceAssembly=false \
+                    -f net10.0-windows10.0.19041.0 -t:Compile -p:BuildProjectReferences=false
+        -->
+        <TargetFrameworks Condition="'$(ForceWindowsTfm)' == 'true' Or $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
         <EnableWindowsTargeting>true</EnableWindowsTargeting>
         <UseMaui>true</UseMaui>
         <IsAotCompatible>true</IsAotCompatible>
         <SingleProject>true</SingleProject>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>Shiny.Maui.Controls.Desktop</RootNamespace>
-        <Description>Desktop-only .NET MAUI controls — system tray / status bar icon (Windows, macOS AppKit + Catalyst, Linux ayatana-appindicator) and Visual-Studio-style docking (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows).</Description>
+        <Description>Desktop-only .NET MAUI controls — system tray / status bar icon (Windows, macOS AppKit + Catalyst, Linux ayatana-appindicator), Visual-Studio-style docking (dockable tool windows, tabbed groups, splitters, auto-hide rails, tear-off floating windows), global hotkeys, and the desktop-window presentation of Shiny's quick entry popup and screen-edge glow.</Description>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" />
+        <!--
+            The quick entry contracts, the PromptView control and the in-app presentation all live in
+            the core package now; this add-on supplies the native-window presentation of the same
+            thing. Core has no macos/maccatalyst TFM, so those targets resolve its net10.0 asset —
+            which is fine, because nothing quick entry needs from it touches a platform SDK.
+        -->
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.Desktop.Tests" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">

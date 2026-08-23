@@ -1,9 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Hosting;
 using Shiny.Maui.Controls.Desktop.Docking;
+using Shiny.Maui.Controls.Desktop.QuickEntry;
+using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Desktop.TrayIcon;
 
 namespace Shiny;
@@ -32,6 +35,68 @@ public static class DesktopMauiAppBuilderExtensions
             return new UnsupportedTrayIconFactory();
         });
 #endif
+        return builder;
+    }
+
+    /// <summary>
+    /// Adds the desktop half of Shiny's quick entry popup: a borderless, always-on-top OS window that
+    /// opens over <em>other applications</em>, the screen-edge glow drawn across the whole display,
+    /// and <see cref="IGlobalHotKeyService"/> for system-wide shortcuts.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// builder
+    ///     .UseShinyControls(cfg => cfg.ConfigureQuickEntry(o =>
+    ///     {
+    ///         o.HotKey = OperatingSystem.IsMacOS() ? "Cmd+Opt+Space" : "Ctrl+Alt+Space";
+    ///         o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
+    ///     }))
+    ///     .UseDesktopQuickEntry();
+    /// </code>
+    /// </example>
+    /// <remarks>
+    /// <para>
+    /// The popup itself, the <c>PromptView</c> control and the in-app presentation all live in
+    /// <c>Shiny.Maui.Controls</c> and are registered by <c>UseShinyControls()</c> — so a shared
+    /// codebase already has a working popup on every platform. This adds a second presentation the
+    /// core service will choose when <see cref="QuickEntryOptions.Presentation"/> allows it, which
+    /// <see cref="QuickEntryPresentation.Auto"/> (the default) does.
+    /// </para>
+    /// <para>
+    /// Safe to call unconditionally. On MacCatalyst — and on any platform that reaches this package's
+    /// <c>net10.0</c> asset without being a desktop — the presenters report themselves unsupported
+    /// and the core service quietly stays with the overlay.
+    /// </para>
+    /// </remarks>
+    public static MauiAppBuilder UseDesktopQuickEntry(this MauiAppBuilder builder)
+    {
+#if WINDOWS
+        builder.Services.TryAddSingleton<IGlobalHotKeyService, WindowsGlobalHotKeyService>();
+        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new WindowsScreenGlow(sp.GetService<ILogger<WindowsScreenGlow>>()));
+#elif MACCATALYST
+        builder.Services.TryAddSingleton<IGlobalHotKeyService, CatalystGlobalHotKeyService>();
+        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+#elif MACOS
+        builder.Services.TryAddSingleton<IGlobalHotKeyService, MacGlobalHotKeyService>();
+        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+#else
+        // net10.0 fallback — Linux at runtime, otherwise unsupported.
+        builder.Services.TryAddSingleton<IGlobalHotKeyService>(sp =>
+        {
+            if (OperatingSystem.IsLinux())
+                return new LinuxGlobalHotKeyService(sp.GetService<ILogger<LinuxGlobalHotKeyService>>());
+            return new UnsupportedGlobalHotKeyService();
+        });
+        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+#endif
+
+        builder.Services.AddSingleton<IQuickEntryPresenter>(sp => new DesktopQuickEntryPresenter(sp.GetService<ILogger<DesktopQuickEntryPresenter>>()));
+        builder.Services.AddSingleton<IMauiInitializeService, DesktopQuickEntryInitializer>();
+
+        // BorderlessEntry's chrome-stripping runs through handler mappers that the AppKit and GTK4
+        // heads never execute — they ship their own handler types. Core exposes a hook for exactly
+        // this rather than taking a dependency on a package that only exists on desktop.
+        PromptEntryPolish.Handler = QuickEntryPlatform.PolishEntry;
         return builder;
     }
 
@@ -80,6 +145,45 @@ public static class DesktopMauiAppBuilderExtensions
         public Task<View> CreateAsync(string instanceId, CancellationToken ct = default)
             => Task.FromResult<View>(sp.GetRequiredService<TView>());
     }
+}
+
+/// <summary>
+/// Claims the configured global hotkey at startup.
+/// </summary>
+/// <remarks>
+/// <see cref="IMauiInitializeService"/> runs as the MauiApp is built, on every host including the
+/// AppKit and GTK4 heads that ship their own handler types and so never run a mapper hook this could
+/// otherwise key off. Claiming a hotkey needs nothing from the visual tree, so this is the earliest
+/// safe point.
+/// </remarks>
+sealed class DesktopQuickEntryInitializer : IMauiInitializeService
+{
+    public void Initialize(IServiceProvider services)
+    {
+        var options = services.GetRequiredService<QuickEntryOptions>();
+        if (String.IsNullOrWhiteSpace(options.HotKey))
+            return;
+
+        var hotKeys = services.GetRequiredService<IGlobalHotKeyService>();
+        var quickEntry = services.GetRequiredService<IQuickEntryService>();
+
+        if (hotKeys.Register(options.HotKey, quickEntry.Toggle) == null)
+        {
+            services
+                .GetService<ILogger<DesktopQuickEntryInitializer>>()?
+                .LogWarning(
+                    "The quick entry hotkey '{HotKey}' could not be registered. The popup can still be opened from a tray icon or IQuickEntryService.Show().",
+                    options.HotKey
+                );
+        }
+    }
+}
+
+sealed class UnsupportedGlobalHotKeyService : IGlobalHotKeyService
+{
+    public bool IsSupported => false;
+
+    public IDisposable? Register(string accelerator, Action pressed) => null;
 }
 
 sealed class UnsupportedTrayIconFactory : ITrayIconFactory

@@ -20,9 +20,15 @@ public partial class MarkdownEditorViewModel : ObservableObject
 
         Try using the **toolbar** above to format text, or toggle the preview with the eye button.
 
+        On a phone the same toolbar rides the top of the soft keyboard, which is where you
+        actually want it - the one above is covered the moment you start typing.
+
         - Bold, italic, and code formatting
         - Headings (H1, H2, H3)
         - Lists and task lists
         - Links, quotes, and code blocks
         """;
+
+    [ObservableProperty]
+    bool showToolbarInKeyboard = true;
 }
