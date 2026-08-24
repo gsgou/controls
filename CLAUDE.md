@@ -4,7 +4,7 @@ Guidance for working in the **Shiny Controls** repo (`Shiny.Maui.Controls` + `Sh
 
 ## Repo layout
 
-- `src/` — one project per package per host (e.g. `Shiny.Maui.Controls`, `Shiny.Blazor.Controls`, plus add-ons: `*.Camera`, `*.Barcodes`, `*.Markdown`, `*.MermaidDiagrams`, `*.Desktop`, `*.Kiosk`, camera analyzers `Camera.Barcode/Documents/Face/Motion/Ocr`, themes `Themes.Material/Ocean`).
+- `src/` — one project per package per host. Core: `Shiny.Maui.Controls`, `Shiny.Blazor.Controls`. Add-ons on **both** hosts: `*.Barcodes`, `*.Camera`, `*.Camera.Ai`, `*.Markdown`, `*.MediaElement`, `*.MermaidDiagrams`, `*.Office`, `*.SpeechAddins`, themes `*.Themes.Aurora/Material/Ocean/Terminal`. **MAUI-only**: `Shiny.Maui.Controls.Desktop`, `Shiny.Maui.Controls.Keyframe` (+ `.Keyframe.Export`), `Shiny.Maui.Controls.MediaElement.Linux`, camera analyzers `Camera.Barcode/Documents/Face/Motion/Ocr`. Cross-host shared libraries (referenced by the hosts, also published): `Shiny.Controls.Camera.Shared`, `.Keyframe.Shared`, `.MediaElement.Shared`, `.MotionIcons.Shared`, `.Office.Shared`, `.Office.Skia`. There is **no** `*.Kiosk` package — the Blazor on-screen keyboard and docking ship in `Shiny.Blazor.Controls`.
 - `samples/Sample/` — the MAUI + Blazor demo app. Each control has a feature page under `samples/Sample/Features/<Area>/`, wired into `AppShell.xaml` and `MauiProgram.cs`.
 - `tests/` — unit tests.
 - `SKILLS/shiny-controls/` — the **local skill** (`SKILL.md` + one markdown file per control) that teaches code generation for these controls.
@@ -36,6 +36,22 @@ With each fix and each new feature, update all of the following so they stay in 
 5. Add it to the **homepage section** — the "UI Controls" `<Card>` in `src/content/docs/index.mdx` (place it in the appropriate category group).
 6. Add its top-level node to the **main menu** (`src/sidebar-topics.mjs`) under the `Controls` topic — which also surfaces it in the homepage menu.
 7. **Leave a screenshot TODO** — do **not** capture screenshots as part of the feature/release work. Instead, after wiring up a new component, note a TODO (e.g. `TODO: capture screenshots for <control>`) so they can be done later on request. See **Screenshots** below.
+
+### Additionally, if the PACKAGE is new (or removed / renamed)
+
+8. Add it to the solution (`Shiny.Controls.slnx`) and to `Build.slnf`.
+9. Add a NuGet badge to `README.md` (see step 1) — the badge block sits directly under the summary paragraph.
+10. Add it to the **`Package` dropdown** in `.github/ISSUE_TEMPLATE/bug_report.yml` and to the **`Target Package`** dropdown in `.github/ISSUE_TEMPLATE/feature_request.yml`. Both dropdowns mirror `src/` exactly, so a removed or renamed package must come out of them too.
+11. Update the **Repo layout** bullet at the top of this file.
+
+## Supported platforms
+
+These are the platforms the issue templates offer and that features should be reasoned about against:
+
+- **MAUI** — iOS, Android, Mac Catalyst, macOS (AppKit, `net10.0-macos`), Windows (WinUI), Linux (GTK4).
+- **Blazor** — WebAssembly, Server, and Hybrid (MAUI `BlazorWebView`).
+
+Not every package covers every one; MAUI add-ons multi-target `net10.0` plus some subset of `-ios/-android/-maccatalyst/-macos`, and the Windows TFM is only added on Windows or with `-p:ForceWindowsTfm=true`.
 
 ## Screenshots (on request)
 
@@ -91,6 +107,6 @@ Do **not** write blog posts automatically as part of a fix/feature. Write them *
 
 ## Conventions
 
-- Keep MAUI and Blazor at feature parity where the platform allows; note platform-only features explicitly (Desktop is MAUI-only; SheetView/Kiosk are Blazor-specific, etc.).
+- Keep MAUI and Blazor at feature parity where the platform allows; note platform-only features explicitly (Desktop and Keyframe are MAUI-only; SheetView, Layout/AppLayout, SplashScreen and the on-screen keyboard are Blazor-only, etc.).
 - Add/update a demo page in `samples/Sample/Features/` for any new control or notable feature.
 - Build with `dotnet build Build.slnf`.

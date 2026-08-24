@@ -1,6 +1,10 @@
 <Solution>
     <Folder Name="/Solution/">
+        <File Path=".github\ISSUE_TEMPLATE\bug_report.yml" />
+        <File Path=".github\ISSUE_TEMPLATE\config.yml" />
+        <File Path=".github\ISSUE_TEMPLATE\feature_request.yml" />
         <File Path=".github\workflows\build.yml" />
+        <File Path=".github\workflows\deploy-blazor-sample.yml" />
         <File Path=".github\workflows\sync-skills.yml" />
         <File Path="Build.slnf" />
         <File Path="Directory.Build.props" />

@@ -10,25 +10,50 @@ body:
 
         > 💡 Search [existing issues](https://github.com/shinyorg/controls/issues) first — someone may have already requested it.
   - type: dropdown
+    id: host
+    attributes:
+      label: Host
+      description: Which host(s) should this land on?
+      multiple: true
+      options:
+        - .NET MAUI
+        - Blazor
+        - Both (parity)
+    validations:
+      required: true
+  - type: dropdown
     id: package
     attributes:
       label: Target Package
       description: Which package would this affect? (or propose a new one)
       options:
-        - Shiny.Maui.Controls
-        - Shiny.Blazor.Controls
-        - Camera (Shiny.*.Controls.Camera / analyzers)
-        - Barcodes
-        - Markdown
-        - MermaidDiagrams
-        - Desktop (MAUI)
-        - Kiosk (Blazor)
-        - SpeechAddins
-        - Themes (Material / Ocean)
+        - Core (Shiny.Maui.Controls / Shiny.Blazor.Controls)
+        - Barcodes (*.Controls.Barcodes)
+        - Camera (*.Controls.Camera)
+        - Camera AI (*.Controls.Camera.Ai)
+        - Camera analyzers (Shiny.Maui.Controls.Camera.Barcode / .Documents / .Face / .Motion / .Ocr)
+        - Desktop — MAUI only (Shiny.Maui.Controls.Desktop)
+        - Keyframe — MAUI only (Shiny.Maui.Controls.Keyframe / .Keyframe.Export)
+        - Markdown (*.Controls.Markdown)
+        - MediaElement (*.Controls.MediaElement)
+        - MediaElement Linux — MAUI only (Shiny.Maui.Controls.MediaElement.Linux)
+        - Mermaid Diagrams (*.Controls.MermaidDiagrams)
+        - Motion Icons (core packages / Shiny.Controls.MotionIcons.Shared)
+        - Office — Spreadsheet / Document / Slide (*.Controls.Office)
+        - Speech Addins (*.Controls.SpeechAddins)
+        - Themes (Aurora / Material / Ocean / Terminal)
         - New package / control
         - Not sure
     validations:
       required: true
+  - type: input
+    id: control
+    attributes:
+      label: Control / Feature
+      description: Which existing control does this extend, or what would the new one be called?
+      placeholder: e.g. DataGrid column grouping, new TimelineView
+    validations:
+      required: false
   - type: dropdown
     id: platforms
     attributes:
@@ -39,11 +64,12 @@ body:
         - iOS
         - Android
         - Mac Catalyst
-        - macOS (AppKit)
-        - Windows
-        - Linux (GTK)
+        - macOS (AppKit — net10.0-macos)
+        - Windows (WinUI)
+        - Linux (GTK4)
         - Blazor WebAssembly
-        - Blazor Server / Hybrid
+        - Blazor Server
+        - Blazor Hybrid (MAUI BlazorWebView)
         - All platforms
     validations:
       required: false

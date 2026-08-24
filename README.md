@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -14,18 +14,30 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![Blazor Camera NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Camera.svg?label=Shiny.Blazor.Controls.Camera)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Camera)
 [![MAUI Camera AI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Ai.svg?label=Shiny.Maui.Controls.Camera.Ai)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Ai)
 [![Blazor Camera AI NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Camera.Ai.svg?label=Shiny.Blazor.Controls.Camera.Ai)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Camera.Ai)
+[![MAUI Camera Barcode NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Barcode.svg?label=Shiny.Maui.Controls.Camera.Barcode)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Barcode)
+[![MAUI Camera Documents NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Documents.svg?label=Shiny.Maui.Controls.Camera.Documents)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Documents)
+[![MAUI Camera Face NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Face.svg?label=Shiny.Maui.Controls.Camera.Face)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Face)
+[![MAUI Camera Motion NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Motion.svg?label=Shiny.Maui.Controls.Camera.Motion)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Motion)
+[![MAUI Camera Ocr NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Camera.Ocr.svg?label=Shiny.Maui.Controls.Camera.Ocr)](https://www.nuget.org/packages/Shiny.Maui.Controls.Camera.Ocr)
 [![MAUI Keyframe NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Keyframe.svg?label=Shiny.Maui.Controls.Keyframe)](https://www.nuget.org/packages/Shiny.Maui.Controls.Keyframe)
 [![MAUI MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MediaElement.svg?label=Shiny.Maui.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Maui.Controls.MediaElement)
 [![MAUI MediaElement Linux NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MediaElement.Linux.svg?label=Shiny.Maui.Controls.MediaElement.Linux)](https://www.nuget.org/packages/Shiny.Maui.Controls.MediaElement.Linux)
 [![Blazor MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MediaElement.svg?label=Shiny.Blazor.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MediaElement)
 [![MAUI Office NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Office.svg?label=Shiny.Maui.Controls.Office)](https://www.nuget.org/packages/Shiny.Maui.Controls.Office)
 [![Blazor Office NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Office.svg?label=Shiny.Blazor.Controls.Office)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Office)
+[![MAUI Desktop NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Desktop.svg?label=Shiny.Maui.Controls.Desktop)](https://www.nuget.org/packages/Shiny.Maui.Controls.Desktop)
+[![MAUI Speech Addins NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.SpeechAddins.svg?label=Shiny.Maui.Controls.SpeechAddins)](https://www.nuget.org/packages/Shiny.Maui.Controls.SpeechAddins)
+[![Blazor Speech Addins NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.SpeechAddins.svg?label=Shiny.Blazor.Controls.SpeechAddins)](https://www.nuget.org/packages/Shiny.Blazor.Controls.SpeechAddins)
 [![Keyframe Export NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Keyframe.Export.svg?label=Shiny.Maui.Controls.Keyframe.Export)](https://www.nuget.org/packages/Shiny.Maui.Controls.Keyframe.Export)
 [![Motion Icons NuGet](https://img.shields.io/nuget/v/Shiny.Controls.MotionIcons.Shared.svg?label=Shiny.Controls.MotionIcons.Shared)](https://www.nuget.org/packages/Shiny.Controls.MotionIcons.Shared)
 [![MAUI Terminal Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Terminal.svg?label=Shiny.Maui.Controls.Themes.Terminal)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Terminal)
 [![Blazor Terminal Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Terminal.svg?label=Shiny.Blazor.Controls.Themes.Terminal)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Terminal)
 [![MAUI Aurora Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Aurora.svg?label=Shiny.Maui.Controls.Themes.Aurora)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Aurora)
 [![Blazor Aurora Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Aurora.svg?label=Shiny.Blazor.Controls.Themes.Aurora)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Aurora)
+[![MAUI Material Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Material.svg?label=Shiny.Maui.Controls.Themes.Material)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Material)
+[![Blazor Material Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Material.svg?label=Shiny.Blazor.Controls.Themes.Material)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Material)
+[![MAUI Ocean Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Ocean.svg?label=Shiny.Maui.Controls.Themes.Ocean)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Ocean)
+[![Blazor Ocean Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Ocean.svg?label=Shiny.Blazor.Controls.Themes.Ocean)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Ocean)
 
 ## Getting Started
 
@@ -955,6 +967,48 @@ SpellCheckers.Default = new MyChecker();   // derive from SpellCheckerBase; two 
 
 Checking is per paragraph, cached on the paragraph's text, limited to what is on screen and debounced,
 so scrolling re-checks nothing and typing re-checks one paragraph.
+
+### Slide Editor
+
+> Same packages as the viewers. Two controls: `SlideEditor` is the lone editing surface;
+> `SlideEditorView` is the same thing plus an editing toolbar.
+
+```csharp
+using var deck = await SlideDeck.OpenAsync("deck.pptx", editable: true);
+```
+
+```razor
+<div style="height:560px">
+    <SlideEditorView Deck="deck" @bind-SlideIndex="index" DeckChanged="OnChanged" />
+</div>
+```
+
+```xml
+<office:SlideEditorView Deck="{Binding Deck}" />
+```
+
+**Two gestures carry the whole design.** A single click selects a shape and draws a **dashed** frame
+with eight resize handles — drag the body to move it, a handle to resize it. A double-click puts a
+caret inside that shape's text and the frame turns **solid**. That is the split PowerPoint uses, and
+the frame is the only thing telling a user where their next keystroke will go.
+
+Only shapes the slide itself owns can be selected. Ones painted from the layout or master are skipped,
+because they belong to every slide using that layout — letting a click grab one would drag the company
+logo off the whole deck at once.
+
+Edits are surgical on the DrawingML runs, the same way the document editor treats Word's: a run is
+split only where an edit needs a boundary and never re-created, so the language, hyperlinks and
+theme-derived fills it carries survive a formatting change. A whole drag is **one** undo step, not one
+per pointer sample.
+
+| | Blazor | MAUI |
+|---|---|---|
+| Select, move, resize, double-click into text | ✅ | ✅ |
+| Typing, IME, dictation, paste | ✅ via `beforeinput` | ✅ via a hidden `Entry` |
+| Physical keys (arrows, shortcuts) | ✅ | ⚠️ route through `HandleKey` — MAUI has no portable key-down event |
+
+⚠️ Not implemented, deliberately: soft line breaks, editing table cells or grouped shapes, adding or
+reordering slides, and rotation handles.
 
 ### Document & Slide Viewers
 

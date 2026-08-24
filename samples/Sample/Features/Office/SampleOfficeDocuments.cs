@@ -94,6 +94,11 @@ public static class SampleOfficeDocuments
             body.AppendChild(ListItem("Labels sit in the hanging indent, like Word draws them."));
             body.AppendChild(ListItem("Restarting a level resets everything nested inside it."));
 
+            body.AppendChild(Styled("Heading2", "Spelling"));
+            body.AppendChild(Text(
+                "Teh editor can recieve a spell checker and show its suggestions. It is definately " +
+                "worth turning on: long-press a underlined word to see what it reccomend."));
+
             body.AppendChild(Styled("Heading2", "A table"));
             body.AppendChild(BuildTable());
 

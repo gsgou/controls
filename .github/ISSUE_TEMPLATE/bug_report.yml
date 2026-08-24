@@ -15,29 +15,50 @@ body:
       label: Package
       description: Which package does this affect?
       options:
-        - Shiny.Maui.Controls
+        # --- .NET MAUI ---
+        - Shiny.Maui.Controls (core)
         - Shiny.Maui.Controls.Barcodes
         - Shiny.Maui.Controls.Camera
+        - Shiny.Maui.Controls.Camera.Ai
         - Shiny.Maui.Controls.Camera.Barcode
         - Shiny.Maui.Controls.Camera.Documents
         - Shiny.Maui.Controls.Camera.Face
         - Shiny.Maui.Controls.Camera.Motion
         - Shiny.Maui.Controls.Camera.Ocr
-        - Shiny.Maui.Controls.Desktop
+        - Shiny.Maui.Controls.Desktop (tray icon / docking / quick entry window / hotkeys)
+        - Shiny.Maui.Controls.Keyframe
+        - Shiny.Maui.Controls.Keyframe.Export
         - Shiny.Maui.Controls.Markdown
+        - Shiny.Maui.Controls.MediaElement
+        - Shiny.Maui.Controls.MediaElement.Linux
         - Shiny.Maui.Controls.MermaidDiagrams
+        - Shiny.Maui.Controls.Office
         - Shiny.Maui.Controls.SpeechAddins
+        - Shiny.Maui.Controls.Themes.Aurora
         - Shiny.Maui.Controls.Themes.Material
         - Shiny.Maui.Controls.Themes.Ocean
-        - Shiny.Blazor.Controls
+        - Shiny.Maui.Controls.Themes.Terminal
+        # --- Blazor ---
+        - Shiny.Blazor.Controls (core)
         - Shiny.Blazor.Controls.Barcodes
         - Shiny.Blazor.Controls.Camera
-        - Shiny.Blazor.Controls.Kiosk
+        - Shiny.Blazor.Controls.Camera.Ai
         - Shiny.Blazor.Controls.Markdown
+        - Shiny.Blazor.Controls.MediaElement
         - Shiny.Blazor.Controls.MermaidDiagrams
+        - Shiny.Blazor.Controls.Office
         - Shiny.Blazor.Controls.SpeechAddins
+        - Shiny.Blazor.Controls.Themes.Aurora
         - Shiny.Blazor.Controls.Themes.Material
         - Shiny.Blazor.Controls.Themes.Ocean
+        - Shiny.Blazor.Controls.Themes.Terminal
+        # --- Shared / internal ---
+        - Shiny.Controls.Camera.Shared
+        - Shiny.Controls.Keyframe.Shared
+        - Shiny.Controls.MediaElement.Shared
+        - Shiny.Controls.MotionIcons.Shared
+        - Shiny.Controls.Office.Shared
+        - Shiny.Controls.Office.Skia
         - Not sure / multiple
     validations:
       required: true
@@ -45,8 +66,8 @@ body:
     id: control
     attributes:
       label: Control / Feature
-      description: Which control or feature is involved? (e.g. TableView, ChatView, FloatingPanel, CameraView)
-      placeholder: e.g. ChatView
+      description: Which control or feature is involved?
+      placeholder: e.g. ChatView, DataGrid, TableView, FloatingPanel, CameraView, SpreadsheetView, Walkthrough, Toast, Docking
     validations:
       required: false
   - type: input
@@ -61,17 +82,20 @@ body:
     id: platforms
     attributes:
       label: Affected Platform(s)
-      description: Where does this reproduce? (select the closest match)
+      description: Where does this reproduce? Pick every platform you've confirmed it on.
       multiple: true
       options:
         - iOS
         - Android
         - Mac Catalyst
-        - macOS (AppKit)
-        - Windows
-        - Linux (GTK)
+        - macOS (AppKit — net10.0-macos)
+        - Windows (WinUI)
+        - Linux (GTK4)
         - Blazor WebAssembly
-        - Blazor Server / Hybrid
+        - Blazor Server
+        - Blazor Hybrid (MAUI BlazorWebView)
+        - All platforms
+        - Not sure
     validations:
       required: true
   - type: textarea
@@ -112,7 +136,7 @@ body:
     id: logs
     attributes:
       label: Stack trace / logs
-      description: Any relevant exception, stack trace, or console output.
+      description: Any relevant exception, stack trace, console output, or browser devtools console output.
       render: shell
     validations:
       required: false
@@ -120,14 +144,22 @@ body:
     id: dotnet
     attributes:
       label: .NET / MAUI version
-      description: Output of `dotnet --version` and your target framework(s).
-      placeholder: e.g. .NET 10.0.100, net10.0-ios
+      description: Output of `dotnet --version`, your target framework(s), and the MAUI workload version if relevant.
+      placeholder: e.g. .NET 10.0.300, net10.0-ios, MAUI 10.0.51
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device / OS / Browser
+      description: The device, OS version, and — for Blazor — the browser you saw this on.
+      placeholder: e.g. iPhone 16 Pro (iOS 26.0) simulator, Pixel 8 (Android 15), Chrome 140 on macOS 15.5
     validations:
       required: false
   - type: textarea
     id: context
     attributes:
       label: Additional context
-      description: Screenshots, device/OS details, or anything else that might help.
+      description: Screenshots, recordings, theme in use, or anything else that might help.
     validations:
       required: false
