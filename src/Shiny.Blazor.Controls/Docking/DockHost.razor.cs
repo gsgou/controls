@@ -230,6 +230,11 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
     {
         if (layout is null) return Task.CompletedTask;
 
+        // a panel registered as not closable stays put however it is asked to go - the tab hides
+        // its own close button too, but that is the affordance rather than the rule
+        if (FindTab(panelInstanceId) is { } found && !CanCloseTab(found))
+            return Task.CompletedTask;
+
         var collapsedEntry = layout.MainWindow.CollapsedTabs
             .FirstOrDefault(c => c.Tab.PanelInstanceId == panelInstanceId);
         if (collapsedEntry is not null)
@@ -701,11 +706,32 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
         StateHasChanged();
     }
 
+    /// <summary>The tab with this instance id, wherever it currently sits - docked or collapsed.</summary>
+    DockTab? FindTab(string panelInstanceId)
+    {
+        var collapsed = layout?.MainWindow.CollapsedTabs
+            .FirstOrDefault(c => c.Tab.PanelInstanceId == panelInstanceId);
+
+        if (collapsed is not null)
+            return collapsed.Tab;
+
+        return AllGroups()
+            .SelectMany(g => g.Tabs)
+            .FirstOrDefault(t => t.PanelInstanceId == panelInstanceId);
+    }
+
     string GetTabTitle(DockTab tab)
         => registry?.Resolve(tab.PanelTypeId)?.DisplayName ?? tab.PanelTypeId;
 
     string? GetTabIcon(DockTab tab)
         => registry?.Resolve(tab.PanelTypeId)?.Icon;
+
+    /// <summary>
+    /// Whether a tab may be closed. Unknown panel types are closable: a layout naming a panel this
+    /// app no longer registers is one the user needs to be able to get rid of.
+    /// </summary>
+    bool CanCloseTab(DockTab tab)
+        => registry?.Resolve(tab.PanelTypeId)?.CanClose ?? true;
 
     static string FlexStyle(double ratio)
         => $"flex:{ratio.ToString("0.####", CultureInfo.InvariantCulture)} 1 0%;";
@@ -724,9 +750,6 @@ public partial class DockHost : ComponentBase, IDockHost, IAsyncDisposable
         if (factory is null) return; // renders the "unknown panel" placeholder
         fragments[tab.PanelInstanceId] = await factory.CreateAsync(tab.PanelInstanceId, ct);
     }
-
-    DockTab? FindTab(string instanceId)
-        => AllGroups().SelectMany(g => g.Tabs).FirstOrDefault(t => t.PanelInstanceId == instanceId);
 
     DockGroup? FindFloatingGroup(DockGroup group)
         => layout?.FloatingWindows.SelectMany(w => GroupsIn(w.DocumentArea)).FirstOrDefault(g => ReferenceEquals(g, group));

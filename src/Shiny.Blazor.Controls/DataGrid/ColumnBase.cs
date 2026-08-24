@@ -20,10 +20,29 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
     [Parameter] public bool? Groupable { get; set; }
     [Parameter] public bool? Editable { get; set; }
     [Parameter] public bool Hidden { get; set; }
+    /// <summary>
+    /// Whether a resize handle is offered for this column. Only has an effect when the grid sets
+    /// <see cref="DataGrid{TItem}.ColumnResizeMode"/>. Defaults to true.
+    /// </summary>
     [Parameter] public bool? Resizable { get; set; }
 
     /// <summary>CSS width, e.g. <c>"120px"</c> or <c>"20%"</c>.</summary>
     [Parameter] public string? Width { get; set; }
+
+    /// <summary>
+    /// CSS <c>min-width</c> for this column, e.g. <c>"80px"</c>. Falls back to
+    /// <see cref="DataGrid{TItem}.MinColumnWidth"/>. An absolute pixel value also floors interactive
+    /// resizing; any other unit is emitted as CSS but leaves the drag clamped by the grid default,
+    /// because a drag works in pixels and only the browser knows what a <c>%</c> or <c>em</c> is worth.
+    /// </summary>
+    [Parameter] public string? MinWidth { get; set; }
+
+    /// <summary>
+    /// CSS <c>max-width</c> for this column, e.g. <c>"400px"</c>. Falls back to
+    /// <see cref="DataGrid{TItem}.MaxColumnWidth"/>, which is unbounded by default. Same pixel caveat
+    /// as <see cref="MinWidth"/>.
+    /// </summary>
+    [Parameter] public string? MaxWidth { get; set; }
 
     /// <summary>
     /// Freezes (pins) this column to the leading or trailing edge so it stays put while the grid
@@ -87,7 +106,7 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
     // the grid's StateHasChanged re-renders this column, re-firing OnParametersSet, ad infinitum. Template /
     // comparer / aggregate params are excluded on purpose — they get a fresh delegate identity on every parent
     // render, so including them would re-introduce the loop (and the grid re-renders them as part of its tree).
-    (string?, bool?, bool?, bool?, bool?, bool, bool?, string?, bool, bool, DataGridFrozen) layoutSnapshot;
+    (string?, bool?, bool?, bool?, bool?, bool, bool?, string?, string?, string?, bool, bool, DataGridFrozen) layoutSnapshot;
     bool hasSnapshot;
 
     protected override void OnInitialized()
@@ -102,7 +121,8 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
             return;
 
         var snapshot = (this.Title, this.Sortable, this.Filterable, this.Groupable, this.Editable,
-            this.Hidden, this.Resizable, this.Width, this.StickyLeft, this.StickyRight, this.Frozen);
+            this.Hidden, this.Resizable, this.Width, this.MinWidth, this.MaxWidth,
+            this.StickyLeft, this.StickyRight, this.Frozen);
 
         if (!this.hasSnapshot || !snapshot.Equals(this.layoutSnapshot))
         {

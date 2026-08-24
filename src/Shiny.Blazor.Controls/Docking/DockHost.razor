@@ -146,7 +146,7 @@
                                     <span class="shiny-dock-tab__icon">@tabIcon</span>
                                 }
                                 <span class="shiny-dock-tab__title">@GetTabTitle(tab)</span>
-                                @if (!IsLocked)
+                                @if (!IsLocked && CanCloseTab(tab))
                                 {
                                     <span class="shiny-dock-tab__close"
                                           title="Close"

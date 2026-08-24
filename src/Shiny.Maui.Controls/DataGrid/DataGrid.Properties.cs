@@ -118,6 +118,13 @@ public partial class DataGrid
                 ((DataGrid)b).RebuildHeader();
             }));
 
+    public static readonly BindableProperty DragDropColumnReorderingProperty = BindableProperty.Create(
+        nameof(DragDropColumnReordering), typeof(bool), typeof(DataGrid), false,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildHeader();
+            }));
+
     public static readonly BindableProperty HorizontalScrollProperty = BindableProperty.Create(
         nameof(HorizontalScroll), typeof(bool), typeof(DataGrid), false,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
@@ -128,6 +135,20 @@ public partial class DataGrid
 
     public static readonly BindableProperty DefaultColumnWidthProperty = BindableProperty.Create(
         nameof(DefaultColumnWidth), typeof(double), typeof(DataGrid), 150d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    public static readonly BindableProperty MinColumnWidthProperty = BindableProperty.Create(
+        nameof(MinColumnWidth), typeof(double), typeof(DataGrid), 48d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    public static readonly BindableProperty MaxColumnWidthProperty = BindableProperty.Create(
+        nameof(MaxColumnWidth), typeof(double), typeof(DataGrid), 0d,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
             {
                 ((DataGrid)b).RebuildAll();
@@ -281,6 +302,22 @@ public partial class DataGrid
     }
 
     /// <summary>
+    /// Lets a column header be dragged and dropped into a new position. Off by default, and
+    /// independent of <see cref="AllowColumnReorder"/> - the arrows are the accessible, no-drag path
+    /// to the same thing, so a grid can offer either, both, or neither.
+    /// </summary>
+    /// <remarks>
+    /// Under <see cref="HorizontalScroll"/> this claims sideways gestures that start on a header, so
+    /// the grid is scrolled by dragging a row rather than the header. Reordering moves the column in
+    /// <see cref="Columns"/> itself, which is what the <see cref="ColumnReordered"/> event reports.
+    /// </remarks>
+    public bool DragDropColumnReordering
+    {
+        get => (bool)this.GetValue(DragDropColumnReorderingProperty);
+        set => this.SetValue(DragDropColumnReorderingProperty, value);
+    }
+
+    /// <summary>
     /// Scrolls the header, rows and footer sideways as one when the columns are wider than the
     /// grid. Star widths cannot survive an unbounded measure, so in this mode every star column
     /// resolves to <see cref="DefaultColumnWidth"/> x its star factor. Required for frozen columns.
@@ -296,6 +333,26 @@ public partial class DataGrid
     {
         get => (double)this.GetValue(DefaultColumnWidthProperty);
         set => this.SetValue(DefaultColumnWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Floor applied to every column that does not set its own <see cref="DataGridColumn.MinWidth"/>
+    /// (default 48). Keeps a resize drag from collapsing a column to nothing.
+    /// </summary>
+    public double MinColumnWidth
+    {
+        get => (double)this.GetValue(MinColumnWidthProperty);
+        set => this.SetValue(MinColumnWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Ceiling applied to every column that does not set its own <see cref="DataGridColumn.MaxWidth"/>.
+    /// <c>0</c> (the default) leaves columns unbounded.
+    /// </summary>
+    public double MaxColumnWidth
+    {
+        get => (double)this.GetValue(MaxColumnWidthProperty);
+        set => this.SetValue(MaxColumnWidthProperty, value);
     }
 
     /// <summary>

@@ -29,15 +29,17 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
           FixedHeader="true" Height="420px"
           FrozenColumns="1" FrozenEndColumns="1"
           ColumnResizeMode="DataGridColumnResizeMode.Column"
+          MinColumnWidth="60" MaxColumnWidth="420"
           DragDropColumnReordering="true"
           CommittedItemChanges="OnSaved">
     <Columns>
-        <PropertyColumn Property="x => x.FirstName" Title="First" />
+        <PropertyColumn Property="x => x.FirstName" Title="First"
+                        Width="25%" MinWidth="80px" MaxWidth="260px" />
         <PropertyColumn Property="x => x.Age" Format="N0" />
         <PropertyColumn Property="x => x.Salary" Format="C0">
             <FooterTemplate>Total: @people.Sum(p => p.Salary).ToString("C0")</FooterTemplate>
         </PropertyColumn>
-        <TemplateColumn Title="Status" Sortable="false" Filterable="false">
+        <TemplateColumn Title="Status" Sortable="false" Filterable="false" Resizable="false">
             <CellTemplate>
                 <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
                       Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
@@ -56,13 +58,14 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
 - **Columns**: `PropertyColumn<TItem,TProperty>` (`Property="x => x.Name"`, `Format`, derives Title) and
   `TemplateColumn<TItem>` (`CellTemplate`/`EditTemplate`/`HeaderTemplate`/`FooterTemplate` with
   `context.Item`). Per-column flags: `Sortable`, `Filterable`, `Groupable`, `Editable`, `Hidden`,
-  `Width`, `Resizable`, `Frozen` (`DataGridFrozen.Start`/`End`; `StickyLeft`/`StickyRight` are legacy
-  aliases), `Aggregate`.
+  `Width` (any CSS length, including `"25%"`), `MinWidth`, `MaxWidth`, `Resizable`,
+  `Frozen` (`DataGridFrozen.Start`/`End`; `StickyLeft`/`StickyRight` are legacy aliases), `Aggregate`.
 - **Grid params**: `Items`, `ServerData` (`Func<GridState, Task<GridData<TItem>>>`), `SelectionMode`,
   `SelectedItem(s)`, `SortMode`, `FilterMode`, `QuickFilter`, `Groupable`, `Virtualize`, `EditMode`,
   `EditTrigger`, `ReadOnly`, `RowsPerPage`, `FixedHeader`, `Height`, `Dense`, `Striped`, `Bordered`,
   `Hover`, `Outlined`, `Loading`, `RowClick`, `StartedEditingItem`/`CommittedItemChanges`/
-  `CanceledEditingItem`, `ColumnResizeMode`, `DragDropColumnReordering`, `ToolbarContent`,
+  `CanceledEditingItem`, `ColumnResizeMode`, `MinColumnWidth`/`MaxColumnWidth`, `ColumnResized`,
+  `DragDropColumnReordering`, `ColumnReordered`, `ToolbarContent`,
   `NoRecordsText`/`NoRecordsContent`, `LoadingContent`.
 - **Paging**: put `<DataGridPager TItem="..." />` in `<PagerContent>`.
 - **Detail rows**: `<RowDetailTemplate>` (context is the item) adds a caret column at the leading edge.
@@ -116,18 +119,24 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
                 EditMode="Form"
                 AllowColumnResize="True"
                 AllowColumnReorder="True"
+                DragDropColumnReordering="True"
                 HorizontalScroll="True"
                 DefaultColumnWidth="140"
+                MinColumnWidth="70"
+                MaxColumnWidth="400"
                 FrozenColumns="1"
                 Striped="True" Bordered="True">
-    <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
+    <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*"
+                          MinWidth="90" MaxWidth="260" />
     <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
+    <shiny:DataGridColumn Title="Department" PropertyName="Department" WidthPercent="30" />
     <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
         <shiny:DataGridColumn.Aggregate>
             <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
         </shiny:DataGridColumn.Aggregate>
     </shiny:DataGridColumn>
-    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False" Frozen="End">
+    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False"
+                                  Resizable="False" Frozen="End">
         <shiny:DataGridTemplateColumn.CellTemplate>
             <DataTemplate><shiny:PillView Text="{Binding StatusText}" /></DataTemplate>
         </shiny:DataGridTemplateColumn.CellTemplate>
@@ -137,12 +146,14 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
 
 - **Columns**: `DataGridColumn` (`PropertyName`, `Width` as `GridLength` star/auto/abs, `StringFormat`,
   `CellTemplate`/`HeaderTemplate`/`EditTemplate`/`FooterTemplate`, `Sortable`/`Filterable`/`Groupable`/
-  `Editable`/`Resizable`/`IsVisible`, `Frozen`, `Aggregate`). `DataGridTemplateColumn` for custom-only cells.
+  `Editable`/`Resizable`/`IsVisible`, `WidthPercent`, `MinWidth`/`MaxWidth`, `Frozen`, `Aggregate`).
+  `DataGridTemplateColumn` for custom-only cells.
   Cell templates bind to the data item directly (e.g. `{Binding StatusText}`).
 - **Grid params**: `ItemsSource`, `ServerData`, `SelectionMode`, `SelectedItem`/`SelectedItems`,
   `SortMode`, `FilterMode`, `Groupable`, `PageSize` (0 = no paging), `EditMode`, `EditTrigger`,
-  `ReadOnly`, `AllowColumnResize`, `AllowColumnReorder`, `HorizontalScroll`, `DefaultColumnWidth`,
-  `FrozenColumns`/`FrozenEndColumns`, `Dense`, `Striped`, `Bordered`,
+  `ReadOnly`, `AllowColumnResize`, `AllowColumnReorder`, `DragDropColumnReordering`, `ColumnReordered`,
+  `HorizontalScroll`, `DefaultColumnWidth`,
+  `MinColumnWidth`/`MaxColumnWidth`, `FrozenColumns`/`FrozenEndColumns`, `Dense`, `Striped`, `Bordered`,
   `ShowColumnHeaders`, `IsLoading`, `EmptyText`, `RowHeight`, `SelectionChanged`/`SelectionChangedCommand`,
   `StartedEditingItem`/`CommittedItemChanges`/`CanceledEditingItem` events.
 - **Detail rows**: `RowDetailTemplate` (a `DataTemplate` whose BindingContext is the row's item) adds a
@@ -176,8 +187,41 @@ theme tokens (`var(--shiny-color-*)` on Blazor, `ShinyThemeKeys.Color.*` on MAUI
 - **Editing**: Blazor `Cell` edits one cell on click (commit on blur/Enter, cancel on Escape); `Form`
   edits the whole row with Save/Cancel. MAUI uses **inline-row editing** (editors for editable columns +
   a Save/Cancel bar) for both modes — the touch-friendly model.
-- **Reorder**: Blazor uses native HTML drag-and-drop on headers (`DragDropColumnReordering`); MAUI uses
-  ‹ › reorder arrows on headers (`AllowColumnReorder`).
+- **Column widths**: Blazor takes any CSS length on `Width` — `"160px"`, `"12rem"`, `"25%"`. MAUI takes a
+  `GridLength` (`"*"`, `"2*"`, `"Auto"`, `"160"`) plus **`WidthPercent`** (1-100), which wins over `Width`
+  when set. Outside `HorizontalScroll` a MAUI percentage resolves to a star of the same factor — a star
+  factor *is* a percentage, since the Grid divides the available width in the ratio of the factors — and
+  under `HorizontalScroll` it resolves against the scroller's own width, so percentages summing past 100
+  are what make the grid scroll. Prefer percentages when the same layout has to read the same on both
+  hosts.
+- **Reorder**: both hosts have **drag-and-drop on headers via `DragDropColumnReordering`, off by
+  default** — drag a header onto another and a marker shows the edge it will land on; dropping to the
+  right of a column puts it *after* that column. MAUI additionally offers ‹ › reorder arrows under the
+  separate `AllowColumnReorder` (the accessible, no-drag path to the same thing; a grid can enable
+  either, both, or neither). Each drop raises `ColumnReordered`, which is what you persist to restore a
+  user's column layout. Blazor keeps the order on the grid (`ResetColumnOrder()` clears it); MAUI moves
+  the column in `Columns` itself.
+  - ⚠️ On MAUI under `HorizontalScroll`, enabling drag reorder claims sideways gestures that start on a
+    header, so the grid is scrolled by dragging a row instead.
+- **Column resizing**: switch it on per grid (Blazor `ColumnResizeMode`, MAUI `AllowColumnResize="True"`),
+  then drag the right edge of a header. Any column can opt out with `Resizable="false"` — it keeps its
+  width and offers no handle.
+  - **Bounds**: `MinWidth` / `MaxWidth` per column, falling back to the grid's
+    `MinColumnWidth` (48 by default) / `MaxColumnWidth` (unbounded by default). Set at least a
+    `MinWidth` on any column a user can drag, or they can squeeze it down to the floor and lose the
+    header text. A `MaxWidth` below the `MinWidth` loses — the floor wins, so a bad pair still leaves a
+    usable column.
+  - The grid-level pair bounds the **drag**, not the layout: a `Width="40"` icon column stays 40 wide
+    even though dragging it would stop at 48. Only a column's own `MinWidth`/`MaxWidth` bound the
+    declared width as well.
+  - **Blazor** takes CSS strings (`MinWidth="80px"`). A pixel value also clamps the drag; any other unit
+    (`%`, `em`) is emitted as CSS but leaves the drag on the grid-level default, because a drag works in
+    pixels. `ColumnResizeMode.Column` lets the grid grow; `Container` takes the difference out of the
+    next resizable column so the total holds. `ColumnResized` reports the final width (persist it to
+    restore widths on the next visit); `ResetColumnWidths()` drops back to the declared widths.
+  - **MAUI** takes doubles (`MinWidth="90"`); `0` means "fall back to the grid". A star column outside
+    `HorizontalScroll` stays a star and is not clamped — MAUI's `Grid` has no bounded star, so clamping
+    would silently turn it absolute.
 - **Virtualization**: Blazor opt-in via `Virtualize` (uses `<Virtualize>`, best with `FixedHeader`+`Height`,
   not combined with paging/grouping); MAUI gets it free from `CollectionView`.
 - **Frozen header**: Blazor needs `FixedHeader="true"` **and** `Height` (the header sticks against the

@@ -15,6 +15,15 @@ public class DataGridColumn : BindableObject
     public static readonly BindableProperty WidthProperty = BindableProperty.Create(
         nameof(Width), typeof(GridLength), typeof(DataGridColumn), GridLength.Star);
 
+    public static readonly BindableProperty WidthPercentProperty = BindableProperty.Create(
+        nameof(WidthPercent), typeof(double), typeof(DataGridColumn), 0d);
+
+    public static readonly BindableProperty MinWidthProperty = BindableProperty.Create(
+        nameof(MinWidth), typeof(double), typeof(DataGridColumn), 0d);
+
+    public static readonly BindableProperty MaxWidthProperty = BindableProperty.Create(
+        nameof(MaxWidth), typeof(double), typeof(DataGridColumn), 0d);
+
     public static readonly BindableProperty IsVisibleProperty = BindableProperty.Create(
         nameof(IsVisible), typeof(bool), typeof(DataGridColumn), true);
 
@@ -57,6 +66,49 @@ public class DataGridColumn : BindableObject
         set => this.SetValue(WidthProperty, value);
     }
 
+    /// <summary>
+    /// Width as a percentage of the grid (1-100). Wins over <see cref="Width"/> when set; <c>0</c>
+    /// (the default) means unset.
+    /// </summary>
+    /// <remarks>
+    /// Outside <see cref="DataGrid.HorizontalScroll"/> this resolves to a star of the same factor,
+    /// because a star factor <i>is</i> a percentage: MAUI's Grid divides the available width in
+    /// exactly the ratio of the factors, so columns whose percentages sum to 100 each get theirs.
+    /// Percentages that sum to less than 100 leave the remainder unclaimed (the columns simply share
+    /// the whole width in that ratio); mixed with absolute columns they split whatever is left over.
+    /// Under <c>HorizontalScroll</c> - where the columns are meant to be wider than the viewport, so
+    /// "share what is available" has no meaning - it resolves against the scroller's own width
+    /// instead, and percentages summing past 100 are what make the grid scroll.
+    /// </remarks>
+    public double WidthPercent
+    {
+        get => (double)this.GetValue(WidthPercentProperty);
+        set => this.SetValue(WidthPercentProperty, value);
+    }
+
+    /// <summary>
+    /// Smallest width (device-independent units) this column may take. <c>0</c> falls back to
+    /// <see cref="DataGrid.MinColumnWidth"/>. Applies to an absolute <see cref="Width"/>, to a star
+    /// width resolved under <see cref="DataGrid.HorizontalScroll"/>, and to interactive resizing.
+    /// </summary>
+    public double MinWidth
+    {
+        get => (double)this.GetValue(MinWidthProperty);
+        set => this.SetValue(MinWidthProperty, value);
+    }
+
+    /// <summary>
+    /// Largest width (device-independent units) this column may take. <c>0</c> falls back to
+    /// <see cref="DataGrid.MaxColumnWidth"/>, which is itself unbounded by default. Applies to an
+    /// absolute <see cref="Width"/>, to a star width resolved under
+    /// <see cref="DataGrid.HorizontalScroll"/>, and to interactive resizing.
+    /// </summary>
+    public double MaxWidth
+    {
+        get => (double)this.GetValue(MaxWidthProperty);
+        set => this.SetValue(MaxWidthProperty, value);
+    }
+
     public bool IsVisible
     {
         get => (bool)this.GetValue(IsVisibleProperty);
@@ -87,6 +139,10 @@ public class DataGridColumn : BindableObject
         set => this.SetValue(EditableProperty, value);
     }
 
+    /// <summary>
+    /// Whether a resize handle is offered for this column. Only has an effect when the grid sets
+    /// <see cref="DataGrid.AllowColumnResize"/>.
+    /// </summary>
     public bool Resizable
     {
         get => (bool)this.GetValue(ResizableProperty);

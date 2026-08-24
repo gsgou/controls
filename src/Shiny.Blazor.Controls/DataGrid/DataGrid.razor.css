@@ -270,8 +270,47 @@
     opacity: 0.4;
 }
 
+.shiny-dg-resizing,
+.shiny-dg-resizing * {
+    cursor: col-resize !important;
+    user-select: none;
+}
+
+.shiny-dg-resizing .shiny-dg-resize-handle {
+    background: var(--shiny-color-primary, #7c3aed);
+    opacity: 0.4;
+}
+
 .shiny-dg-table thead th[draggable="true"] {
     cursor: grab;
+}
+
+/* The drop marker sits on the edge the column will land on, so "one place right" is visibly
+   different from "one place left" - inserting always-before is what made a rightward drag look
+   like nothing happened. */
+.shiny-dg-drop-before,
+.shiny-dg-drop-after {
+    position: relative;
+}
+
+.shiny-dg-drop-before::after,
+.shiny-dg-drop-after::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--shiny-color-primary, #7c3aed);
+    pointer-events: none;
+    z-index: 4;
+}
+
+.shiny-dg-drop-before::after {
+    left: 0;
+}
+
+.shiny-dg-drop-after::after {
+    right: 0;
 }
 
 .shiny-dg-table tbody td {

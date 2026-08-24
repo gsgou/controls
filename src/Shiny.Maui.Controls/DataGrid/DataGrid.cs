@@ -729,6 +729,7 @@ public partial class DataGrid : ContentView
 
     void RebuildHeader()
     {
+        this.ClearColumnDragCells();
         this.headerGrid.Children.Clear();
         this.headerGrid.ColumnDefinitions = this.BuildColumnDefinitions();
         this.headerWrapper.IsVisible = this.ShowColumnHeaders;
@@ -882,11 +883,21 @@ public partial class DataGrid : ContentView
                 headerView = cell;
             }
 
-            if (this.AllowColumnResize && column.Resizable)
+            var resizable = this.AllowColumnResize && column.Resizable;
+            if (resizable || this.DragDropColumnReordering)
             {
                 var container = new Grid();
                 container.Add(headerView);
-                container.Add(this.ResizeHandle(capture, container));
+
+                // The drag gesture goes on the container, the resize handle is a child of it - so the
+                // handle wins the touch on the few pixels the two overlap, which is what a user
+                // reaching for the column edge means.
+                if (this.DragDropColumnReordering)
+                    this.AttachColumnDrag(capture, container);
+
+                if (resizable)
+                    container.Add(this.ResizeHandle(capture, container));
+
                 headerView = container;
             }
 
@@ -969,13 +980,22 @@ public partial class DataGrid : ContentView
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
-                    startWidth = headerCell.Width > 0 ? headerCell.Width : 120;
+                    // The measured header is the truth once laid out; before that fall back to what
+                    // the column asks for, so the first drag nudges the column instead of teleporting
+                    // it to some unrelated default.
+                    startWidth = headerCell.Width > 0 ? headerCell.Width : this.ResolveWidth(col).Value;
+                    if (startWidth <= 0)
+                        startWidth = this.DefaultColumnWidth;
                     break;
                 case GestureStatus.Running:
-                    col.Width = new GridLength(Math.Max(48, startWidth + e.TotalX));
+                    var width = this.ClampColumnWidth(col, startWidth + e.TotalX);
+                    if (Math.Abs(width - col.Width.Value) < 0.5 && col.Width.IsAbsolute)
+                        break;
+                    col.Width = new GridLength(width);
                     this.RebuildHeader();
                     break;
                 case GestureStatus.Completed:
+                case GestureStatus.Canceled:
                     this.RebuildRows();
                     break;
             }

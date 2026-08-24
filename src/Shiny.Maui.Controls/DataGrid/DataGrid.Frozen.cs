@@ -58,17 +58,111 @@ public partial class DataGrid
     /// Star widths collapse to nothing under the unbounded measure a horizontal ScrollView hands its
     /// content, so in scroll mode every proportional width resolves to a concrete one.
     /// </summary>
-    GridLength ResolveWidth(DataGridColumn col)
+    /// <remarks>
+    /// Min/max only reach a width that is (or resolves to) a concrete number. A star column outside
+    /// <see cref="HorizontalScroll"/> stays a star - MAUI's Grid has no notion of a bounded star, so
+    /// clamping one here would mean silently turning it absolute and killing the proportional layout
+    /// the caller asked for.
+    /// <para>
+    /// Only the column's own <see cref="DataGridColumn.MinWidth"/> / <see cref="DataGridColumn.MaxWidth"/>
+    /// apply here. The grid-level <see cref="MinColumnWidth"/> / <see cref="MaxColumnWidth"/> bound a
+    /// resize drag, not the layout - otherwise the 48 default would quietly widen a deliberately narrow
+    /// icon column that nobody asked to resize.
+    /// </para>
+    /// </remarks>
+    internal GridLength ResolveWidth(DataGridColumn col)
     {
-        if (!this.HorizontalScroll)
-            return col.Width;
+        if (col.WidthPercent > 0)
+            return this.ResolvePercentWidth(col);
 
         var w = col.Width;
+
         if (w.IsAbsolute)
+            return new GridLength(ClampToColumnBounds(col, w.Value));
+
+        if (!this.HorizontalScroll)
             return w;
 
         var factor = w.IsStar && w.Value > 0 ? w.Value : 1;
-        return new GridLength(Math.Max(1, this.DefaultColumnWidth * factor));
+        return new GridLength(Math.Max(1, ClampToColumnBounds(col, this.DefaultColumnWidth * factor)));
+    }
+
+    /// <summary>
+    /// A percentage becomes a star of the same factor - the Grid already divides the available width
+    /// in the ratio of the factors, which is what a percentage is asking for. Under
+    /// <see cref="HorizontalScroll"/> there is no "available width" to share (the columns are meant to
+    /// overflow it), so it resolves against the scroller's measured width instead.
+    /// </summary>
+    GridLength ResolvePercentWidth(DataGridColumn col)
+    {
+        if (!this.HorizontalScroll)
+            return new GridLength(col.WidthPercent, GridUnitType.Star);
+
+        var viewport = this.ViewportWidth;
+
+        // Before the first layout there is no viewport to take a percentage of. DefaultColumnWidth is
+        // the same stand-in a star gets in this mode, and the SizeChanged hook rebuilds once the real
+        // width arrives - so this is what the grid shows for one frame, not what it settles on.
+        return new GridLength(Math.Max(1, ClampToColumnBounds(
+            col,
+            viewport > 0 ? viewport * col.WidthPercent / 100 : this.DefaultColumnWidth)));
+    }
+
+    /// <summary>The width a percentage column is a percentage <i>of</i> under HorizontalScroll.</summary>
+    double ViewportWidth
+        => this.hostScroll is { Width: > 0 } scroll ? scroll.Width : this.Width;
+
+    /// <summary>
+    /// Re-resolves percentage columns when the scroller's width changes. Star columns need none of
+    /// this - the Grid re-divides them itself - so this is gated on a percentage actually being in
+    /// play, and on the width having genuinely moved, because the rebuild re-lays out the very
+    /// scroller whose SizeChanged called it.
+    /// </summary>
+    void RefreshPercentWidths()
+    {
+        if (!this.HorizontalScroll)
+            return;
+
+        var viewport = this.ViewportWidth;
+        if (viewport <= 0 || Math.Abs(viewport - this.lastViewportWidth) < 0.5)
+            return;
+
+        this.lastViewportWidth = viewport;
+        if (this.VisibleColumns.Any(c => c.WidthPercent > 0))
+            this.RebuildAll();
+    }
+
+    double lastViewportWidth;
+
+    /// <summary>The floor for <paramref name="col"/>: its own MinWidth, else the grid's.</summary>
+    internal double EffectiveMinWidth(DataGridColumn col)
+        => col.MinWidth > 0 ? col.MinWidth : Math.Max(1, this.MinColumnWidth);
+
+    /// <summary>The ceiling for <paramref name="col"/>: its own MaxWidth, else the grid's, else none.</summary>
+    internal double? EffectiveMaxWidth(DataGridColumn col)
+    {
+        var max = col.MaxWidth > 0 ? col.MaxWidth : this.MaxColumnWidth;
+        return max > 0 ? max : null;
+    }
+
+    /// <summary>
+    /// Holds <paramref name="width"/> inside the column's min/max, falling back to the grid-level
+    /// defaults. The floor wins a contradictory pair (max below min) so a bad configuration still
+    /// leaves a usable column rather than a sliver.
+    /// </summary>
+    internal double ClampColumnWidth(DataGridColumn col, double width)
+        => Clamp(width, this.EffectiveMinWidth(col), this.EffectiveMaxWidth(col));
+
+    /// <summary>The same clamp, but with no grid-level fallback - see <see cref="ResolveWidth"/>.</summary>
+    static double ClampToColumnBounds(DataGridColumn col, double width)
+        => Clamp(width, col.MinWidth > 0 ? col.MinWidth : 0, col.MaxWidth > 0 ? col.MaxWidth : null);
+
+    static double Clamp(double width, double min, double? max)
+    {
+        if (max is not null)
+            width = Math.Min(width, max.Value);
+
+        return Math.Max(width, min);
     }
 
     double TotalColumnsWidth
@@ -131,6 +225,7 @@ public partial class DataGrid
                 };
                 this.hostScroll.SizeChanged += (_, _) =>
                 {
+                    this.RefreshPercentWidths();
                     this.UpdateScrollContentWidth();
                     this.ApplyFrozenTranslation();
                 };

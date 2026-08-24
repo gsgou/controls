@@ -27,27 +27,33 @@ public static class DockingServiceCollectionExtensions
     /// <summary>
     /// Registers a Razor component as a dock panel under <paramref name="panelTypeId"/>.
     /// </summary>
+    /// <param name="canClose">
+    /// Whether the user may close the panel. Pass false for one the surface cannot do without -
+    /// closing it would otherwise leave a layout with no way back to it.
+    /// </param>
     public static IServiceCollection AddDockPanel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TComponent>(
-        this IServiceCollection services, string panelTypeId, string? displayName = null, string? icon = null)
+        this IServiceCollection services, string panelTypeId, string? displayName = null, string? icon = null, bool canClose = true)
         where TComponent : ComponentBase
     {
-        services.AddSingleton<IDockableContentFactory>(_ => new ComponentPanelFactory<TComponent>(panelTypeId, displayName, icon));
+        services.AddSingleton<IDockableContentFactory>(_ => new ComponentPanelFactory<TComponent>(panelTypeId, displayName, icon, canClose));
         return services;
     }
 
     sealed class ComponentPanelFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TComponent>
         : IDockableContentFactory where TComponent : ComponentBase
     {
-        public ComponentPanelFactory(string panelTypeId, string? displayName, string? icon)
+        public ComponentPanelFactory(string panelTypeId, string? displayName, string? icon, bool canClose)
         {
             PanelTypeId = panelTypeId;
             DisplayName = displayName ?? panelTypeId;
             Icon = icon;
+            CanClose = canClose;
         }
 
         public string PanelTypeId { get; }
         public string DisplayName { get; }
         public string? Icon { get; }
+        public bool CanClose { get; }
 
         public Task<RenderFragment> CreateAsync(string instanceId, CancellationToken ct = default)
         {

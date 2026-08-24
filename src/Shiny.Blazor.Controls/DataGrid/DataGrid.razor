@@ -10,7 +10,10 @@
         RefreshFrozenLayout();
     }
 
-    <div @ref="rootRef" class="@RootCssClass" style="@RootStyle" @attributes="AdditionalAttributes">
+    @* pointerleave on the root (not the scroller): a drag that crosses the scroller's edge is still a
+       drag, but a pointer that has left the whole grid is never coming back to finish one. *@
+    <div @ref="rootRef" class="@RootCssClass" style="@RootStyle"
+         @onpointerleave="OnResizeEndAsync" @attributes="AdditionalAttributes">
         @if (ToolbarContent is not null || FilterMode == DataGridFilterMode.Toolbar)
         {
             <div class="shiny-dg-toolbar">
@@ -37,7 +40,8 @@
             </div>
         }
 
-        <div class="shiny-dg-scroll" @onpointermove="OnResizeMove" @onpointerup="OnResizeEnd">
+        <div class="shiny-dg-scroll" @onpointermove="OnResizeMove"
+             @onpointerup="OnResizeEndAsync" @onpointercancel="OnResizeEndAsync">
             <table class="shiny-dg-table">
                 @if (ShowColumnHeaders)
                 {
@@ -61,18 +65,23 @@
                                 var sortable = EffectiveSortable(col);
                                 var sort = GetSortDefinition(col);
                                 var badge = SortOrderBadge(col);
-                                <th class="@HeaderCssClass(col) @(sortable ? "shiny-dg-sortable" : "")"
+                                <th class="@HeaderCssClass(col, sortable)"
                                     style="@ColumnWidthStyle(col)"
+                                    data-dg-col="@col.Id"
                                     data-dg-frozen="@FrozenAttr(col)"
-                                    draggable="@(DragDropColumnReordering ? "true" : "false")"
+                                    draggable="@(CanReorder ? "true" : "false")"
                                     @ondragstart="() => OnColumnDragStart(col)"
                                     @ondragover:preventDefault="true"
-                                    @ondrop="() => OnColumnDrop(col)"
+                                    @ondragover="() => OnColumnDragOver(col)"
+                                    @ondragend="OnColumnDragEnd"
+                                    @ondrop="() => OnColumnDropAsync(col)"
                                     @onclick="() => OnHeaderClickAsync(col, sortable)">
-                                    @if (ColumnResizeMode != DataGridColumnResizeMode.None && (col.Resizable ?? true))
+                                    @if (CanResize(col))
                                     {
-                                        <span class="shiny-dg-resize-handle" @onclick:stopPropagation="true"
-                                              @onpointerdown="e => OnResizeStart(col, e)"></span>
+                                        <span class="shiny-dg-resize-handle" title="Resize @col.HeaderText"
+                                              @onclick:stopPropagation="true"
+                                              @onpointerdown:stopPropagation="true"
+                                              @onpointerdown="e => OnResizeStartAsync(col, e)"></span>
                                     }
                                     <span class="shiny-dg-header-inner">
                                         @if (col.HeaderTemplate is not null)

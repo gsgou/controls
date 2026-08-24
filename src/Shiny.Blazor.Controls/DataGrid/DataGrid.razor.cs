@@ -65,51 +65,309 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
     // ---- Virtualization / resize / reorder ----
     [Parameter] public bool Virtualize { get; set; }
+
+    /// <summary>
+    /// Enables the column resize handles. <see cref="DataGridColumnResizeMode.Column"/> widens the
+    /// grid as a column grows; <see cref="DataGridColumnResizeMode.Container"/> takes the difference
+    /// out of the next resizable column so the total stays put.
+    /// </summary>
     [Parameter] public DataGridColumnResizeMode ColumnResizeMode { get; set; } = DataGridColumnResizeMode.None;
+
+    /// <summary>
+    /// Lets a column header be dragged and dropped into a new position. Off by default. The order
+    /// lives on the grid, not on the columns - <see cref="ResetColumnOrder"/> drops back to declaration
+    /// order, and <see cref="ColumnReordered"/> reports each drop so it can be persisted.
+    /// </summary>
     [Parameter] public bool DragDropColumnReordering { get; set; }
+
+    /// <summary>Raised after a column is dropped, with the resulting left-to-right column ids.</summary>
+    [Parameter] public EventCallback<ColumnReorderedEventArgs> ColumnReordered { get; set; }
+
+    /// <summary>
+    /// Floor in pixels for every column that does not set its own <see cref="ColumnBase{TItem}.MinWidth"/>
+    /// (default 48). Keeps a resize drag from collapsing a column to nothing.
+    /// </summary>
+    [Parameter] public double MinColumnWidth { get; set; } = 48;
+
+    /// <summary>
+    /// Ceiling in pixels for every column that does not set its own <see cref="ColumnBase{TItem}.MaxWidth"/>.
+    /// Null (the default) leaves columns unbounded.
+    /// </summary>
+    [Parameter] public double? MaxColumnWidth { get; set; }
+
+    /// <summary>Raised after a resize drag ends, with the column's id and its final pixel width.</summary>
+    [Parameter] public EventCallback<ColumnResizedEventArgs> ColumnResized { get; set; }
 
     readonly Dictionary<string, string> columnWidths = new();
     readonly List<string> columnOrder = new();
-    string? resizingColumnId;
+
+    ColumnBase<TItem>? resizingColumn;
+    ColumnBase<TItem>? resizeNeighbour;
     double resizeStartX;
     double resizeStartWidth;
+    double resizeNeighbourStartWidth;
+    bool resizeMeasured;
     string? dragColumnId;
+    string? dragOverColumnId;
 
     internal bool CanVirtualize => this.Virtualize && !this.IsGrouped && !this.Paging && this.serverItems is null;
 
-    internal void OnResizeStart(ColumnBase<TItem> col, PointerEventArgs e)
+    /// <summary>True when this column offers a resize handle.</summary>
+    internal bool CanResize(ColumnBase<TItem> col)
+        => this.ColumnResizeMode != DataGridColumnResizeMode.None && (col.Resizable ?? true);
+
+    /// <summary>The floor for <paramref name="col"/>: its own pixel MinWidth, else the grid's.</summary>
+    internal double EffectiveMinWidth(ColumnBase<TItem> col)
+        => ParseCssPx(col.MinWidth) ?? Math.Max(1, this.MinColumnWidth);
+
+    /// <summary>The ceiling for <paramref name="col"/>: its own pixel MaxWidth, else the grid's, else none.</summary>
+    internal double? EffectiveMaxWidth(ColumnBase<TItem> col)
     {
-        this.resizingColumnId = col.Id;
-        this.resizeStartX = e.ClientX;
-        this.resizeStartWidth = this.columnWidths.TryGetValue(col.Id, out var w) && w.EndsWith("px")
-            && double.TryParse(w[..^2], out var px) ? px : 150;
+        var max = ParseCssPx(col.MaxWidth) ?? this.MaxColumnWidth;
+        return max > 0 ? max : null;
     }
+
+    /// <summary>
+    /// Holds <paramref name="width"/> inside the column's min/max. The floor wins a contradictory
+    /// pair (max below min) so a bad configuration still leaves a usable column rather than a sliver.
+    /// </summary>
+    internal double ClampColumnWidth(ColumnBase<TItem> col, double width)
+    {
+        var max = this.EffectiveMaxWidth(col);
+        if (max is not null)
+            width = Math.Min(width, max.Value);
+
+        return Math.Max(width, this.EffectiveMinWidth(col));
+    }
+
+    static double? ParseCssPx(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var v = value.Trim();
+        if (!v.EndsWith("px", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return double.TryParse(v[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var px) && px > 0
+            ? px
+            : null;
+    }
+
+    internal async Task OnResizeStartAsync(ColumnBase<TItem> col, PointerEventArgs e)
+    {
+        this.resizingColumn = col;
+        this.resizeStartX = e.ClientX;
+        this.resizeMeasured = false;
+        this.resizeNeighbour = this.ColumnResizeMode == DataGridColumnResizeMode.Container
+            ? this.NextResizable(col)
+            : null;
+
+        // A column with no declared width has no width in C# at all - only the browser knows what the
+        // table gave it. Seeding from a constant is what made the first drag jump the column to some
+        // unrelated size instead of nudging it from where the user sees it.
+        this.resizeStartWidth = await this.MeasureColumnAsync(col)
+            ?? this.PxWidth(col)
+            ?? Math.Max(this.EffectiveMinWidth(col), 150);
+
+        this.resizeNeighbourStartWidth = this.resizeNeighbour is null
+            ? 0
+            : await this.MeasureColumnAsync(this.resizeNeighbour)
+                ?? this.PxWidth(this.resizeNeighbour)
+                ?? Math.Max(this.EffectiveMinWidth(this.resizeNeighbour), 150);
+
+        this.resizeMeasured = true;
+    }
+
+    ColumnBase<TItem>? NextResizable(ColumnBase<TItem> col)
+        => this.VisibleColumns
+            .SkipWhile(c => !ReferenceEquals(c, col))
+            .Skip(1)
+            .FirstOrDefault(c => c.Resizable ?? true);
 
     internal void OnResizeMove(PointerEventArgs e)
     {
-        if (this.resizingColumnId is null)
+        // resizeMeasured gates the drag on the measurement round-trip: on Blazor Server a pointermove
+        // can beat the JS call home, and applying a delta to a start width of 0 snaps the column shut.
+        if (this.resizingColumn is null || !this.resizeMeasured)
             return;
-        var width = Math.Max(48, this.resizeStartWidth + (e.ClientX - this.resizeStartX));
-        this.columnWidths[this.resizingColumnId] = $"{width:0}px";
+
+        var col = this.resizingColumn;
+        var width = this.ClampColumnWidth(col, this.resizeStartWidth + (e.ClientX - this.resizeStartX));
+
+        if (this.resizeNeighbour is not null)
+        {
+            var (resized, neighbourWidth) = this.ResolveContainerResize(
+                col, this.resizeStartWidth, this.resizeNeighbour, this.resizeNeighbourStartWidth, width);
+
+            width = resized;
+            this.columnWidths[this.resizeNeighbour.Id] = Px(neighbourWidth);
+        }
+
+        this.columnWidths[col.Id] = Px(width);
         this.StateHasChanged();
     }
 
-    internal void OnResizeEnd() => this.resizingColumnId = null;
-
-    internal void OnColumnDragStart(ColumnBase<TItem> col) => this.dragColumnId = col.Id;
-
-    internal void OnColumnDrop(ColumnBase<TItem> target)
+    /// <summary>
+    /// Container mode: the drag moves the boundary between two columns, so whatever one gains the
+    /// other gives up and the pair's total never changes.
+    /// </summary>
+    /// <remarks>
+    /// The neighbour's own clamp can refuse part of the delta - it will not shrink past its minimum -
+    /// and the refusal is handed back to the dragged column so the total still holds. What the
+    /// neighbour gives up is capped at what the drag actually asked for: a neighbour that already sits
+    /// outside its own bounds would otherwise be yanked into them on the first pixel of an unrelated
+    /// drag, and hand the dragged column that entire correction as a jump.
+    /// </remarks>
+    internal (double Width, double NeighbourWidth) ResolveContainerResize(
+        ColumnBase<TItem> col,
+        double startWidth,
+        ColumnBase<TItem> neighbour,
+        double neighbourStartWidth,
+        double targetWidth)
     {
-        if (this.dragColumnId is null || this.dragColumnId == target.Id)
+        var wanted = targetWidth - startWidth;
+        var refused = neighbourStartWidth - this.ClampColumnWidth(neighbour, neighbourStartWidth - wanted);
+        var accepted = Math.Clamp(refused, Math.Min(0, wanted), Math.Max(0, wanted));
+
+        return (this.ClampColumnWidth(col, startWidth + accepted), neighbourStartWidth - accepted);
+    }
+
+    internal async Task OnResizeEndAsync()
+    {
+        // Also wired to pointerleave on the root, which fires on every mouse-out of the grid - not
+        // only after a drag - so this returns before touching any state when nothing is resizing.
+        if (this.resizingColumn is null)
             return;
 
-        if (this.columnOrder.Count == 0)
-            this.columnOrder.AddRange(this.columns.Where(c => !c.Hidden).Select(c => c.Id));
+        var col = this.resizingColumn;
+        this.resizingColumn = null;
+        this.resizeNeighbour = null;
+        this.resizeMeasured = false;
 
-        this.columnOrder.Remove(this.dragColumnId);
-        var targetIdx = this.columnOrder.IndexOf(target.Id);
-        this.columnOrder.Insert(targetIdx < 0 ? this.columnOrder.Count : targetIdx, this.dragColumnId);
+        if (col is not null && this.ColumnResized.HasDelegate && this.columnWidths.TryGetValue(col.Id, out var w))
+            await this.ColumnResized.InvokeAsync(new ColumnResizedEventArgs(col.Id, ParseCssPx(w) ?? 0));
+    }
+
+    static string Px(double value) => value.ToString("0.##", CultureInfo.InvariantCulture) + "px";
+
+    /// <summary>Clears any interactive resize, dropping every column back to its declared width.</summary>
+    public void ResetColumnWidths()
+    {
+        this.columnWidths.Clear();
+        this.StateHasChanged();
+    }
+
+    internal bool CanReorder => this.DragDropColumnReordering;
+
+    internal void OnColumnDragStart(ColumnBase<TItem> col)
+    {
+        this.dragColumnId = col.Id;
+        this.dragOverColumnId = null;
+    }
+
+    /// <summary>The drop marker: which header is hovered, and which of its edges the column lands on.</summary>
+    internal string? DropCssClass(ColumnBase<TItem> col)
+    {
+        if (this.dragColumnId is null || this.dragOverColumnId != col.Id || this.dragColumnId == col.Id)
+            return null;
+
+        return DropsAfter(this.EffectiveOrder, this.dragColumnId, col.Id)
+            ? " shiny-dg-drop-after"
+            : " shiny-dg-drop-before";
+    }
+
+    internal void OnColumnDragOver(ColumnBase<TItem> col)
+    {
+        if (this.dragColumnId is null || this.dragOverColumnId == col.Id)
+            return;
+
+        this.dragOverColumnId = col.Id;
+        this.StateHasChanged();
+    }
+
+    /// <summary>Ends a drag that was released outside a header, so no marker is left behind.</summary>
+    internal void OnColumnDragEnd()
+    {
+        if (this.dragColumnId is null && this.dragOverColumnId is null)
+            return;
+
         this.dragColumnId = null;
+        this.dragOverColumnId = null;
+        this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// A column dropped on one to its right lands <i>after</i> it, and on one to its left,
+    /// <i>before</i> it.
+    /// </summary>
+    /// <remarks>
+    /// Inserting before the target unconditionally - which is what this did - made dragging a column
+    /// one place to the right a no-op: removing it and re-inserting it in front of its own right-hand
+    /// neighbour puts it back exactly where it started, so the header simply refused to move.
+    /// </remarks>
+    internal static bool DropsAfter(IReadOnlyList<string> order, string draggedId, string targetId)
+    {
+        var from = IndexOf(order, draggedId);
+        var to = IndexOf(order, targetId);
+        return from >= 0 && to > from;
+    }
+
+    /// <summary>The order after <paramref name="draggedId"/> is dropped on <paramref name="targetId"/>.</summary>
+    internal static List<string> Reorder(IReadOnlyList<string> order, string draggedId, string targetId)
+    {
+        var result = order.ToList();
+        if (draggedId == targetId || !result.Remove(draggedId))
+            return result;
+
+        var after = DropsAfter(order, draggedId, targetId);
+        var targetIdx = result.IndexOf(targetId);
+        result.Insert(targetIdx < 0 ? result.Count : after ? targetIdx + 1 : targetIdx, draggedId);
+        return result;
+    }
+
+    static int IndexOf(IReadOnlyList<string> order, string id)
+    {
+        for (var i = 0; i < order.Count; i++)
+        {
+            if (order[i] == id)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Declaration order until a drop has established one of its own.</summary>
+    internal IReadOnlyList<string> EffectiveOrder
+        => this.columnOrder.Count > 0
+            ? this.columnOrder
+            : this.columns.Where(c => !c.Hidden).Select(c => c.Id).ToList();
+
+    internal async Task OnColumnDropAsync(ColumnBase<TItem> target)
+    {
+        var dragged = this.dragColumnId;
+        this.dragOverColumnId = null;
+        this.dragColumnId = null;
+
+        if (dragged is null || dragged == target.Id)
+        {
+            this.StateHasChanged();
+            return;
+        }
+
+        var order = Reorder(this.EffectiveOrder, dragged, target.Id);
+        this.columnOrder.Clear();
+        this.columnOrder.AddRange(order);
+
+        this.StateHasChanged();
+
+        if (this.ColumnReordered.HasDelegate)
+            await this.ColumnReordered.InvokeAsync(new ColumnReorderedEventArgs(dragged, order));
+    }
+
+    /// <summary>Drops any interactive reordering, putting the columns back in declaration order.</summary>
+    public void ResetColumnOrder()
+    {
+        this.columnOrder.Clear();
         this.StateHasChanged();
     }
 
@@ -204,7 +462,7 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         }
     }
 
-    double? PxWidth(ColumnBase<TItem> col)
+    internal double? PxWidth(ColumnBase<TItem> col)
     {
         var w = this.columnWidths.TryGetValue(col.Id, out var resized) ? resized : col.Width;
         if (string.IsNullOrWhiteSpace(w))
@@ -608,6 +866,10 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
     bool NeedsStickyLayout => this.FixedHeader || this.HasFrozenColumns;
 
+    // Resizing needs the module too - not for the sticky observer, but to ask the browser how wide a
+    // column actually ended up before a drag starts moving it.
+    bool NeedsJsModule => this.NeedsStickyLayout || this.ColumnResizeMode != DataGridColumnResizeMode.None;
+
     async Task SyncStickyLayoutAsync()
     {
         if (this.stickyDisposed)
@@ -615,7 +877,7 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
         try
         {
-            if (!this.NeedsStickyLayout)
+            if (!this.NeedsJsModule)
             {
                 if (this.stickyModule is not null)
                     await this.stickyModule.InvokeVoidAsync("dispose", this.rootRef);
@@ -624,6 +886,9 @@ public partial class DataGrid<TItem> : IAsyncDisposable
 
             this.stickyModule ??= await this.JS.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/Shiny.Blazor.Controls/datagrid.js");
+
+            if (!this.NeedsStickyLayout)
+                return;
 
             // init is idempotent: it wires the observer once and re-measures on every call, which is
             // exactly what we want after a re-render changed the columns or their widths.
@@ -635,6 +900,27 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         }
         catch (ObjectDisposedException)
         {
+        }
+    }
+
+    /// <summary>The column's rendered header width in pixels, or null when JS is unavailable.</summary>
+    async Task<double?> MeasureColumnAsync(ColumnBase<TItem> col)
+    {
+        if (this.stickyModule is null || this.stickyDisposed)
+            return null;
+
+        try
+        {
+            var width = await this.stickyModule.InvokeAsync<double>("measureColumn", this.rootRef, col.Id);
+            return width > 0 ? width : null;
+        }
+        catch (JSDisconnectedException)
+        {
+            return null;
+        }
+        catch (ObjectDisposedException)
+        {
+            return null;
         }
     }
 
@@ -973,6 +1259,9 @@ public partial class DataGrid<TItem> : IAsyncDisposable
             if (this.Hover) sb.Append(" shiny-dg-hover");
             if (this.Outlined) sb.Append(" shiny-dg-outlined");
             if (this.FixedHeader) sb.Append(" shiny-dg-fixedheader");
+            // Holds the col-resize cursor across the whole grid for the length of a drag and kills
+            // the text selection a header drag would otherwise paint over every row it passes.
+            if (this.resizingColumn is not null) sb.Append(" shiny-dg-resizing");
             // Sticky cells lose their borders under border-collapse:collapse, so the sticky
             // variants of the table only switch on when something is actually pinned.
             if (this.FixedHeader || this.HasFrozenColumns) sb.Append(" shiny-dg-sticky");
@@ -997,22 +1286,38 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     /// 810px, never overflowed, and its frozen columns had nothing to stay put against. Percentages are
     /// left alone: they are asking to be relative to the container, which is exactly what shrinking is.
     /// </summary>
+    /// <remarks>
+    /// An explicit <see cref="ColumnBase{TItem}.MinWidth"/> replaces that implied floor rather than
+    /// stacking on top of it - a column saying "160 wide, may shrink to 80" is asking for exactly the
+    /// compression the implied floor exists to prevent, and it gets to have it.
+    /// <para>
+    /// The grid-level <see cref="MinColumnWidth"/> / <see cref="MaxColumnWidth"/> are deliberately not
+    /// emitted here. They bound a resize drag, not the layout: pinning a 48px floor onto every cell of
+    /// every grid would quietly override the percentage widths that asked to be free to shrink.
+    /// </para>
+    /// </remarks>
     internal string? ColumnWidthStyle(ColumnBase<TItem> col)
     {
         string? width;
         if (this.columnWidths.TryGetValue(col.Id, out var resized))
         {
+            // Already clamped when the drag produced it, and pinned on all three so neither the table
+            // nor the column's own bounds can move it afterwards.
             width = $"width:{resized};min-width:{resized};max-width:{resized};";
-        }
-        else if (string.IsNullOrEmpty(col.Width))
-        {
-            width = null;
         }
         else
         {
-            width = col.Width.Contains('%', StringComparison.Ordinal)
-                ? $"width:{col.Width};"
-                : $"width:{col.Width};min-width:{col.Width};";
+            var min = string.IsNullOrWhiteSpace(col.MinWidth)
+                ? string.IsNullOrEmpty(col.Width) || col.Width.Contains('%', StringComparison.Ordinal)
+                    ? null
+                    : col.Width
+                : col.MinWidth.Trim();
+
+            var max = string.IsNullOrWhiteSpace(col.MaxWidth) ? null : col.MaxWidth.Trim();
+
+            width = (string.IsNullOrEmpty(col.Width) ? null : $"width:{col.Width};")
+                + (min is null ? null : $"min-width:{min};")
+                + (max is null ? null : $"max-width:{max};");
         }
 
         // Concatenating two nulls gives "", which Blazor renders as a pointless style="" on every cell
@@ -1021,8 +1326,11 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         return string.IsNullOrEmpty(style) ? null : style;
     }
 
-    string HeaderCssClass(ColumnBase<TItem> col)
-        => "shiny-dg-header" + this.FrozenCssClass(col);
+    string HeaderCssClass(ColumnBase<TItem> col, bool sortable)
+        => "shiny-dg-header"
+            + this.FrozenCssClass(col)
+            + (sortable ? " shiny-dg-sortable" : null)
+            + this.DropCssClass(col);
 
     string RowCssClass(TItem item)
     {

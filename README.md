@@ -2472,12 +2472,15 @@ density/striped/bordered/hover styling. Colors follow the theme tokens.
           SortMode="DataGridSortMode.Multiple" FilterMode="DataGridFilterMode.Menu"
           Groupable="true" EditMode="DataGridEditMode.Form"
           Dense="true" Striped="true" Hover="true" FixedHeader="true" Height="420px"
-          FrozenColumns="1" FrozenEndColumns="1">
+          FrozenColumns="1" FrozenEndColumns="1"
+          ColumnResizeMode="DataGridColumnResizeMode.Column" MinColumnWidth="60" MaxColumnWidth="420"
+          DragDropColumnReordering="true">
     <Columns>
-        <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" />
+        <PropertyColumn Property="x => x.FirstName" Title="First"
+                        Width="25%" MinWidth="80px" MaxWidth="260px" />
         <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
         <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
-        <TemplateColumn Title="Status" Sortable="false" Width="140px">
+        <TemplateColumn Title="Status" Sortable="false" Resizable="false" Width="140px">
             <CellTemplate><Pill Text="@(context.Item.Active ? "Active" : "Inactive")" /></CellTemplate>
         </TemplateColumn>
     </Columns>
@@ -2491,15 +2494,20 @@ density/striped/bordered/hover styling. Colors follow the theme tokens.
                 SortMode="Multiple" FilterMode="Menu" Groupable="True"
                 PageSize="20" EditMode="Form" AllowColumnResize="True" AllowColumnReorder="True"
                 HorizontalScroll="True" DefaultColumnWidth="140" FrozenColumns="1"
+                MinColumnWidth="70" MaxColumnWidth="400"
+                DragDropColumnReordering="True"
                 Striped="True" Bordered="True">
-    <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*" />
+    <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="*"
+                          MinWidth="90" MaxWidth="260" />
     <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
+    <shiny:DataGridColumn Title="Department" PropertyName="Department" WidthPercent="30" />
     <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
         <shiny:DataGridColumn.Aggregate>
             <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
         </shiny:DataGridColumn.Aggregate>
     </shiny:DataGridColumn>
-    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False" Frozen="End">
+    <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False"
+                                  Resizable="False" Frozen="End">
         <shiny:DataGridTemplateColumn.CellTemplate>
             <DataTemplate><shiny:PillView Text="{Binding StatusText}" /></DataTemplate>
         </shiny:DataGridTemplateColumn.CellTemplate>
@@ -2515,6 +2523,33 @@ phone-width grid fits roughly **3–4** columns, fewer once `AllowColumnResize`,
 `Groupable`, or `FilterMode="Menu"` add their glyphs to each header. Columns with no `Width` are `*`
 and split whatever the `Auto` columns leave behind — or give the grid more room than it has and turn on
 horizontal scrolling instead.
+
+**Column widths** — Blazor takes any CSS length on `Width` (`"160px"`, `"12rem"`, `"25%"`). MAUI takes a
+`GridLength` (`"*"`, `"2*"`, `"Auto"`, `"160"`) plus **`WidthPercent`** (1–100), which wins over `Width`
+when set: outside `HorizontalScroll` it resolves to a star of the same factor — a star factor *is* a
+percentage, since the Grid divides the available width in the ratio of the factors — and under
+`HorizontalScroll` it resolves against the scroller's own width, so percentages summing past 100 are what
+make the grid scroll. Percentages are the way to write one layout that reads the same on both hosts.
+
+**Column reordering** — **`DragDropColumnReordering`, off by default on both hosts**: drag a header onto
+another and a marker shows the edge it will land on; dropping to the right of a column puts it *after*
+that column. MAUI additionally offers ‹ › reorder arrows under the separate `AllowColumnReorder` — the
+accessible, no-drag path to the same thing — so a grid can enable either, both, or neither. Each drop
+raises `ColumnReordered`, which is what you persist to restore a user's layout; Blazor keeps the order on
+the grid (`ResetColumnOrder()` clears it), MAUI moves the column in `Columns` itself. On MAUI under
+`HorizontalScroll` the drag claims sideways gestures that start on a header, so the grid is scrolled by
+dragging a row instead.
+
+**Column resizing** — switch it on per grid (Blazor `ColumnResizeMode`, MAUI `AllowColumnResize="True"`)
+and drag the right edge of a header. Any column can opt out with `Resizable="false"`: it keeps its width
+and shows no handle. Bound the drag with `MinWidth` / `MaxWidth` per column — CSS strings on Blazor
+(`MinWidth="80px"`), doubles on MAUI (`MinWidth="90"`) — falling back to the grid's `MinColumnWidth`
+(48) / `MaxColumnWidth` (unbounded). Those grid-level values bound the **drag**, not the layout, so a
+deliberately narrow `Width="40"` column stays 40 wide; only a column's own bounds also constrain its
+declared width. A `MaxWidth` below the `MinWidth` loses — the floor wins, leaving a column the user can
+still see. Blazor adds `ColumnResizeMode.Container`, which takes whatever one column gains out of the
+next resizable one so the grid's total width holds, plus a `ColumnResized` callback (persist the widths)
+and `ResetColumnWidths()`.
 
 **Frozen header** — MAUI's header is always frozen (it sits in its own row above the `CollectionView`).
 Blazor needs `FixedHeader="true"` **and** a `Height`: the header sticks against the scroller, and
@@ -3716,7 +3751,16 @@ builder
     .AddDockPanel<OutputPanel>("output");
 ```
 
-`AddDockPanel` takes optional `displayName` (tab title, defaults to the panel ID) and `icon` (emoji / unicode glyph) arguments. A panel view can also implement `IDockableContent` to control its own per-instance `Title`, `Icon`, `CanClose` / `CanFloat`, and receive `OnActivated` / `OnDeactivated` callbacks.
+`AddDockPanel` takes optional `displayName` (tab title, defaults to the panel ID), `icon` (emoji / unicode glyph) and `canClose` arguments. A panel view can also implement `IDockableContent` to control its own per-instance `Title`, `Icon`, `CanClose` / `CanFloat`, and receive `OnActivated` / `OnDeactivated` callbacks.
+
+Pass `canClose: false` for a panel the surface cannot function without — a file explorer's folder tree, an editor's document area. Closing one of those leaves a layout with nothing on screen that would bring it back, unless the app has built its own reopen affordance. The flag hides the tab's close button **and** makes `HidePanelAsync` refuse the panel, so it is a rule rather than a missing button:
+
+```csharp
+services
+    .AddShinyDocking()
+    .AddDockPanel<FolderTreePanel>("explorer-tree", displayName: "Folders", icon: "📁", canClose: false)
+    .AddDockPanel<OutputPanel>("output");   // closable, as most panels should be
+```
 
 `DockHostView` attaches to any existing `ContentPage` — it does not subclass `ContentPage`, so your Shell / page architecture stays unchanged:
 
@@ -3737,7 +3781,7 @@ builder
 | `DockSplitter` | Draggable splitter between adjacent dock children |
 | `IDockHost` | Per-window controller: `LoadAsync`, `Snapshot`, `ShowPanelAsync` / `HidePanelAsync` / `ActivatePanelAsync`, `ResetLayoutAsync`, `SetRailCollapsedAsync`, `IsLocked` |
 | `IDockableContent` | Optional interface on panel views — per-instance title/icon, close/float gating, activation callbacks, pointer-down claim for embedded editors |
-| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` + `DisplayName` / `Icon` — registered via `AddDockPanel<T>` |
+| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` + `DisplayName` / `Icon` / `CanClose` — registered via `AddDockPanel<T>` |
 | `IDockLayoutStore` | Bring-your-own persistence contract — load/save the layout tree as JSON; saves are debounced via `SaveDebounceMs` |
 | `IDockEvents` | `LayoutChanged`, `PanelActivated`, `DragStarted/Completed/Cancelled` |
 | `IDockCommandScope` | Scopes Ctrl+W / Ctrl+Tab / Ctrl+Alt+PgUp/Dn to the dock surface |

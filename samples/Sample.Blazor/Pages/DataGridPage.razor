@@ -119,6 +119,79 @@
 </section>
 
 <section class="demo-section">
+    <h2>Column resizing (min / max width)</h2>
+    <p>
+        Drag the right edge of a header. <code>Column</code> mode lets the grid grow; <code>Container</code>
+        mode takes the difference out of the next resizable column so the total stays put. Each column
+        declares its own bounds: <strong>First</strong> 80–260px, <strong>Salary</strong> 120–200px,
+        <strong>Department</strong> falls back to the grid-level 60–420px, and <strong>Status</strong> sets
+        <code>Resizable="false"</code> so it offers no handle at all.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label>Resize mode
+            <select @bind="resizeMode">
+                @foreach (var v in Enum.GetValues<DataGridColumnResizeMode>())
+                {
+                    <option value="@v">@v</option>
+                }
+            </select>
+        </label>
+        <button class="btn btn-primary" @onclick="() => resizeGrid?.ResetColumnWidths()">Reset widths</button>
+        <span class="status-message">@resizeStatus</span>
+    </div>
+    <DataGrid TItem="Person" @ref="resizeGrid"
+              Items="people"
+              ColumnResizeMode="resizeMode"
+              MinColumnWidth="60"
+              MaxColumnWidth="420"
+              ColumnResized="OnColumnResized"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Bordered="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="160px" MinWidth="80px" MaxWidth="260px" />
+            <PropertyColumn Property="x => x.LastName" Title="Last" Width="160px" />
+            <PropertyColumn Property="x => x.Department" />
+            <PropertyColumn Property="x => x.Salary" Format="C0" Width="160px" MinWidth="120px" MaxWidth="200px" />
+            <TemplateColumn Title="Status" Sortable="false" Filterable="false" Resizable="false" Width="140px">
+                <CellTemplate>
+                    <Pill Text="@(context.Item.Active ? "Active" : "Inactive")"
+                          Type="@(context.Item.Active ? PillType.Success : PillType.Caution)" />
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
+    <h2>Percentage widths &amp; drag-drop column order</h2>
+    <p>
+        Widths are percentages, so the columns keep their proportions as the window changes.
+        Reordering is <strong>off by default</strong> — the toggle below is the grid's
+        <code>DragDropColumnReordering</code>. With it on, drag a header onto another: a marker shows the
+        edge it will land on, and dropping to the <em>right</em> of a column puts it after that column.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label class="toggle-row"><span>Drag-drop reordering</span>
+            <input type="checkbox" @bind="reordering" /></label>
+        <button class="btn btn-primary" @onclick="() => orderGrid?.ResetColumnOrder()">Reset order</button>
+        <span class="status-message">@orderStatus</span>
+    </div>
+    <DataGrid TItem="Person" @ref="orderGrid"
+              Items="people"
+              DragDropColumnReordering="reordering"
+              ColumnReordered="OnColumnReordered"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Bordered="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="20%" MinWidth="90px" />
+            <PropertyColumn Property="x => x.LastName" Title="Last" Width="20%" MinWidth="90px" />
+            <PropertyColumn Property="x => x.Department" Width="30%" />
+            <PropertyColumn Property="x => x.Salary" Format="C0" Width="30%" />
+        </Columns>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
     <h2>Detail (breakdown) rows</h2>
     <p>
         A <code>RowDetailTemplate</code> adds a caret column at the leading edge; expanding a row opens a
@@ -204,6 +277,20 @@
     DataGridSelectionMode selectionMode = DataGridSelectionMode.Multiple;
     DataGridFilterMode filterMode = DataGridFilterMode.Menu;
     DataGridEditMode editMode = DataGridEditMode.Form;
+
+    DataGrid<Person>? resizeGrid;
+    DataGridColumnResizeMode resizeMode = DataGridColumnResizeMode.Column;
+    string resizeStatus = "Drag a header edge";
+
+    void OnColumnResized(ColumnResizedEventArgs e)
+        => resizeStatus = $"{e.ColumnId} → {e.Width:0}px";
+
+    DataGrid<Person>? orderGrid;
+    bool reordering = true;
+    string orderStatus = "Drag a header onto another";
+
+    void OnColumnReordered(ColumnReorderedEventArgs e)
+        => orderStatus = $"Moved {e.ColumnId} — now {string.Join(", ", e.Order)}";
 
     void OnRowExpanded(Person p) => status = $"Opened {p.FirstName}";
 

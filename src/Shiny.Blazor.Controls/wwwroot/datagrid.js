@@ -95,3 +95,11 @@ export function dispose(root) {
     state.observer?.disconnect();
     states.delete(root);
 }
+
+// A column with no declared CSS width has no width in C# at all - the table decided it. The resize
+// drag needs that number up front, or its first move applies a delta to a guess and the column jumps.
+export function measureColumn(root, columnId) {
+    if (!root || !columnId) return 0;
+    const cell = root.querySelector(`.shiny-dg-table thead th[data-dg-col="${CSS.escape(columnId)}"]`);
+    return cell ? cell.getBoundingClientRect().width : 0;
+}
