@@ -8,6 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Fails the consumer's build when the wasm-tools workload is missing, instead of letting
+             them publish an app that dies on the first Skia call. See the targets file. -->
+        <None Include="buildTransitive/Shiny.Blazor.Controls.Office.targets" Pack="true" PackagePath="buildTransitive/Shiny.Blazor.Controls.Office.targets" />
+    </ItemGroup>
+
+    <ItemGroup>
         <SupportedPlatform Include="browser" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Web"/>
         <PackageReference Include="SkiaSharp.Views.Blazor"/>

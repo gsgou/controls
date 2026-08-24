@@ -905,7 +905,9 @@ await workbook.SaveAsync();
 | Reporting | `UnsupportedFeatureCollector` names anything in a document the editor cannot show or edit |
 
 **Constraints.** Blazor is **WebAssembly only** (a Server round-trip per keystroke is unusable, and
-SkiaSharp on WASM needs the `wasm-tools` workload). MAUI requires `UseSkiaSharp()`. Inserting and
+SkiaSharp on WASM needs the `wasm-tools` workload — without it `libSkiaSharp` is never linked into the
+runtime and the app fails in the browser, so `Shiny.Blazor.Controls.Office` fails the build up front
+with `SHINY0001` instead; bypass with `ShinySkipWasmToolsCheck=true`). MAUI requires `UseSkiaSharp()`. Inserting and
 deleting rows and columns is deliberately not implemented — it requires rewriting references across
 formulas, merged cells, conditional formatting, defined names, data validation, charts and tables.
 

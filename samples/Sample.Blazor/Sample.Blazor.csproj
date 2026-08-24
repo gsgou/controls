@@ -5,6 +5,11 @@
         <RootNamespace>Sample.Blazor</RootNamespace>
     </PropertyGroup>
 
+    <!-- ProjectReference does not flow a package's buildTransitive targets, so the wasm-tools guard
+         that ships in Shiny.Blazor.Controls.Office is imported by hand here — this sample publishes
+         to GitHub Pages and a missing workload silently ships a broken Office demo. -->
+    <Import Project="..\..\src\Shiny.Blazor.Controls.Office\buildTransitive\Shiny.Blazor.Controls.Office.targets" />
+
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all"/>

@@ -1,0 +1,17 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Every Office view paints through SkiaSharp, and SkiaSharp for WebAssembly ships only a static
+    libSkiaSharp.a. It is linked into the runtime by the native relink step, which runs only when the
+    wasm-tools workload is installed. Without the workload the NativeFileReference is silently
+    dropped: restore, build and publish all succeed, and the first Skia call in the browser throws
+    "DllNotFoundException: libSkiaSharp" with a blank canvas behind it. Fail the build instead.
+  -->
+  <Target
+    Name="_ShinyBlazorControlsOfficeCheckWasmTools"
+    BeforeTargets="PrepareForBuild"
+    Condition="'$(RuntimeIdentifier)' == 'browser-wasm' AND '$(WasmNativeWorkloadAvailable)' != 'true' AND '$(ShinySkipWasmToolsCheck)' != 'true'">
+    <Error
+      Code="SHINY0001"
+      Text="Shiny.Blazor.Controls.Office renders with SkiaSharp, which needs the 'wasm-tools' workload so that libSkiaSharp gets linked into the WebAssembly runtime. Install that workload (`dotnet workload install wasm-tools`) — note that `dotnet workload restore` does NOT pull it in for a Blazor WebAssembly project. Without it the app builds and publishes clean, then fails in the browser with DllNotFoundException: libSkiaSharp. Set ShinySkipWasmToolsCheck=true to bypass this check." />
+  </Target>
+</Project>

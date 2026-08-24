@@ -42,8 +42,15 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # wasm-tools has to be named explicitly: `dotnet workload restore` installs nothing for a
+      # Blazor WebAssembly project, and without the workload the SkiaSharp native relink is skipped
+      # silently — the publish succeeds and every Office view then throws
+      # "DllNotFoundException: libSkiaSharp" in the browser. The guard imported by Sample.Blazor.csproj
+      # turns that back into a build failure, but the workload is what actually fixes it.
       - name: Restore workloads
-        run: dotnet workload restore "${{ env.SAMPLE_CSPROJ }}"
+        run: |
+          dotnet workload install wasm-tools
+          dotnet workload restore "${{ env.SAMPLE_CSPROJ }}"
 
       - name: Publish
         run: dotnet publish "${{ env.SAMPLE_CSPROJ }}" -c Release -o publish
