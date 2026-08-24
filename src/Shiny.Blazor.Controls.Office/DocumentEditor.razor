@@ -1,0 +1,563 @@
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@using Shiny.Controls.Office.Document
+@implements IAsyncDisposable
+@inject IJSRuntime Js
+
+@*
+    The lone editor: a canvas and the hidden input the platform types into. No chrome of any kind —
+    DocumentEditorView adds that. Anything a toolbar needs is on Controller.
+*@
+<div class="shiny-doc-editor @Class"
+     style="@Style"
+     @onwheel="OnWheel"
+     @onwheel:preventDefault="true"
+     @onpointerdown="OnPointerDown"
+     @onpointerdown:preventDefault="true"
+     @onpointermove="OnPointerMove"
+     @onpointerup="OnPointerUp"
+     @oncontextmenu="OnContextMenu"
+     @oncontextmenu:preventDefault="true">
+
+    <SKCanvasView @ref="canvas"
+                  class="shiny-doc-editor-canvas"
+                  IgnorePixelScaling="false"
+                  OnPaintSurface="OnPaint" />
+
+    @*
+        The real text input. It is a one-line contenteditable parked under the caret rather than an
+        offscreen element, because a hidden input scrolls the page when the browser focuses it, and
+        on mobile the IME candidate window follows this element's position.
+    *@
+    <div class="shiny-doc-editor-input"
+         style="@InputStyle"
+         contenteditable="true"
+         spellcheck="false"
+         @ref="input"
+         @onkeydown="OnKeyDown"
+         @onkeydown:preventDefault="preventKeyDefault"
+         @onfocus="OnFocus"
+         @onblur="OnBlur"></div>
+
+    @*
+        The spelling menu. Rendered here rather than through a shared popup component so it stays
+        inside the editor's own stacking and scroll context - the coordinates come straight from the
+        canvas hit test.
+    *@
+    @if (this.spellingMenu is not null)
+    {
+        <div class="shiny-doc-spelling-menu"
+             style="left:@(this.spellingMenu.X.ToString(Culture))px; top:@(this.spellingMenu.Y.ToString(Culture))px"
+             @onpointerdown:stopPropagation="true">
+
+            @if (this.spellingMenu.Suggestions.Count == 0)
+            {
+                <div class="doc-spell-empty">No suggestions</div>
+            }
+            else
+            {
+                @foreach (var suggestion in this.spellingMenu.Suggestions)
+                {
+                    <button type="button" class="doc-spell-item" @onclick="() => ApplySuggestionAsync(suggestion)">@suggestion</button>
+                }
+            }
+
+            <div class="doc-spell-sep"></div>
+            <button type="button" class="doc-spell-item doc-spell-action" @onclick="IgnoreAsync">Ignore</button>
+            <button type="button" class="doc-spell-item doc-spell-action" @onclick="LearnAsync">Add to dictionary</button>
+        </div>
+    }
+</div>
+
+@code {
+    SKCanvasView? canvas;
+    ElementReference input;
+    IJSObjectReference? inputModule;
+    IJSObjectReference? inputHandle;
+    DotNetObjectReference<DocumentEditor>? selfReference;
+    SkiaTextMeasurer? measurer;
+    DocumentPainter? painter;
+    DocumentEditorController? controller;
+    bool preventKeyDefault;
+    bool focused;
+    bool dragging;
+    bool focusInput;
+    double dpr = 1;
+    double lastWidth;
+    double lastHeight;
+
+    /// <summary>
+    /// The theme the canvas was last painted with.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView only repaints when Invalidate is called; a Blazor re-render does not touch the
+    /// canvas contents. Without this comparison a theme change updates the parameter, re-renders the
+    /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
+    /// </remarks>
+    DocumentTheme? paintedTheme;
+
+    /// <summary>The document to edit. Must have been opened with <c>editable: true</c>.</summary>
+    [Parameter] public WordDocument? Document { get; set; }
+
+    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+
+    [Parameter] public double Zoom { get; set; } = 1.0;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// The spell checker for this editor.
+    /// </summary>
+    /// <remarks>
+    /// The browser has no spell-checking API a canvas can call — it only checks native editable
+    /// elements, and exposes neither the results nor the suggestions — so on Blazor this defaults to
+    /// no checking at all. Supply an implementation (a bundled dictionary, or a call to your own
+    /// server) to turn it on. The MAUI package registers the platform's checker automatically.
+    /// </remarks>
+    [Parameter] public ISpellChecker? SpellChecker { get; set; }
+
+    [Parameter] public bool SpellCheckEnabled { get; set; } = true;
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Raised after every edit, so a host can track the dirty state.</summary>
+    [Parameter] public EventCallback DocumentChanged { get; set; }
+
+    /// <summary>The live controller — selection, caret format, formatting commands, undo.</summary>
+    public DocumentEditorController? Controller => this.controller;
+
+    /// <summary>Puts the keyboard focus on the editor, so the platform starts sending it text.</summary>
+    public async Task FocusAsync()
+    {
+        if (this.inputModule is null)
+            return;
+
+        try
+        {
+            await this.inputModule.InvokeVoidAsync("focus", this.input);
+        }
+        catch (JSException ex)
+        {
+            // Reported rather than swallowed: a focus that quietly fails looks exactly like an editor
+            // that has stopped accepting input, with nothing anywhere to say why.
+            Console.Error.WriteLine($"[Shiny.Office] Could not focus the editor: {ex.Message}");
+        }
+    }
+
+    string InputStyle
+    {
+        get
+        {
+            if (this.controller is null)
+                return "left:-9999px;top:0";
+
+            // Parked at the caret so the IME composition window appears in the right place.
+            var caret = this.controller.CaretRect(this.controller.Selection.Focus);
+            var x = caret.X + this.controller.PageX + this.controller.PagePadding;
+            var y = caret.Y - this.controller.Viewport.ScrollY;
+            return $"left:{Css(x)}px;top:{Css(y)}px;height:{Css(Math.Max(12, caret.Height))}px";
+        }
+    }
+
+    static string Css(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    protected override void OnParametersSet()
+    {
+        // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
+        // called, so a theme change that does not reach this leaves the old pixels on screen and the
+        // toggle appears to do nothing.
+        if (this.paintedTheme != this.Theme)
+        {
+            this.paintedTheme = this.Theme;
+            this.canvas?.Invalidate();
+        }
+
+        if (this.Document is null)
+        {
+            this.controller = null;
+            return;
+        }
+
+        this.measurer ??= new SkiaTextMeasurer();
+        this.painter ??= new DocumentPainter(this.measurer);
+
+        if (this.controller is null || !ReferenceEquals(this.controller.Document, this.Document))
+        {
+            if (this.controller is not null)
+                this.controller.Changed -= this.OnControllerChanged;
+
+            this.controller = new DocumentEditorController(this.Document, this.measurer, this.SpellChecker);
+            this.controller.Changed += this.OnControllerChanged;
+
+            if (this.lastWidth > 0)
+                this.controller.Resize(this.lastWidth, this.lastHeight);
+        }
+
+        this.controller.Zoom = this.Zoom;
+        this.controller.IsSpellCheckEnabled = this.SpellCheckEnabled;
+
+        if (this.SpellChecker is not null)
+            this.controller.SpellChecker = this.SpellChecker;
+    }
+
+    void OnControllerChanged(object? sender, EventArgs e)
+    {
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+            }
+            catch (Exception)
+            {
+                this.dpr = 1;
+            }
+
+            if (this.dpr <= 0)
+                this.dpr = 1;
+
+            this.canvas?.Invalidate();
+
+            if (await OfficeFonts.EnsureLoadedAsync(this.Js))
+            {
+                this.canvas?.Invalidate();
+                this.StateHasChanged();
+            }
+
+            await this.AttachInputAsync();
+        }
+
+        if (this.focusInput)
+        {
+            this.focusInput = false;
+            await this.FocusAsync();
+        }
+    }
+
+    void OnPaint(SKPaintSurfaceEventArgs e)
+    {
+        var info = e.Info;
+        var theme = this.Theme;
+
+        if (this.controller is null || this.painter is null)
+        {
+            e.Surface.Canvas.Clear(new SKColor(theme.SurroundBackground.R, theme.SurroundBackground.G, theme.SurroundBackground.B));
+            return;
+        }
+
+        var scale = (float)this.dpr;
+        var width = info.Width / this.dpr;
+        var height = info.Height / this.dpr;
+
+        if (this.lastWidth <= 0 || Math.Abs(width - this.lastWidth) > 0.5 || Math.Abs(height - this.lastHeight) > 0.5)
+        {
+            this.lastWidth = width;
+            this.lastHeight = height;
+            this.controller.Resize(width, height);
+        }
+
+        this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
+        {
+            Blocks = this.controller.Blocks,
+            Viewport = this.controller.Viewport,
+            Theme = theme,
+            Scale = scale,
+            PageX = this.controller.PageX + this.controller.PagePadding,
+            PageWidth = this.controller.PageWidth,
+            Selection = this.controller.SelectionRects().ToList(),
+            Spelling = this.controller.SpellingRects().ToList(),
+
+            // The caret only belongs on screen while the editor has focus; a document showing a caret
+            // it does not own reads as editable when it is not.
+            Caret = this.focused && !this.ReadOnly ? this.controller.CaretRect(this.controller.Selection.Focus) : null
+        });
+    }
+
+    // ---- pointer ----
+
+    void OnPointerDown(PointerEventArgs e)
+    {
+        if (this.controller?.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
+            return;
+
+        if (e.ShiftKey)
+            this.controller.Selection.ExtendTo(position);
+        else
+            this.controller.Selection.MoveTo(position);
+
+        this.dragging = true;
+        this.spellingMenu = null;
+
+        // The click's default action would move focus off the hidden input the moment the browser
+        // finishes handling it - which is why pointerdown is prevented on the host element. Without
+        // that, focus is set here and silently taken away again a few milliseconds later.
+        this.focusInput = true;
+    }
+
+    void OnPointerMove(PointerEventArgs e)
+    {
+        if (!this.dragging || (e.Buttons & 1) != 1)
+            return;
+
+        if (this.controller?.PositionAt(e.OffsetX, e.OffsetY) is { } position)
+            this.controller.Selection.ExtendTo(position);
+    }
+
+    void OnPointerUp(PointerEventArgs e) => this.dragging = false;
+
+    // ---- spelling menu ----
+
+    sealed record SpellingMenu(double X, double Y, DocumentPosition At, string Word, IReadOnlyList<string> Suggestions);
+
+    static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    SpellingMenu? spellingMenu;
+
+    /// <summary>
+    /// Right-click over a misspelling offers corrections; anywhere else it is an ordinary click.
+    /// </summary>
+    /// <remarks>
+    /// The browser's own context menu is suppressed on the editor because the canvas has no text for
+    /// it to act on - it would offer "Back" and "Reload" over a document.
+    /// </remarks>
+    async Task OnContextMenu(MouseEventArgs e)
+    {
+        this.spellingMenu = null;
+
+        if (this.controller is null || this.ReadOnly)
+            return;
+
+        if (this.controller.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
+            return;
+
+        if (this.controller.SpellingErrorAt(position) is not { } error)
+        {
+            this.StateHasChanged();
+            return;
+        }
+
+        var suggestions = await this.controller.SuggestAtAsync(position);
+
+        this.spellingMenu = new SpellingMenu(e.OffsetX, e.OffsetY, position, error.Word, suggestions);
+        this.StateHasChanged();
+    }
+
+    async Task ApplySuggestionAsync(string suggestion)
+    {
+        if (this.spellingMenu is { } menu && this.controller is not null)
+            this.controller.ApplySuggestion(menu.At, suggestion);
+
+        await this.CloseSpellingMenuAsync();
+    }
+
+    async Task IgnoreAsync()
+    {
+        if (this.spellingMenu is { } menu)
+            this.controller?.IgnoreSpelling(menu.Word);
+
+        await this.CloseSpellingMenuAsync();
+    }
+
+    async Task LearnAsync()
+    {
+        if (this.spellingMenu is { } menu)
+            this.controller?.LearnSpelling(menu.Word);
+
+        await this.CloseSpellingMenuAsync();
+    }
+
+    async Task CloseSpellingMenuAsync()
+    {
+        this.spellingMenu = null;
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+
+        // Focus has to go back deliberately: clicking a menu button took it off the hidden input, and
+        // leaving it there means the next keystroke goes nowhere.
+        await this.FocusAsync();
+    }
+
+    void OnWheel(WheelEventArgs e) => this.controller?.Scroll(e.DeltaY);
+
+    void OnFocus()
+    {
+        this.focused = true;
+        this.canvas?.Invalidate();
+    }
+
+    void OnBlur()
+    {
+        this.focused = false;
+        this.canvas?.Invalidate();
+    }
+
+    // ---- text input ----
+
+    /// <summary>
+    /// The single entry point for inserted text.
+    /// </summary>
+    /// <remarks>
+    /// <c>beforeinput</c> rather than <c>keypress</c>: it is the only event that reports IME
+    /// composition results, autocorrect, dictation and paste as ordinary text insertions. Handling
+    /// keys instead works for a US keyboard and silently drops every other input method.
+    /// </remarks>
+    [JSInvokable]
+    public async Task HandleBeforeInput(string inputType, string? data)
+    {
+        if (this.controller is null || this.ReadOnly)
+            return;
+
+        switch (inputType)
+        {
+            case "insertText":
+            case "insertCompositionText":
+            case "insertFromPaste":
+            case "insertReplacementText":
+                if (!string.IsNullOrEmpty(data))
+                    this.controller.InsertText(data);
+
+                break;
+
+            case "insertParagraph":
+            case "insertLineBreak":
+                this.controller.InsertParagraph();
+                break;
+
+            case "deleteContentBackward":
+                this.controller.DeleteBackward();
+                break;
+
+            case "deleteContentForward":
+                this.controller.DeleteForward();
+                break;
+
+            case "deleteWordBackward":
+                this.controller.Move(CaretMove.WordLeft, extend: true);
+                this.controller.DeleteBackward();
+                break;
+
+            default:
+                return;
+        }
+
+        await this.RaiseChangedAsync();
+    }
+
+    async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        var extend = e.ShiftKey;
+        var word = e.CtrlKey || e.AltKey;
+        this.preventKeyDefault = true;
+
+        switch (e.Key)
+        {
+            case "ArrowLeft": this.controller.Move(word ? CaretMove.WordLeft : CaretMove.Left, extend); break;
+            case "ArrowRight": this.controller.Move(word ? CaretMove.WordRight : CaretMove.Right, extend); break;
+            case "ArrowUp": this.controller.Move(CaretMove.Up, extend); break;
+            case "ArrowDown": this.controller.Move(CaretMove.Down, extend); break;
+            case "Home": this.controller.Move(e.MetaKey || e.CtrlKey ? CaretMove.DocumentStart : CaretMove.LineStart, extend); break;
+            case "End": this.controller.Move(e.MetaKey || e.CtrlKey ? CaretMove.DocumentEnd : CaretMove.LineEnd, extend); break;
+
+            case "a" when e.CtrlKey || e.MetaKey:
+                this.controller.SelectAll();
+                break;
+
+            case "b" when e.CtrlKey || e.MetaKey:
+                this.controller.ToggleBold();
+                await this.RaiseChangedAsync();
+                break;
+
+            case "i" when e.CtrlKey || e.MetaKey:
+                this.controller.ToggleItalic();
+                await this.RaiseChangedAsync();
+                break;
+
+            case "u" when e.CtrlKey || e.MetaKey:
+                this.controller.ToggleUnderline();
+                await this.RaiseChangedAsync();
+                break;
+
+            case "z" when e.CtrlKey || e.MetaKey:
+                if (e.ShiftKey)
+                    this.controller.Redo();
+                else
+                    this.controller.Undo();
+
+                await this.RaiseChangedAsync();
+                break;
+
+            case "y" when e.CtrlKey || e.MetaKey:
+                this.controller.Redo();
+                await this.RaiseChangedAsync();
+                break;
+
+            default:
+                // Everything else - printable characters included - arrives through beforeinput, which
+                // is what makes IME and dictation work. Swallowing it here would break both.
+                this.preventKeyDefault = false;
+                break;
+        }
+    }
+
+    async Task AttachInputAsync()
+    {
+        try
+        {
+            this.selfReference = DotNetObjectReference.Create(this);
+            this.inputModule = await this.Js.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls.Office/documentEditor.js");
+
+            this.inputHandle = await this.inputModule.InvokeAsync<IJSObjectReference>("attach", this.input, this.selfReference);
+        }
+        catch (Exception ex)
+        {
+            // Prerendering or a host without JS interop leaves the editor navigable but unable to
+            // accept text. Reported rather than swallowed: silence here is indistinguishable from an
+            // editor that simply ignores the keyboard.
+            Console.Error.WriteLine($"[Shiny.Office] Text input is unavailable: {ex.Message}");
+        }
+    }
+
+    async Task RaiseChangedAsync()
+    {
+        this.canvas?.Invalidate();
+
+        if (this.DocumentChanged.HasDelegate)
+            await this.DocumentChanged.InvokeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (this.controller is not null)
+            this.controller.Changed -= this.OnControllerChanged;
+
+        try
+        {
+            if (this.inputModule is not null && this.inputHandle is not null)
+                await this.inputModule.InvokeVoidAsync("detach", this.inputHandle);
+
+            if (this.inputModule is not null)
+                await this.inputModule.DisposeAsync();
+        }
+        catch (Exception)
+        {
+            // The circuit may already be gone; detaching a listener is best-effort.
+        }
+
+        this.selfReference?.Dispose();
+        this.painter?.Dispose();
+        this.measurer?.Dispose();
+    }
+}

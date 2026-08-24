@@ -1,0 +1,583 @@
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@using Shiny.Controls.Office.Presentation
+@implements IAsyncDisposable
+@inject IJSRuntime Js
+
+@*
+    The lone slide editor: a canvas and the hidden input the platform types into. No chrome —
+    SlideEditorView adds that. Anything a toolbar needs is on Controller.
+*@
+<div class="shiny-slide-editor @Class"
+     style="@Style"
+     @onwheel="OnWheel"
+     @onwheel:preventDefault="true"
+     @onpointerdown="OnPointerDown"
+     @onpointerdown:preventDefault="true"
+     @onpointermove="OnPointerMove"
+     @onpointerup="OnPointerUp"
+     @ondblclick="OnDoubleClick">
+
+    <SKCanvasView @ref="canvas"
+                  class="shiny-slide-editor-canvas"
+                  IgnorePixelScaling="false"
+                  OnPaintSurface="OnPaint" />
+
+    @*
+        The real text input, parked at the caret rather than offscreen: a hidden input scrolls the
+        page when the browser focuses it, and on mobile the IME candidate window follows this
+        element's position.
+    *@
+    <div class="shiny-slide-editor-input"
+         style="@InputStyle"
+         contenteditable="true"
+         spellcheck="false"
+         @ref="input"
+         @onkeydown="OnKeyDown"
+         @onkeydown:preventDefault="preventKeyDefault"
+         @onfocus="OnFocus"
+         @onblur="OnBlur"></div>
+</div>
+
+@code {
+    SKCanvasView? canvas;
+    ElementReference input;
+    IJSObjectReference? inputModule;
+    IJSObjectReference? inputHandle;
+    DotNetObjectReference<SlideEditor>? selfReference;
+    SkiaTextMeasurer? measurer;
+    SlidePainter? painter;
+    SlideEditorController? controller;
+    bool preventKeyDefault;
+    bool focused;
+    bool focusInput;
+    bool applyingParameters;
+    double lastWidth;
+    double lastHeight;
+
+    /// <summary>
+    /// The theme the canvas was last painted with.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView only repaints when Invalidate is called; a Blazor re-render does not touch the
+    /// canvas contents. Without this comparison a theme change updates the parameter, re-renders the
+    /// component and leaves the old pixels on screen — the toggle appears to do nothing at all.
+    /// </remarks>
+    SlideTheme? paintedTheme;
+
+    double dpr = 1;
+
+    static readonly System.Globalization.CultureInfo Culture = System.Globalization.CultureInfo.InvariantCulture;
+
+    /// <summary>The deck to edit. Must have been opened with <c>editable: true</c>.</summary>
+    [Parameter] public SlideDeck? Deck { get; set; }
+
+    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+
+    [Parameter] public int SlideIndex { get; set; }
+
+    [Parameter] public EventCallback<int> SlideIndexChanged { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Raised after every edit.</summary>
+    [Parameter] public EventCallback DeckChanged { get; set; }
+
+    /// <summary>
+    /// Raised when the selection or caret moves, without the deck having changed.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="DeckChanged"/> because chrome around the editor has to follow the
+    /// selection too: without this a wrapper's toolbar only refreshes once an edit happens, so
+    /// selecting a shape leaves its Delete button greyed out and the status line stale.
+    /// </remarks>
+    [Parameter] public EventCallback SelectionChanged { get; set; }
+
+    /// <summary>The live controller — selection, caret, formatting commands, undo.</summary>
+    public SlideEditorController? Controller => this.controller;
+
+    protected override void OnParametersSet()
+    {
+        // First, before any of the early returns below, for the reason on paintedTheme.
+        if (this.paintedTheme != this.Theme)
+        {
+            this.paintedTheme = this.Theme;
+            this.canvas?.Invalidate();
+        }
+
+        if (this.Deck is null)
+        {
+            this.controller = null;
+            return;
+        }
+
+        this.measurer ??= new SkiaTextMeasurer();
+        this.painter ??= new SlidePainter(this.measurer);
+
+        if (this.controller is null || !ReferenceEquals(this.controller.Deck, this.Deck))
+        {
+            if (this.controller is not null)
+            {
+                this.controller.Changed -= this.OnControllerChanged;
+                this.controller.Edited -= this.OnEdited;
+            }
+
+            this.controller = new SlideEditorController(this.Deck, this.measurer);
+            this.controller.Changed += this.OnControllerChanged;
+
+            // Every edit reports through the controller, including a drag - which is driven straight
+            // through the commands and never passes through a keyboard handler.
+            this.controller.Edited += this.OnEdited;
+
+            if (this.lastWidth > 0)
+                this.controller.Resize(this.lastWidth, this.lastHeight);
+        }
+
+        this.controller.IsReadOnly = this.ReadOnly;
+
+        // Assigning Index raises Changed, which would otherwise write the controller's state back to
+        // the parent mid-update and undo the navigation the parent just requested.
+        this.applyingParameters = true;
+        try
+        {
+            this.controller.Index = this.SlideIndex;
+        }
+        finally
+        {
+            this.applyingParameters = false;
+        }
+    }
+
+    async void OnControllerChanged(object? sender, EventArgs e)
+    {
+        if (this.controller is { } controller && !this.applyingParameters && controller.Index != this.SlideIndex)
+        {
+            this.SlideIndex = controller.Index;
+            if (this.SlideIndexChanged.HasDelegate)
+                await this.SlideIndexChanged.InvokeAsync(controller.Index);
+        }
+
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+
+        if (this.SelectionChanged.HasDelegate)
+            await this.SelectionChanged.InvokeAsync();
+    }
+
+    async void OnEdited(object? sender, EventArgs e)
+    {
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+
+        if (this.DeckChanged.HasDelegate)
+            await this.DeckChanged.InvokeAsync();
+    }
+
+    void OnPaint(SKPaintSurfaceEventArgs e)
+    {
+        var info = e.Info;
+        var theme = this.Theme;
+        var surface = e.Surface.Canvas;
+
+        surface.Clear(new SKColor(theme.Surround.R, theme.Surround.G, theme.Surround.B));
+
+        if (this.controller is null || this.painter is null)
+            return;
+
+        // The surface arrives in device pixels; the layout works in CSS pixels.
+        var scale = (float)this.dpr;
+        var width = info.Width / this.dpr;
+        var height = info.Height / this.dpr;
+
+        if (this.lastWidth <= 0 || Math.Abs(width - this.lastWidth) > 0.5 || Math.Abs(height - this.lastHeight) > 0.5)
+        {
+            this.lastWidth = width;
+            this.lastHeight = height;
+            this.controller.Resize(width, height);
+        }
+
+        if (this.controller.SinglePlacement() is not { } placement)
+            return;
+
+        this.painter.Paint(surface, new SlidePaintRequest
+        {
+            Slide = placement.Slide,
+            SlideWidth = this.controller.Deck.SlideWidth,
+            SlideHeight = this.controller.Deck.SlideHeight,
+            DestinationX = placement.X,
+            DestinationY = placement.Y,
+            DestinationWidth = placement.Width,
+            DestinationHeight = placement.Height,
+            Theme = theme,
+            Scale = scale,
+            Chrome = this.BuildChrome()
+        });
+    }
+
+    /// <summary>The selection frame, handles, text highlight and caret, or null when nothing is selected.</summary>
+    SlideEditorChrome? BuildChrome()
+    {
+        if (this.controller is not { SelectedShape: >= 0 } controller || this.ReadOnly)
+            return null;
+
+        return new SlideEditorChrome
+        {
+            SelectionFrame = Rect(controller.SelectionBounds()),
+            Handles = controller.SelectionHandles().Select(x => Tuple(x.Rect)).ToList(),
+            TextSelection = controller.TextSelectionRects().Select(Tuple).ToList(),
+
+            // The caret is only drawn while the editor actually has focus; one shown without it reads
+            // as an editor that is accepting keystrokes when it is not.
+            Caret = this.focused ? Rect(controller.CaretRect()) : null,
+            IsEditingText = controller.IsEditingText
+        };
+
+        static (double X, double Y, double Width, double Height)? Rect(SlideRect? r)
+            => r is { } value ? Tuple(value) : null;
+
+        static (double X, double Y, double Width, double Height) Tuple(SlideRect r)
+            => (r.X, r.Y, r.Width, r.Height);
+    }
+
+    // ---- pointer ----
+
+    void OnPointerDown(PointerEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        this.controller.PointerDown(e.OffsetX, e.OffsetY, e.ShiftKey);
+
+        // Focus is taken deliberately: the host element prevents the pointer's default action, which
+        // is what otherwise moves focus off the hidden input a few milliseconds later.
+        this.focusInput = true;
+    }
+
+    void OnPointerMove(PointerEventArgs e)
+    {
+        if (this.controller is null || (e.Buttons & 1) != 1)
+            return;
+
+        this.controller.PointerMove(e.OffsetX, e.OffsetY);
+    }
+
+    void OnPointerUp(PointerEventArgs e) => this.controller?.PointerUp();
+
+    void OnDoubleClick(MouseEventArgs e)
+    {
+        this.controller?.PointerDoubleClick(e.OffsetX, e.OffsetY);
+        this.focusInput = true;
+    }
+
+    void OnWheel(WheelEventArgs e)
+    {
+        if (this.controller is null || this.controller.IsEditingText)
+            return;
+
+        if (e.DeltaY > 0)
+            this.controller.Next();
+        else
+            this.controller.Previous();
+    }
+
+    void OnFocus()
+    {
+        this.focused = true;
+        this.canvas?.Invalidate();
+    }
+
+    void OnBlur()
+    {
+        this.focused = false;
+        this.canvas?.Invalidate();
+    }
+
+    // ---- text input ----
+
+    /// <summary>
+    /// The single entry point for inserted text.
+    /// </summary>
+    /// <remarks>
+    /// <c>beforeinput</c> rather than key events: it is the only event that reports IME composition,
+    /// autocorrect, dictation and paste as ordinary insertions.
+    /// </remarks>
+    [JSInvokable]
+    public Task HandleBeforeInput(string inputType, string? data)
+    {
+        if (this.controller is null || this.ReadOnly || !this.controller.IsEditingText)
+            return Task.CompletedTask;
+
+        switch (inputType)
+        {
+            case "insertText":
+            case "insertCompositionText":
+            case "insertFromPaste":
+            case "insertReplacementText":
+                if (!string.IsNullOrEmpty(data))
+                    this.controller.InsertText(data);
+
+                break;
+
+            case "insertParagraph":
+            case "insertLineBreak":
+                this.controller.InsertParagraph();
+                break;
+
+            case "deleteContentBackward":
+                this.controller.Backspace();
+                break;
+
+            case "deleteContentForward":
+                this.controller.Delete();
+                break;
+
+            default:
+                return Task.CompletedTask;
+        }
+
+        this.Repaint();
+        return Task.CompletedTask;
+    }
+
+    void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        var extend = e.ShiftKey;
+        var command = e.CtrlKey || e.MetaKey;
+        this.preventKeyDefault = true;
+
+        // Undo and redo work whether or not a caret is inside text — moving a shape is undoable too.
+        switch (e.Key)
+        {
+            case "z" when command:
+                if (e.ShiftKey)
+                    this.controller.Redo();
+                else
+                    this.controller.Undo();
+
+                this.Repaint();
+                return;
+
+            case "y" when command:
+                this.controller.Redo();
+                this.Repaint();
+                return;
+        }
+
+        if (!this.controller.IsEditingText)
+        {
+            switch (e.Key)
+            {
+                case "Escape":
+                    this.controller.ClearSelection();
+                    break;
+
+                case "Delete":
+                case "Backspace":
+                    this.controller.DeleteSelectedShape();
+                    this.Repaint();
+                    break;
+
+                case "Enter" when this.controller.SelectedShape >= 0:
+                    // Enter on a selected shape steps into its text, which is what PowerPoint's F2 does
+                    // and what a keyboard-only user needs, since they cannot double-click.
+                    this.controller.BeginTextEditing(0, 0);
+                    break;
+
+                case "ArrowRight" or "ArrowDown" or "PageDown" or " ":
+                    this.controller.Next();
+                    break;
+
+                case "ArrowLeft" or "ArrowUp" or "PageUp":
+                    this.controller.Previous();
+                    break;
+
+                case "Home": this.controller.Index = 0; break;
+                case "End": this.controller.Index = this.controller.Count - 1; break;
+
+                default:
+                    this.preventKeyDefault = false;
+                    break;
+            }
+
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case "ArrowLeft": this.controller.MoveLeft(extend); break;
+            case "ArrowRight": this.controller.MoveRight(extend); break;
+            case "ArrowUp": this.controller.MoveUp(extend); break;
+            case "ArrowDown": this.controller.MoveDown(extend); break;
+            case "Home": this.controller.MoveToLineStart(extend); break;
+            case "End": this.controller.MoveToLineEnd(extend); break;
+
+            case "Escape":
+                this.controller.EndTextEditing();
+                break;
+
+            case "Tab":
+                this.controller.ShiftLevel(extend ? -1 : 1);
+                this.Repaint();
+                break;
+
+            case "a" when command:
+                this.controller.SelectAll();
+                break;
+
+            case "b" when command:
+                this.controller.ToggleBold();
+                this.Repaint();
+                break;
+
+            case "i" when command:
+                this.controller.ToggleItalic();
+                this.Repaint();
+                break;
+
+            case "u" when command:
+                this.controller.ToggleUnderline();
+                this.Repaint();
+                break;
+
+            default:
+                // Everything else — printable characters included — arrives through beforeinput,
+                // which is what makes IME and dictation work. Swallowing it here breaks both.
+                this.preventKeyDefault = false;
+                break;
+        }
+    }
+
+    string InputStyle
+    {
+        get
+        {
+            if (this.controller?.CaretRect() is not { } caret)
+                return "left:-9999px;top:0";
+
+            // Parked at the caret so the IME composition window appears in the right place.
+            return $"left:{Css(caret.X)}px;top:{Css(caret.Y)}px;height:{Css(Math.Max(12, caret.Height))}px";
+        }
+    }
+
+    static string Css(double value) => value.ToString("0.##", Culture);
+
+    public async Task FocusAsync()
+    {
+        if (this.inputModule is null)
+            return;
+
+        try
+        {
+            await this.inputModule.InvokeVoidAsync("focus", this.input);
+        }
+        catch (JSException ex)
+        {
+            // Reported rather than swallowed: a focus that quietly fails looks exactly like an editor
+            // that has stopped accepting input, with nothing anywhere to say why.
+            Console.Error.WriteLine($"[Shiny.Office] Could not focus the slide editor: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Repaints after an action that may not have changed the deck.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately does not raise <c>DeckChanged</c>: every real edit already reports through the
+    /// controller's <c>Edited</c> event, and raising it here as well made one keystroke look like two.
+    /// </remarks>
+    void Repaint()
+    {
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+            }
+            catch (Exception)
+            {
+                this.dpr = 1;
+            }
+
+            if (this.dpr <= 0)
+                this.dpr = 1;
+
+            this.canvas?.Invalidate();
+
+            if (await OfficeFonts.EnsureLoadedAsync(this.Js))
+            {
+                this.canvas?.Invalidate();
+                this.StateHasChanged();
+            }
+
+            await this.AttachInputAsync();
+        }
+
+        if (this.focusInput)
+        {
+            this.focusInput = false;
+            await this.FocusAsync();
+        }
+    }
+
+    async Task AttachInputAsync()
+    {
+        try
+        {
+            this.selfReference = DotNetObjectReference.Create(this);
+
+            // The same module the document editor uses — it only attaches beforeinput, which is
+            // exactly what this needs too.
+            this.inputModule = await this.Js.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls.Office/documentEditor.js");
+
+            this.inputHandle = await this.inputModule.InvokeAsync<IJSObjectReference>("attach", this.input, this.selfReference);
+        }
+        catch (Exception ex)
+        {
+            // Prerendering or a host without JS interop leaves the editor navigable but unable to
+            // accept text. Reported rather than swallowed: silence is indistinguishable from an editor
+            // that simply ignores the keyboard.
+            Console.Error.WriteLine($"[Shiny.Office] Slide text input is unavailable: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (this.controller is not null)
+        {
+            this.controller.Changed -= this.OnControllerChanged;
+            this.controller.Edited -= this.OnEdited;
+        }
+
+        try
+        {
+            if (this.inputModule is not null && this.inputHandle is not null)
+                await this.inputModule.InvokeVoidAsync("detach", this.inputHandle);
+
+            if (this.inputModule is not null)
+                await this.inputModule.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone; there is nothing left to detach from.
+        }
+
+        this.selfReference?.Dispose();
+        this.painter?.Dispose();
+        this.measurer?.Dispose();
+    }
+}

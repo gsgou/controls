@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!--
+            Platform heads exist for one reason: the spell checker. Everything else in this package is
+            SkiaSharp and MAUI, which need no platform code — but a spell checker has to be the
+            platform's own, because it is the user's dictionary and their learned words.
+        -->
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-android;$(BaseTargetFramework)-maccatalyst;$(BaseTargetFramework)-macos</TargetFrameworks>
+        <!--
+            Windows packaging (MakePri) only runs on Windows, so the Windows TFM is normally added only
+            there. ForceWindowsTfm=true adds it anyway, which is how Platforms/Windows gets
+            *compile*-verified off Windows:
+
+                dotnet build -p:ForceWindowsTfm=true -f net10.0-windows10.0.19041.0 -t:Compile
+        -->
+        <TargetFrameworks Condition="'$(ForceWindowsTfm)' == 'true' Or $([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);$(BaseTargetFramework)-windows10.0.19041.0</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Maui.Controls.Office</RootNamespace>
+        <Description>Spreadsheet, document and slide viewers and editors for .NET MAUI, rendering .xlsx, .docx and .pptx on a SkiaSharp canvas.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls"/>
+        <PackageReference Include="SkiaSharp.Views.Maui.Controls"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Office.Shared\Shiny.Controls.Office.Shared.csproj"/>
+        <ProjectReference Include="..\Shiny.Controls.Office.Skia\Shiny.Controls.Office.Skia.csproj"/>
+
+        <!-- DocumentEditorView composes the core package's FontPickerButton and FontSizePickerButton. -->
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj"/>
+    </ItemGroup>
+
+    <!--
+        Platforms/** is managed here rather than left to SingleProject, which knows only the folder
+        names MAUI itself defines: one Apple folder serves iOS and Mac Catalyst instead of two copies
+        of the same UITextChecker code, and net10.0-macos (AppKit) is not a platform it strips for.
+        Mirrors src/Shiny.Maui.Controls.Camera.
+    -->
+    <ItemGroup>
+        <Compile Remove="Platforms/**/*.cs"/>
+        <None Include="Platforms/**/*.cs"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+        <Compile Include="Platforms/Apple/**/*.cs"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+        <Compile Include="Platforms/AppKit/**/*.cs"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <Compile Include="Platforms/Android/**/*.cs"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'windows'">
+        <Compile Include="Platforms/Windows/**/*.cs"/>
+    </ItemGroup>
+
+    <!--
+        MAUI's SingleProject targets tag every Platforms/**/*.cs with ExcludeFromCurrentConfiguration
+        and only re-enable folders named after platforms it knows, which Apple and AppKit are not.
+    -->
+    <Target Name="_ReincludeNonMauiPlatforms" BeforeTargets="_MauiRemovePlatformCompileItems" Condition="'$(SingleProject)' == 'true'">
+        <ItemGroup>
+            <Compile Update="Platforms/Apple/**/*.cs" Condition="'$(TargetPlatformIdentifier)' == 'ios' Or '$(TargetPlatformIdentifier)' == 'maccatalyst'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+            <Compile Update="Platforms/AppKit/**/*.cs" Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+                <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+            </Compile>
+        </ItemGroup>
+    </Target>
+</Project>

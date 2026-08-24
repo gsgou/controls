@@ -28,6 +28,7 @@
                   xmlns:toast="clr-namespace:Sample.Features.Toast"
                   xmlns:dialogs="clr-namespace:Sample.Features.Dialogs"
                   xmlns:datagrid="clr-namespace:Sample.Features.DataGrid"
+                  xmlns:office="clr-namespace:Sample.Features.Office"
                   xmlns:feedback="clr-namespace:Sample.Features.Feedback"
                   xmlns:textentry="clr-namespace:Sample.Features.TextEntry"
                   xmlns:overlay="clr-namespace:Sample.Features.Overlay"
@@ -346,6 +347,12 @@
         </FlyoutItem.FlyoutIcon>
         <ShellContent Title="Grid" ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
         <ShellContent Title="Tree" ContentTemplate="{DataTemplate datagrid:TreeDataGridPage}" Route="treedatagrid" />
+        <ShellContent Title="Formatting" ContentTemplate="{DataTemplate datagrid:DataGridFormattingPage}" Route="datagridformatting" />
+        <ShellContent Title="Spreadsheet" ContentTemplate="{DataTemplate office:SpreadsheetPage}" Route="spreadsheet" />
+        <ShellContent Title="Document" ContentTemplate="{DataTemplate office:DocumentViewerPage}" Route="documentviewer" />
+        <ShellContent Title="Doc Editor" ContentTemplate="{DataTemplate office:DocumentEditorPage}" Route="documenteditor" />
+        <ShellContent Title="Slides" ContentTemplate="{DataTemplate office:SlideViewerPage}" Route="slideviewer" />
+        <ShellContent Title="Slide Editor" ContentTemplate="{DataTemplate office:SlideEditorPage}" Route="slideeditor" />
     </FlyoutItem>
 
     <FlyoutItem Title="Docking">

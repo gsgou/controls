@@ -97,3 +97,59 @@ public enum DataGridExpandMode
     /// <summary>Any number of rows can be expanded at the same time.</summary>
     Multiple
 }
+
+/// <summary>
+/// A display preset for a databound column - the common formats you would otherwise reach for a
+/// custom cell template to get. Set <see cref="DataGridColumn.StringFormat"/> instead (or as well)
+/// for a raw .NET format string; an explicit format string always wins over the preset.
+/// </summary>
+public enum DataGridColumnFormat
+{
+    /// <summary>No preset - <c>StringFormat</c> if given, otherwise <c>ToString()</c>.</summary>
+    None,
+
+    /// <summary>Plain text. Same output as <see cref="None"/>, but pins left alignment under <see cref="DataGridCellAlignment.Auto"/>.</summary>
+    Text,
+
+    /// <summary>Grouped number ("N"), e.g. <c>1,234.5</c>. <see cref="DataGridColumn.Decimals"/> sets the places.</summary>
+    Number,
+
+    /// <summary>Currency ("C") in the column's culture, e.g. <c>$1,234.00</c>.</summary>
+    Currency,
+
+    /// <summary>Percent ("P"). Note .NET multiplies by 100 - <c>0.15</c> renders as <c>15%</c>.</summary>
+    Percent,
+
+    /// <summary>Short date ("d").</summary>
+    Date,
+
+    /// <summary>Short time ("t").</summary>
+    Time,
+
+    /// <summary>General date + short time ("g").</summary>
+    DateTime,
+
+    /// <summary>Byte count scaled to B/KB/MB/GB/TB, e.g. <c>1.2 MB</c>.</summary>
+    FileSize,
+
+    /// <summary>A glyph (or <see cref="DataGridColumn.TrueText"/>/<see cref="DataGridColumn.FalseText"/>) instead of "True"/"False".</summary>
+    Boolean,
+
+    /// <summary>The enum member's <c>[Description]</c>, else its name split on PascalCase ("InProgress" -> "In Progress").</summary>
+    Enum
+}
+
+/// <summary>Horizontal alignment of a column's cells, header and footer.</summary>
+public enum DataGridCellAlignment
+{
+    /// <summary>Right-align quantities (number/currency/percent/file-size and numeric CLR types), left-align everything else.</summary>
+    Auto,
+
+    /// <summary>Leading edge (left in LTR).</summary>
+    Start,
+
+    Center,
+
+    /// <summary>Trailing edge (right in LTR).</summary>
+    End
+}

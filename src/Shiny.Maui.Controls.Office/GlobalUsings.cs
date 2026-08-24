@@ -1,0 +1,10 @@
+global using Microsoft.Maui;
+global using Microsoft.Maui.Controls;
+global using Microsoft.Maui.Graphics;
+global using Microsoft.Maui.Layouts;
+global using Shiny.Controls.Office.Spreadsheet;
+global using Shiny.Controls.Office.Spreadsheet.View;
+global using Shiny.Controls.Office.Document;
+global using Shiny.Controls.Office.Presentation;
+global using Shiny.Controls.Office.Skia;
+global using Shiny.Controls.Office.Spelling;

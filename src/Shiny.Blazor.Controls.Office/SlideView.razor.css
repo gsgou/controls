@@ -1,0 +1,21 @@
+.shiny-slides {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* SKCanvasView renders the <canvas> itself, so this rule has to cross a component boundary.
+   Without ::deep the scope attribute never lands on that element, the rule silently does nothing,
+   and the canvas keeps its intrinsic 300x150 default. */
+.shiny-slides ::deep canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}

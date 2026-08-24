@@ -39,6 +39,15 @@ public static class Catalog
             new("docking", "Docking", "▨", "Visual-Studio-style tear-off tool windows")
         ]),
 
+        new("Office Documents", "#34D399",
+        [
+            new("spreadsheet", "Spreadsheet", "▩", "Open, edit and recalculate .xlsx workbooks"),
+            new("document-viewer", "Document Viewer", "▤", "Read .docx with reflowed layout and an outline"),
+            new("document-editor", "Document Editor", "✎", "Edit .docx — bare surface or with the toolbar"),
+            new("slide-viewer", "Slide Viewer", "◳", "Read .pptx as fitted slides or a thumbnail grid"),
+            new("slide-editor", "Slide Editor", "✦", "Edit .pptx — move shapes, edit their text")
+        ]),
+
         new("Panels & Overlays", "#22D3EE",
         [
             new("sheet", "Sheet", "▣", "Bottom sheet with detents and header peek"),

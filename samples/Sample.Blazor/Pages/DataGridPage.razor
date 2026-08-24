@@ -192,6 +192,74 @@
 </section>
 
 <section class="demo-section">
+    <h2>Column formatting</h2>
+    <p>
+        Everything below is a plain <code>PropertyColumn</code> &mdash; no <code>CellTemplate</code> anywhere.
+        <code>DisplayAs</code> picks a preset (<code>Currency</code>, <code>Percent</code>, <code>Date</code>,
+        <code>FileSize</code>, <code>Boolean</code>, <code>Enum</code>), <code>Decimals</code> tunes it,
+        <code>NullText</code> covers the gaps, <code>Prefix</code>/<code>Suffix</code> decorate the value,
+        and <code>CellStyle</code> colours the cell from the row. Numeric columns right-align on their own,
+        and the header follows them.
+    </p>
+    <DataGrid TItem="Person"
+              Items="people"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Bordered="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="120px" />
+
+            @* Auto alignment sends this right; Decimals trims the trailing ".00". *@
+            <PropertyColumn Property="x => x.Salary" DisplayAs="DataGridColumnFormat.Currency" Decimals="0" Width="120px" />
+
+            @* .NET's "P" multiplies by 100, so 0.61 renders as 61%. *@
+            <PropertyColumn Property="x => x.Utilisation" Title="Util." DisplayAs="DataGridColumnFormat.Percent" Decimals="0" Width="90px" />
+
+            <PropertyColumn Property="x => x.MailboxBytes" Title="Mailbox" DisplayAs="DataGridColumnFormat.FileSize" Width="110px" />
+
+            @* Inactive people have no review date - NullText is what stops the cell going blank. *@
+            <PropertyColumn Property="x => x.LastReview" Title="Reviewed"
+                            DisplayAs="DataGridColumnFormat.Date" NullText="—" Width="120px" />
+
+            @* Description attribute wins; without one the member name is split on PascalCase. *@
+            <PropertyColumn Property="x => x.State" Title="State" DisplayAs="DataGridColumnFormat.Enum" Width="140px" />
+
+            <PropertyColumn Property="x => x.Active" Title="On" DisplayAs="DataGridColumnFormat.Boolean"
+                            Alignment="DataGridCellAlignment.Center" Width="60px" />
+
+            <PropertyColumn Property="x => x.YearsOfService" Title="Tenure" Suffix=" yrs" Width="90px" />
+
+            @* TextFormatter is the escape hatch that still is not a template. *@
+            <PropertyColumn Property="x => x.Age" Title="Band" Width="90px"
+                            TextFormatter="@(a => a < 40 ? "Junior" : a < 50 ? "Senior" : "Principal")" />
+        </Columns>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
+    <h2>Conditional cell styling &amp; wrapping</h2>
+    <p>
+        <code>CellStyle</code> takes the row and returns colours/weight for that one cell, so "highlight
+        the underpaid" and "flag a missing review" stop being reasons to write a template.
+        <code>Wrap</code> plus <code>MaxLines</code> lets one column breathe while the rest stay on a line.
+    </p>
+    <DataGrid TItem="Person" Items="people" SortMode="DataGridSortMode.Single" Striped="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="110px" />
+            <PropertyColumn Property="x => x.Salary" DisplayAs="DataGridColumnFormat.Currency" Decimals="0" Width="130px"
+                            CellStyle="@(p => p.Salary < 150000
+                                ? new DataGridCellStyle { TextColor = "var(--shiny-color-error, #c62828)", Bold = true }
+                                : null)" />
+            <PropertyColumn Property="x => x.LastReview" Title="Reviewed" DisplayAs="DataGridColumnFormat.Date"
+                            NullText="Overdue" Width="130px"
+                            CellStyle="@(p => p.LastReview is null
+                                ? new DataGridCellStyle { BackgroundColor = "rgba(245, 158, 11, .18)", Bold = true }
+                                : null)" />
+            <PropertyColumn Property="x => x.Notes" Title="Notes" Wrap="true" MaxLines="2" />
+        </Columns>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
     <h2>Detail (breakdown) rows</h2>
     <p>
         A <code>RowDetailTemplate</code> adds a caret column at the leading edge; expanding a row opens a
@@ -357,6 +425,14 @@
 
     void OnSaved(Person p) => status = $"Saved {p.FirstName} {p.LastName}";
 
+    public enum ReviewState
+    {
+        [System.ComponentModel.Description("Signed off")]
+        SignedOff,
+
+        AwaitingReview
+    }
+
     public class Person
     {
         public string FirstName { get; set; } = "";
@@ -372,6 +448,16 @@
         public DateTime StartDate { get; set; }
         public string Region { get; set; } = "";
         public string Extension { get; set; } = "";
+
+        // Derived rather than seeded, so the formatting demo below exercises every preset (including a
+        // genuine null) without another eight lines of literals per row.
+        public double Utilisation => (this.Age % 30 + 55) / 100d;
+        public long MailboxBytes => (long)this.Salary * 6_400;
+        public DateTime? LastReview => this.Active ? this.StartDate.AddYears(this.Age % 4 + 1) : null;
+        public ReviewState State => this.Active ? ReviewState.SignedOff : ReviewState.AwaitingReview;
+        public int YearsOfService => DateTime.Today.Year - this.StartDate.Year;
+        public string Notes
+            => $"{this.FirstName} reports to {this.Manager} out of {this.Location}, on cost centre {this.CostCentre} in the {this.Region} region.";
 
         public static List<Person> Sample() =>
         [

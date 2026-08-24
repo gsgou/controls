@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -18,6 +18,8 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![MAUI MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MediaElement.svg?label=Shiny.Maui.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Maui.Controls.MediaElement)
 [![MAUI MediaElement Linux NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.MediaElement.Linux.svg?label=Shiny.Maui.Controls.MediaElement.Linux)](https://www.nuget.org/packages/Shiny.Maui.Controls.MediaElement.Linux)
 [![Blazor MediaElement NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.MediaElement.svg?label=Shiny.Blazor.Controls.MediaElement)](https://www.nuget.org/packages/Shiny.Blazor.Controls.MediaElement)
+[![MAUI Office NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Office.svg?label=Shiny.Maui.Controls.Office)](https://www.nuget.org/packages/Shiny.Maui.Controls.Office)
+[![Blazor Office NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Office.svg?label=Shiny.Blazor.Controls.Office)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Office)
 [![Keyframe Export NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Keyframe.Export.svg?label=Shiny.Maui.Controls.Keyframe.Export)](https://www.nuget.org/packages/Shiny.Maui.Controls.Keyframe.Export)
 [![Motion Icons NuGet](https://img.shields.io/nuget/v/Shiny.Controls.MotionIcons.Shared.svg?label=Shiny.Controls.MotionIcons.Shared)](https://www.nuget.org/packages/Shiny.Controls.MotionIcons.Shared)
 [![MAUI Terminal Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Terminal.svg?label=Shiny.Maui.Controls.Themes.Terminal)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Terminal)
@@ -842,6 +844,167 @@ Plays local and remote **audio and video** on iOS, Android, Windows, macOS AppKi
 
 Blazor mirrors all of it as `[Parameter]`s with `On*` `EventCallback`s, and adds `Poster`. Its video size is
 exposed as the `VideoWidth`/`VideoHeight` ints the browser reports, with `OnVideoSizeChanged`. **Linux** ships separately as `Shiny.Maui.Controls.MediaElement.Linux` — there is no Linux target framework, so the GTK4 backend can't live in the main package — and is registered with `UseShinyMediaElementGtk()` instead of `UseShinyMediaElement()`; decoding needs `gtk4-media-gstreamer` (Fedora/Arch) or `libgtk-4-media-gstreamer` (Debian/Ubuntu) installed.
+
+### Spreadsheet
+
+> Separate packages: `Shiny.Maui.Controls.Office` and `Shiny.Blazor.Controls.Office`, over the shared
+> `Shiny.Controls.Office.Shared` kernel and `Shiny.Controls.Office.Skia` renderer.
+
+Opens, renders and edits `.xlsx` workbooks. Both hosts drive the same controller and paint with the
+same SkiaSharp routine, so MAUI and Blazor are not two implementations kept in step — they are one.
+
+```bash
+dotnet add package Shiny.Maui.Controls.Office     # or Shiny.Blazor.Controls.Office
+```
+
+MAUI needs SkiaSharp registered:
+
+```csharp
+builder.UseMauiApp<App>().UseShinyControls().UseSkiaSharp();
+```
+
+```xml
+<office:SpreadsheetView Workbook="{Binding Workbook}" SheetName="Budget" />
+```
+
+```razor
+<div style="height:420px">
+    <SpreadsheetView Workbook="workbook" Theme="SpreadsheetTheme.Dark" />
+</div>
+```
+
+```csharp
+using var workbook = await Workbook.OpenAsync("book.xlsx");   // or Workbook.Create("Sheet1")
+
+workbook.Execute(new SetCellValueCommand("Budget", CellRef.Parse("B2"), CellValue.FromNumber(42)));
+workbook.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse("D2"), "B2*C2"));
+workbook.Undo.Undo();
+
+await workbook.SaveAsync();
+```
+
+| Capability | Notes |
+|---|---|
+| Rendering | Virtualized over all 1,048,576 rows; frozen panes, merged cells, number formats, fonts, fills, alignment, theme colours with tint |
+| Editing | Cell values and formulas, range clear, column/row resize, range selection, in-cell editing through a native `Entry` / `<input>` |
+| Undo | Transactional, with typing-run coalescing; a range clear is one step |
+| Formulas | ~80 functions, dependency-ordered incremental recalculation, circular-reference detection |
+| Round-trip | Edits are surgical. An unmodified workbook saves byte-identical; macros, tracked changes, pivot caches and custom XML survive untouched |
+| Reporting | `UnsupportedFeatureCollector` names anything in a document the editor cannot show or edit |
+
+**Constraints.** Blazor is **WebAssembly only** (a Server round-trip per keystroke is unusable, and
+SkiaSharp on WASM needs the `wasm-tools` workload). MAUI requires `UseSkiaSharp()`. Inserting and
+deleting rows and columns is deliberately not implemented — it requires rewriting references across
+formulas, merged cells, conditional formatting, defined names, data validation, charts and tables.
+
+### Document Editor
+
+> Same packages as the viewers. Two controls: `DocumentEditor` is the lone editing surface;
+> `DocumentEditorView` is the same thing plus a formatting toolbar.
+
+```csharp
+using var document = await WordDocument.OpenAsync("report.docx", editable: true);
+```
+
+```razor
+<div style="height:520px">
+    <DocumentEditorView Document="document" DocumentChanged="OnChanged" />
+</div>
+```
+
+```xml
+<office:DocumentEditorView Document="{Binding Document}" />
+```
+
+Edits are surgical on the OOXML runs: a run is split only where an edit actually needs a boundary and
+is never rebuilt, so the language, proofing state and revision marks a run carries survive a
+formatting change. An unedited document still saves byte-identical.
+
+**The toolbar is asymmetric on purpose.** MAUI has `FontPickerButton`/`FontSizePickerButton` but no
+toolbar; Blazor has `ShinyToolbar` but no font picker. Each host composes what it actually has — MAUI a
+row of primitives around the two pickers, Blazor a `ShinyToolbar` with plain selects. The API and
+behaviour are the same on both.
+
+| | Blazor | MAUI |
+|---|---|---|
+| Typing, IME, dictation, paste | ✅ via `beforeinput` | ✅ via a hidden `Entry` |
+| Click, drag-select, toolbar commands | ✅ | ✅ |
+| Physical keys (arrows, shortcuts) | ✅ | ⚠️ route through `HandleKey` — MAUI has no portable key-down event |
+
+⚠️ Formatting with an **empty selection** updates the toolbar state only, not the document. Word
+applies it to whatever is typed next; that needs a pending-format concept the editor does not have yet.
+
+**Spell check uses the platform's own dictionary.** On MAUI nothing has to be registered — referencing
+the package installs `UITextChecker` (iOS, Mac Catalyst), `NSSpellChecker` (macOS), Android's
+text-services session, or the Windows `ISpellChecker` COM API. It is the *user's* dictionary, so words
+they taught the keyboard are already known and **Add to dictionary** writes back to it. Misspellings
+get a red wavy underline; right-click or long-press for corrections, Ignore and Add to dictionary, and
+applying a correction is one undo step.
+
+The browser has no equivalent API — it spell-checks its own editable elements and exposes neither
+results nor suggestions to script — so **Blazor defaults to no checking** and takes one you supply.
+Either way it is replaceable, per control or globally:
+
+```razor
+<DocumentEditorView Document="document" SpellChecker="myChecker" />
+```
+
+```csharp
+SpellCheckers.Default = new MyChecker();   // derive from SpellCheckerBase; two methods
+```
+
+Checking is per paragraph, cached on the paragraph's text, limited to what is on screen and debounced,
+so scrolling re-checks nothing and typing re-checks one paragraph.
+
+### Document & Slide Viewers
+
+> Same packages as the Spreadsheet: `Shiny.Maui.Controls.Office` / `Shiny.Blazor.Controls.Office`.
+
+`DocumentView` renders `.docx` and `SlideView` renders `.pptx`. Both are **read-only** — editing those
+two formats is a later phase.
+
+```csharp
+using var document = await WordDocument.OpenAsync("report.docx");
+using var deck = await SlideDeck.OpenAsync("deck.pptx");
+```
+
+```xml
+<office:DocumentView Document="{Binding Document}" Zoom="1.0" />
+<office:SlideView Deck="{Binding Deck}" Mode="Single" />
+```
+
+```razor
+<div style="height:520px"><DocumentView Document="document" /></div>
+<div style="height:460px"><SlideView Deck="deck" @bind-SlideIndex="index" @bind-Mode="mode" /></div>
+```
+
+**Word reflows; it does not paginate.** Content is laid out as one continuous column at the control's
+width, so there are no pages, headers or footers. That is deliberate: a viewer without a full
+pagination engine puts page breaks in the wrong places, which reads as a bug rather than a gap. It
+resolves the whole style chain — document defaults, the named style with its entire `basedOn`
+ancestry, then direct formatting — along with list numbering from `numbering.xml`, tables with column
+spans, vertical merges and shading, inline images, and an `Outline()` for navigation.
+
+**PowerPoint scales; it does not reflow.** Slides are fixed-size artboards, so the view fits and
+letterboxes them. Shapes arrive resolved through slide → layout → master, which matters because a
+title placeholder typically carries text and nothing else. ~20 preset geometries, solid and gradient
+fills, outlines, theme colours with their `lumMod`/`lumOff`/`shade`/`tint` modifiers applied, per-level
+text styles, speaker notes, pictures, tables, and a scrolling thumbnail-grid mode.
+
+**Fonts are bundled on Blazor.** `Shiny.Blazor.Controls.Office` ships Carlito and Caladea (SIL OFL
+1.1, ~1 MB compressed), metric-compatible with Calibri and Cambria, loaded automatically on first
+render. SkiaSharp on WebAssembly has no access to system fonts and returns a wrong-but-non-null
+fallback for every request, so without them every document renders in a single monospace face. MAUI
+uses the platform's own fonts and needs no bundle.
+
+Both preserve the package exactly — opening and saving is byte-identical — and both report what they
+could not draw:
+
+```csharp
+var collector = new UnsupportedFeatureCollector();
+using var document = await WordDocument.OpenAsync(path, collector);
+// charts, SmartArt, footnotes, comments, headers/footers, custom geometry...
+```
 
 ### ChatView
 
@@ -2464,7 +2627,9 @@ toolbar quick-search), **grouping** with expandable groups, footer/group **aggre
 (cell + form), **detail ("breakdown") rows**, a **tree/hierarchy mode** (`TreeDataGrid`) with lazy child
 loading, **paging**, **virtualization**, column **resize/reorder**, **frozen columns** and a
 frozen (sticky) header, loading + empty states, a `ServerData` delegate for server-side data, and
-density/striped/bordered/hover styling. Colors follow the theme tokens.
+density/striped/bordered/hover styling, and **column formatting** - display presets, alignment, a
+null placeholder, prefix/suffix, wrapping and conditional per-cell styling, none of which need a cell
+template. Colors follow the theme tokens.
 
 ```razor
 @* Blazor *@
@@ -2478,8 +2643,11 @@ density/striped/bordered/hover styling. Colors follow the theme tokens.
     <Columns>
         <PropertyColumn Property="x => x.FirstName" Title="First"
                         Width="25%" MinWidth="80px" MaxWidth="260px" />
-        <PropertyColumn Property="x => x.Age" Format="N0" Width="120px" />
-        <PropertyColumn Property="x => x.Salary" Format="C0" Width="180px" />
+        <PropertyColumn Property="x => x.Age" StringFormat="N0" Width="120px" />
+        <PropertyColumn Property="x => x.Salary" DisplayAs="DataGridColumnFormat.Currency"
+                        Decimals="0" Width="180px"
+                        CellStyle="@(p => p.Salary < 100000 ? new DataGridCellStyle { TextColor = "#c62828" } : null)" />
+        <PropertyColumn Property="x => x.Reviewed" DisplayAs="DataGridColumnFormat.Date" NullText="—" />
         <TemplateColumn Title="Status" Sortable="false" Resizable="false" Width="140px">
             <CellTemplate><Pill Text="@(context.Item.Active ? "Active" : "Inactive")" /></CellTemplate>
         </TemplateColumn>
@@ -2501,11 +2669,15 @@ density/striped/bordered/hover styling. Colors follow the theme tokens.
                           MinWidth="90" MaxWidth="260" />
     <shiny:DataGridColumn Title="Age" PropertyName="Age" Width="Auto" />
     <shiny:DataGridColumn Title="Department" PropertyName="Department" WidthPercent="30" />
-    <shiny:DataGridColumn Title="Salary" PropertyName="Salary" StringFormat="{}{0:C0}" Width="*">
+    <shiny:DataGridColumn Title="Salary" PropertyName="Salary"
+                          DisplayAs="Currency" Decimals="0" Width="*"
+                          CellStyle="{Binding SalaryStyle}">
         <shiny:DataGridColumn.Aggregate>
             <shiny:DataGridAggregateDefinition Type="Sum" Format="C0" />
         </shiny:DataGridColumn.Aggregate>
     </shiny:DataGridColumn>
+    <shiny:DataGridColumn Title="Reviewed" PropertyName="LastReview"
+                          DisplayAs="Date" NullText="—" Width="*" />
     <shiny:DataGridTemplateColumn Title="Status" Width="110" Editable="False"
                                   Resizable="False" Frozen="End">
         <shiny:DataGridTemplateColumn.CellTemplate>
@@ -2530,6 +2702,38 @@ when set: outside `HorizontalScroll` it resolves to a star of the same factor �
 percentage, since the Grid divides the available width in the ratio of the factors — and under
 `HorizontalScroll` it resolves against the scroller's own width, so percentages summing past 100 are what
 make the grid scroll. Percentages are the way to write one layout that reads the same on both hosts.
+
+**Column formatting** — the ordinary reasons to write a cell template, offered as column properties
+instead. `DisplayAs` picks a preset — `Currency`, `Percent`, `Number`, `Date`, `Time`, `DateTime`,
+`FileSize`, `Boolean` (a glyph, or your own `TrueText`/`FalseText`), `Enum` (its `[Description]`, else
+its name split on PascalCase) — and `Decimals` tunes the numeric ones. A raw .NET format string still
+works and wins over the preset: `StringFormat` on both hosts (MAUI also accepts the old
+`"{}{0:C0}"` binding dialect; Blazor's `Format` is a still-working alias). `NullText` covers a null or
+empty value, `Prefix`/`Suffix` decorate a real one, and `TextFormatter` takes the raw value and returns
+the string when none of that fits — all of it feeding one code path, so a cell, the quick-filter search
+index and a group header can no longer disagree about what a value reads as.
+
+`Alignment` (and `HeaderAlignment`, which follows it by default) defaults to `Auto`: quantities align
+right, everything else left. `Wrap` plus `MaxLines` lets one column breathe while the rest stay on a
+line. `CellStyle` takes the row item and returns colours/weight for that one cell — red negatives, an
+amber overdue cell — returning `null` to keep the themed default. It is evaluated when a row binds, so
+it follows list recycling but not a live property change on the item.
+
+```razor
+@* Blazor - colours are CSS, so a theme token works as well as a hex *@
+<PropertyColumn Property="x => x.Balance" DisplayAs="DataGridColumnFormat.Currency" Decimals="0"
+                NullText="—" Suffix=" USD"
+                CellStyle="@(a => a.Balance < 0
+                    ? new DataGridCellStyle { TextColor = "var(--shiny-color-error)", Bold = true }
+                    : null)" />
+```
+
+```xml
+<!-- MAUI - CellStyle/TextFormatter are bindable, so they come from the view model -->
+<shiny:DataGridColumn Title="Balance" PropertyName="Balance"
+                      DisplayAs="Currency" Decimals="0" NullText="—" Suffix=" USD"
+                      CellStyle="{Binding BalanceStyle}" />
+```
 
 **Column reordering** — **`DragDropColumnReordering`, off by default on both hosts**: drag a header onto
 another and a marker shows the edge it will land on; dropping to the right of a column puts it *after*

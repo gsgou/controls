@@ -1,0 +1,39 @@
+.shiny-spreadsheet {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: none;
+
+    /* The grid handles its own scrolling, so browser text selection would only ever fight it. */
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+/* SKCanvasView renders the <canvas> itself, so this rule has to cross a component boundary.
+   Without ::deep the scope attribute never lands on that element, the rule silently does nothing,
+   and the canvas keeps its intrinsic 300x150 default. */
+.shiny-spreadsheet ::deep canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.shiny-spreadsheet-editor {
+    position: absolute;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 3px;
+    border: 2px solid var(--shiny-spreadsheet-selection, #217a3c);
+    border-radius: 0;
+    background: var(--shiny-spreadsheet-editor-bg, #fff);
+    color: var(--shiny-spreadsheet-editor-fg, #1a1a1a);
+    font: inherit;
+    font-size: 11pt;
+    outline: none;
+
+    /* Sits above the canvas, which is why the painter skips the cell underneath it. */
+    z-index: 2;
+}

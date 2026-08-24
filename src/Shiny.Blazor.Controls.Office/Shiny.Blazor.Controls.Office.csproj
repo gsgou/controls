@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Blazor.Controls.Office</RootNamespace>
+        <Description>Spreadsheet viewer and editor for Blazor WebAssembly, rendering .xlsx on a SkiaSharp canvas.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web"/>
+        <PackageReference Include="SkiaSharp.Views.Blazor"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Office.Shared\Shiny.Controls.Office.Shared.csproj"/>
+        <ProjectReference Include="..\Shiny.Controls.Office.Skia\Shiny.Controls.Office.Skia.csproj"/>
+
+        <!-- DocumentEditorView composes the core package's ShinyToolbar. Without this reference the
+             element is not a component at all: Razor emits it as unknown markup and the toolbar
+             silently does not exist. -->
+        <ProjectReference Include="..\Shiny.Blazor.Controls\Shiny.Blazor.Controls.csproj"/>
+    </ItemGroup>
+</Project>

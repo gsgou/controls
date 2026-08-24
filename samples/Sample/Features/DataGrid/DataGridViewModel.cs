@@ -67,4 +67,24 @@ public partial class Person(string firstName, string lastName, int age, string d
 
     public string StatusText => this.Active ? "Active" : "Inactive";
     public PillType StatusPill => this.Active ? PillType.Success : PillType.Caution;
+
+    // Derived rather than seeded, so the formatting page can exercise every preset (including a
+    // genuine null) without another six constructor arguments.
+    public double Utilisation => (this.Age % 30 + 55) / 100d;
+    public long MailboxBytes => (long)this.Salary * 6_400;
+    public DateTime StartDate => new DateTime(2014, 1, 1).AddMonths(this.Age % 40 * 3);
+    public DateTime? LastReview => this.Active ? this.StartDate.AddYears(this.Age % 4 + 1) : null;
+    public ReviewState State => this.Active ? ReviewState.SignedOff : ReviewState.AwaitingReview;
+    public int YearsOfService => DateTime.Today.Year - this.StartDate.Year;
+
+    public string Notes
+        => $"{this.FirstName} {this.LastName} works in {this.Department} and has been with the company for {this.YearsOfService} years.";
+}
+
+public enum ReviewState
+{
+    [System.ComponentModel.Description("Signed off")]
+    SignedOff,
+
+    AwaitingReview
 }

@@ -1,0 +1,69 @@
+.lead {
+    color: var(--shiny-on-surface-variant, #666);
+    max-width: 60ch;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.btn {
+    padding: 6px 12px;
+    border: 1px solid var(--shiny-outline, #ccc);
+    border-radius: 6px;
+    background: var(--shiny-surface, #fff);
+    color: var(--shiny-on-surface, #1a1a1a);
+    cursor: pointer;
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.status {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--shiny-on-surface-variant, #666);
+}
+
+.formula-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--shiny-outline, #ccc);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: var(--shiny-surface-variant, #fafafa);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    min-height: 1.6em;
+}
+
+.formula-bar .address {
+    min-width: 5ch;
+    font-weight: 600;
+}
+
+.formula-bar .content {
+    color: var(--shiny-on-surface-variant, #555);
+}
+
+/* The grid paints to a canvas that fills its host, so the host needs an explicit height. */
+.sheet-host {
+    height: 420px;
+    border: 1px solid var(--shiny-outline, #ccc);
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+}
+
+.hint {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--shiny-on-surface-variant, #666);
+}

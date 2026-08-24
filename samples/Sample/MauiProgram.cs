@@ -1,3 +1,4 @@
+using SkiaSharp.Views.Maui.Controls.Hosting;
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Audio;
 using Sample.Features.Diagrams;
@@ -22,6 +23,8 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .AddAudio()
+            // Required by Shiny.Maui.Controls.Office: the spreadsheet grid paints onto a Skia surface.
+            .UseSkiaSharp()
             .UseShinyControls(cfg =>
             {
                 cfg.SetCustomFeedback<MyCustomFeedbackService>(); // haptic is installed by default, but we want more fun

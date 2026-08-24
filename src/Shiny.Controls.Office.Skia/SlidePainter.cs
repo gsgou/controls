@@ -1,0 +1,667 @@
+using Shiny.Controls.Office.Presentation;
+using Shiny.Controls.Office.Spreadsheet;
+using Shiny.Controls.Office.Text;
+using SkiaSharp;
+
+namespace Shiny.Controls.Office.Skia;
+
+public sealed record SlideTheme
+{
+    public static readonly SlideTheme Light = new();
+
+    /// <summary>
+    /// Dark mode darkens the surround only.
+    /// </summary>
+    /// <remarks>
+    /// A slide is a fixed artboard with authored colours, like a photograph — inverting it would show
+    /// the deck's own black text on a dark background and misrepresent what the author made. PowerPoint's
+    /// own dark mode leaves slides alone for the same reason. <see cref="SlideBackground"/> stays light
+    /// because it is only the fallback for a deck that specifies no background of its own.
+    /// </remarks>
+    public static readonly SlideTheme Dark = new()
+    {
+        Surround = new ArgbColor(255, 0x14, 0x14, 0x14),
+        Border = new ArgbColor(255, 0x44, 0x44, 0x44)
+    };
+
+    public ArgbColor Surround { get; init; } = new(255, 0x2B, 0x2B, 0x2E);
+    public ArgbColor SlideBackground { get; init; } = new(255, 255, 255, 255);
+    public ArgbColor DefaultText { get; init; } = new(255, 0x1A, 0x1A, 0x1A);
+    public ArgbColor Border { get; init; } = new(255, 0xBB, 0xBB, 0xBB);
+}
+
+public sealed record SlidePaintRequest
+{
+    public required Slide Slide { get; init; }
+
+    /// <summary>Slide dimensions in slide coordinates, before fitting.</summary>
+    public required double SlideWidth { get; init; }
+
+    public required double SlideHeight { get; init; }
+
+    /// <summary>Destination rectangle in viewport coordinates.</summary>
+    public required double DestinationX { get; init; }
+
+    public required double DestinationY { get; init; }
+    public required double DestinationWidth { get; init; }
+    public required double DestinationHeight { get; init; }
+
+    public SlideTheme Theme { get; init; } = SlideTheme.Light;
+    public float Scale { get; init; } = 1f;
+    public bool DrawBorder { get; init; } = true;
+
+    /// <summary>
+    /// The editor's chrome: selection frame, resize handles, text selection and caret.
+    /// </summary>
+    /// <remarks>
+    /// All in viewport coordinates, and drawn <em>outside</em> the slide's fit transform. Drawing a
+    /// handle inside it would scale the handle with the slide, so a zoomed-out deck would have grab
+    /// targets too small to hit.
+    /// </remarks>
+    public SlideEditorChrome? Chrome { get; init; }
+}
+
+/// <summary>The editor's overlay, in viewport coordinates.</summary>
+public sealed record SlideEditorChrome
+{
+    public (double X, double Y, double Width, double Height)? SelectionFrame { get; init; }
+
+    public IReadOnlyList<(double X, double Y, double Width, double Height)> Handles { get; init; } = [];
+
+    public IReadOnlyList<(double X, double Y, double Width, double Height)> TextSelection { get; init; } = [];
+
+    public (double X, double Y, double Width, double Height)? Caret { get; init; }
+
+    /// <summary>Drawn dashed when the shape is selected but its text is not being edited.</summary>
+    public bool IsEditingText { get; init; }
+
+    public ArgbColor Accent { get; init; } = new(255, 0x2F, 0x6F, 0xED);
+
+    public ArgbColor SelectionFill { get; init; } = new(90, 0x2F, 0x6F, 0xED);
+}
+
+/// <summary>
+/// Paints one slide, scaled to fit a destination rectangle.
+/// </summary>
+/// <remarks>
+/// Slides are fixed-size artboards, so unlike the reflowing document view this scales rather than
+/// re-lays-out. Everything inside is drawn in slide coordinates and a single transform does the fit,
+/// which keeps text proportions exactly as authored at any zoom.
+/// </remarks>
+public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
+{
+    readonly TextLayoutEngine layout = new(measurer);
+    readonly SKPaint fill = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
+    readonly SKPaint stroke = new() { IsAntialias = true, Style = SKPaintStyle.Stroke };
+    readonly Dictionary<int, SKImage?> images = new();
+
+    /// <summary>Space between a bullet glyph and the text it introduces.</summary>
+
+    public void Paint(SKCanvas canvas, SlidePaintRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(canvas);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var theme = request.Theme;
+        canvas.Save();
+        canvas.Scale(request.Scale);
+
+        var destination = new SKRect(
+            (float)request.DestinationX,
+            (float)request.DestinationY,
+            (float)(request.DestinationX + request.DestinationWidth),
+            (float)(request.DestinationY + request.DestinationHeight));
+
+        canvas.Save();
+        canvas.ClipRect(destination);
+        canvas.Translate(destination.Left, destination.Top);
+
+        var scaleX = request.SlideWidth <= 0 ? 1 : request.DestinationWidth / request.SlideWidth;
+        var scaleY = request.SlideHeight <= 0 ? 1 : request.DestinationHeight / request.SlideHeight;
+        canvas.Scale((float)scaleX, (float)scaleY);
+
+        this.PaintBackground(canvas, request, theme);
+
+        foreach (var shape in request.Slide.Shapes)
+            this.PaintShape(canvas, shape, theme);
+
+        canvas.Restore();
+
+        if (request.DrawBorder)
+        {
+            this.stroke.Color = ToSk(theme.Border);
+            this.stroke.StrokeWidth = 1;
+            canvas.DrawRect(destination, this.stroke);
+        }
+
+        if (request.Chrome is { } chrome)
+            this.PaintChrome(canvas, chrome);
+
+        canvas.Restore();
+    }
+
+    /// <summary>Draws the editor's selection frame, handles, text highlight and caret.</summary>
+    void PaintChrome(SKCanvas canvas, SlideEditorChrome chrome)
+    {
+        // Text highlight goes underneath the frame so the frame stays legible over it.
+        this.fill.Shader = null;
+        this.fill.Color = ToSk(chrome.SelectionFill);
+
+        foreach (var rect in chrome.TextSelection)
+            canvas.DrawRect(Rect(rect), this.fill);
+
+        if (chrome.SelectionFrame is { } frame)
+        {
+            this.stroke.Color = ToSk(chrome.Accent);
+            this.stroke.StrokeWidth = 1.5f;
+
+            // Dashed while the shape itself is selected, solid once the caret is inside its text -
+            // the same distinction PowerPoint draws, and the only cue that typing will go somewhere.
+            this.stroke.PathEffect?.Dispose();
+            this.stroke.PathEffect = chrome.IsEditingText
+                ? null
+                : SKPathEffect.CreateDash([4f, 3f], 0);
+
+            canvas.DrawRect(Rect(frame), this.stroke);
+
+            this.stroke.PathEffect?.Dispose();
+            this.stroke.PathEffect = null;
+        }
+
+        foreach (var handle in chrome.Handles)
+        {
+            var rect = Rect(handle);
+
+            this.fill.Color = SKColors.White;
+            canvas.DrawRect(rect, this.fill);
+
+            this.stroke.Color = ToSk(chrome.Accent);
+            this.stroke.StrokeWidth = 1.5f;
+            canvas.DrawRect(rect, this.stroke);
+        }
+
+        if (chrome.Caret is { } caret)
+        {
+            this.fill.Color = ToSk(chrome.Accent);
+            canvas.DrawRect(Rect(caret), this.fill);
+        }
+
+        static SKRect Rect((double X, double Y, double Width, double Height) r)
+            => new((float)r.X, (float)r.Y, (float)(r.X + r.Width), (float)(r.Y + r.Height));
+    }
+
+    void PaintBackground(SKCanvas canvas, SlidePaintRequest request, SlideTheme theme)
+    {
+        var bounds = new SKRect(0, 0, (float)request.SlideWidth, (float)request.SlideHeight);
+
+        this.fill.Color = ToSk(theme.SlideBackground);
+        this.fill.Shader = null;
+        canvas.DrawRect(bounds, this.fill);
+
+        if (request.Slide.Background.IsEmpty)
+            return;
+
+        this.ApplyFill(request.Slide.Background, bounds);
+        canvas.DrawRect(bounds, this.fill);
+        this.fill.Shader = null;
+    }
+
+    void PaintShape(SKCanvas canvas, SlideShape shape, SlideTheme theme)
+    {
+        var bounds = new SKRect((float)shape.X, (float)shape.Y, (float)(shape.X + shape.Width), (float)(shape.Y + shape.Height));
+
+        canvas.Save();
+
+        if (shape.Rotation != 0)
+            canvas.RotateDegrees((float)shape.Rotation, bounds.MidX, bounds.MidY);
+
+        // Flips are expressed as a scale about the shape's own centre.
+        if (shape.FlipHorizontal || shape.FlipVertical)
+        {
+            canvas.Translate(bounds.MidX, bounds.MidY);
+            canvas.Scale(shape.FlipHorizontal ? -1 : 1, shape.FlipVertical ? -1 : 1);
+            canvas.Translate(-bounds.MidX, -bounds.MidY);
+        }
+
+        if (shape.Image is { } image)
+        {
+            this.DrawImage(canvas, image, bounds);
+        }
+        else if (shape.Table is { } table)
+        {
+            this.PaintTable(canvas, table, bounds, theme);
+        }
+        else if (shape.Geometry != ShapeGeometry.None)
+        {
+            using var path = BuildPath(shape, bounds);
+
+            if (!shape.Fill.IsEmpty && shape.Geometry != ShapeGeometry.Line)
+            {
+                this.ApplyFill(shape.Fill, bounds);
+                canvas.DrawPath(path, this.fill);
+                this.fill.Shader = null;
+            }
+
+            if (shape.Outline is { } outline)
+            {
+                this.stroke.Color = ToSk(outline.Color);
+                this.stroke.StrokeWidth = (float)outline.Width;
+                this.stroke.PathEffect = outline.Dashed
+                    ? SKPathEffect.CreateDash([(float)outline.Width * 3, (float)outline.Width * 2], 0)
+                    : null;
+
+                canvas.DrawPath(path, this.stroke);
+                this.stroke.PathEffect?.Dispose();
+                this.stroke.PathEffect = null;
+            }
+        }
+
+        if (shape.Text is { } text)
+            this.PaintTextBody(canvas, text, bounds, theme);
+
+        canvas.Restore();
+    }
+
+    static SKPath BuildPath(SlideShape shape, SKRect bounds)
+    {
+        var path = new SKPath();
+        var w = bounds.Width;
+        var h = bounds.Height;
+
+        switch (shape.Geometry)
+        {
+            case ShapeGeometry.Ellipse:
+                path.AddOval(bounds);
+                break;
+
+            case ShapeGeometry.RoundedRectangle:
+                var radius = (float)(Math.Min(w, h) * shape.CornerRadius);
+                path.AddRoundRect(bounds, radius, radius);
+                break;
+
+            case ShapeGeometry.Triangle:
+                path.MoveTo(bounds.MidX, bounds.Top);
+                path.LineTo(bounds.Right, bounds.Bottom);
+                path.LineTo(bounds.Left, bounds.Bottom);
+                path.Close();
+                break;
+
+            case ShapeGeometry.RightTriangle:
+                path.MoveTo(bounds.Left, bounds.Top);
+                path.LineTo(bounds.Left, bounds.Bottom);
+                path.LineTo(bounds.Right, bounds.Bottom);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Diamond:
+                path.MoveTo(bounds.MidX, bounds.Top);
+                path.LineTo(bounds.Right, bounds.MidY);
+                path.LineTo(bounds.MidX, bounds.Bottom);
+                path.LineTo(bounds.Left, bounds.MidY);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Line:
+                // A connector's box encodes its direction; flips are applied by the caller.
+                path.MoveTo(bounds.Left, bounds.Top);
+                path.LineTo(bounds.Right, bounds.Bottom);
+                break;
+
+            case ShapeGeometry.RightArrow:
+                AddArrow(path, bounds, 0);
+                break;
+
+            case ShapeGeometry.LeftArrow:
+                AddArrow(path, bounds, 180);
+                break;
+
+            case ShapeGeometry.UpArrow:
+                AddArrow(path, bounds, 270);
+                break;
+
+            case ShapeGeometry.DownArrow:
+                AddArrow(path, bounds, 90);
+                break;
+
+            case ShapeGeometry.Pentagon:
+                AddPolygon(path, bounds, 5, -90);
+                break;
+
+            case ShapeGeometry.Hexagon:
+                AddPolygon(path, bounds, 6, 0);
+                break;
+
+            case ShapeGeometry.Star5:
+                AddStar(path, bounds, 5);
+                break;
+
+            case ShapeGeometry.Chevron:
+                var notch = w * 0.25f;
+                path.MoveTo(bounds.Left, bounds.Top);
+                path.LineTo(bounds.Right - notch, bounds.Top);
+                path.LineTo(bounds.Right, bounds.MidY);
+                path.LineTo(bounds.Right - notch, bounds.Bottom);
+                path.LineTo(bounds.Left, bounds.Bottom);
+                path.LineTo(bounds.Left + notch, bounds.MidY);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Parallelogram:
+                var slant = w * 0.2f;
+                path.MoveTo(bounds.Left + slant, bounds.Top);
+                path.LineTo(bounds.Right, bounds.Top);
+                path.LineTo(bounds.Right - slant, bounds.Bottom);
+                path.LineTo(bounds.Left, bounds.Bottom);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Trapezoid:
+                var inset = w * 0.2f;
+                path.MoveTo(bounds.Left + inset, bounds.Top);
+                path.LineTo(bounds.Right - inset, bounds.Top);
+                path.LineTo(bounds.Right, bounds.Bottom);
+                path.LineTo(bounds.Left, bounds.Bottom);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Plus:
+                var armX = w * 0.33f;
+                var armY = h * 0.33f;
+                path.MoveTo(bounds.Left + armX, bounds.Top);
+                path.LineTo(bounds.Right - armX, bounds.Top);
+                path.LineTo(bounds.Right - armX, bounds.Top + armY);
+                path.LineTo(bounds.Right, bounds.Top + armY);
+                path.LineTo(bounds.Right, bounds.Bottom - armY);
+                path.LineTo(bounds.Right - armX, bounds.Bottom - armY);
+                path.LineTo(bounds.Right - armX, bounds.Bottom);
+                path.LineTo(bounds.Left + armX, bounds.Bottom);
+                path.LineTo(bounds.Left + armX, bounds.Bottom - armY);
+                path.LineTo(bounds.Left, bounds.Bottom - armY);
+                path.LineTo(bounds.Left, bounds.Top + armY);
+                path.LineTo(bounds.Left + armX, bounds.Top + armY);
+                path.Close();
+                break;
+
+            case ShapeGeometry.Can:
+                var lip = h * 0.12f;
+                path.AddOval(new SKRect(bounds.Left, bounds.Top, bounds.Right, bounds.Top + lip * 2));
+                path.AddRect(new SKRect(bounds.Left, bounds.Top + lip, bounds.Right, bounds.Bottom - lip));
+                path.AddOval(new SKRect(bounds.Left, bounds.Bottom - lip * 2, bounds.Right, bounds.Bottom));
+                break;
+
+            case ShapeGeometry.Cloud:
+                // Overlapping circles, which is close enough for a shape used decoratively.
+                path.AddOval(new SKRect(bounds.Left, bounds.Top + h * 0.3f, bounds.Left + w * 0.5f, bounds.Bottom));
+                path.AddOval(new SKRect(bounds.Left + w * 0.2f, bounds.Top, bounds.Left + w * 0.75f, bounds.Bottom - h * 0.15f));
+                path.AddOval(new SKRect(bounds.Left + w * 0.5f, bounds.Top + h * 0.25f, bounds.Right, bounds.Bottom));
+                break;
+
+            default:
+                path.AddRect(bounds);
+                break;
+        }
+
+        return path;
+    }
+
+    static void AddArrow(SKPath path, SKRect bounds, double rotationDegrees)
+    {
+        // Built pointing right, then rotated about the centre.
+        var w = bounds.Width;
+        var h = bounds.Height;
+        var headStart = bounds.Left + w * 0.6f;
+        var shaftTop = bounds.Top + h * 0.3f;
+        var shaftBottom = bounds.Bottom - h * 0.3f;
+
+        path.MoveTo(bounds.Left, shaftTop);
+        path.LineTo(headStart, shaftTop);
+        path.LineTo(headStart, bounds.Top);
+        path.LineTo(bounds.Right, bounds.MidY);
+        path.LineTo(headStart, bounds.Bottom);
+        path.LineTo(headStart, shaftBottom);
+        path.LineTo(bounds.Left, shaftBottom);
+        path.Close();
+
+        if (rotationDegrees != 0)
+            path.Transform(SKMatrix.CreateRotationDegrees((float)rotationDegrees, bounds.MidX, bounds.MidY));
+    }
+
+    static void AddPolygon(SKPath path, SKRect bounds, int sides, double startAngleDegrees)
+    {
+        var cx = bounds.MidX;
+        var cy = bounds.MidY;
+        var rx = bounds.Width / 2;
+        var ry = bounds.Height / 2;
+
+        for (var i = 0; i < sides; i++)
+        {
+            var angle = (startAngleDegrees + i * 360d / sides) * Math.PI / 180;
+            var x = (float)(cx + rx * Math.Cos(angle));
+            var y = (float)(cy + ry * Math.Sin(angle));
+
+            if (i == 0)
+                path.MoveTo(x, y);
+            else
+                path.LineTo(x, y);
+        }
+
+        path.Close();
+    }
+
+    static void AddStar(SKPath path, SKRect bounds, int points)
+    {
+        var cx = bounds.MidX;
+        var cy = bounds.MidY;
+        var outerX = bounds.Width / 2;
+        var outerY = bounds.Height / 2;
+        var innerRatio = 0.4;
+
+        for (var i = 0; i < points * 2; i++)
+        {
+            var angle = (-90 + i * 180d / points) * Math.PI / 180;
+            var ratio = i % 2 == 0 ? 1 : innerRatio;
+            var x = (float)(cx + outerX * ratio * Math.Cos(angle));
+            var y = (float)(cy + outerY * ratio * Math.Sin(angle));
+
+            if (i == 0)
+                path.MoveTo(x, y);
+            else
+                path.LineTo(x, y);
+        }
+
+        path.Close();
+    }
+
+    void ApplyFill(ShapeFill shapeFill, SKRect bounds)
+    {
+        this.fill.Shader?.Dispose();
+        this.fill.Shader = null;
+
+        if (shapeFill.Solid is { } solid)
+        {
+            this.fill.Color = ToSk(solid);
+            return;
+        }
+
+        if (shapeFill.GradientStops.Count == 0)
+            return;
+
+        var colors = shapeFill.GradientStops.Select(x => ToSk(x.Color)).ToArray();
+        var positions = shapeFill.GradientStops.Select(x => (float)x.Position).ToArray();
+
+        var radians = shapeFill.GradientAngle * Math.PI / 180;
+        var dx = (float)Math.Cos(radians) * bounds.Width / 2;
+        var dy = (float)Math.Sin(radians) * bounds.Height / 2;
+
+        this.fill.Color = SKColors.White;
+        this.fill.Shader = SKShader.CreateLinearGradient(
+            new SKPoint(bounds.MidX - dx, bounds.MidY - dy),
+            new SKPoint(bounds.MidX + dx, bounds.MidY + dy),
+            colors,
+            positions,
+            SKShaderTileMode.Clamp);
+    }
+
+    void PaintTextBody(SKCanvas canvas, ShapeTextBody body, SKRect bounds, SlideTheme theme)
+    {
+        // Laid out by the shared kernel rather than here, so the editor's caret and this painter's
+        // glyphs can never disagree about where a character sits.
+        var layout = ShapeTextLayout.Layout(body, bounds.Width, bounds.Height, measurer);
+        if (layout.Paragraphs.Count == 0)
+            return;
+
+        canvas.Save();
+        canvas.ClipRect(bounds);
+
+        foreach (var block in layout.Paragraphs)
+        {
+            var left = bounds.Left + (float)(layout.Left + block.Indent);
+            var top = bounds.Top + (float)(layout.Top + block.Y);
+
+            if (block.Bullet is { } bullet && block.Lines.Count > 0)
+            {
+                this.fill.Color = ToSk(block.BulletStyle.Color);
+                this.fill.Shader = null;
+
+                canvas.DrawText(
+                    bullet,
+                    left - (float)block.BulletAdvance,
+                    top + (float)block.Lines[0].Ascent,
+                    SKTextAlign.Left,
+                    measurer.GetFont(block.BulletStyle),
+                    this.fill);
+            }
+
+            foreach (var line in block.Lines)
+            {
+                var baseline = top + (float)(line.Y + line.Ascent);
+
+                foreach (var run in line.Runs)
+                {
+                    if (run.Text.Length == 0)
+                        continue;
+
+                    this.fill.Color = ToSk(run.Style.Color);
+                    this.fill.Shader = null;
+
+                    var x = left + (float)run.X;
+                    canvas.DrawText(run.Text, x, baseline, SKTextAlign.Left, measurer.GetFont(run.Style), this.fill);
+
+                    if (run.Style.Underline != UnderlineStyle.None)
+                    {
+                        this.stroke.Color = ToSk(run.Style.Color);
+                        this.stroke.StrokeWidth = Math.Max(1, (float)(run.Style.FontSize / 14));
+                        var offset = baseline + (float)(run.Style.FontSize * 0.12);
+                        canvas.DrawLine(x, offset, x + (float)run.Width, offset, this.stroke);
+                    }
+
+                    if (run.Style.Strike)
+                    {
+                        this.stroke.Color = ToSk(run.Style.Color);
+                        this.stroke.StrokeWidth = Math.Max(1, (float)(run.Style.FontSize / 14));
+                        var middle = baseline - (float)(run.Style.FontSize * 0.28);
+                        canvas.DrawLine(x, middle, x + (float)run.Width, middle, this.stroke);
+                    }
+                }
+            }
+        }
+
+        canvas.Restore();
+    }
+
+    void PaintTable(SKCanvas canvas, SlideTable table, SKRect bounds, SlideTheme theme)
+    {
+        var columnWidths = Distribute(table.ColumnWidths, bounds.Width);
+        var rowHeights = Distribute(table.RowHeights, bounds.Height);
+
+        var y = bounds.Top;
+        for (var r = 0; r < table.Rows.Count && r < rowHeights.Count; r++)
+        {
+            var x = bounds.Left;
+            var row = table.Rows[r];
+
+            for (var c = 0; c < row.Count && c < columnWidths.Count; c++)
+            {
+                var cell = row[c];
+                var span = Math.Max(1, cell.ColumnSpan);
+                var cellWidth = 0f;
+                for (var i = c; i < Math.Min(c + span, columnWidths.Count); i++)
+                    cellWidth += (float)columnWidths[i];
+
+                var rect = new SKRect(x, y, x + cellWidth, y + (float)rowHeights[r]);
+
+                if (!cell.IsMerged)
+                {
+                    if (cell.Fill is { } cellFill)
+                    {
+                        this.fill.Color = ToSk(cellFill);
+                        this.fill.Shader = null;
+                        canvas.DrawRect(rect, this.fill);
+                    }
+
+                    if (cell.Text is { } text)
+                        this.PaintTextBody(canvas, text, rect, theme);
+
+                    this.stroke.Color = ToSk(theme.Border);
+                    this.stroke.StrokeWidth = 1;
+                    canvas.DrawRect(rect, this.stroke);
+                }
+
+                x += cellWidth;
+            }
+
+            y += (float)rowHeights[r];
+        }
+    }
+
+    /// <summary>Scales stored track sizes to the destination, sharing evenly when none are recorded.</summary>
+    static List<double> Distribute(IReadOnlyList<double> sizes, double available)
+    {
+        if (sizes.Count == 0)
+            return [];
+
+        var total = sizes.Sum();
+        if (total <= 0)
+            return Enumerable.Repeat(available / sizes.Count, sizes.Count).ToList();
+
+        var scale = available / total;
+        return sizes.Select(x => x * scale).ToList();
+    }
+
+    void DrawImage(SKCanvas canvas, byte[] data, SKRect destination)
+    {
+        var key = System.HashCode.Combine(data.Length, data.Length > 0 ? data[0] : 0, data.Length > 64 ? data[64] : 0);
+
+        if (!this.images.TryGetValue(key, out var image))
+        {
+            try
+            {
+                image = SKImage.FromEncodedData(data);
+            }
+            catch (Exception)
+            {
+                image = null;
+            }
+
+            this.images[key] = image;
+        }
+
+        if (image is null)
+            return;
+
+        canvas.DrawImage(image, destination, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+    }
+
+    public void Dispose()
+    {
+        foreach (var image in this.images.Values)
+            image?.Dispose();
+
+        this.images.Clear();
+        this.fill.Shader?.Dispose();
+        this.fill.Dispose();
+        this.stroke.Dispose();
+    }
+
+    static SKColor ToSk(ArgbColor color) => new(color.R, color.G, color.B, color.A);
+}

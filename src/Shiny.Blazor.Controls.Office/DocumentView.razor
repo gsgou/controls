@@ -1,0 +1,200 @@
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@using Shiny.Controls.Office.Document
+@implements IDisposable
+@inject IJSRuntime Js
+
+<div class="shiny-document @Class"
+     style="@Style"
+     tabindex="0"
+     @onwheel="OnWheel"
+     @onwheel:preventDefault="true"
+     @onkeydown="OnKeyDown"
+     @onkeydown:preventDefault="preventKeyDefault">
+
+    <SKCanvasView @ref="canvas"
+                  class="shiny-document-canvas"
+                  IgnorePixelScaling="false"
+                  OnPaintSurface="OnPaint" />
+</div>
+
+@code {
+    SKCanvasView? canvas;
+    SkiaTextMeasurer? measurer;
+    DocumentPainter? painter;
+    DocumentController? controller;
+    bool preventKeyDefault;
+    double lastWidth;
+    double lastHeight;
+
+    /// <summary>
+    /// The theme the canvas was last painted with.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView only repaints when Invalidate is called; a Blazor re-render does not touch the
+    /// canvas contents. Without this comparison a theme change updates the parameter, re-renders the
+    /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
+    /// </remarks>
+    DocumentTheme? paintedTheme;
+
+    /// <summary>
+    /// Device pixel ratio, read once from the browser.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView hands back a surface in device pixels but does not expose the ratio it used.
+    /// Deriving it from the last known CSS width is circular — width = info.Width / (info.Width /
+    /// lastWidth) is just lastWidth — so the size could never change after the first paint, and the
+    /// grid stayed frozen at whatever the element measured on its very first frame.
+    /// </remarks>
+    double dpr = 1;
+
+    /// <summary>The document to display. Setting it rebuilds the view.</summary>
+    [Parameter] public WordDocument? Document { get; set; }
+
+    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+
+    /// <summary>Zoom factor, clamped to 0.25–4. Changing it re-lays-out.</summary>
+    [Parameter] public double Zoom { get; set; } = 1.0;
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>The live controller, so a toolbar or outline pane can drive the same state.</summary>
+    public DocumentController? Controller => this.controller;
+
+    protected override void OnParametersSet()
+    {
+        // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
+        // called, so a theme change that does not reach this leaves the old pixels on screen and the
+        // toggle appears to do nothing.
+        if (this.paintedTheme != this.Theme)
+        {
+            this.paintedTheme = this.Theme;
+            this.canvas?.Invalidate();
+        }
+
+        if (this.Document is null)
+        {
+            this.controller = null;
+            return;
+        }
+
+        this.measurer ??= new SkiaTextMeasurer();
+        this.painter ??= new DocumentPainter(this.measurer);
+
+        if (this.controller is null || !ReferenceEquals(this.controller.Document, this.Document))
+        {
+            if (this.controller is not null)
+                this.controller.Changed -= this.OnControllerChanged;
+
+            this.controller = new DocumentController(this.Document, this.measurer);
+            this.controller.Changed += this.OnControllerChanged;
+
+            if (this.lastWidth > 0)
+                this.controller.Resize(this.lastWidth, this.lastHeight);
+        }
+
+        this.controller.Zoom = this.Zoom;
+    }
+
+    void OnControllerChanged(object? sender, EventArgs e)
+    {
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+    }
+
+    void OnPaint(SKPaintSurfaceEventArgs e)
+    {
+        var info = e.Info;
+        var theme = this.Theme;
+
+        if (this.controller is null || this.painter is null)
+        {
+            e.Surface.Canvas.Clear(new SKColor(theme.SurroundBackground.R, theme.SurroundBackground.G, theme.SurroundBackground.B));
+            return;
+        }
+
+        // The surface arrives in device pixels; the layout works in CSS pixels.
+        var scale = (float)this.dpr;
+        var width = info.Width / this.dpr;
+        var height = info.Height / this.dpr;
+
+        if (this.lastWidth <= 0 || Math.Abs(width - this.lastWidth) > 0.5 || Math.Abs(height - this.lastHeight) > 0.5)
+        {
+            this.lastWidth = width;
+            this.lastHeight = height;
+            this.controller.Resize(width, height);
+        }
+
+        this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
+        {
+            Blocks = this.controller.Blocks,
+            Viewport = this.controller.Viewport,
+            Theme = theme,
+            Scale = scale,
+            PageX = this.controller.PageX + this.controller.PagePadding,
+            PageWidth = this.controller.PageWidth
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+        }
+        catch (Exception)
+        {
+            // Prerendering or a locked-down host: 1 is the safe assumption.
+            this.dpr = 1;
+        }
+
+        if (this.dpr <= 0)
+            this.dpr = 1;
+
+        this.canvas?.Invalidate();
+
+        if (await OfficeFonts.EnsureLoadedAsync(this.Js))
+        {
+            // The first frame painted with fallback metrics; the measurer's cache is invalidated by
+            // the new registrations, so a repaint now re-measures against the real faces.
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+        }
+    }
+
+    void OnWheel(WheelEventArgs e) => this.controller?.Scroll(e.DeltaY);
+
+    void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        this.preventKeyDefault = true;
+        var page = this.controller.Viewport.Height * 0.9;
+
+        switch (e.Key)
+        {
+            case "ArrowDown": this.controller.Scroll(60); break;
+            case "ArrowUp": this.controller.Scroll(-60); break;
+            case "PageDown": this.controller.Scroll(page); break;
+            case "PageUp": this.controller.Scroll(-page); break;
+            case "Home": this.controller.ScrollTo(0); break;
+            case "End": this.controller.ScrollTo(this.controller.Viewport.ContentHeight); break;
+            default: this.preventKeyDefault = false; break;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (this.controller is not null)
+            this.controller.Changed -= this.OnControllerChanged;
+
+        this.painter?.Dispose();
+        this.measurer?.Dispose();
+    }
+}

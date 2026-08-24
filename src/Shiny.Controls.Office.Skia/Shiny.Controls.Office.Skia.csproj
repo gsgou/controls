@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Controls.Office.Skia</RootNamespace>
+        <Description>SkiaSharp rendering for the Shiny spreadsheet grid, shared by the MAUI and Blazor hosts.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="SkiaSharp"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Controls.Office.Shared\Shiny.Controls.Office.Shared.csproj"/>
+    </ItemGroup>
+</Project>

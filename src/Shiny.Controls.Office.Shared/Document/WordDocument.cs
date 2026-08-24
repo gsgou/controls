@@ -1,0 +1,323 @@
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using Shiny.Controls.Office.Editing;
+using Shiny.Controls.Office.Packaging;
+using Shiny.Controls.Office.Text;
+using Drawing = DocumentFormat.OpenXml.Drawing;
+
+namespace Shiny.Controls.Office.Document;
+
+/// <summary>
+/// An open <c>.docx</c>, read into a reflowable block model.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is a **viewer**. The document is presented as a continuous flow rather than paginated: page
+/// breaks, headers, footers and footnote placement all depend on a full pagination engine, and
+/// pretending to have one produces page boundaries in the wrong places, which is worse than honestly
+/// not having pages at all.
+/// </para>
+/// <para>
+/// The package is still held open and untouched, so the same document can later gain an editor without
+/// changing how it is read.
+/// </para>
+/// </remarks>
+public sealed class WordDocument : OfficeDocument
+{
+    readonly WordprocessingDocument document;
+    readonly List<DocumentBlock> blocks = new();
+    readonly WordBodyReader reader;
+    readonly Body? body;
+    bool contentChanged;
+
+    WordDocument(MemoryStream buffer, string? path, WordprocessingDocument document, IUnsupportedFeatureSink unsupported)
+        : base(buffer, path, unsupported)
+    {
+        this.document = document;
+
+        var main = document.MainDocumentPart
+            ?? throw new InvalidDataException("The package has no main document part.");
+
+        var styles = new WordStyleResolver(main);
+        var numbering = new WordNumbering(main);
+        this.reader = new WordBodyReader(main, styles, numbering, unsupported);
+        this.body = main.Document?.Body;
+
+        this.DefaultStyle = styles.DefaultRunStyle;
+        this.Page = ReadPageSetup(main);
+        this.blocks.AddRange(this.reader.ReadBody(this.body));
+        this.Undo = new UndoStack<WordDocument>(this);
+
+        this.ReportUnsupported(main);
+    }
+
+    public IReadOnlyList<DocumentBlock> Blocks => this.blocks;
+
+    /// <summary>Undo history for edits. Empty for a document opened read-only.</summary>
+    public UndoStack<WordDocument> Undo { get; }
+
+    /// <summary>True when the document was opened for editing.</summary>
+    public bool IsEditable { get; private set; }
+
+    /// <summary>Raised after any edit, so a view can re-lay-out and repaint.</summary>
+    public event EventHandler? ContentChanged;
+
+    /// <summary>Applies an edit through the undo stack.</summary>
+    public void Execute(IEditCommand<WordDocument> command)
+    {
+        if (!this.IsEditable)
+            throw new InvalidOperationException("This document was opened read-only. Use OpenAsync(..., editable: true).");
+
+        this.Undo.Execute(command);
+    }
+
+    public PageSetup Page { get; }
+
+    public TextStyle DefaultStyle { get; }
+
+    /// <summary>Headings in document order, for a navigation pane or outline.</summary>
+    public IEnumerable<(int Level, string Text)> Outline()
+        => this.blocks
+            .OfType<DocumentParagraph>()
+            .Where(x => x.Format.OutlineLevel > 0 && x.PlainText.Length > 0)
+            .Select(x => (x.Format.OutlineLevel, x.PlainText));
+
+    /// <summary>The whole document as plain text, one line per paragraph.</summary>
+    public string PlainText => string.Join(
+        Environment.NewLine,
+        this.blocks.OfType<DocumentParagraph>().Select(x => x.PlainText));
+
+    public static async Task<WordDocument> OpenAsync(
+        string path,
+        IUnsupportedFeatureSink? unsupported = null,
+        bool editable = false,
+        CancellationToken cancellationToken = default)
+    {
+        var buffer = await ReadIntoBufferAsync(path, cancellationToken).ConfigureAwait(false);
+        return Create(buffer, path, unsupported, editable);
+    }
+
+    public static async Task<WordDocument> OpenAsync(
+        Stream source,
+        IUnsupportedFeatureSink? unsupported = null,
+        bool editable = false,
+        CancellationToken cancellationToken = default)
+    {
+        var buffer = await ReadIntoBufferAsync(source, cancellationToken).ConfigureAwait(false);
+        return Create(buffer, null, unsupported, editable);
+    }
+
+    static WordDocument Create(MemoryStream buffer, string? path, IUnsupportedFeatureSink? unsupported, bool editable = false)
+    {
+        var sink = unsupported ?? NullUnsupportedFeatureSink.Instance;
+        WordprocessingDocument document;
+        try
+        {
+            // AutoSave off for the same reason as the workbook: OpenXml otherwise re-serialises every
+            // part it materialised, so merely opening a document would rewrite it.
+            document = WordprocessingDocument.Open(buffer, isEditable: editable, new OpenSettings { AutoSave = false });
+        }
+        catch
+        {
+            buffer.Dispose();
+            throw;
+        }
+
+        try
+        {
+            return new WordDocument(buffer, path, document, sink) { IsEditable = editable };
+        }
+        catch
+        {
+            document.Dispose();
+            buffer.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Writes pending edits into the package. An unedited document is never re-serialised, so opening
+    /// and saving without changing anything produces a byte-identical file.
+    /// </summary>
+    protected override void FlushToPackage()
+    {
+        if (!this.contentChanged)
+            return;
+
+        this.document.MainDocumentPart?.Document?.Save();
+        this.document.Save();
+        this.contentChanged = false;
+    }
+
+    // ---- editing surface, driven by the commands ----
+
+    internal Paragraph? ParagraphElementAt(int block)
+        => block >= 0 && block < this.blocks.Count && this.blocks[block] is DocumentParagraph paragraph
+            ? paragraph.Element
+            : null;
+
+    /// <summary>Re-reads one block from its (now edited) XML.</summary>
+    internal void Reproject(int block)
+    {
+        if (block < 0 || block >= this.blocks.Count)
+            return;
+
+        if (this.blocks[block] is DocumentParagraph { Element: { } element })
+            this.blocks[block] = this.reader.Reread(element);
+
+        this.MarkChanged();
+    }
+
+    internal void InsertBlockAfter(int block, Paragraph element)
+    {
+        this.blocks.Insert(block + 1, this.reader.Reread(element));
+        this.MarkChanged();
+    }
+
+    internal void RemoveBlockAfter(int block)
+    {
+        if (block + 1 < this.blocks.Count)
+            this.blocks.RemoveAt(block + 1);
+
+        this.MarkChanged();
+    }
+
+    internal void RemoveBlock(int block)
+    {
+        if (block < 0 || block >= this.blocks.Count)
+            return;
+
+        if (this.blocks[block] is DocumentParagraph { Element: { } element })
+            element.Remove();
+
+        this.blocks.RemoveAt(block);
+        this.MarkChanged();
+    }
+
+    /// <summary>
+    /// Clones the paragraphs a range touches, so an edit can be reversed by putting them back.
+    /// </summary>
+    internal RestoreBlocksCommand CaptureRange(DocumentRange range)
+        => this.CaptureBlocks(range.Start.Block, range.End.Block - range.Start.Block + 1);
+
+    internal RestoreBlocksCommand CaptureBlocks(int start, int count)
+    {
+        var snapshot = new List<Paragraph>();
+        for (var i = start; i < start + count && i < this.blocks.Count; i++)
+        {
+            if (this.blocks[i] is DocumentParagraph { Element: { } element })
+                snapshot.Add((Paragraph)element.CloneNode(true));
+        }
+
+        return new RestoreBlocksCommand(start, snapshot.Count, snapshot);
+    }
+
+    /// <summary>Replaces a span of blocks with cloned paragraphs, in the body and in the projection.</summary>
+    internal void ReplaceBlocks(int start, int count, IReadOnlyList<Paragraph> replacements)
+    {
+        if (this.body is null)
+            return;
+
+        // Anchor on the element before the span, so the replacements land in the right place even when
+        // the span itself is being removed entirely.
+        var anchor = start > 0 ? this.ParagraphElementAt(start - 1) : null;
+
+        for (var i = Math.Min(start + count, this.blocks.Count) - 1; i >= start; i--)
+        {
+            if (this.blocks[i] is DocumentParagraph { Element: { } element })
+                element.Remove();
+
+            if (i < this.blocks.Count)
+                this.blocks.RemoveAt(i);
+        }
+
+        var index = start;
+        foreach (var replacement in replacements)
+        {
+            var clone = (Paragraph)replacement.CloneNode(true);
+
+            if (anchor is null)
+                this.body.InsertAt(clone, 0);
+            else
+                anchor.InsertAfterSelf(clone);
+
+            anchor = clone;
+            this.blocks.Insert(index++, this.reader.Reread(clone));
+        }
+
+        this.MarkChanged();
+    }
+
+    void MarkChanged()
+    {
+        this.contentChanged = true;
+        this.MarkDirty();
+        this.ContentChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    static PageSetup ReadPageSetup(MainDocumentPart main)
+    {
+        var section = main.Document?.Body?.Elements<SectionProperties>().LastOrDefault();
+        var size = section?.GetFirstChild<PageSize>();
+        var margin = section?.GetFirstChild<PageMargin>();
+
+        var setup = PageSetup.Letter;
+
+        if (size?.Width?.Value is { } width)
+            setup = setup with { Width = OoxmlUnits.TwipsToPixels(width) };
+
+        if (size?.Height?.Value is { } height)
+            setup = setup with { Height = OoxmlUnits.TwipsToPixels(height) };
+
+        if (margin is not null)
+        {
+            setup = setup with
+            {
+                MarginLeft = margin.Left?.Value is { } left ? OoxmlUnits.TwipsToPixels(left) : setup.MarginLeft,
+                MarginRight = margin.Right?.Value is { } right ? OoxmlUnits.TwipsToPixels(right) : setup.MarginRight,
+                MarginTop = margin.Top?.Value is { } top ? OoxmlUnits.TwipsToPixels(top) : setup.MarginTop,
+                MarginBottom = margin.Bottom?.Value is { } bottom ? OoxmlUnits.TwipsToPixels(bottom) : setup.MarginBottom
+            };
+        }
+
+        return setup;
+    }
+
+    void ReportUnsupported(MainDocumentPart main)
+    {
+        // Everything here is preserved in the package - the viewer simply does not show it, and saying
+        // so is better than letting someone assume a document has no comments because none appeared.
+        if (main.Document?.Body?.Descendants<CommentRangeStart>().Any() == true)
+            this.Unsupported.Report(new UnsupportedFeature("document", "Comments", UnsupportedSeverity.NotRendered));
+
+        if (main.FootnotesPart is not null || main.EndnotesPart is not null)
+            this.Unsupported.Report(new UnsupportedFeature("document", "Footnotes and endnotes", UnsupportedSeverity.NotRendered));
+
+        if (main.HeaderParts.Any() || main.FooterParts.Any())
+        {
+            this.Unsupported.Report(new UnsupportedFeature(
+                "document", "Headers and footers", UnsupportedSeverity.NotRendered,
+                "The viewer reflows content and has no pages to attach them to."));
+        }
+
+        if (main.Document?.Body?.Descendants<InsertedRun>().Any() == true ||
+            main.Document?.Body?.Descendants<DeletedRun>().Any() == true)
+        {
+            this.Unsupported.Report(new UnsupportedFeature(
+                "document", "Tracked changes", UnsupportedSeverity.NotRendered,
+                "Insertions render as normal text; deletions are hidden."));
+        }
+
+        if (main.VbaProjectPart is not null)
+            this.Unsupported.Report(new UnsupportedFeature("vbaProject", "Macros", UnsupportedSeverity.NotRendered));
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            this.document.Dispose();
+
+        base.Dispose(disposing);
+    }
+}

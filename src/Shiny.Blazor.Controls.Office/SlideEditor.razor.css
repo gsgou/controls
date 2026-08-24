@@ -1,0 +1,37 @@
+.shiny-slide-editor {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    cursor: default;
+}
+
+/* SKCanvasView renders the <canvas> itself, so this has to cross a component boundary. */
+.shiny-slide-editor ::deep canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/*
+    The real text input, parked at the caret. Transparent and 1px wide rather than hidden or
+    offscreen: display:none and visibility:hidden cannot be focused, and an offscreen element makes
+    the browser scroll the page to it and puts the IME candidate window in the wrong place.
+*/
+.shiny-slide-editor-input {
+    position: absolute;
+    width: 1px;
+    padding: 0;
+    border: 0;
+    outline: none;
+    color: transparent;
+    background: transparent;
+    caret-color: transparent;
+    overflow: hidden;
+    white-space: pre;
+    z-index: 2;
+}

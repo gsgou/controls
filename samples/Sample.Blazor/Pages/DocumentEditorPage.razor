@@ -1,0 +1,83 @@
+@page "/document-editor"
+@using Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Skia
+@implements IDisposable
+
+<PageTitle>Document Editor</PageTitle>
+
+<h1>Document Editor</h1>
+<p class="lead">
+    A <code>.docx</code> editor. Two controls: <code>DocumentEditor</code> is the bare surface,
+    <code>DocumentEditorView</code> wraps it in a <code>ShinyToolbar</code> with the formatting chrome.
+</p>
+
+<div class="toolbar">
+    <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>
+    <label class="chk"><input type="checkbox" @bind="spellCheck" /> Spell check</label>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <span class="status">@Status</span>
+</div>
+
+<div class="editor-host">
+    @if (withToolbar)
+    {
+        <DocumentEditorView Document="document"
+                            Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                            SpellChecker="checker"
+                            SpellCheckEnabled="spellCheck"
+                            DocumentChanged="OnChanged" />
+    }
+    else
+    {
+        <DocumentEditor Document="document"
+                        Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                        SpellChecker="checker"
+                        SpellCheckEnabled="spellCheck"
+                        DocumentChanged="OnChanged" />
+    }
+</div>
+
+<p class="hint">
+    Click to place the caret, drag to select. Type to insert; Enter splits a paragraph; Backspace at the
+    start of one joins it to the paragraph above. Ctrl/Cmd+B, I, U format the selection; Ctrl/Cmd+Z and
+    Shift+Ctrl/Cmd+Z undo and redo. Right-click a red-underlined word for corrections.
+</p>
+
+@code {
+    WordDocument? document;
+
+    /// <summary>
+    /// The web has no platform spell checker, so the sample supplies one.
+    /// </summary>
+    /// <remarks>
+    /// On MAUI this parameter would be left off entirely — the package registers the iOS, Android,
+    /// macOS and Windows checkers itself. Setting it is how any host overrides that.
+    /// </remarks>
+    readonly SampleSpellChecker checker = new();
+
+    bool spellCheck = true;
+    bool withToolbar = true;
+    bool dark;
+    int edits;
+
+    string Status => this.document is null
+        ? "loading"
+        : $"{this.document.Blocks.Count} blocks · {this.edits} edits{(this.document.IsDirty ? " · unsaved" : string.Empty)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bytes = SampleOfficeDocuments.BuildDocument();
+        this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), editable: true);
+    }
+
+    void ToggleTheme() => this.dark = !this.dark;
+
+    void OnChanged()
+    {
+        this.edits++;
+        this.StateHasChanged();
+    }
+
+    public void Dispose() => this.document?.Dispose();
+}

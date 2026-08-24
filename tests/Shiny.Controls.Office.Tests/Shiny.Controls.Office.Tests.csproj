@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="Shouldly"/>
+        <PackageReference Include="xunit"/>
+        <PackageReference Include="xunit.runner.visualstudio"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Shiny.Controls.Office.Shared\Shiny.Controls.Office.Shared.csproj"/>
+        <ProjectReference Include="..\..\src\Shiny.Controls.Office.Skia\Shiny.Controls.Office.Skia.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The real shipped font, so registry tests run against something Skia actually parses. -->
+        <None Include="..\..\src\Shiny.Blazor.Controls.Office\wwwroot\fonts\Carlito-Regular.ttf"
+              Link="Carlito-Regular.ttf"
+              CopyToOutputDirectory="PreserveNewest"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Real documents dropped in here are picked up by the corpus tests. The folder is intentionally
+             not tracked: the corpus is whatever the developer actually cares about not breaking. -->
+        <None Include="corpus\**" CopyToOutputDirectory="PreserveNewest" Condition="Exists('corpus')"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,71 @@
+@page "/slide-editor"
+@using Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Presentation
+@using Shiny.Controls.Office.Skia
+@implements IDisposable
+
+<PageTitle>Slide Editor</PageTitle>
+
+<h1>Slide Editor</h1>
+<p class="lead">
+    A <code>.pptx</code> editor. Two controls: <code>SlideEditor</code> is the bare surface,
+    <code>SlideEditorView</code> wraps it in a <code>ShinyToolbar</code> with the editing chrome.
+</p>
+
+<div class="toolbar">
+    <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <span class="status">@Status</span>
+</div>
+
+<div class="editor-host">
+    @if (withToolbar)
+    {
+        <SlideEditorView Deck="deck"
+                         @bind-SlideIndex="index"
+                         Theme="@(dark ? SlideTheme.Dark : SlideTheme.Light)"
+                         DeckChanged="OnChanged" />
+    }
+    else
+    {
+        <SlideEditor Deck="deck"
+                     @bind-SlideIndex="index"
+                     Theme="@(dark ? SlideTheme.Dark : SlideTheme.Light)"
+                     DeckChanged="OnChanged" />
+    }
+</div>
+
+<p class="hint">
+    Click a shape to select it, then drag it or its handles to move and resize. Double-click (or press
+    Enter) to put a caret inside its text; type, and Ctrl/Cmd+B, I, U format the selection. Tab and
+    Shift+Tab change a bullet's outline level. Escape leaves the text, Delete removes the selected
+    shape, and Ctrl/Cmd+Z undoes everything — including a whole drag, as one step.
+</p>
+
+@code {
+    SlideDeck? deck;
+    bool withToolbar = true;
+    bool dark;
+    int index;
+    int edits;
+
+    string Status => this.deck is null
+        ? "loading"
+        : $"{this.deck.Slides.Count} slides · {this.edits} edits{(this.deck.IsDirty ? " · unsaved" : string.Empty)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bytes = SampleOfficeDocuments.BuildDeck();
+        this.deck = await SlideDeck.OpenAsync(new MemoryStream(bytes), editable: true);
+    }
+
+    void ToggleTheme() => this.dark = !this.dark;
+
+    void OnChanged()
+    {
+        this.edits++;
+        this.StateHasChanged();
+    }
+
+    public void Dispose() => this.deck?.Dispose();
+}

@@ -1,0 +1,258 @@
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Presentation
+@using Shiny.Controls.Office.Spreadsheet
+
+@*
+    SlideEditor with editing chrome on top.
+
+    The toolbar is a ShinyToolbar from the core Blazor package. Blazor has no FontPicker (that control
+    is MAUI-only), so family and size are plain selects — the MAUI SlideEditorView uses
+    FontPickerButton/FontSizePickerButton for the same two slots.
+*@
+<div class="shiny-slide-editor-view @Class" style="@Style">
+
+    @if (ShowToolbar)
+    {
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Sticky="false"
+                      Height="@ToolbarHeight"
+                      BackgroundColor="@ToolbarBackground"
+                      TextColor="@ToolbarForeground"
+                      HasShadow="false"
+                      BorderColor="@ToolbarBorder"
+                      BorderThickness="1"
+                      OverflowEnabled="false"
+                      SafeArea="false"
+                      ZIndex="5">
+
+            <button class="slide-btn" title="Previous slide" disabled="@(!CanPrevious)" @onclick="() => Run(c => c.Previous())">‹</button>
+            <span class="slide-count">@(Controller is null ? "—" : $"{Controller.Index + 1}/{Controller.Count}")</span>
+            <button class="slide-btn" title="Next slide" disabled="@(!CanNext)" @onclick="() => Run(c => c.Next())">›</button>
+
+            <span class="slide-sep"></span>
+
+            <select class="slide-select slide-font"
+                    title="Font"
+                    disabled="@(!HasText)"
+                    value="@Format.FontFamily"
+                    @onchange="OnFontChanged">
+                @foreach (var font in FontFamilies)
+                {
+                    <option value="@font" selected="@(font == Format.FontFamily)">@font</option>
+                }
+            </select>
+
+            <select class="slide-select slide-size"
+                    title="Size"
+                    disabled="@(!HasText)"
+                    value="@SelectedSize"
+                    @onchange="OnSizeChanged">
+                @foreach (var size in FontSizes)
+                {
+                    <option value="@size" selected="@(Math.Abs(size - Format.FontSize) < 0.51)">@size</option>
+                }
+            </select>
+
+            <span class="slide-sep"></span>
+
+            <button class="slide-btn @(Format.Bold ? "on" : null)" title="Bold (Ctrl+B)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleBold())"><b>B</b></button>
+            <button class="slide-btn @(Format.Italic ? "on" : null)" title="Italic (Ctrl+I)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleItalic())"><i>I</i></button>
+            <button class="slide-btn @(Format.Underline ? "on" : null)" title="Underline (Ctrl+U)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleUnderline())"><u>U</u></button>
+            <button class="slide-btn @(Format.Strike ? "on" : null)" title="Strikethrough" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleStrikethrough())"><s>S</s></button>
+
+            <input class="slide-color"
+                   type="color"
+                   title="Text colour"
+                   disabled="@(!HasText)"
+                   value="@ColorHex"
+                   @onchange="OnColorChanged" />
+
+            <span class="slide-sep"></span>
+
+            <button class="slide-btn @(Format.Alignment == TextAlignment.Left ? "on" : null)" title="Align left" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Left)">⯇</button>
+            <button class="slide-btn @(Format.Alignment == TextAlignment.Center ? "on" : null)" title="Centre" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Center)">≡</button>
+            <button class="slide-btn @(Format.Alignment == TextAlignment.Right ? "on" : null)" title="Align right" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Right)">⯈</button>
+
+            <button class="slide-btn" title="Outdent (Shift+Tab)" disabled="@(!HasText)" @onclick="() => Run(c => c.ShiftLevel(-1))">⇤</button>
+            <button class="slide-btn" title="Indent (Tab)" disabled="@(!HasText)" @onclick="() => Run(c => c.ShiftLevel(1))">⇥</button>
+
+            <span class="slide-sep"></span>
+
+            <button class="slide-btn" title="Add a text box" disabled="@Disabled" @onclick="AddTextBox">＋T</button>
+            <button class="slide-btn" title="Delete the selected shape" disabled="@(!HasSelection)" @onclick="() => Run(c => c.DeleteSelectedShape())">🗑</button>
+
+            <span class="slide-sep"></span>
+
+            <button class="slide-btn" title="Undo (Ctrl+Z)" disabled="@(Disabled || !(Controller?.CanUndo ?? false))" @onclick="() => Run(c => c.Undo())">↶</button>
+            <button class="slide-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
+
+            @ToolbarContent
+        </ShinyToolbar>
+    }
+
+    <div class="slide-surface">
+        <SlideEditor @ref="editor"
+                     Deck="Deck"
+                     Theme="Theme"
+                     SlideIndex="SlideIndex"
+                     SlideIndexChanged="OnSlideIndexChanged"
+                     ReadOnly="ReadOnly"
+                     SelectionChanged="StateHasChanged"
+                     DeckChanged="OnDeckChanged" />
+    </div>
+
+    @if (ShowStatus)
+    {
+        <div class="slide-status">
+            @if (Controller is { SelectedShape: >= 0 } controller)
+            {
+                <span>@(controller.IsEditingText ? "Editing text — Esc to leave" : "Shape selected — double-click to edit its text")</span>
+            }
+            else
+            {
+                <span>Click a shape to select it; double-click to edit its text.</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    SlideEditor? editor;
+
+    /// <summary>The deck to edit. Must have been opened with <c>editable: true</c>.</summary>
+    [Parameter] public SlideDeck? Deck { get; set; }
+
+    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+
+    [Parameter] public int SlideIndex { get; set; }
+
+    [Parameter] public EventCallback<int> SlideIndexChanged { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    /// <summary>A one-line hint under the canvas saying what the current gesture will do.</summary>
+    [Parameter] public bool ShowStatus { get; set; } = true;
+
+    /// <summary>Extra items appended to the toolbar, after the built-in controls.</summary>
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+
+    [Parameter] public IReadOnlyList<string> FontFamilies { get; set; } =
+    [
+        "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
+    ];
+
+    [Parameter] public IReadOnlyList<int> FontSizes { get; set; } =
+    [
+        8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 44, 54, 66, 88
+    ];
+
+    [Parameter] public double ToolbarHeight { get; set; } = 44;
+    [Parameter] public string ToolbarBackground { get; set; } = "#FFFFFF";
+    [Parameter] public string ToolbarForeground { get; set; } = "#1F2937";
+    [Parameter] public string ToolbarBorder { get; set; } = "#E5E7EB";
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    [Parameter] public EventCallback DeckChanged { get; set; }
+
+    /// <summary>The underlying editor, so a host can focus it or reach its controller.</summary>
+    public SlideEditor? Editor => this.editor;
+
+    public SlideEditorController? Controller => this.editor?.Controller;
+
+    bool Disabled => this.ReadOnly || this.Deck is null;
+
+    bool HasSelection => !this.Disabled && this.Controller?.SelectedShape >= 0;
+
+    /// <summary>
+    /// Text formatting only applies while a caret is actually inside a shape's text.
+    /// </summary>
+    /// <remarks>
+    /// A live Bold button with nothing to embolden is worse than a disabled one: it tells the user the
+    /// click did something.
+    /// </remarks>
+    bool HasText => !this.Disabled && this.Controller?.IsEditingText == true;
+
+    bool CanNext => this.Controller?.CanGoNext ?? false;
+    bool CanPrevious => this.Controller?.CanGoPrevious ?? false;
+
+    SlideCaretFormat Format => this.Controller?.CaretFormat ?? SlideCaretFormat.Default;
+
+    /// <summary>The nearest offered size to what is actually at the caret.</summary>
+    int SelectedSize
+    {
+        get
+        {
+            var actual = this.Format.FontSize;
+            return this.FontSizes.OrderBy(x => Math.Abs(x - actual)).FirstOrDefault(18);
+        }
+    }
+
+    string ColorHex => $"#{this.Format.Color.R:x2}{this.Format.Color.G:x2}{this.Format.Color.B:x2}";
+
+    async Task Run(Action<SlideEditorController> action)
+    {
+        if (this.Controller is not { } controller || this.Disabled)
+            return;
+
+        action(controller);
+
+        // Focus goes back to the editor after every toolbar action: leaving it on the button means the
+        // next keystroke goes nowhere, which reads as the editor having silently stopped working.
+        if (this.editor is not null)
+            await this.editor.FocusAsync();
+
+        await this.RaiseChangedAsync();
+    }
+
+    /// <summary>Drops a new text box into the middle of the slide.</summary>
+    Task AddTextBox()
+        => this.Run(c => c.AddTextBox(
+            Math.Max(0, c.Deck.SlideWidth / 2 - 160),
+            Math.Max(0, c.Deck.SlideHeight / 2 - 32)));
+
+    Task Align(TextAlignment alignment) => this.Run(c => c.SetAlignment(alignment));
+
+    Task OnFontChanged(ChangeEventArgs e)
+        => e.Value?.ToString() is { Length: > 0 } family
+            ? this.Run(c => c.SetFontFamily(family))
+            : Task.CompletedTask;
+
+    Task OnSizeChanged(ChangeEventArgs e)
+        => double.TryParse(e.Value?.ToString(), out var size)
+            ? this.Run(c => c.SetFontSize(size))
+            : Task.CompletedTask;
+
+    Task OnColorChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (value is null || value.Length != 7 || value[0] != '#')
+            return Task.CompletedTask;
+
+        var rgb = uint.Parse(value[1..], System.Globalization.NumberStyles.HexNumber);
+        return this.Run(c => c.SetTextColor(ArgbColor.FromUInt32(0xFF000000u | rgb)));
+    }
+
+    async Task OnSlideIndexChanged(int index)
+    {
+        this.SlideIndex = index;
+
+        if (this.SlideIndexChanged.HasDelegate)
+            await this.SlideIndexChanged.InvokeAsync(index);
+
+        this.StateHasChanged();
+    }
+
+    async Task OnDeckChanged() => await this.RaiseChangedAsync();
+
+    async Task RaiseChangedAsync()
+    {
+        this.StateHasChanged();
+
+        if (this.DeckChanged.HasDelegate)
+            await this.DeckChanged.InvokeAsync();
+    }
+}

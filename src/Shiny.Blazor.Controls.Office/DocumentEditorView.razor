@@ -1,0 +1,200 @@
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Spreadsheet
+
+@*
+    DocumentEditor with formatting chrome on top.
+
+    The toolbar is a ShinyToolbar from the core Blazor package, filled through its ChildContent.
+    Blazor has no FontPicker (that control is MAUI-only), so the family and size are plain selects —
+    the MAUI DocumentEditorView uses FontPickerButton/FontSizePickerButton for the same two slots.
+*@
+<div class="shiny-doc-editor-view @Class" style="@Style">
+
+    @if (ShowToolbar)
+    {
+        <ShinyToolbar Dock="ToolbarDock.Top"
+                      Sticky="false"
+                      Height="@ToolbarHeight"
+                      BackgroundColor="@ToolbarBackground"
+                      TextColor="@ToolbarForeground"
+                      HasShadow="false"
+                      BorderColor="@ToolbarBorder"
+                      BorderThickness="1"
+                      OverflowEnabled="false"
+                      SafeArea="false"
+                      ZIndex="5">
+
+            <select class="doc-select doc-font"
+                    title="Font"
+                    disabled="@Disabled"
+                    value="@Format.FontFamily"
+                    @onchange="OnFontChanged">
+                @foreach (var font in FontFamilies)
+                {
+                    <option value="@font" selected="@(font == Format.FontFamily)">@font</option>
+                }
+            </select>
+
+            <select class="doc-select doc-size"
+                    title="Size"
+                    disabled="@Disabled"
+                    value="@SelectedSize"
+                    @onchange="OnSizeChanged">
+                @foreach (var size in FontSizes)
+                {
+                    <option value="@size" selected="@(Math.Abs(size - Format.FontSize) < 0.51)">@size</option>
+                }
+            </select>
+
+            <span class="doc-sep"></span>
+
+            <button class="doc-btn @(Format.Bold ? "on" : null)" title="Bold (Ctrl+B)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleBold())"><b>B</b></button>
+            <button class="doc-btn @(Format.Italic ? "on" : null)" title="Italic (Ctrl+I)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleItalic())"><i>I</i></button>
+            <button class="doc-btn @(Format.Underline ? "on" : null)" title="Underline (Ctrl+U)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleUnderline())"><u>U</u></button>
+            <button class="doc-btn @(Format.Strike ? "on" : null)" title="Strikethrough" disabled="@Disabled" @onclick="() => Run(c => c.ToggleStrikethrough())"><s>S</s></button>
+
+            <span class="doc-sep"></span>
+
+            <input class="doc-color"
+                   type="color"
+                   title="Text colour"
+                   disabled="@Disabled"
+                   value="@ColorHex"
+                   @onchange="OnColorChanged" />
+
+            <span class="doc-sep"></span>
+
+            <button class="doc-btn @(Format.Alignment == TextAlignment.Left ? "on" : null)" title="Align left" disabled="@Disabled" @onclick="() => Align(TextAlignment.Left)">⯇</button>
+            <button class="doc-btn @(Format.Alignment == TextAlignment.Center ? "on" : null)" title="Centre" disabled="@Disabled" @onclick="() => Align(TextAlignment.Center)">≡</button>
+            <button class="doc-btn @(Format.Alignment == TextAlignment.Right ? "on" : null)" title="Align right" disabled="@Disabled" @onclick="() => Align(TextAlignment.Right)">⯈</button>
+            <button class="doc-btn @(Format.Alignment == TextAlignment.Justify ? "on" : null)" title="Justify" disabled="@Disabled" @onclick="() => Align(TextAlignment.Justify)">▤</button>
+
+            <span class="doc-sep"></span>
+
+            <button class="doc-btn" title="Undo (Ctrl+Z)" disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))" @onclick="() => Run(c => c.Undo())">↶</button>
+            <button class="doc-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
+
+            @ToolbarContent
+        </ShinyToolbar>
+    }
+
+    <div class="doc-surface">
+        <DocumentEditor @ref="editor"
+                        Document="Document"
+                        Theme="Theme"
+                        Zoom="Zoom"
+                        ReadOnly="ReadOnly"
+                        SpellChecker="SpellChecker"
+                        SpellCheckEnabled="SpellCheckEnabled"
+                        DocumentChanged="OnDocumentChanged" />
+    </div>
+</div>
+
+@code {
+    DocumentEditor? editor;
+
+    [Parameter] public WordDocument? Document { get; set; }
+
+    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+
+    [Parameter] public double Zoom { get; set; } = 1.0;
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Passed straight through to the inner <see cref="DocumentEditor"/>.</summary>
+    [Parameter] public ISpellChecker? SpellChecker { get; set; }
+
+    [Parameter] public bool SpellCheckEnabled { get; set; } = true;
+
+    [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    /// <summary>Extra items appended to the toolbar, after the built-in formatting controls.</summary>
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+
+    [Parameter] public IReadOnlyList<string> FontFamilies { get; set; } =
+    [
+        "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
+    ];
+
+    [Parameter] public IReadOnlyList<int> FontSizes { get; set; } =
+    [
+        8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72
+    ];
+
+    [Parameter] public double ToolbarHeight { get; set; } = 44;
+    [Parameter] public string ToolbarBackground { get; set; } = "#FFFFFF";
+    [Parameter] public string ToolbarForeground { get; set; } = "#1F2937";
+    [Parameter] public string ToolbarBorder { get; set; } = "#E5E7EB";
+
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    [Parameter] public EventCallback DocumentChanged { get; set; }
+
+    /// <summary>The underlying editor, so a host can focus it or reach its controller.</summary>
+    public DocumentEditor? Editor => this.editor;
+
+    public DocumentEditorController? Controller => this.editor?.Controller;
+
+    bool Disabled => this.ReadOnly || this.Document is null;
+
+    CaretFormat Format => this.editor?.Controller?.CaretFormat ?? CaretFormat.Default;
+
+    /// <summary>The nearest offered size to what is actually at the caret.</summary>
+    int SelectedSize
+    {
+        get
+        {
+            var actual = this.Format.FontSize;
+            return this.FontSizes.OrderBy(x => Math.Abs(x - actual)).FirstOrDefault(11);
+        }
+    }
+
+    string ColorHex => $"#{this.Format.Color.R:x2}{this.Format.Color.G:x2}{this.Format.Color.B:x2}";
+
+    async Task Run(Action<DocumentEditorController> action)
+    {
+        if (this.editor?.Controller is not { } controller || this.Disabled)
+            return;
+
+        action(controller);
+
+        // Focus goes back to the editor after every toolbar action: leaving it on the button means the
+        // next keystroke goes nowhere, which reads as the editor having silently stopped working.
+        await this.editor.FocusAsync();
+        await this.RaiseChangedAsync();
+    }
+
+    Task Align(TextAlignment alignment) => this.Run(c => c.SetAlignment(alignment));
+
+    Task OnFontChanged(ChangeEventArgs e)
+        => e.Value?.ToString() is { Length: > 0 } family
+            ? this.Run(c => c.SetFontFamily(family))
+            : Task.CompletedTask;
+
+    Task OnSizeChanged(ChangeEventArgs e)
+        => double.TryParse(e.Value?.ToString(), out var size)
+            ? this.Run(c => c.SetFontSize(size))
+            : Task.CompletedTask;
+
+    Task OnColorChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (value is null || value.Length != 7 || value[0] != '#')
+            return Task.CompletedTask;
+
+        var rgb = uint.Parse(value[1..], System.Globalization.NumberStyles.HexNumber);
+        return this.Run(c => c.SetTextColor(ArgbColor.FromUInt32(0xFF000000u | rgb)));
+    }
+
+    async Task OnDocumentChanged() => await this.RaiseChangedAsync();
+
+    async Task RaiseChangedAsync()
+    {
+        this.StateHasChanged();
+
+        if (this.DocumentChanged.HasDelegate)
+            await this.DocumentChanged.InvokeAsync();
+    }
+}

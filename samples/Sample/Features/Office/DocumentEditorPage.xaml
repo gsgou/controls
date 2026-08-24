@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:office="clr-namespace:Shiny.Maui.Controls.Office;assembly=Shiny.Maui.Controls.Office"
+             x:Class="Sample.Features.Office.DocumentEditorPage"
+             Title="Document Editor">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="12" RowSpacing="8">
+
+        <HorizontalStackLayout Grid.Row="0" Spacing="8">
+            <Button Text="Toolbar" Clicked="OnToggleToolbar" />
+            <Button Text="Theme" Clicked="OnToggleTheme" />
+            <Button x:Name="SpellButton" Clicked="OnToggleSpelling" />
+        </HorizontalStackLayout>
+
+        <Border Grid.Row="1" StrokeThickness="1">
+            <office:DocumentEditorView x:Name="Editor" />
+        </Border>
+
+        <Label Grid.Row="2"
+               x:Name="StatusLabel"
+               FontSize="12"
+               Opacity="0.7"
+               LineBreakMode="WordWrap" />
+    </Grid>
+</ContentPage>

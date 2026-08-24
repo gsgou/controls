@@ -1,0 +1,118 @@
+@page "/spreadsheet"
+@using Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Spreadsheet
+@using Shiny.Controls.Office.Spreadsheet.Commands
+@using Shiny.Controls.Office.Skia
+@implements IDisposable
+
+<PageTitle>Spreadsheet</PageTitle>
+
+<h1>Spreadsheet</h1>
+<p class="lead">
+    An <code>.xlsx</code> viewer and editor. Edits are applied surgically to the open package, so
+    anything the editor does not model survives a save untouched.
+</p>
+
+<div class="toolbar">
+    <button class="btn" @onclick="Recalculate">Recalculate</button>
+    <button class="btn" @onclick="AddRow">Add row</button>
+    <button class="btn" disabled="@(!CanUndo)" @onclick="Undo">Undo</button>
+    <button class="btn" disabled="@(!CanRedo)" @onclick="Redo">Redo</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <span class="status">@Status</span>
+</div>
+
+<div class="formula-bar">
+    <span class="address">@(view?.Controller?.Selection.Active.Relative().ToString() ?? "A1")</span>
+    <span class="content">@(view?.Controller?.ActiveCellText)</span>
+</div>
+
+<div class="sheet-host">
+    <SpreadsheetView @ref="view"
+                     Workbook="workbook"
+                     Theme="@(dark ? SpreadsheetTheme.Dark : SpreadsheetTheme.Light)"
+                     CellChanged="OnCellChanged" />
+</div>
+
+<p class="hint">
+    Click to select, drag to extend, double-click or just start typing to edit. Enter and Tab commit;
+    Escape cancels. Drag a column header's right edge to resize.
+</p>
+
+@code {
+    SpreadsheetView? view;
+    Workbook? workbook;
+    bool dark;
+    int nextRow = 6;
+
+    bool CanUndo => this.workbook?.Undo.CanUndo ?? false;
+    bool CanRedo => this.workbook?.Undo.CanRedo ?? false;
+
+    string Status => this.workbook is null
+        ? "loading"
+        : $"{this.workbook.Calc.FormulaCount} formulas{(this.workbook.IsDirty ? " · unsaved" : string.Empty)}";
+
+    protected override void OnInitialized()
+    {
+        // Built in memory rather than shipped as a binary fixture, so the demo also exercises the
+        // "create a new workbook from nothing" path.
+        this.workbook = Workbook.Create("Budget");
+
+        Set("A1", CellValue.FromText("Item"));
+        Set("B1", CellValue.FromText("Qty"));
+        Set("C1", CellValue.FromText("Unit"));
+        Set("D1", CellValue.FromText("Total"));
+
+        AddItem(2, "Widget", 4, 12.50);
+        AddItem(3, "Gadget", 2, 42.00);
+        AddItem(4, "Doohickey", 7, 3.25);
+
+        Set("A5", CellValue.FromText("Total"));
+        this.workbook.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse("D5"), "SUM(D2:D4)"));
+    }
+
+    void AddItem(int row, string name, double quantity, double unit)
+    {
+        Set($"A{row}", CellValue.FromText(name));
+        Set($"B{row}", CellValue.FromNumber(quantity));
+        Set($"C{row}", CellValue.FromNumber(unit));
+        this.workbook!.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse($"D{row}"), $"B{row}*C{row}"));
+    }
+
+    void Set(string reference, CellValue value)
+        => this.workbook!.Execute(new SetCellValueCommand("Budget", CellRef.Parse(reference), value));
+
+    void AddRow()
+    {
+        AddItem(this.nextRow, $"Item {this.nextRow}", this.nextRow, 5);
+
+        // The total has to grow with the table; nothing rewrites ranges for us yet.
+        this.workbook!.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse("D5"), $"SUM(D2:D{this.nextRow})"));
+        this.nextRow++;
+        this.StateHasChanged();
+    }
+
+    void Recalculate()
+    {
+        this.workbook?.EnsureFormulasLoaded();
+        this.StateHasChanged();
+    }
+
+    void Undo()
+    {
+        this.view?.Controller?.Undo();
+        this.StateHasChanged();
+    }
+
+    void Redo()
+    {
+        this.view?.Controller?.Redo();
+        this.StateHasChanged();
+    }
+
+    void ToggleTheme() => this.dark = !this.dark;
+
+    void OnCellChanged(CellRef cell) => this.StateHasChanged();
+
+    public void Dispose() => this.workbook?.Dispose();
+}

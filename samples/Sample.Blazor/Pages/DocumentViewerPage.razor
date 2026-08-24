@@ -1,0 +1,85 @@
+@page "/document-viewer"
+@using Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Packaging
+@using Shiny.Controls.Office.Skia
+@implements IDisposable
+
+<PageTitle>Document Viewer</PageTitle>
+
+<h1>Document Viewer</h1>
+<p class="lead">
+    A read-only <code>.docx</code> viewer. Content reflows to the control's width rather than being
+    paginated — narrow the window and every paragraph re-wraps.
+</p>
+
+<div class="toolbar">
+    <button class="btn" @onclick="() => Zoom(-0.1)">−</button>
+    <span class="zoom">@((zoom * 100).ToString("0")) %</span>
+    <button class="btn" @onclick="() => Zoom(0.1)">+</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <span class="status">@(document?.Blocks.Count ?? 0) blocks</span>
+</div>
+
+<div class="viewer-layout">
+    <aside class="outline">
+        <div class="outline-title">Outline</div>
+        @if (document is not null)
+        {
+            var index = 0;
+            @foreach (var (level, text) in document.Outline())
+            {
+                var target = index++;
+                <button class="outline-item level-@level" @onclick="() => GoTo(target)">@text</button>
+            }
+        }
+
+        @if (unsupported.Features.Count > 0)
+        {
+            <div class="outline-title">Not rendered</div>
+            @foreach (var feature in unsupported.Features)
+            {
+                <div class="unsupported" title="@feature.Detail">@feature.Feature</div>
+            }
+        }
+    </aside>
+
+    <div class="doc-host">
+        <DocumentView @ref="view"
+                      Document="document"
+                      Zoom="zoom"
+                      Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)" />
+    </div>
+</div>
+
+<p class="hint">
+    Scroll with the wheel, or focus the view and use the arrow keys, Page Up/Down, Home and End.
+    Headers, footers, footnotes and comments are preserved in the file but deliberately not shown —
+    the panel on the left lists what the viewer skipped.
+</p>
+
+@code {
+    DocumentView? view;
+    WordDocument? document;
+    readonly UnsupportedFeatureCollector unsupported = new();
+    double zoom = 1.0;
+    bool dark;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bytes = SampleOfficeDocuments.BuildDocument();
+        this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), this.unsupported);
+    }
+
+    void Zoom(double delta)
+    {
+        this.zoom = Math.Clamp(this.zoom + delta, 0.5, 2.0);
+        this.StateHasChanged();
+    }
+
+    void ToggleTheme() => this.dark = !this.dark;
+
+    void GoTo(int outlineIndex) => this.view?.Controller?.ScrollToHeading(outlineIndex);
+
+    public void Dispose() => this.document?.Dispose();
+}

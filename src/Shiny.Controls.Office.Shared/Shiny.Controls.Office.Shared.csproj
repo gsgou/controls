@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(BaseTargetFramework)</TargetFramework>
+        <IsAotCompatible>true</IsAotCompatible>
+        <RootNamespace>Shiny.Controls.Office</RootNamespace>
+        <Description>Host-agnostic OOXML document kernel for the Shiny Office editors - surgical package editing, transactional undo, and the spreadsheet model.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="DocumentFormat.OpenXml" />
+        <PackageReference Include="ExcelNumberFormat" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Shiny.Controls.Office.Tests" />
+        <InternalsVisibleTo Include="Shiny.Maui.Controls.Office" />
+        <InternalsVisibleTo Include="Shiny.Blazor.Controls.Office" />
+    </ItemGroup>
+</Project>

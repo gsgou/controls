@@ -48,6 +48,51 @@ public class DataGridColumn : BindableObject
     public static readonly BindableProperty FrozenProperty = BindableProperty.Create(
         nameof(Frozen), typeof(DataGridFrozen), typeof(DataGridColumn), DataGridFrozen.None);
 
+    public static readonly BindableProperty DisplayAsProperty = BindableProperty.Create(
+        nameof(DisplayAs), typeof(DataGridColumnFormat), typeof(DataGridColumn), DataGridColumnFormat.None);
+
+    public static readonly BindableProperty DecimalsProperty = BindableProperty.Create(
+        nameof(Decimals), typeof(int?), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty NullTextProperty = BindableProperty.Create(
+        nameof(NullText), typeof(string), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty PrefixProperty = BindableProperty.Create(
+        nameof(Prefix), typeof(string), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty SuffixProperty = BindableProperty.Create(
+        nameof(Suffix), typeof(string), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty TrueTextProperty = BindableProperty.Create(
+        nameof(TrueText), typeof(string), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty FalseTextProperty = BindableProperty.Create(
+        nameof(FalseText), typeof(string), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty AlignmentProperty = BindableProperty.Create(
+        nameof(Alignment), typeof(DataGridCellAlignment), typeof(DataGridColumn), DataGridCellAlignment.Auto);
+
+    public static readonly BindableProperty HeaderAlignmentProperty = BindableProperty.Create(
+        nameof(HeaderAlignment), typeof(DataGridCellAlignment), typeof(DataGridColumn), DataGridCellAlignment.Auto);
+
+    public static readonly BindableProperty WrapProperty = BindableProperty.Create(
+        nameof(Wrap), typeof(bool), typeof(DataGridColumn), false);
+
+    public static readonly BindableProperty MaxLinesProperty = BindableProperty.Create(
+        nameof(MaxLines), typeof(int), typeof(DataGridColumn), 0);
+
+    // Bindable, not plain CLR properties: XAML cannot {Binding} onto a CLR property on a
+    // BindableObject - it fails at compile with MAUIX2002, which reads like the property does not
+    // exist. Formatting is meant to be reachable from a view model, so these have to be bindable.
+    public static readonly BindableProperty TextFormatterProperty = BindableProperty.Create(
+        nameof(TextFormatter), typeof(Func<object?, string?>), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty CellStyleProperty = BindableProperty.Create(
+        nameof(CellStyle), typeof(Func<object, DataGridCellStyle?>), typeof(DataGridColumn), null);
+
+    public static readonly BindableProperty CultureProperty = BindableProperty.Create(
+        nameof(Culture), typeof(System.Globalization.CultureInfo), typeof(DataGridColumn), null);
+
     public string Title
     {
         get => (string)this.GetValue(TitleProperty);
@@ -167,6 +212,120 @@ public class DataGridColumn : BindableObject
         set => this.SetValue(FrozenProperty, value);
     }
 
+    /// <summary>
+    /// A display preset - <c>Currency</c>, <c>Percent</c>, <c>Date</c>, <c>FileSize</c>, <c>Boolean</c>,
+    /// <c>Enum</c> and friends - so the common cases need neither a format string nor a cell template.
+    /// <see cref="StringFormat"/> wins over this when both are set.
+    /// </summary>
+    public DataGridColumnFormat DisplayAs
+    {
+        get => (DataGridColumnFormat)this.GetValue(DisplayAsProperty);
+        set => this.SetValue(DisplayAsProperty, value);
+    }
+
+    /// <summary>
+    /// Decimal places for the <c>Number</c>/<c>Currency</c>/<c>Percent</c>/<c>FileSize</c> presets.
+    /// <c>null</c> uses the culture default (and, for <c>FileSize</c>, 0 places for bytes and 1 above that).
+    /// </summary>
+    public int? Decimals
+    {
+        get => (int?)this.GetValue(DecimalsProperty);
+        set => this.SetValue(DecimalsProperty, value);
+    }
+
+    /// <summary>Text shown when the value is null or an empty string, e.g. <c>"&#8212;"</c>. Prefix/suffix are not applied to it.</summary>
+    public string? NullText
+    {
+        get => (string?)this.GetValue(NullTextProperty);
+        set => this.SetValue(NullTextProperty, value);
+    }
+
+    /// <summary>Text placed before the formatted value. Skipped when the value is null (see <see cref="NullText"/>).</summary>
+    public string? Prefix
+    {
+        get => (string?)this.GetValue(PrefixProperty);
+        set => this.SetValue(PrefixProperty, value);
+    }
+
+    /// <summary>Text placed after the formatted value, e.g. <c>" kg"</c>. Skipped when the value is null.</summary>
+    public string? Suffix
+    {
+        get => (string?)this.GetValue(SuffixProperty);
+        set => this.SetValue(SuffixProperty, value);
+    }
+
+    /// <summary>Text for <c>true</c> under <see cref="DataGridColumnFormat.Boolean"/>. Defaults to a check glyph.</summary>
+    public string? TrueText
+    {
+        get => (string?)this.GetValue(TrueTextProperty);
+        set => this.SetValue(TrueTextProperty, value);
+    }
+
+    /// <summary>Text for <c>false</c> under <see cref="DataGridColumnFormat.Boolean"/>. Defaults to a cross glyph.</summary>
+    public string? FalseText
+    {
+        get => (string?)this.GetValue(FalseTextProperty);
+        set => this.SetValue(FalseTextProperty, value);
+    }
+
+    /// <summary>Horizontal alignment of this column's cells and footer. <c>Auto</c> right-aligns quantities.</summary>
+    public DataGridCellAlignment Alignment
+    {
+        get => (DataGridCellAlignment)this.GetValue(AlignmentProperty);
+        set => this.SetValue(AlignmentProperty, value);
+    }
+
+    /// <summary>Horizontal alignment of the header. <c>Auto</c> follows <see cref="Alignment"/> so the header sits over its own values.</summary>
+    public DataGridCellAlignment HeaderAlignment
+    {
+        get => (DataGridCellAlignment)this.GetValue(HeaderAlignmentProperty);
+        set => this.SetValue(HeaderAlignmentProperty, value);
+    }
+
+    /// <summary>Let cell text wrap instead of truncating on one line. Pair with <see cref="MaxLines"/> to cap the height.</summary>
+    public bool Wrap
+    {
+        get => (bool)this.GetValue(WrapProperty);
+        set => this.SetValue(WrapProperty, value);
+    }
+
+    /// <summary>Maximum wrapped lines before truncating. <c>0</c> means unlimited; only meaningful with <see cref="Wrap"/>.</summary>
+    public int MaxLines
+    {
+        get => (int)this.GetValue(MaxLinesProperty);
+        set => this.SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>
+    /// Culture used for formatting this column. <c>null</c> uses <see cref="System.Globalization.CultureInfo.CurrentCulture"/>.
+    /// </summary>
+    public System.Globalization.CultureInfo? Culture
+    {
+        get => (System.Globalization.CultureInfo?)this.GetValue(CultureProperty);
+        set => this.SetValue(CultureProperty, value);
+    }
+
+    /// <summary>
+    /// Full control over the cell text without a template: takes the raw value, returns the string to
+    /// show. Runs instead of the preset/format string, but <see cref="Prefix"/>/<see cref="Suffix"/> and
+    /// the <see cref="NullText"/> placeholder still apply around it.
+    /// </summary>
+    public Func<object?, string?>? TextFormatter
+    {
+        get => (Func<object?, string?>?)this.GetValue(TextFormatterProperty);
+        set => this.SetValue(TextFormatterProperty, value);
+    }
+
+    /// <summary>
+    /// Per-cell colour/weight driven by the row item, e.g. red negatives or an amber "overdue" cell.
+    /// Return <c>null</c> (or a <see cref="DataGridCellStyle"/> with null members) to keep the themed default.
+    /// </summary>
+    public Func<object, DataGridCellStyle?>? CellStyle
+    {
+        get => (Func<object, DataGridCellStyle?>?)this.GetValue(CellStyleProperty);
+        set => this.SetValue(CellStyleProperty, value);
+    }
+
     /// <summary>Custom cell content. When null, a default <see cref="Label"/> bound to <see cref="PropertyName"/> is used.</summary>
     public DataTemplate? CellTemplate { get; set; }
 
@@ -220,17 +379,42 @@ public class DataGridColumn : BindableObject
             DataGridReflection.SetValue(item, this.PropertyName, value);
     }
 
-    internal virtual string? GetText(object? item)
+    internal virtual string? GetText(object? item) => this.FormatValue(this.GetCellValue(item));
+
+    /// <summary>
+    /// The single place a raw value becomes display text. The cell, the quick-filter search index,
+    /// group headers and aggregates all come through here so none of them can drift apart - which is
+    /// exactly what used to happen when the cell went through a binding <c>StringFormat</c> and
+    /// everything else went through <c>IFormattable.ToString</c>.
+    /// </summary>
+    internal string? FormatValue(object? value)
     {
-        var value = this.GetCellValue(item);
-        if (value is null)
-            return null;
+        if (this.TextFormatter is not null)
+        {
+            if (value is null)
+                return this.NullText;
 
-        if (!string.IsNullOrEmpty(this.StringFormat) && value is IFormattable formattable)
-            return formattable.ToString(this.StringFormat, System.Globalization.CultureInfo.CurrentCulture);
+            var custom = this.TextFormatter(value);
+            if (string.IsNullOrEmpty(custom))
+                return this.NullText;
 
-        return value.ToString();
+            return (this.Prefix ?? string.Empty) + custom + (this.Suffix ?? string.Empty);
+        }
+        return DataGridValueFormatter.Format(value, this.FormatSpec);
     }
+
+    DataGridFormatSpec FormatSpec => new()
+    {
+        DisplayAs = this.DisplayAs,
+        StringFormat = this.StringFormat,
+        Decimals = this.Decimals,
+        NullText = this.NullText,
+        Prefix = this.Prefix,
+        Suffix = this.Suffix,
+        TrueText = this.TrueText,
+        FalseText = this.FalseText,
+        Culture = this.Culture
+    };
 
     internal Type GetDataType(Type itemType)
         => DataGridReflection.GetPropertyType(itemType, this.PropertyName);

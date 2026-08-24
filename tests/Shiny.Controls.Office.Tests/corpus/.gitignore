@@ -1,0 +1,4 @@
+# Real documents used by the corpus tests. Drop .xlsx/.docx/.pptx files here; they stay local.
+*
+!.gitignore
+!README.md

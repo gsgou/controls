@@ -596,3 +596,20 @@
         animation-duration: 2s;
     }
 }
+
+/* ---- Column alignment / wrapping (DataGridCellAlignment, Column.Wrap) ---- */
+/* `.shiny-dg-table th/td` sets text-align:left, so these have to out-specify it. */
+.shiny-dg-table .shiny-dg-align-center {
+    text-align: center;
+}
+
+.shiny-dg-table .shiny-dg-align-end {
+    text-align: right;
+}
+
+/* The table default is nowrap; a wrapping column opts back into normal flow.
+   MaxLines adds the -webkit-line-clamp box inline, since the count is per column. */
+.shiny-dg-table .shiny-dg-wrap {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}

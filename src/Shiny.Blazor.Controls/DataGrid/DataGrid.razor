@@ -201,8 +201,9 @@
                                 {
                                     var editingThisCell = IsEditingCell(rowItem, col);
                                     var editingFormCell = EditMode == DataGridEditMode.Form && IsEditingRow(rowItem) && EffectiveEditable(col);
-                                    <td class="shiny-dg-cell@(FrozenCssClass(col))"
-                                        style="@ColumnWidthStyle(col)"
+                                    var cellStyle = CellStyleFor(col, rowItem);
+                                    <td class="@CellCssClass(col, cellStyle)"
+                                        style="@CellInlineStyle(col, cellStyle)"
                                         data-dg-frozen="@FrozenAttr(col)"
                                         @onclick="() => OnCellClickAsync(rowItem, col)"
                                         @onclick:stopPropagation="@(EditMode == DataGridEditMode.Cell && EffectiveEditable(col))">
@@ -305,7 +306,7 @@
                             <tr class="shiny-dg-group-header" @onclick="() => ToggleGroupCollapse(group.Key)">
                                 <td colspan="@ColSpan">
                                     <span class="shiny-dg-group-caret">@(collapsed ? "▸" : "▾")</span>
-                                    <strong>@gcol.HeaderText:</strong> @group.Key?.ToString()
+                                    <strong>@gcol.HeaderText:</strong> @gcol.FormatValue(group.Key)
                                     <span class="shiny-dg-group-count">(@group.Items.Count)</span>
                                 </td>
                             </tr>
@@ -330,7 +331,7 @@
                                         }
                                         @foreach (var c in VisibleColumns)
                                         {
-                                            <td class="shiny-dg-footer-cell@(FrozenCssClass(c))"
+                                            <td class="@FooterCellCssClass(c)"
                                                 style="@ColumnWidthStyle(c)" data-dg-frozen="@FrozenAttr(c)">@GroupAggregateText(c, group.Items)</td>
                                         }
                                     </tr>
@@ -388,7 +389,7 @@
                             }
                             @foreach (var col in VisibleColumns)
                             {
-                                <td class="shiny-dg-footer-cell@(FrozenCssClass(col))"
+                                <td class="@FooterCellCssClass(col)"
                                     style="@ColumnWidthStyle(col)" data-dg-frozen="@FrozenAttr(col)">
                                     @if (col.FooterTemplate is not null)
                                     {

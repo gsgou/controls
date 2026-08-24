@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:office="clr-namespace:Shiny.Maui.Controls.Office;assembly=Shiny.Maui.Controls.Office"
+             x:Class="Sample.Features.Office.SpreadsheetPage"
+             Title="Spreadsheet">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="12" RowSpacing="8">
+
+        <HorizontalStackLayout Grid.Row="0" Spacing="8">
+            <Button Text="Add row" Clicked="OnAddRow" />
+            <Button Text="Undo" Clicked="OnUndo" />
+            <Button Text="Redo" Clicked="OnRedo" />
+            <Button Text="Theme" Clicked="OnToggleTheme" />
+        </HorizontalStackLayout>
+
+        <!-- A read-only formula bar: it shows the formula behind the active cell, not its result. -->
+        <Border Grid.Row="1" Padding="8,6" StrokeThickness="1">
+            <Label x:Name="FormulaBar" FontFamily="Monospace" FontSize="13" LineBreakMode="TailTruncation" />
+        </Border>
+
+        <Border Grid.Row="2" StrokeThickness="1">
+            <office:SpreadsheetView x:Name="Sheet" CellChanged="OnCellChanged" />
+        </Border>
+
+        <Label Grid.Row="3"
+               FontSize="12"
+               Text="Tap to select, drag to extend, double-tap a cell to edit. Drag a column header edge to resize."
+               Opacity="0.7" />
+    </Grid>
+</ContentPage>

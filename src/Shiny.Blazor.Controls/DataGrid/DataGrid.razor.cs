@@ -1330,7 +1330,67 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         => "shiny-dg-header"
             + this.FrozenCssClass(col)
             + (sortable ? " shiny-dg-sortable" : null)
+            + AlignCssClass(col.EffectiveHeaderAlignment)
             + this.DropCssClass(col);
+
+    /// <summary>
+    /// The full class list for one data cell. Built in a single call because the Razor generator
+    /// mangles a <c>class</c> attribute stitched together from several consecutive <c>@(...)</c>
+    /// expressions inside the row's templated delegate.
+    /// </summary>
+    internal string CellCssClass(ColumnBase<TItem> col, DataGridCellStyle? style)
+        => "shiny-dg-cell"
+            + this.FrozenCssClass(col)
+            + AlignCssClass(col.EffectiveAlignment)
+            + (col.Wrap ? " shiny-dg-wrap" : null)
+            + (string.IsNullOrWhiteSpace(style?.CssClass) ? null : " " + style!.CssClass!.Trim());
+
+    /// <summary>The full inline style for one data cell - width, line clamp, and the CellStyle delegate.</summary>
+    internal string? CellInlineStyle(ColumnBase<TItem> col, DataGridCellStyle? style)
+        => this.ColumnWidthStyle(col) + LineClampStyle(col) + CellStyleAttr(style);
+
+    /// <summary>The full class list for one footer cell (grid footer and group footer alike).</summary>
+    internal string FooterCellCssClass(ColumnBase<TItem> col)
+        => "shiny-dg-footer-cell" + this.FrozenCssClass(col) + AlignCssClass(col.EffectiveAlignment);
+
+    /// <summary>The column's per-row style, resolved once so the delegate is not called for class and style separately.</summary>
+    internal static DataGridCellStyle? CellStyleFor(ColumnBase<TItem> col, TItem item)
+        => col.CellStyle?.Invoke(item);
+
+    static string? AlignCssClass(DataGridCellAlignment alignment)
+        => alignment switch
+        {
+            DataGridCellAlignment.Center => " shiny-dg-align-center",
+            DataGridCellAlignment.End => " shiny-dg-align-end",
+            _ => null
+        };
+
+    /// <summary>
+    /// Line clamping is inline because the line count is per column. Only meaningful with
+    /// <c>Wrap</c> - clamping a <c>nowrap</c> cell caps it at a line it already had.
+    /// </summary>
+    static string? LineClampStyle(ColumnBase<TItem> col)
+        => col.Wrap && col.MaxLines > 0
+            ? $"display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:{col.MaxLines};overflow:hidden;"
+            : null;
+
+    static string? CellStyleAttr(DataGridCellStyle? style)
+    {
+        if (style is null)
+            return null;
+
+        var sb = new System.Text.StringBuilder();
+        if (!string.IsNullOrWhiteSpace(style.TextColor))
+            sb.Append("color:").Append(style.TextColor).Append(';');
+        if (!string.IsNullOrWhiteSpace(style.BackgroundColor))
+            sb.Append("background:").Append(style.BackgroundColor).Append(';');
+        if (style.Bold == true)
+            sb.Append("font-weight:600;");
+        if (!string.IsNullOrWhiteSpace(style.Style))
+            sb.Append(style.Style!.TrimEnd().TrimEnd(';')).Append(';');
+
+        return sb.Length == 0 ? null : sb.ToString();
+    }
 
     string RowCssClass(TItem item)
     {

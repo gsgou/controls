@@ -134,7 +134,29 @@ public partial class DataGrid : ContentView
 
     bool HasMultiSelect => this.SelectionMode == DataGridSelectionMode.Multiple;
 
-    void OnColumnsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => this.RebuildAll();
+    void OnColumnsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        this.PushBindingContextToColumns();
+        this.RebuildAll();
+    }
+
+    /// <summary>
+    /// Columns are <see cref="BindableObject"/>s, not elements, so they are not in the visual tree and
+    /// inherit nothing on their own - a <c>{Binding}</c> on a column would silently resolve against no
+    /// context at all. Handing them the grid's context is what makes <c>TextFormatter</c>,
+    /// <c>CellStyle</c> and the rest reachable from a view model instead of code-behind only.
+    /// </summary>
+    void PushBindingContextToColumns()
+    {
+        foreach (var column in this.Columns)
+            SetInheritedBindingContext(column, this.BindingContext);
+    }
+
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+        this.PushBindingContextToColumns();
+    }
 
     // ---------- Items ----------
     void OnItemsSourceChanged()
@@ -184,7 +206,7 @@ public partial class DataGrid : ContentView
                 {
                     var items = g.ToList();
                     var collapsed = g.Key is not null && this.collapsedGroups.Contains(g.Key);
-                    this.displayItems.Add(new DataGridGroupHeader(g.Key, col.Title, items.Count, collapsed, items));
+                    this.displayItems.Add(new DataGridGroupHeader(g.Key, col.FormatValue(g.Key), col.Title, items.Count, collapsed, items));
                     if (collapsed)
                         continue;
 
@@ -481,7 +503,9 @@ public partial class DataGrid : ContentView
                 Text = ComputeAggregate(column, data),
                 FontAttributes = FontAttributes.Bold,
                 Padding = this.CellPadding,
-                VerticalOptions = LayoutOptions.Center
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalTextAlignment = this.ResolveAlignment(column, column.Alignment)
             };
             lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
             return lbl;
@@ -775,6 +799,8 @@ public partial class DataGrid : ContentView
                     Text = column.Title,
                     FontAttributes = FontAttributes.Bold,
                     VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    HorizontalTextAlignment = this.ResolveHeaderAlignment(column),
                     // Narrow columns are the norm on phones; a header that refuses to shrink spills
                     // over the next one instead of ellipsizing like the cells below it do.
                     LineBreakMode = LineBreakMode.TailTruncation,
@@ -1261,22 +1287,91 @@ public partial class DataGrid : ContentView
             return content;
         }
 
+        // Fill rather than Center so the cell's own alignment and background cover the whole cell;
+        // VerticalTextAlignment keeps the text centred exactly as LayoutOptions.Center used to.
         var label = new Label
         {
-            VerticalOptions = LayoutOptions.Center,
-            LineBreakMode = LineBreakMode.TailTruncation,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            VerticalTextAlignment = TextAlignment.Center,
+            HorizontalTextAlignment = this.ResolveAlignment(column, column.Alignment),
+            LineBreakMode = column.Wrap ? LineBreakMode.WordWrap : LineBreakMode.TailTruncation,
             Padding = this.CellPadding
         };
+        if (column.MaxLines > 0)
+            label.MaxLines = column.MaxLines;
+
         label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         if (!string.IsNullOrEmpty(column.PropertyName))
         {
+            // Converter rather than the binding's own StringFormat: presets, prefix/suffix, the null
+            // placeholder and a TextFormatter delegate all live in Column.FormatValue, and routing the
+            // cell through it is what keeps the cell text identical to what search and export see.
             label.SetBinding(Label.TextProperty, new Binding(
                 $"{nameof(DataGridRow.Data)}.{column.PropertyName}",
-                stringFormat: column.StringFormat));
+                converter: new DataGridCellTextConverter(column)));
         }
+        this.HookCellStyle(label, column);
         return label;
     }
+
+    /// <summary>
+    /// Applies <see cref="DataGridColumn.CellStyle"/> whenever the cell binds to a row - including
+    /// when the virtualized list recycles this exact view onto a different item, which is why it has
+    /// to re-assert the themed defaults instead of only writing the overrides.
+    /// </summary>
+    void HookCellStyle(Label label, DataGridColumn column)
+    {
+        label.BindingContextChanged += (sender, _) =>
+        {
+            // Read the delegate at bind time, not at hook time: CellStyle can be a {Binding}, and the
+            // grid's BindingContext usually lands after the columns are added.
+            if (column.CellStyle is null)
+                return;
+
+            var lbl = (Label)sender!;
+            var item = (lbl.BindingContext as DataGridRow)?.Data;
+            var style = item is null ? null : column.CellStyle(item);
+
+            if (style?.TextColor is not null)
+                lbl.TextColor = style.TextColor;
+            else
+                lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+            lbl.BackgroundColor = style?.BackgroundColor ?? Colors.Transparent;
+            lbl.FontAttributes = style?.FontAttributes ?? FontAttributes.None;
+        };
+    }
+
+    /// <summary>
+    /// Resolves <see cref="DataGridCellAlignment.Auto"/> against the column's preset and CLR type -
+    /// quantities right, everything else left.
+    /// </summary>
+    internal TextAlignment ResolveAlignment(DataGridColumn column, DataGridCellAlignment alignment)
+    {
+        if (alignment == DataGridCellAlignment.Auto)
+        {
+            if (!column.HasValue)
+                return TextAlignment.Start;
+
+            return DataGridValueFormatter.IsNumericAlignment(column.DisplayAs, column.GetDataType(this.ItemTypeOrString()))
+                ? TextAlignment.End
+                : TextAlignment.Start;
+        }
+        return alignment switch
+        {
+            DataGridCellAlignment.Center => TextAlignment.Center,
+            DataGridCellAlignment.End => TextAlignment.End,
+            _ => TextAlignment.Start
+        };
+    }
+
+    /// <summary>Header alignment - <c>Auto</c> follows the cells so a header sits over its own values.</summary>
+    TextAlignment ResolveHeaderAlignment(DataGridColumn column)
+        => column.HeaderAlignment == DataGridCellAlignment.Auto
+            ? this.ResolveAlignment(column, column.Alignment)
+            : this.ResolveAlignment(column, column.HeaderAlignment);
 
     // ---------- Selection ----------
     void OnRowTapped(DataGridRow row)

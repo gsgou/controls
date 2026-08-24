@@ -1,0 +1,295 @@
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@using Shiny.Controls.Office.Presentation
+@implements IDisposable
+@inject IJSRuntime Js
+
+<div class="shiny-slides @Class"
+     style="@Style"
+     tabindex="0"
+     @onwheel="OnWheel"
+     @onwheel:preventDefault="true"
+     @onkeydown="OnKeyDown"
+     @onkeydown:preventDefault="preventKeyDefault">
+
+    <SKCanvasView @ref="canvas"
+                  class="shiny-slides-canvas"
+                  IgnorePixelScaling="false"
+                  OnPaintSurface="OnPaint"
+                  @onclick="OnClick" />
+</div>
+
+@code {
+    SKCanvasView? canvas;
+    SkiaTextMeasurer? measurer;
+    SlidePainter? painter;
+    SlideController? controller;
+    bool preventKeyDefault;
+    bool applyingParameters;
+    double lastWidth;
+    double lastHeight;
+
+    /// <summary>
+    /// The theme the canvas was last painted with.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView only repaints when Invalidate is called; a Blazor re-render does not touch the
+    /// canvas contents. Without this comparison a theme change updates the parameter, re-renders the
+    /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
+    /// </remarks>
+    SlideTheme? paintedTheme;
+
+    /// <summary>
+    /// Device pixel ratio, read once from the browser.
+    /// </summary>
+    /// <remarks>
+    /// SKCanvasView hands back a surface in device pixels but does not expose the ratio it used.
+    /// Deriving it from the last known CSS width is circular — width = info.Width / (info.Width /
+    /// lastWidth) is just lastWidth — so the size could never change after the first paint, and the
+    /// grid stayed frozen at whatever the element measured on its very first frame.
+    /// </remarks>
+    double dpr = 1;
+
+    [Parameter] public SlideDeck? Deck { get; set; }
+
+    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+
+    [Parameter] public SlideViewMode Mode { get; set; } = SlideViewMode.Single;
+
+    [Parameter] public EventCallback<SlideViewMode> ModeChanged { get; set; }
+
+    [Parameter] public int SlideIndex { get; set; }
+
+    [Parameter] public EventCallback<int> SlideIndexChanged { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    public SlideController? Controller => this.controller;
+
+    protected override void OnParametersSet()
+    {
+        // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
+        // called, so a theme change that does not reach this leaves the old pixels on screen and the
+        // toggle appears to do nothing.
+        if (this.paintedTheme != this.Theme)
+        {
+            this.paintedTheme = this.Theme;
+            this.canvas?.Invalidate();
+        }
+
+        if (this.Deck is null)
+        {
+            this.controller = null;
+            return;
+        }
+
+        this.measurer ??= new SkiaTextMeasurer();
+        this.painter ??= new SlidePainter(this.measurer);
+
+        if (this.controller is null || !ReferenceEquals(this.controller.Deck, this.Deck))
+        {
+            if (this.controller is not null)
+                this.controller.Changed -= this.OnControllerChanged;
+
+            this.controller = new SlideController(this.Deck);
+            this.controller.Changed += this.OnControllerChanged;
+
+            if (this.lastWidth > 0)
+                this.controller.Resize(this.lastWidth, this.lastHeight);
+        }
+
+        // Applying parameters mutates the controller, which raises Changed. Without this guard that
+        // event writes the controller's *current* state back to the parent mid-update: assigning Mode
+        // fires Changed while Index is still the old value, the stale index is pushed to the parent,
+        // and the navigation the parent just requested is silently undone.
+        this.applyingParameters = true;
+        try
+        {
+            this.controller.Index = this.SlideIndex;
+            this.controller.Mode = this.Mode;
+        }
+        finally
+        {
+            this.applyingParameters = false;
+        }
+    }
+
+    async void OnControllerChanged(object? sender, EventArgs e)
+    {
+        if (this.controller is { } controller && !this.applyingParameters)
+        {
+            if (controller.Index != this.SlideIndex)
+            {
+                this.SlideIndex = controller.Index;
+                if (this.SlideIndexChanged.HasDelegate)
+                    await this.SlideIndexChanged.InvokeAsync(controller.Index);
+            }
+
+            if (controller.Mode != this.Mode)
+            {
+                this.Mode = controller.Mode;
+                if (this.ModeChanged.HasDelegate)
+                    await this.ModeChanged.InvokeAsync(controller.Mode);
+            }
+        }
+
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+    }
+
+    void OnPaint(SKPaintSurfaceEventArgs e)
+    {
+        var info = e.Info;
+        var theme = this.Theme;
+        var surface = e.Surface.Canvas;
+
+        surface.Clear(new SKColor(theme.Surround.R, theme.Surround.G, theme.Surround.B));
+
+        if (this.controller is null || this.painter is null)
+            return;
+
+        // The surface arrives in device pixels; the layout works in CSS pixels.
+        var scale = (float)this.dpr;
+        var width = info.Width / this.dpr;
+        var height = info.Height / this.dpr;
+
+        if (this.lastWidth <= 0 || Math.Abs(width - this.lastWidth) > 0.5 || Math.Abs(height - this.lastHeight) > 0.5)
+        {
+            this.lastWidth = width;
+            this.lastHeight = height;
+            this.controller.Resize(width, height);
+        }
+
+        if (this.controller.Mode == SlideViewMode.Grid)
+        {
+            foreach (var placement in this.controller.VisibleThumbnails())
+                this.PaintPlacement(surface, placement, theme, scale);
+
+            return;
+        }
+
+        if (this.controller.SinglePlacement() is { } single)
+            this.PaintPlacement(surface, single, theme, scale);
+    }
+
+    void PaintPlacement(SKCanvas surface, SlidePlacement placement, SlideTheme theme, float scale)
+    {
+        if (this.controller is null || this.painter is null)
+            return;
+
+        this.painter.Paint(surface, new SlidePaintRequest
+        {
+            Slide = placement.Slide,
+            SlideWidth = this.controller.Deck.SlideWidth,
+            SlideHeight = this.controller.Deck.SlideHeight,
+            DestinationX = placement.X,
+            DestinationY = placement.Y,
+            DestinationWidth = placement.Width,
+            DestinationHeight = placement.Height,
+            Theme = theme,
+            Scale = scale
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+        }
+        catch (Exception)
+        {
+            // Prerendering or a locked-down host: 1 is the safe assumption.
+            this.dpr = 1;
+        }
+
+        if (this.dpr <= 0)
+            this.dpr = 1;
+
+        this.canvas?.Invalidate();
+
+        if (await OfficeFonts.EnsureLoadedAsync(this.Js))
+        {
+            // The first frame painted with fallback metrics; the measurer's cache is invalidated by
+            // the new registrations, so a repaint now re-measures against the real faces.
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+        }
+    }
+
+    void OnWheel(WheelEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        if (this.controller.Mode == SlideViewMode.Grid)
+        {
+            this.controller.Scroll(e.DeltaY);
+            return;
+        }
+
+        if (e.DeltaY > 0)
+            this.controller.Next();
+        else
+            this.controller.Previous();
+    }
+
+    void OnClick(MouseEventArgs e)
+    {
+        if (this.controller is null || this.controller.Mode != SlideViewMode.Grid)
+            return;
+
+        var index = this.controller.ThumbnailAt(e.OffsetX, e.OffsetY);
+        if (index < 0)
+            return;
+
+        this.controller.Index = index;
+        this.controller.Mode = SlideViewMode.Single;
+    }
+
+    void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        this.preventKeyDefault = true;
+
+        switch (e.Key)
+        {
+            case "ArrowRight":
+            case "ArrowDown":
+            case "PageDown":
+            case " ": this.controller.Next(); break;
+
+            case "ArrowLeft":
+            case "ArrowUp":
+            case "PageUp": this.controller.Previous(); break;
+
+            case "Home": this.controller.Index = 0; break;
+            case "End": this.controller.Index = this.controller.Count - 1; break;
+
+            case "Escape":
+                this.controller.Mode = this.controller.Mode == SlideViewMode.Grid
+                    ? SlideViewMode.Single
+                    : SlideViewMode.Grid;
+
+                break;
+
+            default: this.preventKeyDefault = false; break;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (this.controller is not null)
+            this.controller.Changed -= this.OnControllerChanged;
+
+        this.painter?.Dispose();
+        this.measurer?.Dispose();
+    }
+}
