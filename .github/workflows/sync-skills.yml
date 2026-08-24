@@ -3,7 +3,7 @@ name: Sync Skills
 on:
   push:
     branches:
-      - main
+      - 'v*'
     paths:
       - 'SKILLS/**'
   workflow_dispatch:
@@ -68,7 +68,7 @@ jobs:
           token: ${{ secrets.SKILLS_REPO_TOKEN }}
           path: skills-repo
           commit-message: "Update skills from shinyorg/controls"
-          title: "Update skills from Shiny Controls"
+          title: "Update skills from Shiny Controls (${{ github.ref_name }})"
           body: |
             This PR updates the `shiny` plugin skills from the [Shiny Controls repository](https://github.com/shinyorg/controls).
 
@@ -78,7 +78,7 @@ jobs:
 
             ---
             *This PR was automatically created by the [sync-skills workflow](https://github.com/shinyorg/controls/actions/workflows/sync-skills.yml).*
-          branch: update-skills-controls
+          branch: update-skills-controls-${{ github.ref_name }}
           delete-branch: true
           labels: |
             automated
