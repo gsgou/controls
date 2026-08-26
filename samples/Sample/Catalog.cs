@@ -75,6 +75,7 @@ public static class Catalog
         [
             new("buttons", "ShinyButton", "⬭", "States, icons, loading and long-press"),
             new("fab", "Fab & FabMenu", "➕", "Floating action button and expanding menu"),
+            new("navigationpage", "Navigation Page", "▢", "A NavigationPage with items on both sides of the title"),
             new("stateview", "State View", "⇄", "Named branches switched by one string"),
             new("wizard", "Wizard", "➤", "Multi-step flow with a pointed progress bar")
         ]),

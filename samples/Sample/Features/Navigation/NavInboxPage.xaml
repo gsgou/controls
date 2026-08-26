@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             x:Class="Sample.Features.Navigation.NavInboxPage"
+             Title="Inbox"
+             AutomationId="NavInboxPage"
+             shiny:ShinyNav.Subtitle="12 unread">
+
+    <!-- The left side. A stock NavigationPage has no room here at all: the slot belongs to the
+         back button, and on the root page it simply goes unused. -->
+    <shiny:ShinyNav.LeftItems>
+        <shiny:NavBarItem Icon="menu" AutomationId="nav-left-menu" Clicked="OnMenu" />
+    </shiny:ShinyNav.LeftItems>
+
+    <!-- The right side. Order="Secondary" always folds into the overflow menu; anything past
+         MaxVisibleItems (3 by default) folds in behind it. -->
+    <shiny:ShinyNav.RightItems>
+        <shiny:NavBarItem Icon="search" AutomationId="nav-right-search" Clicked="OnSearch" />
+        <shiny:NavBarItem Icon="bell" Badge="3" AutomationId="nav-right-alerts" Clicked="OnAlerts" />
+        <shiny:NavBarItem Text="Mark all read" Icon="check" Order="Secondary" Clicked="OnMarkAll" />
+        <shiny:NavBarItem IsSeparator="True" Order="Secondary" />
+        <shiny:NavBarItem Text="Delete all" Icon="trash" Order="Secondary" IsDestructive="True" Clicked="OnDeleteAll" />
+    </shiny:ShinyNav.RightItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label x:Name="Status" FontSize="13" TextColor="Gray" AutomationId="NavStatus"
+                   Text="Tap something in the bar." />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <Button Text="Push a message" AutomationId="PushMessage" Clicked="OnPush" />
+            <Button Text="Toggle the badge" AutomationId="ToggleBadge" Clicked="OnToggleBadge" />
+            <Button Text="Hide the bar" AutomationId="HideBar" Clicked="OnToggleBar" />
+            <Button Text="Close" AutomationId="CloseNavDemo" Clicked="OnClose" />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <Label Text="Scroll on, if the large title is switched on"
+                   FontAttributes="Bold" />
+
+            <!-- Enough content for the collapsing title to have something to follow. The bar finds
+                 this ScrollView on its own; ShinyNav.ScrollSource names one explicitly when a page
+                 has more than one. -->
+            <VerticalStackLayout x:Name="Filler" Spacing="10" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

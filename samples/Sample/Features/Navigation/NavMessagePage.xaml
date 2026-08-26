@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:shiny="http://shiny.net/maui/controls"
+             x:Class="Sample.Features.Navigation.NavMessagePage"
+             Title="Release notes"
+             AutomationId="NavMessagePage"
+             shiny:ShinyNav.Subtitle="from Allan"
+             NavigationPage.BackButtonTitle="Inbox">
+
+    <!-- A left item alongside the back button, which is the arrangement no native bar allows. -->
+    <shiny:ShinyNav.LeftItems>
+        <shiny:NavBarItem Icon="star" AutomationId="nav-left-star" Clicked="OnStar" />
+    </shiny:ShinyNav.LeftItems>
+
+    <shiny:ShinyNav.RightItems>
+        <shiny:NavBarItem Icon="share" AutomationId="nav-right-share" Clicked="OnShare" />
+        <shiny:NavBarItem Icon="trash" AutomationId="nav-right-delete" IsDestructive="True" Clicked="OnDelete" />
+    </shiny:ShinyNav.RightItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label x:Name="Status" FontSize="13" TextColor="Gray" AutomationId="NavMessageStatus"
+                   Text="The back button carries the previous page's title, because BackButtonTitle is set." />
+
+            <Label FontSize="14"
+                   Text="Everything about the stack is MAUI's: this page was reached with PushAsync, the back button pops, and Android's hardware back still works. Only the bar is ours." />
+
+            <Button Text="Back" AutomationId="GoBack" Clicked="OnBack" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

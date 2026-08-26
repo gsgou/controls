@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Sample.Features.Navigation.NavigationDemoPage"
+             Title="Navigation Page"
+             AutomationId="NavigationDemoPage">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="14">
+            <Label Text="A NavigationPage with two sides" FontSize="22" FontAttributes="Bold" />
+            <Label FontSize="14" TextColor="Gray"
+                   Text="ShinyNavigationPage is a NavigationPage — PushAsync, PopAsync, the back button, page lifecycle and every attached property MAUI already gives it still work. What it adds is a bar with items on the left as well as the right, an overflow menu, badges, motion icons and a collapsing large title." />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <Label Text="The bar is drawn, not native" FontAttributes="Bold" />
+            <Label FontSize="13" TextColor="Gray"
+                   Text="No platform's native bar has a left slot to give you — it belongs to the back button on all of them, and AppKit and GTK4 have no bar at all. Drawing it is what makes the same chrome render everywhere." />
+
+            <BoxView HeightRequest="1" Color="LightGray" />
+
+            <Button Text="Open the demo"
+                    AutomationId="OpenNavDemo"
+                    Clicked="OnOpen" />
+
+            <Button Text="Open with a collapsing large title"
+                    AutomationId="OpenNavDemoLarge"
+                    Clicked="OnOpenLarge" />
+
+            <Label FontSize="12" TextColor="Gray"
+                   Text="Both open modally, because Shell cannot host a NavigationPage." />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

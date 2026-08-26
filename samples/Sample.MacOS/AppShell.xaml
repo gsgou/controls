@@ -27,6 +27,7 @@
        xmlns:fab="clr-namespace:Sample.Features.Fab;assembly=Sample.MacOS"
        xmlns:feedback="clr-namespace:Sample.Features.Feedback;assembly=Sample.MacOS"
        xmlns:fp="clr-namespace:Sample.Features.FloatingPanel;assembly=Sample.MacOS"
+       xmlns:navpage="clr-namespace:Sample.Features.Navigation;assembly=Sample.MacOS"
        xmlns:glass="clr-namespace:Sample.Features.FrostedGlass;assembly=Sample.MacOS"
        xmlns:home="clr-namespace:Sample.Features.Home;assembly=Sample.MacOS"
        xmlns:images="clr-namespace:Sample.Features.Images;assembly=Sample.MacOS"
@@ -115,6 +116,9 @@
 
     <MenuItem Text="PANELS &amp; OVERLAYS" IsEnabled="False" />
 
+    <FlyoutItem Title="Navigation Page">
+        <ShellContent ContentTemplate="{DataTemplate navpage:NavigationDemoPage}" Route="navigationpage" />
+    </FlyoutItem>
     <FlyoutItem Title="Floating Panel">
         <ShellContent ContentTemplate="{DataTemplate fp:SheetPage}" Route="sheet" />
     </FlyoutItem>

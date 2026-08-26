@@ -57,6 +57,12 @@ static class PageOverlay
     internal sealed class TabMenuLayer : Grid, IOverlayLayer;
 
     /// <summary>
+    /// Where <see cref="ShinyNavBar"/> puts its overflow menu. Above the tab bar's menu for the same
+    /// reason the nav bar sits above the page: it is the chrome the user just touched.
+    /// </summary>
+    internal sealed class NavMenuLayer : Grid, IOverlayLayer;
+
+    /// <summary>
     /// Z-order for the layers, so the intent is stated once rather than guessed at each call site.
     /// A tooltip sits above page content, a walkthrough dims everything including tooltips, and a
     /// modal dialog wins outright.
@@ -68,6 +74,9 @@ static class PageOverlay
 
         /// <summary>Below a tooltip: the tab bar's menu is page chrome, not an annotation on top of it.</summary>
         public const int TabMenu = 8_500;
+
+        /// <summary>The nav bar's overflow menu, above the tab bar's and below anything annotating the page.</summary>
+        public const int NavMenu = 8_600;
 
         public const int Tooltip = 9_000;
         public const int Walkthrough = 9_500;
