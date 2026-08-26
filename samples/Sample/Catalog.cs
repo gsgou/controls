@@ -44,6 +44,9 @@ public static class Catalog
 
         new("Panels & Overlays", "#22D3EE",
         [
+            new("flyout", "Flyout", "◧", "Side panel that collapses to a rail and pushes or floats"),
+            new("flyoutdrawer", "Flyout Drawer", "◨", "A drawer installed over every page from one declaration"),
+            new("tabbedpage", "Tabbed Page", "▤", "Tabs with motion icons, badges, transitions and a centre button"),
             new("sheet", "Floating Panel", "▣", "Bottom sheet with detents"),
             new("minimizedsheetstandalone", "Header Peek", "▤", "Collapsed sheet that peeks its header"),
             new("minimizedsheet", "Bottom Tabs", "▁", "A peeking panel over bottom tabs"),

@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -362,6 +362,158 @@ public class MyEventProvider : ISchedulerEventProvider
 `CanChangeEvent` defaults to `false`, so a provider that ignores drag/drop can never have its events moved even if an app sets `AllowEventDrag` - the opt-in is required on both the view and the provider. `SchedulerEventChange` carries the event, its original `Start`/`End`, the proposed (already snapped) `NewStart`/`NewEnd`, and a `Kind` of `Move` / `ResizeStart` / `ResizeEnd`. Returning `false` from `OnEventChanged` reverts; throwing reverts and raises `EventChangeFailed` on the view.
 
 On Blazor, events are matched across the JS boundary by `SchedulerEvent.Identifier` (a `Guid` by default) - duplicate identifiers make a drag a no-op rather than move the wrong event. Blazor also has `DragValidationMode`: `OnCommit` (default, no interop while the pointer moves) or `PerPosition` (`CanChangeEventTo` per snap boundary, which is visibly slower on WASM).
+
+### Flyout (MAUI)
+
+A side panel that slides in from either edge, can rest as a narrow **icon rail** instead of a full panel, and either **pushes** the content aside or **floats** over it with a scrim. It replaces MAUI's `FlyoutPage` for apps that want more than a drawer, and — unlike `FlyoutPage` — it works **inside Shell**.
+
+> **Blazor equivalent — `AppLayoutPanel` inside `AppLayout`.** Same three states and the same auto-compacting; the Blazor panel additionally persists its state and width to localStorage.
+
+Three states (`Hidden` / `Collapsed` — the rail — / `Expanded`), two RTL-aware sides (`Start` / `End`), and three presentations (`Overlay` / `Push` / `Auto`, which pushes at or above `CompactWidth`, default 800). **`Presentation` governs an *expanded* panel**: a collapsed rail always insets the content on both presentations, because a rail is chrome rather than a drawer — which is what lets a rail expand *over* the content without the content moving at all.
+
+```xml
+<shiny:ShinyFlyoutPage xmlns:shiny="http://shiny.net/maui/controls" Title="Workspace">
+    <shiny:ShinyFlyoutPage.Start>
+        <shiny:FlyoutPanel x:Name="Nav"
+                           State="Collapsed"
+                           Presentation="Auto"
+                           CompactWidth="700"
+                           ExpandedWidth="260"
+                           CollapsedWidth="64"
+                           IsResizable="True">
+            <shiny:FlyoutPanel.HeaderContent>
+                <Label Text="Explorer" FontAttributes="Bold" Padding="16,14" />
+            </shiny:FlyoutPanel.HeaderContent>
+
+            <shiny:FlyoutPanel.RailContent>
+                <VerticalStackLayout HorizontalOptions="Center" Padding="0,12" Spacing="6">
+                    <Button Text="&#x1F5C2;" Clicked="OnToggle" />
+                    <Button Text="&#x1F50D;" Clicked="OnToggle" />
+                </VerticalStackLayout>
+            </shiny:FlyoutPanel.RailContent>
+
+            <VerticalStackLayout Padding="8">
+                <Label Text="Files" Padding="12,10" />
+                <Label Text="Search" Padding="12,10" />
+            </VerticalStackLayout>
+        </shiny:FlyoutPanel>
+    </shiny:ShinyFlyoutPage.Start>
+
+    <ScrollView>…detail…</ScrollView>
+</shiny:ShinyFlyoutPage>
+```
+
+`ShinyFlyoutPage.Detail` is a **`View`**, not a `Page` — MAUI cannot parent a `Page` inside a page's content, so it cannot host a `NavigationPage` the way `FlyoutPage.Detail` can. For a flyout on every page, declare it once as a template on the Shell (or a `NavigationPage`) instead:
+
+```xml
+<Shell FlyoutBehavior="Disabled" xmlns:shiny="http://shiny.net/maui/controls">
+    <shiny:ShinyFlyout.StartTemplate>
+        <DataTemplate>
+            <shiny:FlyoutPanel State="Hidden" CollapsedState="Hidden"
+                               Presentation="Overlay" ExpandedWidth="280">…nav…</shiny:FlyoutPanel>
+        </DataTemplate>
+    </shiny:ShinyFlyout.StartTemplate>
+    …
+</Shell>
+```
+
+Each page builds its own panel from the template — sharing one instance would re-parent it on every navigation and throw away its scroll position — and the open/collapsed **state** carries across. Drive it from a view model through `IFlyoutService` (`ToggleAsync`, `SetStateAsync`, `GetState`, `StateChanged`), which resolves the flyout on the page currently showing. `FlyoutView` is the underlying layout if you want a panel on one screen only.
+
+**Pushing shifts rather than crushes.** `PushMode` defaults to `Shift`: the content keeps its full width and is simply translated aside, so its far edge slides out of view and is clipped. Nothing inside it re-lays out — text does not rewrap and columns do not collapse as the panel moves, which is both the drawer feel most apps want and a great deal less work per frame than re-measuring the whole content tree. `PushMode="Resize"` restores the narrow-and-reflow behaviour, which is what a responsive master/detail beside a permanent sidebar actually wants. Note the mode governs *every* displacement including the rail's, so an app whose rail is permanent chrome should use `Resize`.
+
+`CollapseBelow` drops an expanded panel to its `CollapsedState` when the flyout gets narrow and restores it when there is room again — unless the user has changed the state themselves in the meantime, which always wins. Panels take `MinExpandedWidth`/`MaxExpandedWidth` with a drag-to-resize handle (`IsResizable`), edge-swipe-to-open, tap- or drag-the-scrim-to-close, theme-following colours, and `HeaderContent`/`FooterContent` that stay pinned while the body scrolls.
+
+### TabbedPage & TabBar (MAUI)
+
+An improved `TabbedPage`: motion icons in the tabs, per-tab badges, an animated transition between tabs, tab content that is built the first time you reach it, and a raised **centre button** that presents the current page's actions. The same bar drops onto a `Shell` without changing a line of its structure.
+
+> **Blazor note.** `Shiny.Blazor.Controls` has a `ShinyTabBar` component, but it is a *different*, simpler control with its own API (see below) — not the other half of this one.
+
+Nothing in it touches a platform SDK, so it renders on every MAUI head, **including AppKit (`net10.0-macos`) and GTK4**, where MAUI's own `TabbedPage` does not go.
+
+```xml
+<shiny:ShinyTabbedPage x:Class="MyApp.MainTabs" Transition="Slide" IndicatorStyle="Pill">
+
+    <shiny:ShinyTabbedPage.CenterButton>
+        <shiny:TabCenterButton Icon="plus" Mode="Menu" />
+    </shiny:ShinyTabbedPage.CenterButton>
+
+    <shiny:ShinyTabItem Title="Home" Icon="home" Route="home">
+        <views:HomeView />
+    </shiny:ShinyTabItem>
+
+    <shiny:ShinyTabItem Title="Chat" Icon="message" Route="chat" Badge="3">
+        <shiny:ShinyTabItem.ContentTemplate>
+            <DataTemplate><views:ChatView /></DataTemplate>
+        </shiny:ShinyTabItem.ContentTemplate>
+    </shiny:ShinyTabItem>
+</shiny:ShinyTabbedPage>
+```
+
+Inline `Content` is built with the markup; a `ContentTemplate` is built the first time its tab is selected and then kept, so four tabs behind templates cost one view tree on launch rather than four. The template may inflate a plain `View` **or a whole `ContentPage`**, which is adopted: its `Content` is hosted, its `Title` fills in a tab that has none, and its `BindingContext` is mirrored onto the hosted view.
+
+An adopted page does **not** get `OnAppearing`. MAUI raises page lifecycle from the platform, for the page the platform actually presented — and this one never is, so `SendAppearing()` on it does nothing at all. Implement `ITabAware` on the content, the page, or its view model instead:
+
+```csharp
+public class InboxViewModel : ITabAware
+{
+    public void OnTabAppearing() => this.StartPolling();
+    public void OnTabDisappearing() => this.StopPolling();
+}
+```
+
+`Transition` takes the same `StateTransition` as `StateView` and `Wizard`. `Slide` is the default and is direction-aware — a tab later in the list enters from the right, an earlier one from the left.
+
+**The centre button** is not a tab and never becomes the selection. What it presents belongs to the page rather than to the bar, in the same shape as `ToolbarItems`:
+
+```xml
+<ContentPage shiny:ShinyTabs.Badge="{Binding UnreadText}">
+    <shiny:ShinyTabs.Actions>
+        <shiny:TabActionCollection>
+            <shiny:TabAction Text="New message" Icon="edit" Command="{Binding ComposeCommand}" />
+            <shiny:TabAction Text="Empty inbox" Icon="trash" IsDestructive="True" Command="{Binding EmptyCommand}" />
+        </shiny:TabActionCollection>
+    </shiny:ShinyTabs.Actions>
+</ContentPage>
+```
+
+`ShinyTabs.MenuContent` (or `MenuContentTemplate`) hands the bar a whole view instead, for a menu that is not a list of rows. `Mode="Menu"` falls back to a plain click when neither the page nor the button declares anything, so a centre button that is only ever a button behaves like one.
+
+Both halves are optional and both are template-driven: leave `CenterButton` null for an ordinary bar, `TabCenterButton.ContentTemplate` replaces the circle entirely, and `ShinyTabBar.MenuTemplate` replaces everything inside the popup card while the bar keeps the backdrop, the anchoring and the animation.
+
+**The indicator travels between tabs.** `IndicatorTransition="Slide"` (the default) moves one indicator horizontally from the old tab to the new one, shaped by `IndicatorEasing` and `AnimationDuration`. This is separate from `Transition`, which animates the *content* — they compose. Sliding needs measured geometry, so until the bar has been laid out it falls back to drawing inside the cell, which keeps the first frame correct rather than parking a zero-width indicator in the corner.
+
+**Selection animations.** `SelectionAnimation` gives you `Scale` (default), `Lift`, `Bounce`, `Fade`, `Indicator` or `None`. For anything else, implement `ITabAnimator` and set `ShinyTabBar.Animator` — it is called once per tab whose selected state actually changed, never on a restyle or a badge update, and gets the cell, icon, label and indicator handed over separately:
+
+```csharp
+public class SpinAnimator : ITabAnimator
+{
+    public Task AnimateAsync(TabAnimationContext context)
+        => context.Icon?.RotateToAsync(context.IsSelected ? 360 : 0, context.Duration) ?? Task.CompletedTask;
+}
+```
+
+The bar respects the bottom safe area by default (`RespectSafeArea`) — its background paints to the screen edge while the tabs sit clear of the home indicator — and every tab cell carries an `AutomationId` of `tab-<route>`, with `tab-center` on the centre button, so UI tests address tabs by name.
+
+Badges live wherever the count does: on the `ShinyTabItem` or `ShellContent` when it must show on a tab the user has never opened, and on the page when the page computes it. The page's value wins, but only for the tab that page is showing. `Badge=""` draws a dot; `Badge=null` draws nothing.
+
+**In Shell**, add the behavior and keep everything else:
+
+```xml
+<Shell.Behaviors>
+    <shiny:ShinyTabBarBehavior>
+        <shiny:ShinyTabBar IndicatorStyle="Pill" />
+    </shiny:ShinyTabBarBehavior>
+</Shell.Behaviors>
+
+<TabBar>
+    <Tab Title="Home" shiny:ShinyTabs.Icon="home">
+        <ShellContent ContentTemplate="{DataTemplate local:HomePage}" Route="home" />
+    </Tab>
+</TabBar>
+```
+
+It hides the platform bar, mirrors the Shell's own tabs into the bar, docks it over whichever page is showing, and turns a tap back into a `CurrentItem` change — so routes, deep links, `ShellContent`'s lazy loading and each tab's navigation stack all keep working. The bar's `Items` are managed by the behavior, which is why per-tab chrome goes on the Shell elements with `ShinyTabs`.
 
 ### FloatingPanel + OverlayHost
 
@@ -869,11 +1021,16 @@ same SkiaSharp routine, so MAUI and Blazor are not two implementations kept in s
 dotnet add package Shiny.Maui.Controls.Office     # or Shiny.Blazor.Controls.Office
 ```
 
-MAUI needs SkiaSharp registered:
+MAUI registers its Skia surface through one call:
 
 ```csharp
-builder.UseMauiApp<App>().UseShinyControls().UseSkiaSharp();
+builder.UseMauiApp<App>().UseShinyControls().UseShinyOffice();
 ```
+
+`UseShinyOffice()` calls `UseSkiaSharp()` for you and, on the macOS AppKit head (`net10.0-macos`), adds
+the Skia canvas SkiaSharp itself does not ship — it has no `-macos` target, so that head falls back to a
+handler whose `CreatePlatformView()` throws and every Office control came up blank. Elsewhere the two
+calls are equivalent.
 
 ```xml
 <office:SpreadsheetView Workbook="{Binding Workbook}" SheetName="Budget" />
@@ -907,7 +1064,7 @@ await workbook.SaveAsync();
 **Constraints.** Blazor is **WebAssembly only** (a Server round-trip per keystroke is unusable, and
 SkiaSharp on WASM needs the `wasm-tools` workload — without it `libSkiaSharp` is never linked into the
 runtime and the app fails in the browser, so `Shiny.Blazor.Controls.Office` fails the build up front
-with `SHINY0001` instead; bypass with `ShinySkipWasmToolsCheck=true`). MAUI requires `UseSkiaSharp()`. Inserting and
+with `SHINY0001` instead; bypass with `ShinySkipWasmToolsCheck=true`). MAUI requires `UseShinyOffice()` (which registers SkiaSharp, plus the AppKit canvas on `net10.0-macos`). Inserting and
 deleting rows and columns is deliberately not implemented — it requires rewriting references across
 formulas, merged cells, conditional formatting, defined names, data validation, charts and tables.
 

@@ -1,0 +1,430 @@
+using System.Windows.Input;
+using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
+
+namespace Shiny.Maui.Controls;
+
+public partial class ShinyTabBar
+{
+    /// <summary>Backing store for <see cref="SelectedIndex"/>.</summary>
+    public static readonly BindableProperty SelectedIndexProperty = BindableProperty.Create(
+        nameof(SelectedIndex), typeof(int), typeof(ShinyTabBar), 0, BindingMode.TwoWay,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.OnSelectedIndexChanged((int)o, (int)n)));
+
+    /// <summary>Backing store for <see cref="SelectedItem"/>.</summary>
+    public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
+        nameof(SelectedItem), typeof(ShinyTabItem), typeof(ShinyTabBar), null, BindingMode.TwoWay,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.OnSelectedItemChanged(n as ShinyTabItem)));
+
+    /// <summary>Backing store for <see cref="BarHeight"/>.</summary>
+    public static readonly BindableProperty BarHeightProperty = BindableProperty.Create(
+        nameof(BarHeight), typeof(double), typeof(ShinyTabBar), 62d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyMetrics()));
+
+    /// <summary>Backing store for <see cref="BarBackgroundColor"/>.</summary>
+    public static readonly BindableProperty BarBackgroundColorProperty = BindableProperty.Create(
+        nameof(BarBackgroundColor), typeof(Color), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="BarCornerRadius"/>.</summary>
+    public static readonly BindableProperty BarCornerRadiusProperty = BindableProperty.Create(
+        nameof(BarCornerRadius), typeof(double), typeof(ShinyTabBar), ThemeTokens.Unset,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="BarMargin"/>.</summary>
+    public static readonly BindableProperty BarMarginProperty = BindableProperty.Create(
+        nameof(BarMargin), typeof(Thickness), typeof(ShinyTabBar), default(Thickness),
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="BarPadding"/>.</summary>
+    public static readonly BindableProperty BarPaddingProperty = BindableProperty.Create(
+        nameof(BarPadding), typeof(Thickness), typeof(ShinyTabBar), new Thickness(4, 6),
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="HasShadow"/>.</summary>
+    public static readonly BindableProperty HasShadowProperty = BindableProperty.Create(
+        nameof(HasShadow), typeof(bool), typeof(ShinyTabBar), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="RespectSafeArea"/>.</summary>
+    public static readonly BindableProperty RespectSafeAreaProperty = BindableProperty.Create(
+        nameof(RespectSafeArea), typeof(bool), typeof(ShinyTabBar), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplySurface()));
+
+    /// <summary>Backing store for <see cref="SelectedColor"/>.</summary>
+    public static readonly BindableProperty SelectedColorProperty = BindableProperty.Create(
+        nameof(SelectedColor), typeof(Color), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="UnselectedColor"/>.</summary>
+    public static readonly BindableProperty UnselectedColorProperty = BindableProperty.Create(
+        nameof(UnselectedColor), typeof(Color), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="IndicatorColor"/>.</summary>
+    public static readonly BindableProperty IndicatorColorProperty = BindableProperty.Create(
+        nameof(IndicatorColor), typeof(Color), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="IndicatorTransition"/>.</summary>
+    public static readonly BindableProperty IndicatorTransitionProperty = BindableProperty.Create(
+        nameof(IndicatorTransition), typeof(TabIndicatorTransition), typeof(ShinyTabBar), TabIndicatorTransition.Slide,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="IndicatorEasing"/>.</summary>
+    public static readonly BindableProperty IndicatorEasingProperty = BindableProperty.Create(
+        nameof(IndicatorEasing), typeof(Easing), typeof(ShinyTabBar), Easing.CubicInOut);
+
+    /// <summary>Backing store for <see cref="IndicatorStyle"/>.</summary>
+    public static readonly BindableProperty IndicatorStyleProperty = BindableProperty.Create(
+        nameof(IndicatorStyle), typeof(TabIndicatorStyle), typeof(ShinyTabBar), TabIndicatorStyle.Pill,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="LabelMode"/>.</summary>
+    public static readonly BindableProperty LabelModeProperty = BindableProperty.Create(
+        nameof(LabelMode), typeof(TabLabelMode), typeof(ShinyTabBar), TabLabelMode.Always,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="IconSize"/>.</summary>
+    public static readonly BindableProperty IconSizeProperty = BindableProperty.Create(
+        nameof(IconSize), typeof(double), typeof(ShinyTabBar), 24d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.RebuildCells()));
+
+    /// <summary>Backing store for <see cref="FontSize"/>.</summary>
+    public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
+        nameof(FontSize), typeof(double), typeof(ShinyTabBar), 11d,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="AnimateIcons"/>.</summary>
+    public static readonly BindableProperty AnimateIconsProperty = BindableProperty.Create(
+        nameof(AnimateIcons), typeof(bool), typeof(ShinyTabBar), true);
+
+    /// <summary>Backing store for <see cref="AnimationDuration"/>.</summary>
+    public static readonly BindableProperty AnimationDurationProperty = BindableProperty.Create(
+        nameof(AnimationDuration), typeof(uint), typeof(ShinyTabBar), 200u);
+
+    /// <summary>Backing store for <see cref="SelectionAnimation"/>.</summary>
+    public static readonly BindableProperty SelectionAnimationProperty = BindableProperty.Create(
+        nameof(SelectionAnimation), typeof(TabSelectionAnimation), typeof(ShinyTabBar), TabSelectionAnimation.Scale);
+
+    /// <summary>Backing store for <see cref="Animator"/>.</summary>
+    public static readonly BindableProperty AnimatorProperty = BindableProperty.Create(
+        nameof(Animator), typeof(ITabAnimator), typeof(ShinyTabBar), null);
+
+    /// <summary>Backing store for <see cref="CenterButton"/>.</summary>
+    public static readonly BindableProperty CenterButtonProperty = BindableProperty.Create(
+        nameof(CenterButton), typeof(TabCenterButton), typeof(ShinyTabBar), null,
+        propertyChanged: (b, o, n) =>
+        {
+            // Not gated: swapping the subscription touches no children, and losing it would leave the
+            // old button driving the bar. Only the rebuild waits for the constructor.
+            var bar = (ShinyTabBar)b;
+            if (o is TabCenterButton previous)
+            {
+                previous.PropertyChanged -= bar.OnCenterButtonChanged;
+                previous.Actions.CollectionChanged -= bar.OnCenterActionsChanged;
+            }
+            if (n is TabCenterButton next)
+            {
+                next.PropertyChanged += bar.OnCenterButtonChanged;
+                next.Actions.CollectionChanged += bar.OnCenterActionsChanged;
+            }
+            StyleGuard.WhenReady<ShinyTabBar>(b, x => x.RebuildCells());
+        });
+
+    /// <summary>Backing store for <see cref="MenuTemplate"/>.</summary>
+    public static readonly BindableProperty MenuTemplateProperty = BindableProperty.Create(
+        nameof(MenuTemplate), typeof(DataTemplate), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar =>
+        {
+            if (bar.IsMenuOpen)
+                bar.RefreshMenuContent();
+        }));
+
+    /// <summary>Backing store for <see cref="PageContext"/>.</summary>
+    public static readonly BindableProperty PageContextProperty = BindableProperty.Create(
+        nameof(PageContext), typeof(BindableObject), typeof(ShinyTabBar), null,
+        propertyChanged: (b, o, n) =>
+        {
+            var bar = (ShinyTabBar)b;
+            if (o is BindableObject previous)
+                previous.PropertyChanged -= bar.OnPageContextPropertyChanged;
+            if (n is BindableObject next)
+                next.PropertyChanged += bar.OnPageContextPropertyChanged;
+
+            StyleGuard.WhenReady<ShinyTabBar>(b, x => x.ApplyAllCellStates());
+        });
+
+    /// <summary>Backing store for <see cref="IsMenuOpen"/>.</summary>
+    public static readonly BindableProperty IsMenuOpenProperty = BindableProperty.Create(
+        nameof(IsMenuOpen), typeof(bool), typeof(ShinyTabBar), false, BindingMode.TwoWay,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.SyncMenuState((bool)n)));
+
+    /// <summary>Backing store for <see cref="SelectionChangedCommand"/>.</summary>
+    public static readonly BindableProperty SelectionChangedCommandProperty = BindableProperty.Create(
+        nameof(SelectionChangedCommand), typeof(ICommand), typeof(ShinyTabBar), null);
+
+
+    /// <summary>The tabs, in bar order. The content property, so they can be listed inline in XAML.</summary>
+    public IList<ShinyTabItem> Items => this.items;
+
+    /// <summary>
+    /// The selected tab's index into <see cref="Items"/>, counting hidden tabs. -1 when nothing is
+    /// selected — which is what an empty bar reports, and what a bar whose selected tab was removed
+    /// falls back to.
+    /// </summary>
+    public int SelectedIndex
+    {
+        get => (int)this.GetValue(SelectedIndexProperty);
+        set => this.SetValue(SelectedIndexProperty, value);
+    }
+
+    /// <summary>The selected tab. Kept in step with <see cref="SelectedIndex"/> in both directions.</summary>
+    public ShinyTabItem? SelectedItem
+    {
+        get => (ShinyTabItem?)this.GetValue(SelectedItemProperty);
+        set => this.SetValue(SelectedItemProperty, value);
+    }
+
+    /// <summary>Height of the bar itself, excluding anything the centre button rises above it.</summary>
+    public double BarHeight
+    {
+        get => (double)this.GetValue(BarHeightProperty);
+        set => this.SetValue(BarHeightProperty, value);
+    }
+
+    /// <summary>Unset follows the theme's surface-container colour.</summary>
+    public Color? BarBackgroundColor
+    {
+        get => (Color?)this.GetValue(BarBackgroundColorProperty);
+        set => this.SetValue(BarBackgroundColorProperty, value);
+    }
+
+    /// <summary>
+    /// Rounds the bar. Pair it with <see cref="BarMargin"/> for a floating, detached bar. Negative
+    /// (the default) follows the theme's corner token, which is square for every pack that ships.
+    /// </summary>
+    public double BarCornerRadius
+    {
+        get => (double)this.GetValue(BarCornerRadiusProperty);
+        set => this.SetValue(BarCornerRadiusProperty, value);
+    }
+
+    /// <summary>Insets the bar from the edges it is docked against.</summary>
+    public Thickness BarMargin
+    {
+        get => (Thickness)this.GetValue(BarMarginProperty);
+        set => this.SetValue(BarMarginProperty, value);
+    }
+
+    /// <summary>Padding between the bar's edges and the tabs.</summary>
+    public Thickness BarPadding
+    {
+        get => (Thickness)this.GetValue(BarPaddingProperty);
+        set => this.SetValue(BarPaddingProperty, value);
+    }
+
+    /// <summary>Lifts the bar off the content beneath it.</summary>
+    public bool HasShadow
+    {
+        get => (bool)this.GetValue(HasShadowProperty);
+        set => this.SetValue(HasShadowProperty, value);
+    }
+
+    /// <summary>
+    /// Insets the tabs out of the bottom safe area — the home indicator, the gesture bar — while the
+    /// bar's background still paints all the way to the screen edge. On by default. Turn it off for
+    /// a bar that is not docked to the bottom of a page, or one already inside a safe-area-aware
+    /// container.
+    /// </summary>
+    public bool RespectSafeArea
+    {
+        get => (bool)this.GetValue(RespectSafeAreaProperty);
+        set => this.SetValue(RespectSafeAreaProperty, value);
+    }
+
+    /// <summary>Unset follows the theme's primary colour.</summary>
+    public Color? SelectedColor
+    {
+        get => (Color?)this.GetValue(SelectedColorProperty);
+        set => this.SetValue(SelectedColorProperty, value);
+    }
+
+    /// <summary>Unset follows the theme's on-surface-variant colour.</summary>
+    public Color? UnselectedColor
+    {
+        get => (Color?)this.GetValue(UnselectedColorProperty);
+        set => this.SetValue(UnselectedColorProperty, value);
+    }
+
+    /// <summary>Unset follows the theme's secondary-container colour.</summary>
+    public Color? IndicatorColor
+    {
+        get => (Color?)this.GetValue(IndicatorColorProperty);
+        set => this.SetValue(IndicatorColorProperty, value);
+    }
+
+    /// <summary>
+    /// Whether the indicator travels from the old tab to the new one. Defaults to
+    /// <see cref="TabIndicatorTransition.Slide"/>.
+    /// </summary>
+    /// <remarks>
+    /// Sliding needs measured geometry, which does not exist until the bar has been laid out. Until
+    /// it does — and on any tab the bar cannot measure — the indicator falls back to
+    /// <see cref="TabIndicatorTransition.None"/> and is drawn inside the cell, so the first frame is
+    /// correct rather than blank or parked in the corner.
+    /// </remarks>
+    public TabIndicatorTransition IndicatorTransition
+    {
+        get => (TabIndicatorTransition)this.GetValue(IndicatorTransitionProperty);
+        set => this.SetValue(IndicatorTransitionProperty, value);
+    }
+
+    /// <summary>The travelling indicator's easing. Defaults to <see cref="Easing.CubicInOut"/>.</summary>
+    public Easing IndicatorEasing
+    {
+        get => (Easing)this.GetValue(IndicatorEasingProperty);
+        set => this.SetValue(IndicatorEasingProperty, value);
+    }
+
+    /// <summary>How the selected tab is marked. Defaults to <see cref="TabIndicatorStyle.Pill"/>.</summary>
+    public TabIndicatorStyle IndicatorStyle
+    {
+        get => (TabIndicatorStyle)this.GetValue(IndicatorStyleProperty);
+        set => this.SetValue(IndicatorStyleProperty, value);
+    }
+
+    /// <summary>When tabs show their labels. Defaults to <see cref="TabLabelMode.Always"/>.</summary>
+    public TabLabelMode LabelMode
+    {
+        get => (TabLabelMode)this.GetValue(LabelModeProperty);
+        set => this.SetValue(LabelModeProperty, value);
+    }
+
+    /// <summary>Icon size in the tabs. Defaults to 24, the size the motion icons are drawn for.</summary>
+    public double IconSize
+    {
+        get => (double)this.GetValue(IconSizeProperty);
+        set => this.SetValue(IconSizeProperty, value);
+    }
+
+    /// <summary>Label size. Defaults to 11.</summary>
+    public double FontSize
+    {
+        get => (double)this.GetValue(FontSizeProperty);
+        set => this.SetValue(FontSizeProperty, value);
+    }
+
+    /// <summary>Play a tab's motion icon when it becomes selected. Plain image icons are unaffected.</summary>
+    public bool AnimateIcons
+    {
+        get => (bool)this.GetValue(AnimateIconsProperty);
+        set => this.SetValue(AnimateIconsProperty, value);
+    }
+
+    /// <summary>How long the bar's own animations run — the indicator, the menu. Milliseconds.</summary>
+    public uint AnimationDuration
+    {
+        get => (uint)this.GetValue(AnimationDurationProperty);
+        set => this.SetValue(AnimationDurationProperty, value);
+    }
+
+    /// <summary>
+    /// How a tab animates as it becomes selected and as it stops being. Defaults to
+    /// <see cref="TabSelectionAnimation.Scale"/>. Ignored when <see cref="Animator"/> is set.
+    /// </summary>
+    public TabSelectionAnimation SelectionAnimation
+    {
+        get => (TabSelectionAnimation)this.GetValue(SelectionAnimationProperty);
+        set => this.SetValue(SelectionAnimationProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces <see cref="SelectionAnimation"/> with your own. Called once per tab whose selected
+    /// state actually changed, with the cell, the icon, the label and the indicator handed over
+    /// separately.
+    /// </summary>
+    public ITabAnimator? Animator
+    {
+        get => (ITabAnimator?)this.GetValue(AnimatorProperty);
+        set => this.SetValue(AnimatorProperty, value);
+    }
+
+    /// <summary>
+    /// The raised button in the middle. Null (the default) gives an ordinary bar; setting one splits
+    /// the tabs around it.
+    /// </summary>
+    public TabCenterButton? CenterButton
+    {
+        get => (TabCenterButton?)this.GetValue(CenterButtonProperty);
+        set => this.SetValue(CenterButtonProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces everything inside the centre menu's card — the rows, their layout, all of it — with
+    /// your own. The bar keeps the backdrop, the anchoring above the button, and the open/close
+    /// animation.
+    /// </summary>
+    /// <remarks>
+    /// Beats every other menu source, including a page's <see cref="ShinyTabs.MenuContentProperty"/>,
+    /// because it is the bar-wide chrome decision. Build the template's contents from
+    /// <see cref="ResolveMenuActions"/> if you want the pages to keep declaring rows; the binding
+    /// context handed to it is the current page's, so bindings written in it resolve there.
+    /// </remarks>
+    public DataTemplate? MenuTemplate
+    {
+        get => (DataTemplate?)this.GetValue(MenuTemplateProperty);
+        set => this.SetValue(MenuTemplateProperty, value);
+    }
+
+    /// <summary>
+    /// The page the bar is currently showing chrome for. The bar reads <see cref="ShinyTabs"/>
+    /// attached properties off it — the selected tab's badge, and what the centre button presents.
+    /// </summary>
+    /// <remarks>
+    /// Set for you: <see cref="ShinyTabbedPage"/> points it at the selected tab's content and
+    /// <see cref="ShinyTabBarBehavior"/> points it at the Shell's current page. Set it yourself only
+    /// when hosting the bar somewhere neither of those covers.
+    /// </remarks>
+    public BindableObject? PageContext
+    {
+        get => (BindableObject?)this.GetValue(PageContextProperty);
+        set => this.SetValue(PageContextProperty, value);
+    }
+
+    /// <summary>Whether the centre menu is showing. Two-way, so it can be opened from a view model.</summary>
+    public bool IsMenuOpen
+    {
+        get => (bool)this.GetValue(IsMenuOpenProperty);
+        set => this.SetValue(IsMenuOpenProperty, value);
+    }
+
+    /// <summary>Invoked with the newly selected <see cref="ShinyTabItem"/> after every change.</summary>
+    public ICommand? SelectionChangedCommand
+    {
+        get => (ICommand?)this.GetValue(SelectionChangedCommandProperty);
+        set => this.SetValue(SelectionChangedCommandProperty, value);
+    }
+
+
+    /// <summary>Raised after the selected tab changes.</summary>
+    public event EventHandler<TabSelectionChangedEventArgs>? SelectionChanged;
+
+    /// <summary>Raised when the already-selected tab is tapped again.</summary>
+    public event EventHandler<TabReselectedEventArgs>? TabReselected;
+
+    /// <summary>
+    /// Raised when the centre button is pressed, before anything is presented. Cancel it to handle
+    /// the press entirely yourself.
+    /// </summary>
+    public event EventHandler<TabCenterClickedEventArgs>? CenterClicked;
+
+    /// <summary>Raised when a row of the centre menu is tapped, after its own command has run.</summary>
+    public event EventHandler<TabActionEventArgs>? ActionInvoked;
+
+    /// <summary>Raised once the centre menu is on screen.</summary>
+    public event EventHandler? MenuOpened;
+
+    /// <summary>Raised once the centre menu has closed.</summary>
+    public event EventHandler? MenuClosed;
+}

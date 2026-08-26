@@ -5,6 +5,8 @@
                   xmlns:shiny="clr-namespace:Shiny;assembly=Shiny.Maui.Shell"
                   xmlns:home="clr-namespace:Sample.Features.Home"
                   xmlns:fp="clr-namespace:Sample.Features.FloatingPanel"
+                  xmlns:flyout="clr-namespace:Sample.Features.Flyout"
+                  xmlns:tabs="clr-namespace:Sample.Features.Tabs"
                   xmlns:pills="clr-namespace:Sample.Features.Pills"
                   xmlns:tv="clr-namespace:Sample.Features.TableView"
                   xmlns:scheduler="clr-namespace:Sample.Features.Scheduler"
@@ -424,6 +426,30 @@
             <FontImageSource Glyph=" " Size="1" Color="Transparent" />
         </MenuItem.IconImageSource>
     </MenuItem>
+
+    <FlyoutItem Title="Flyout">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25E7;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate flyout:FlyoutDemoPage}" Route="flyout" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Flyout Drawer">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25E8;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate flyout:FlyoutDrawerPage}" Route="flyoutdrawer" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Tabbed Page">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25A4;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate tabs:TabsDemoPage}" Route="tabbedpage" />
+    </FlyoutItem>
 
     <FlyoutItem Title="Floating Panel">
         <FlyoutItem.FlyoutIcon>

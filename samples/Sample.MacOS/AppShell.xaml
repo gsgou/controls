@@ -37,6 +37,7 @@
        xmlns:mediaelement="clr-namespace:Sample.Features.Media;assembly=Sample.MacOS"
        xmlns:mediapicker="clr-namespace:Sample.Features.Media;assembly=Sample.MacOS"
        xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons;assembly=Sample.MacOS"
+       xmlns:office="clr-namespace:Sample.Features.Office;assembly=Sample.MacOS"
        xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard;assembly=Sample.MacOS"
        xmlns:overlay="clr-namespace:Sample.Features.Overlay;assembly=Sample.MacOS"
        xmlns:parallax="clr-namespace:Sample.Features.ParallaxCollectionView;assembly=Sample.MacOS"
@@ -271,6 +272,24 @@
     </FlyoutItem>
     <FlyoutItem Title="Markdown Editor">
         <ShellContent ContentTemplate="{DataTemplate markdown:MarkdownEditorPage}" Route="markdowneditor" />
+    </FlyoutItem>
+
+    <MenuItem Text="OFFICE" IsEnabled="False" />
+
+    <FlyoutItem Title="Spreadsheet">
+        <ShellContent ContentTemplate="{DataTemplate office:SpreadsheetPage}" Route="spreadsheet" />
+    </FlyoutItem>
+    <FlyoutItem Title="Document">
+        <ShellContent ContentTemplate="{DataTemplate office:DocumentViewerPage}" Route="documentviewer" />
+    </FlyoutItem>
+    <FlyoutItem Title="Doc Editor">
+        <ShellContent ContentTemplate="{DataTemplate office:DocumentEditorPage}" Route="documenteditor" />
+    </FlyoutItem>
+    <FlyoutItem Title="Slides">
+        <ShellContent ContentTemplate="{DataTemplate office:SlideViewerPage}" Route="slideviewer" />
+    </FlyoutItem>
+    <FlyoutItem Title="Slide Editor">
+        <ShellContent ContentTemplate="{DataTemplate office:SlideEditorPage}" Route="slideeditor" />
     </FlyoutItem>
 
     <MenuItem Text="DIAGRAMS" IsEnabled="False" />

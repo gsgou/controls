@@ -3,6 +3,7 @@ using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Dialogs;
+using Shiny.Maui.Controls.Flyout;
 using Shiny.Maui.Controls.Images;
 using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Themes;
@@ -40,6 +41,10 @@ public static class ControlsMauiAppBuilderExtensions
         builder.Services.TryAddSingleton<QuickEntryService>();
         builder.Services.TryAddSingleton<IQuickEntryService>(sp => sp.GetRequiredService<QuickEntryService>());
         builder.Services.TryAddSingleton<IToaster, Toaster>();
+
+        // Lets a view model drive whatever flyout is on the page that is showing, without the page
+        // having to hand its FlyoutView over. The registry it reads is weak, so this holds nothing alive.
+        builder.Services.TryAddSingleton<IFlyoutService, FlyoutService>();
         builder.Services.TryAddSingleton(cfg.DialogOptions);
         builder.Services.TryAddSingleton<IDialogService, DialogService>();
 

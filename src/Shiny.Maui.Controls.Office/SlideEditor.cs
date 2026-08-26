@@ -143,7 +143,7 @@ public class SlideEditor : ContentView, IDisposable
     public event EventHandler<int>? SlideChanged;
 
     /// <summary>Gives the editor keyboard focus, so the platform starts sending it text.</summary>
-    public void FocusEditor() => this.input.Focus();
+    public void FocusEditor() => this.input.FocusForEditing();
 
     void Rebuild()
     {
@@ -343,9 +343,24 @@ public class SlideEditor : ContentView, IDisposable
     // ---- text input ----
 
     /// <summary>
-    /// The hidden entry is cleared after every change, so its text is only ever the newly typed
-    /// characters. Keeping a running buffer would fight the IME, which rewrites what it has committed.
+    /// Turns whatever the hidden entry now holds into the characters that are actually new, and feeds
+    /// those to the controller. Keeping a running buffer of our own would fight the IME, which
+    /// rewrites what it has already committed — so the entry's own text is the buffer.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="ClearInput"/> empties the entry after every insert, so on most heads the text
+    /// arriving here is just the new characters and <c>consumedInput</c> is empty. The macOS AppKit
+    /// head does not apply that clear to the native field before the next keystroke reaches it, so the
+    /// entry keeps accumulating: typing "hello" arrives as "h", "he", "hel", "hell" — which inserted
+    /// <c>hhehelhell</c>.
+    /// </para>
+    /// <para>
+    /// Diffing against what was last consumed rather than against <c>OldTextValue</c> is what covers
+    /// both — <c>OldTextValue</c> is the entry's *bindable* previous value, which the clear resets to
+    /// empty even on the head where the native field kept its text.
+    /// </para>
+    /// </remarks>
     void OnInputTextChanged(object? sender, TextChangedEventArgs e)
     {
         if (this.suppressInputEvents || this.controller is null || this.IsReadOnly)
@@ -359,24 +374,63 @@ public class SlideEditor : ContentView, IDisposable
             return;
         }
 
-        var text = e.NewTextValue;
-        if (string.IsNullOrEmpty(text))
+        var text = e.NewTextValue ?? string.Empty;
+#if MACOS
+        this.sawInputSinceFocus = true;
+#endif
+
+        if (text.Length < this.consumedInput.Length && this.consumedInput.StartsWith(text, StringComparison.Ordinal))
         {
-            // An empty entry after a non-empty one is the platform's way of reporting Backspace.
-            if (!string.IsNullOrEmpty(e.OldTextValue))
+            // The entry shrank: Backspace once per character lost. A cleared entry reports deletion as
+            // a single character going to empty, which is this same path.
+            for (var i = this.consumedInput.Length; i > text.Length; i--)
                 this.controller.Backspace();
 
+            this.consumedInput = text;
             return;
         }
 
-        this.controller.InsertText(text);
+        var inserted = text.StartsWith(this.consumedInput, StringComparison.Ordinal)
+            ? text[this.consumedInput.Length..]
+            : text;
+
+        if (inserted.Length == 0)
+            return;
+
+        this.controller.InsertText(inserted);
+
+        // What the native field holds now, whether or not the clear below reaches it. A head that does
+        // apply the clear sends the next keystroke as a string that does not start with this, which
+        // falls into the replacement branch above and re-bases on its own.
+        this.consumedInput = text;
         this.ClearInput();
     }
+
+    /// <summary>What the hidden entry held the last time characters were taken from it.</summary>
+    string consumedInput = string.Empty;
+
+#if MACOS
+    /// <summary>
+    /// Whether anything has been typed since the hidden entry was focused. Only the macOS AppKit head
+    /// needs it, to tell a real Return from the completion that head raises on a focus change.
+    /// </summary>
+    bool sawInputSinceFocus;
+#endif
 
     void OnInputCompleted(object? sender, EventArgs e)
     {
         if (this.controller is null || this.IsReadOnly || !this.controller.IsEditingText)
             return;
+
+#if MACOS
+        // On the macOS AppKit head this event is not only Return: it also arrives when the hidden
+        // entry gains or loses first responder, which happens on every click that moves the caret.
+        // Acting on those inserted a paragraph break into the shape each time the user clicked.
+        // A completion that follows no typing at all is one of those, so it is ignored - the cost is
+        // that Return as the very first keystroke after a click does nothing on that head.
+        if (!this.sawInputSinceFocus)
+            return;
+#endif
 
         this.controller.InsertParagraph();
         this.ClearInput();
@@ -392,12 +446,20 @@ public class SlideEditor : ContentView, IDisposable
     void OnInputFocused(object? sender, FocusEventArgs e)
     {
         this.focused = true;
+        this.consumedInput = string.Empty;
+#if MACOS
+        this.sawInputSinceFocus = false;
+#endif
         this.Invalidate();
     }
 
     void OnInputUnfocused(object? sender, FocusEventArgs e)
     {
         this.focused = false;
+        this.consumedInput = string.Empty;
+#if MACOS
+        this.sawInputSinceFocus = false;
+#endif
         this.Invalidate();
     }
 

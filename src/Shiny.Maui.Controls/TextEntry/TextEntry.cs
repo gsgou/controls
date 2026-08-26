@@ -374,7 +374,17 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
         var labelHeight = placeholderLabel.Height;
         var fieldHeight = outerBorder.Height;
         if (labelHeight <= 0 || fieldHeight <= 0)
+        {
+            // The label's height and the field's height land in either order on the first layout
+            // pass, and this only runs from their own SizeChanged - so whichever arrives first bails
+            // here, and the second one may already have been raised. That leaves the label sitting
+            // unpositioned at the grid origin until something else forces a re-layout (resizing the
+            // window fixes it, which is exactly the tell). Retry on the next tick instead.
+            this.QueueGeometryRetry(snap);
             return;
+        }
+
+        this.geometryRetries = 0;
 
         // Rest: vertically centred in the field. Float: centred on the top border stroke.
         placeholderRestY = (fieldHeight - labelHeight) / 2;
@@ -397,6 +407,30 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 
         if (snap)
             placeholderLabel.TranslationY = isPlaceholderUp ? placeholderFloatY : placeholderRestY;
+    }
+
+    int geometryRetries;
+    bool geometryRetryQueued;
+
+    /// <summary>
+    /// Re-runs <see cref="UpdatePlaceholderGeometry"/> on the next tick, a bounded number of times,
+    /// so a first pass that ran before both sizes were measured is not the last word. Bounded because
+    /// a control that is never given a size (collapsed, or off an inactive tab) would otherwise
+    /// re-queue forever; once it is sized its own SizeChanged brings us back here anyway.
+    /// </summary>
+    void QueueGeometryRetry(bool snap)
+    {
+        const int MaxGeometryRetries = 3;
+        if (this.geometryRetryQueued || this.geometryRetries >= MaxGeometryRetries)
+            return;
+
+        this.geometryRetryQueued = true;
+        this.geometryRetries++;
+        this.Dispatcher.Dispatch(() =>
+        {
+            this.geometryRetryQueued = false;
+            this.UpdatePlaceholderGeometry(snap);
+        });
     }
 
     void ApplyPlaceholder(string text)

@@ -222,7 +222,7 @@ public class SpreadsheetView : ContentView, IDisposable
         AbsoluteLayout.SetLayoutFlags(this.editor, AbsoluteLayoutFlags.None);
         AbsoluteLayout.SetLayoutBounds(this.editor, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
         this.editor.IsVisible = true;
-        this.editor.Focus();
+        this.editor.FocusForEditing();
     }
 
     void OnEditorTextChanged(object? sender, TextChangedEventArgs e)

@@ -1,12 +1,13 @@
-using SkiaSharp.Views.Maui.Controls.Hosting;
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Audio;
 using Sample.Features.Diagrams;
 using Sample.Features.Docking;
 using Sample.Features.FloatingPanel;
+using Sample.Features.Flyout;
 using Sample.Features.Scheduler;
 using Sample.Features.TableView;
 using Shiny;
+using Shiny.Maui.Controls.Office;
 using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Scheduler;
 #if DEBUG
@@ -24,7 +25,8 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .AddAudio()
             // Required by Shiny.Maui.Controls.Office: the spreadsheet grid paints onto a Skia surface.
-            .UseSkiaSharp()
+            // UseShinyOffice registers SkiaSharp and, on the AppKit head, the canvas SkiaSharp omits.
+            .UseShinyOffice()
             .UseShinyControls(cfg =>
             {
                 cfg.SetCustomFeedback<MyCustomFeedbackService>(); // haptic is installed by default, but we want more fun
@@ -80,6 +82,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ThemesPage>();
         builder.Services.AddTransient<SubgraphsPage>();
         builder.Services.AddTransient<InteractiveEditorPage>();
+        builder.Services.AddTransient<FlyoutDrawerPage>();
         builder.Services.AddSingleton<ISchedulerEventProvider, SampleSchedulerProvider>();
 
         // shared app-session list of documents lifted by the camera's document analyzers

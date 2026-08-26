@@ -17,13 +17,20 @@ static class PageOverlay
     internal sealed class ShinyOverlayRoot : Grid;
 
     /// <summary>
+    /// Marks a child of the root as one of ours rather than the page's own content. Without it,
+    /// "the page's content" has to be inferred - and every inference (first child, lowest ZIndex)
+    /// breaks the moment a layer is added in a different order.
+    /// </summary>
+    internal interface IOverlayLayer;
+
+    /// <summary>
     /// Marker layers. Each control gets its own type because the layer is looked up by type — asking
     /// for a bare <see cref="AbsoluteLayout"/> would match any other control's layer that happened to
     /// be added first, and two controls would end up sharing (and clearing) each other's children.
     /// </summary>
-    internal sealed class TooltipLayer : AbsoluteLayout;
+    internal sealed class TooltipLayer : AbsoluteLayout, IOverlayLayer;
 
-    internal sealed class WalkthroughLayer : AbsoluteLayout;
+    internal sealed class WalkthroughLayer : AbsoluteLayout, IOverlayLayer;
 
     /// <summary>
     /// Grid-based, unlike the layers above. An <see cref="AbsoluteLayout"/> child sized with
@@ -31,9 +38,23 @@ static class PageOverlay
     /// it comes back unmeasured, so the popup is present in the tree, reports itself visible, and
     /// paints nothing. Alignment plus a margin is boring and works everywhere.
     /// </summary>
-    internal sealed class QuickEntryLayer : Grid;
+    internal sealed class QuickEntryLayer : Grid, IOverlayLayer;
 
-    internal sealed class ScreenGlowLayer : Grid;
+    internal sealed class ScreenGlowLayer : Grid, IOverlayLayer;
+
+    /// <summary>
+    /// Where <see cref="ShinyTabBarBehavior"/> docks the tab bar over a Shell page. Below the menu
+    /// layer, because the menu is drawn above the bar that opened it.
+    /// </summary>
+    internal sealed class TabBarLayer : Grid, IOverlayLayer;
+
+    /// <summary>
+    /// Where <see cref="ShinyTabBar"/> puts its centre menu when it is hosted on a page it does not
+    /// own the layout of - a Shell page, chiefly. A <see cref="ShinyTabbedPage"/> hands the bar its
+    /// own layer instead and never comes through here, because installing an overlay root re-parents
+    /// the page's content and that costs a full native rebuild.
+    /// </summary>
+    internal sealed class TabMenuLayer : Grid, IOverlayLayer;
 
     /// <summary>
     /// Z-order for the layers, so the intent is stated once rather than guessed at each call site.
@@ -42,6 +63,12 @@ static class PageOverlay
     /// </summary>
     public static class Layers
     {
+        /// <summary>Page chrome: above the page's content, below everything that annotates it.</summary>
+        public const int TabBar = 8_400;
+
+        /// <summary>Below a tooltip: the tab bar's menu is page chrome, not an annotation on top of it.</summary>
+        public const int TabMenu = 8_500;
+
         public const int Tooltip = 9_000;
         public const int Walkthrough = 9_500;
         public const int Dialog = 10_000;
@@ -109,6 +136,14 @@ static class PageOverlay
         root.Children.Add(layer);
         return layer;
     }
+
+
+    /// <summary>
+    /// The page's own content inside an overlay root — everything that is not a layer this class
+    /// installed. Null when the page had no content to begin with.
+    /// </summary>
+    public static View? ContentOf(ShinyOverlayRoot root)
+        => root.Children.OfType<View>().FirstOrDefault(v => v is not IOverlayLayer);
 
 
     /// <summary>The <see cref="ContentPage"/> an element is sitting on, or null if it is not on one yet.</summary>

@@ -28,6 +28,15 @@
         <PackageReference Include="SkiaSharp.Views.Maui.Controls"/>
     </ItemGroup>
 
+    <!--
+        The AppKit head only. SkiaSharp.Views.Maui has no net10.0-macos target, so that head falls back
+        to the plain net10.0 build whose SKCanvasViewHandler throws where the platform view should be -
+        Platforms/AppKit supplies a real one, and MacOSViewHandler<,> is the base it has to derive from.
+    -->
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS"/>
+    </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Shiny.Controls.Office.Shared\Shiny.Controls.Office.Shared.csproj"/>
         <ProjectReference Include="..\Shiny.Controls.Office.Skia\Shiny.Controls.Office.Skia.csproj"/>

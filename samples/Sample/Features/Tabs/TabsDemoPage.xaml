@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shiny:ShinyTabbedPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:shiny="http://shiny.net/maui/controls"
+                       xmlns:local="clr-namespace:Sample.Features.Tabs"
+                       x:Class="Sample.Features.Tabs.TabsDemoPage"
+                       x:DataType="local:TabsDemoViewModel"
+                       Title="Tabs"
+                       AutomationId="TabsDemoPage"
+                       Transition="Slide"
+                       TransitionDuration="220"
+                       IndicatorStyle="Pill">
+
+    <!-- The raised button in the middle. Mode="Menu" presents whatever the page that is showing
+         declared via shiny:ShinyTabs.Actions / MenuContent — see the tabs below. -->
+    <shiny:ShinyTabbedPage.CenterButton>
+        <shiny:TabCenterButton Icon="plus" Mode="Menu" Size="60" />
+    </shiny:ShinyTabbedPage.CenterButton>
+
+    <!-- Tab 1 — inline content, built with the markup. -->
+    <shiny:ShinyTabItem Title="Home" Icon="home" Route="home">
+        <ScrollView>
+            <VerticalStackLayout Padding="24" Spacing="14">
+                <Label Text="An improved TabbedPage" FontSize="22" FontAttributes="Bold" />
+                <Label FontSize="14" TextColor="Gray"
+                       Text="Animated icons, a per-tab badge, a transition between tabs, a raised centre button that presents the current page's actions — and the same bar drops onto a Shell." />
+
+                <BoxView HeightRequest="1" Color="LightGray" />
+
+                <Label Text="Transition" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Slide" Clicked="OnSlide" AutomationId="TransitionSlide" />
+                    <Button Text="Fade" Clicked="OnFade" AutomationId="TransitionFade" />
+                    <Button Text="Scale" Clicked="OnScale" AutomationId="TransitionScale" />
+                </HorizontalStackLayout>
+
+                <Label Text="Indicator" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Pill" Clicked="OnPill" AutomationId="IndicatorPill" />
+                    <Button Text="Line" Clicked="OnLine" AutomationId="IndicatorLine" />
+                    <Button Text="Dot" Clicked="OnDot" AutomationId="IndicatorDot" />
+                    <Button Text="None" Clicked="OnNoIndicator" AutomationId="IndicatorNone" />
+                </HorizontalStackLayout>
+
+                <Label Text="Indicator motion" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Slide" Clicked="OnIndicatorSlide" AutomationId="IndicatorSlide" />
+                    <Button Text="No travel" Clicked="OnIndicatorStatic" AutomationId="IndicatorStatic" />
+                    <Button Text="Slow" Clicked="OnSlowIndicator" AutomationId="IndicatorSlow" />
+                </HorizontalStackLayout>
+
+                <Label Text="Labels" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Always" Clicked="OnLabelsAlways" AutomationId="LabelsAlways" />
+                    <Button Text="Selected only" Clicked="OnLabelsSelected" AutomationId="LabelsSelected" />
+                    <Button Text="Never" Clicked="OnLabelsNever" AutomationId="LabelsNever" />
+                </HorizontalStackLayout>
+
+                <Label Text="Tab animation" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Scale" Clicked="OnAnimScale" AutomationId="AnimScale" />
+                    <Button Text="Lift" Clicked="OnAnimLift" AutomationId="AnimLift" />
+                    <Button Text="Bounce" Clicked="OnAnimBounce" AutomationId="AnimBounce" />
+                    <Button Text="Custom" Clicked="OnAnimCustom" AutomationId="AnimCustom" />
+                </HorizontalStackLayout>
+
+                <Label Text="Badges" FontAttributes="Bold" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="Add to Chat" Clicked="OnAddBadge" AutomationId="AddBadge" />
+                    <Button Text="Clear" Clicked="OnClearBadge" AutomationId="ClearBadge" />
+                </HorizontalStackLayout>
+
+                <Label Text="{Binding Status}" FontSize="13" TextColor="Gray" Margin="0,4,0,80" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </shiny:ShinyTabItem>
+
+    <!-- Tab 2 — a badge the tab owns, so it shows before the tab has ever been opened. -->
+    <shiny:ShinyTabItem Title="Chat" Icon="message" Route="chat" Badge="3">
+        <shiny:ShinyTabItem.ContentTemplate>
+            <DataTemplate>
+                <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
+                    <shiny:MotionIconView Icon="message" Trigger="Loop" Interval="0:0:2"
+                                          WidthRequest="48" HeightRequest="48"
+                                          HorizontalOptions="Center" />
+                    <Label Text="Built on first selection" FontSize="18" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" />
+                    <Label FontSize="14" TextColor="Gray" HorizontalTextAlignment="Center"
+                           Text="This tab is a ContentTemplate, so nothing here existed until you tapped it — and it is kept afterwards." />
+                </VerticalStackLayout>
+            </DataTemplate>
+        </shiny:ShinyTabItem.ContentTemplate>
+    </shiny:ShinyTabItem>
+
+    <!-- Tab 3 — a whole ContentPage in the template. The page's BindingContext and ShinyTabs
+         attached values come across when it is adopted; see TabsInboxPage. Title is set here as
+         well as on the page, because the page does not exist until this tab is first selected —
+         without it the tab would sit there unlabelled until you tapped it. -->
+    <shiny:ShinyTabItem Title="Inbox" Icon="mail" Route="inbox">
+        <shiny:ShinyTabItem.ContentTemplate>
+            <DataTemplate>
+                <local:TabsInboxPage />
+            </DataTemplate>
+        </shiny:ShinyTabItem.ContentTemplate>
+    </shiny:ShinyTabItem>
+
+    <!-- Tab 4 — its own centre-menu content instead of a list of actions. -->
+    <shiny:ShinyTabItem Title="Search" Icon="search" Route="search">
+        <shiny:ShinyTabItem.ContentTemplate>
+            <DataTemplate>
+                <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
+                    <shiny:ShinyTabs.MenuContent>
+                        <VerticalStackLayout Padding="20" Spacing="10" WidthRequest="260">
+                            <Label Text="Saved searches" FontAttributes="Bold" />
+                            <Label Text="Unread this week" FontSize="14" TextColor="Gray" />
+                            <Label Text="From my team" FontSize="14" TextColor="Gray" />
+                            <Label Text="Attachments only" FontSize="14" TextColor="Gray" />
+                        </VerticalStackLayout>
+                    </shiny:ShinyTabs.MenuContent>
+
+                    <Label Text="Custom centre-button content" FontSize="18" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" />
+                    <Label FontSize="14" TextColor="Gray" HorizontalTextAlignment="Center"
+                           Text="Tap the centre button: this tab hands the bar a whole view instead of a list of actions." />
+                </VerticalStackLayout>
+            </DataTemplate>
+        </shiny:ShinyTabItem.ContentTemplate>
+    </shiny:ShinyTabItem>
+
+    <!-- Tab 5 — an odd tab count, so the centre button's spacer column is exercised. -->
+    <shiny:ShinyTabItem Title="Me" Icon="user" Route="me">
+        <shiny:ShinyTabItem.ContentTemplate>
+            <DataTemplate>
+                <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
+                    <shiny:MotionIconView Icon="user" Trigger="Appear"
+                                          WidthRequest="48" HeightRequest="48"
+                                          HorizontalOptions="Center" />
+                    <Label Text="Five tabs, one centre button" FontSize="18" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" />
+                    <Label FontSize="14" TextColor="Gray" HorizontalTextAlignment="Center"
+                           Text="An odd tab count splits unevenly, so the bar pads the short side with an empty column and the centre button stays centred." />
+                </VerticalStackLayout>
+            </DataTemplate>
+        </shiny:ShinyTabItem.ContentTemplate>
+    </shiny:ShinyTabItem>
+
+</shiny:ShinyTabbedPage>

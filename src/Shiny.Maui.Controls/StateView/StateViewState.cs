@@ -64,10 +64,19 @@ public class StateViewState : BindableObject
             if (template is DataTemplateSelector selector)
                 template = selector.SelectTemplate(this.BindingContext, null);
 
-            this.TemplatedContent = template.CreateContent() as View;
+            this.TemplatedContent = this.CreateFromTemplate(template);
         }
         return this.TemplatedContent;
     }
+
+    /// <summary>
+    /// Turns the resolved template into the view to host. The base implementation takes a
+    /// <see cref="View"/> and nothing else; <c>ShinyTabItem</c> overrides it so a template that
+    /// inflates a whole <see cref="ContentPage"/> — the shape MAUI's own <c>TabbedPage</c> takes —
+    /// still yields something hostable.
+    /// </summary>
+    private protected virtual View? CreateFromTemplate(DataTemplate template)
+        => template.CreateContent() as View;
 
     /// <summary>Drop the realized template so the next show rebuilds it.</summary>
     internal void ReleaseTemplatedContent() => this.TemplatedContent = null;

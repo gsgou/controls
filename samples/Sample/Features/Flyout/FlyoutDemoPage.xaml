@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shiny:ShinyFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:shiny="http://shiny.net/maui/controls"
+                       x:Class="Sample.Features.Flyout.FlyoutDemoPage"
+                       Title="Flyout">
+
+    <!-- Start: a navigation panel that collapses to an icon rail -->
+    <shiny:ShinyFlyoutPage.Start>
+        <shiny:FlyoutPanel x:Name="Nav"
+                           State="Collapsed"
+                           CollapsedState="Collapsed"
+                           Presentation="Auto"
+                           CompactWidth="700"
+                           ExpandedWidth="260"
+                           CollapsedWidth="64"
+                           IsResizable="True"
+                           StateChanged="OnPanelStateChanged">
+
+            <shiny:FlyoutPanel.HeaderContent>
+                <Grid Padding="16,14" ColumnDefinitions="*,Auto">
+                    <Label Text="Workspace" FontSize="16" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Button Grid.Column="1"
+                            Text="&#x2261;"
+                            FontSize="18"
+                            Padding="0"
+                            WidthRequest="36" HeightRequest="36"
+                            BackgroundColor="Transparent"
+                            Clicked="OnToggleStart" />
+                </Grid>
+            </shiny:FlyoutPanel.HeaderContent>
+
+            <!-- The rail: what Collapsed shows instead of the body -->
+            <shiny:FlyoutPanel.RailContent>
+                <VerticalStackLayout Padding="0,12" Spacing="6" HorizontalOptions="Center">
+                    <Button Text="&#x1F5C2;" FontSize="20" Padding="0" WidthRequest="44" HeightRequest="44"
+                            BackgroundColor="Transparent" Clicked="OnToggleStart" />
+                    <Button Text="&#x1F50D;" FontSize="20" Padding="0" WidthRequest="44" HeightRequest="44"
+                            BackgroundColor="Transparent" Clicked="OnToggleStart" />
+                    <Button Text="&#x2699;" FontSize="20" Padding="0" WidthRequest="44" HeightRequest="44"
+                            BackgroundColor="Transparent" Clicked="OnToggleStart" />
+                </VerticalStackLayout>
+            </shiny:FlyoutPanel.RailContent>
+
+            <VerticalStackLayout Padding="8,4" Spacing="2">
+                <Label Text="&#x1F5C2;  Files" Padding="12,10" />
+                <Label Text="&#x1F50D;  Search" Padding="12,10" />
+                <Label Text="&#x2699;  Settings" Padding="12,10" />
+                <Label Text="&#x1F4C8;  Reports" Padding="12,10" />
+                <Label Text="&#x1F464;  Team" Padding="12,10" />
+            </VerticalStackLayout>
+
+            <shiny:FlyoutPanel.FooterContent>
+                <Label Text="v1.0" Padding="16,12" FontSize="12" Opacity="0.6" />
+            </shiny:FlyoutPanel.FooterContent>
+        </shiny:FlyoutPanel>
+    </shiny:ShinyFlyoutPage.Start>
+
+    <!-- End: an inspector that floats over the content -->
+    <shiny:ShinyFlyoutPage.End>
+        <shiny:FlyoutPanel x:Name="Inspector"
+                           State="Hidden"
+                           CollapsedState="Hidden"
+                           Presentation="Overlay"
+                           ExpandedWidth="300"
+                           CornerRadius="16">
+            <shiny:FlyoutPanel.HeaderContent>
+                <Label Text="Inspector" FontSize="16" FontAttributes="Bold" Padding="16,14" />
+            </shiny:FlyoutPanel.HeaderContent>
+
+            <VerticalStackLayout Padding="16" Spacing="12">
+                <Label Text="An End panel comes in from the trailing edge. This one floats over the content with a scrim - tap outside or swipe it away to dismiss." />
+                <BoxView HeightRequest="1" Color="#33808080" />
+                <Label Text="Nothing selected" Opacity="0.6" />
+            </VerticalStackLayout>
+        </shiny:FlyoutPanel>
+    </shiny:ShinyFlyoutPage.End>
+
+    <!-- Detail: the page body the panels sit beside -->
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label Text="Flyout" FontSize="28" FontAttributes="Bold" />
+            <Label Text="A start panel that collapses to a rail, and an end panel that floats over the content. Resize the window (or rotate) to watch Auto switch between pushing and floating."
+                   Opacity="0.75" />
+
+            <Label x:Name="Status" FontSize="14" FontAttributes="Bold" />
+
+            <BoxView HeightRequest="1" Color="#33808080" />
+
+            <Label Text="Start panel" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Hidden" Clicked="OnStartHidden" />
+                <Button Text="Rail" Clicked="OnStartCollapsed" />
+                <Button Text="Expanded" Clicked="OnStartExpanded" />
+            </HorizontalStackLayout>
+
+            <Label Text="Presentation" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Overlay" Clicked="OnOverlay" />
+                <Button Text="Push" Clicked="OnPush" />
+                <Button Text="Auto" Clicked="OnAuto" />
+            </HorizontalStackLayout>
+
+            <Label Text="End panel" FontAttributes="Bold" />
+            <Label Text="Push mode" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Shift" Clicked="OnPushShift" AutomationId="PushShift" />
+                <Button Text="Resize" Clicked="OnPushResize" AutomationId="PushResize" />
+            </HorizontalStackLayout>
+
+            <Button Text="Toggle inspector" Clicked="OnToggleEnd" HorizontalOptions="Start" />
+
+            <BoxView HeightRequest="1" Color="#33808080" />
+
+            <Label Text="Push insets this text and re-lays it out; Overlay leaves it exactly where it is and dims it instead. The rail always insets - it is chrome, not a drawer."
+                   Opacity="0.75" />
+        </VerticalStackLayout>
+    </ScrollView>
+</shiny:ShinyFlyoutPage>

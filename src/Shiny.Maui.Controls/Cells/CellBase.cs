@@ -368,6 +368,9 @@ public abstract class CellBase : ContentView
 
 
 
+    /// <summary>Gap between the icon/accessory and the title block. See <see cref="BuildLayout"/>.</summary>
+    const double ColumnGap = 12;
+
     void BuildLayout()
     {
         rootGrid = new Grid
@@ -384,7 +387,11 @@ public abstract class CellBase : ContentView
                 new RowDefinition(GridLength.Auto)
             },
             Padding = new Thickness(16, 12),
-            ColumnSpacing = 12,
+            // The gaps around the icon and the accessory are margins on those two children rather
+            // than ColumnSpacing. Both columns are Auto and both are usually empty: an icon-less
+            // cell (the common case) would still pay the spacing, which indented every title 12px
+            // past the section header above it while the accessory kept the padding's 16.
+            ColumnSpacing = 0,
             RowSpacing = 2
         };
 
@@ -394,6 +401,7 @@ public abstract class CellBase : ContentView
             WidthRequest = 24,
             HeightRequest = 24,
             VerticalOptions = LayoutOptions.Center,
+            Margin = new Thickness(0, 0, ColumnGap, 0),
             IsVisible = false
         };
         Grid.SetColumn(iconImage, 0);
@@ -448,6 +456,8 @@ public abstract class CellBase : ContentView
         if (accessoryView != null)
         {
             accessoryView.VerticalOptions = LayoutOptions.Center;
+            if (accessoryView.Margin == default)
+                accessoryView.Margin = new Thickness(ColumnGap, 0, 0, 0);
             Grid.SetColumn(accessoryView, 2);
             Grid.SetRowSpan(accessoryView, 2);
             rootGrid.Children.Add(accessoryView);
