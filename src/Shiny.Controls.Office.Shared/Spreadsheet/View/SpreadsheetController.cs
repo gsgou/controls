@@ -21,11 +21,24 @@ public enum EditCommitDirection
 /// </remarks>
 public sealed class SpreadsheetController
 {
+    /// <summary>
+    /// Where each sheet was left: its selection, its scroll position and its column and row sizes.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by name because that is what survives an undo — deleting a sheet and undoing it produces a
+    /// different <see cref="Worksheet"/> instance with the same name and the same contents, and coming
+    /// back to a restored sheet at the top-left when you left it halfway down reads as data loss.
+    /// </remarks>
+    readonly Dictionary<string, SheetViewState> sheetState = new(StringComparer.OrdinalIgnoreCase);
+
     Worksheet sheet;
     DragMode drag = DragMode.None;
     int resizeIndex = -1;
     double resizeOrigin;
     double resizeStartSize;
+
+    /// <summary>What a sheet looked like when it was last showing.</summary>
+    sealed record SheetViewState(GridMetrics Metrics, double ScrollX, double ScrollY, CellRef Anchor, CellRef Active);
 
     enum DragMode
     {
@@ -50,6 +63,9 @@ public sealed class SpreadsheetController
         this.Selection.Changed += (_, _) => this.RaiseChanged();
     }
 
+    /// <summary>The sheets a tab strip should offer, in book order. Hidden sheets are left out.</summary>
+    public IReadOnlyList<Worksheet> VisibleSheets => this.Workbook.Sheets.Where(x => x.IsVisible).ToList();
+
     public Workbook Workbook { get; }
 
     public Worksheet Sheet => this.sheet;
@@ -72,16 +88,70 @@ public sealed class SpreadsheetController
     /// <summary>Raised when an editor should be opened or closed over the active cell.</summary>
     public event EventHandler<CellRef?>? EditingChanged;
 
+    /// <summary>
+    /// Raised when a different sheet becomes the one on screen — by a tab click, or because a
+    /// structural edit took the old one away.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Changed"/>, which every scroll and keystroke raises. A host binding
+    /// its sheet name two-way needs the rare event, not the constant one.
+    /// </remarks>
+    public event EventHandler<Worksheet>? ActiveSheetChanged;
+
     public void SwitchSheet(Worksheet target)
     {
         ArgumentNullException.ThrowIfNull(target);
+
+        if (ReferenceEquals(target, this.sheet))
+            return;
+
         this.CancelEdit();
+        this.Remember();
+        this.Adopt(target);
+        this.RaiseChanged();
+        this.ActiveSheetChanged?.Invoke(this, target);
+    }
+
+    /// <summary>Switches to a sheet by name. Unknown or hidden names are ignored.</summary>
+    public void SwitchSheet(string name)
+    {
+        if (this.Workbook.Find(name) is { } target)
+            this.SwitchSheet(target);
+    }
+
+    /// <summary>Files the current sheet's position away so coming back to it lands where it was left.</summary>
+    void Remember()
+        => this.sheetState[this.sheet.Name] = new SheetViewState(
+            this.Metrics,
+            this.Viewport.ScrollX,
+            this.Viewport.ScrollY,
+            this.Selection.Anchor,
+            this.Selection.Active);
+
+    /// <summary>Makes a sheet the current one, restoring where it was left if it has been seen before.</summary>
+    void Adopt(Worksheet target)
+    {
+        var remembered = this.sheetState.GetValueOrDefault(target.Name);
 
         this.sheet = target;
-        this.Metrics = GridMetrics.FromWorksheet(target);
+
+        // A remembered metrics object carries the column widths the user dragged out by hand. Rebuilding
+        // it from the sheet would throw those away every time a tab was clicked.
+        this.Metrics = remembered?.Metrics ?? GridMetrics.FromWorksheet(target);
         this.Viewport = new GridViewport(this.Metrics) { Width = this.Viewport.Width, Height = this.Viewport.Height };
-        this.Selection.MoveTo(new CellRef(0, 0));
-        this.RaiseChanged();
+
+        if (remembered is null)
+        {
+            this.Selection.MoveTo(new CellRef(0, 0));
+            return;
+        }
+
+        this.Viewport.ScrollTo(remembered.ScrollX, remembered.ScrollY);
+
+        // Anchor first, then extend: that reproduces both the range and which end of it is active.
+        this.Selection.MoveTo(remembered.Anchor);
+        if (remembered.Active != remembered.Anchor)
+            this.Selection.ExtendTo(remembered.Active);
     }
 
     public void Resize(double width, double height)
@@ -245,15 +315,216 @@ public sealed class SpreadsheetController
     public void Undo()
     {
         this.CancelEdit();
+
+        var before = this.CurrentSheetNames();
         this.Workbook.Undo.Undo();
-        this.RaiseChanged();
+
+        // What was undone may have been a sheet edit, in which case the sheet on screen has just been
+        // renamed, hidden or deleted out from under this controller.
+        this.AfterSheetsChanged(this.Appeared(before) ?? this.sheet.Name);
     }
 
     public void Redo()
     {
         this.CancelEdit();
+
+        var before = this.CurrentSheetNames();
         this.Workbook.Undo.Redo();
+        this.AfterSheetsChanged(this.Appeared(before) ?? this.sheet.Name);
+    }
+
+    HashSet<string> CurrentSheetNames()
+        => new(this.Workbook.Sheets.Select(x => x.Name), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The sheet an undo or redo brought back, if it brought one back.
+    /// </summary>
+    /// <remarks>
+    /// Undoing a delete has to land on the sheet that returned — staying put would leave the user
+    /// looking at a different sheet and wondering whether the undo did anything. The stack cannot say
+    /// what a command restored, but a sheet that was not there a moment ago is unambiguous enough.
+    /// </remarks>
+    string? Appeared(HashSet<string> before)
+        => this.Workbook.Sheets.FirstOrDefault(x => x.IsVisible && !before.Contains(x.Name))?.Name;
+
+    // ---- sheets ----
+    //
+    // Each of these is the pair of things a sheet edit actually is: the command, which changes the
+    // workbook and can be undone, and the reconciliation, which decides what should be on screen
+    // afterwards. Neither half is any use without the other - a delete that leaves the controller
+    // pointing at the sheet it just removed paints a grid that no longer exists.
+
+    /// <summary>
+    /// Adds a sheet after the current one and switches to it.
+    /// </summary>
+    /// <param name="name">A name, or null for the next free <c>SheetN</c>.</param>
+    /// <param name="index">Where to put it, or null for immediately after the current sheet.</param>
+    public Worksheet AddSheet(string? name = null, int? index = null)
+    {
+        var chosen = name ?? SheetNames.NextDefault(this.Workbook.Sheets.Select(x => x.Name));
+        var position = index ?? this.IndexOf(this.sheet) + 1;
+
+        this.Begin();
+        this.Workbook.Execute(new AddSheetCommand(chosen, position));
+        this.AfterSheetsChanged(chosen);
+
+        return this.Workbook[chosen];
+    }
+
+    /// <summary>
+    /// Renames a sheet, repointing every formula that referred to it.
+    /// </summary>
+    /// <exception cref="ArgumentException">The name is illegal or already taken.</exception>
+    public void RenameSheet(Worksheet target, string newName)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        var previous = target.Name;
+        if (string.Equals(previous, newName, StringComparison.Ordinal))
+            return;
+
+        this.Begin();
+        this.Workbook.Execute(new RenameSheetCommand(previous, newName));
+
+        // The remembered position is filed under the old name; without this the sheet you are looking
+        // at jumps back to A1 the moment you rename it.
+        if (this.sheetState.Remove(previous, out var state))
+            this.sheetState[newName] = state;
+
+        this.AfterSheetsChanged(newName);
+    }
+
+    /// <summary>Copies a sheet in beside the original and switches to the copy.</summary>
+    public Worksheet DuplicateSheet(Worksheet target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        var copyName = SheetNames.MakeUnique(target.Name, this.Workbook.Sheets.Select(x => x.Name));
+
+        this.Begin();
+        this.Workbook.Execute(new DuplicateSheetCommand(target.Name, copyName, this.IndexOf(target) + 1));
+        this.AfterSheetsChanged(copyName);
+
+        return this.Workbook[copyName];
+    }
+
+    /// <summary>Deletes a sheet. There is no confirmation here; that belongs to the host.</summary>
+    /// <exception cref="InvalidOperationException">It is the only visible sheet left.</exception>
+    public void DeleteSheet(Worksheet target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        // Whichever tab Excel would land on: the one to the right, or the one to the left at the end.
+        var visible = this.VisibleSheets;
+        var at = -1;
+        for (var i = 0; i < visible.Count && at < 0; i++)
+        {
+            if (ReferenceEquals(visible[i], target))
+                at = i;
+        }
+
+        var next = at < 0 ? null : visible.ElementAtOrDefault(at + 1) ?? visible.ElementAtOrDefault(at - 1);
+
+        this.Begin();
+        this.Workbook.Execute(new DeleteSheetCommand(target.Name));
+
+        // The remembered position is deliberately kept: undoing the delete brings the sheet back, and
+        // it should come back where it was rather than scrolled to the top.
+        this.AfterSheetsChanged(next?.Name);
+    }
+
+    /// <summary>Moves a sheet to a position in the tab order.</summary>
+    public void MoveSheet(Worksheet target, int index)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (this.IndexOf(target) == index)
+            return;
+
+        this.Begin();
+        this.Workbook.Execute(new MoveSheetCommand(target.Name, index));
+        this.AfterSheetsChanged(this.sheet.Name);
+    }
+
+    /// <summary>Hides or shows a sheet.</summary>
+    /// <exception cref="InvalidOperationException">Hiding it would leave no visible sheet.</exception>
+    public void SetSheetVisible(Worksheet target, bool visible)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        this.Begin();
+        this.Workbook.Execute(new SetSheetVisibilityCommand(target.Name, visible));
+        this.AfterSheetsChanged(visible ? target.Name : null);
+    }
+
+    /// <summary>False when the sheet is the last one Excel would have a tab for.</summary>
+    public bool CanRemoveFromView(Worksheet target)
+        => target is not null && (!target.IsVisible || this.VisibleSheets.Count > 1);
+
+    public int IndexOf(Worksheet target)
+    {
+        for (var i = 0; i < this.Workbook.Sheets.Count; i++)
+        {
+            if (ReferenceEquals(this.Workbook.Sheets[i], target))
+                return i;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Closes the editor and ends the coalescing run before a structural edit.
+    /// </summary>
+    /// <remarks>
+    /// Without the break, adding a sheet in the middle of a typing run folds into that run's undo step,
+    /// and one Ctrl+Z then takes the sheet away along with the characters.
+    /// </remarks>
+    void Begin()
+    {
+        this.CancelEdit();
+        this.Workbook.Undo.BreakCoalescing();
+    }
+
+    /// <summary>Picks what should be on screen after the sheet list changed, and switches to it.</summary>
+    void AfterSheetsChanged(string? preferred)
+    {
+        var target = this.Workbook.Find(preferred) is { IsVisible: true } named
+            ? named
+            : this.Resolve();
+
+        if (target is null)
+        {
+            // Nothing visible is left to show. The workbook guards against this, so reaching here means
+            // the grid keeps painting the last sheet rather than crashing on a null one.
+            this.RaiseChanged();
+            return;
+        }
+
+        if (ReferenceEquals(target, this.sheet))
+        {
+            this.RaiseChanged();
+            return;
+        }
+
+        this.Remember();
+        this.Adopt(target);
         this.RaiseChanged();
+        this.ActiveSheetChanged?.Invoke(this, target);
+    }
+
+    /// <summary>
+    /// The sheet the current one has become: itself if it survived, the sheet with its name if it was
+    /// restored as a new instance, otherwise the first visible one.
+    /// </summary>
+    Worksheet? Resolve()
+    {
+        if (this.Workbook.Sheets.Any(x => ReferenceEquals(x, this.sheet)) && this.sheet.IsVisible)
+            return this.sheet;
+
+        if (this.Workbook.Find(this.sheet.Name) is { IsVisible: true } byName)
+            return byName;
+
+        return this.Workbook.Sheets.FirstOrDefault(x => x.IsVisible);
     }
 
     // ---- editing ----

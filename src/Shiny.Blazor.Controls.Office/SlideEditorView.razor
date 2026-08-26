@@ -1,13 +1,19 @@
 @using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Presentation
+@using Shiny.Controls.Office.Shapes
 @using Shiny.Controls.Office.Spreadsheet
 
 @*
     SlideEditor with editing chrome on top.
 
-    The toolbar is a ShinyToolbar from the core Blazor package. Blazor has no FontPicker (that control
-    is MAUI-only), so family and size are plain selects — the MAUI SlideEditorView uses
-    FontPickerButton/FontSizePickerButton for the same two slots.
+    The toolbar is a ShinyToolbar from the core Blazor package, and the pickers in it are the core
+    package's own — FontPickerButton, FontSizePickerButton and ColorPickerButton — which is what the
+    MAUI SlideEditorView puts in the same three slots.
+
+    The row inside is its own flex container. ShinyToolbar renders ChildContent into a plain block, so
+    left to itself every control here would be an inline-level box aligned to the text baseline — and a
+    button's baseline, a select's baseline and a swatch's baseline are all in different places.
 *@
 <div class="shiny-slide-editor-view @Class" style="@Style">
 
@@ -25,33 +31,23 @@
                       SafeArea="false"
                       ZIndex="5">
 
+        <div class="slide-toolbar">
+
             <button class="slide-btn" title="Previous slide" disabled="@(!CanPrevious)" @onclick="() => Run(c => c.Previous())">‹</button>
             <span class="slide-count">@(Controller is null ? "—" : $"{Controller.Index + 1}/{Controller.Count}")</span>
             <button class="slide-btn" title="Next slide" disabled="@(!CanNext)" @onclick="() => Run(c => c.Next())">›</button>
 
             <span class="slide-sep"></span>
 
-            <select class="slide-select slide-font"
-                    title="Font"
-                    disabled="@(!HasText)"
-                    value="@Format.FontFamily"
-                    @onchange="OnFontChanged">
-                @foreach (var font in FontFamilies)
-                {
-                    <option value="@font" selected="@(font == Format.FontFamily)">@font</option>
-                }
-            </select>
+            <FontPickerButton AvailableFonts="FontFamilies"
+                              SelectedFont="@Format.FontFamily"
+                              Disabled="@(!HasText)"
+                              SelectedFontChanged="OnFontChanged" />
 
-            <select class="slide-select slide-size"
-                    title="Size"
-                    disabled="@(!HasText)"
-                    value="@SelectedSize"
-                    @onchange="OnSizeChanged">
-                @foreach (var size in FontSizes)
-                {
-                    <option value="@size" selected="@(Math.Abs(size - Format.FontSize) < 0.51)">@size</option>
-                }
-            </select>
+            <FontSizePickerButton AvailableFontSizes="FontSizes"
+                                  SelectedFontSize="Format.FontSize"
+                                  Disabled="@(!HasText)"
+                                  SelectedFontSizeChanged="OnSizeChanged" />
 
             <span class="slide-sep"></span>
 
@@ -60,12 +56,15 @@
             <button class="slide-btn @(Format.Underline ? "on" : null)" title="Underline (Ctrl+U)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleUnderline())"><u>U</u></button>
             <button class="slide-btn @(Format.Strike ? "on" : null)" title="Strikethrough" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleStrikethrough())"><s>S</s></button>
 
-            <input class="slide-color"
-                   type="color"
-                   title="Text colour"
-                   disabled="@(!HasText)"
-                   value="@ColorHex"
-                   @onchange="OnColorChanged" />
+            <ColorPickerButton Text="Text colour"
+                               SelectedColor="@ColorHex"
+                               ShowOpacity="false"
+                               Disabled="@(!HasText)"
+                               SelectedColorChanged="OnColorChanged" />
+
+            <OfficeHighlightButton Current="Format.Highlight"
+                                   Disabled="@(!HasText)"
+                                   Picked="OnHighlightPicked" />
 
             <span class="slide-sep"></span>
 
@@ -79,6 +78,13 @@
             <span class="slide-sep"></span>
 
             <button class="slide-btn" title="Add a text box" disabled="@Disabled" @onclick="AddTextBox">＋T</button>
+
+            <OfficeInsertMenu Disabled="Disabled"
+                              ShapePicked="OnShapePicked"
+                              TablePicked="OnTablePicked"
+                              ImagePicked="OnImagePicked"
+                              ImageRejected="DropRejected" />
+
             <button class="slide-btn" title="Delete the selected shape" disabled="@(!HasSelection)" @onclick="() => Run(c => c.DeleteSelectedShape())">🗑</button>
 
             <span class="slide-sep"></span>
@@ -87,6 +93,7 @@
             <button class="slide-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
 
             @ToolbarContent
+        </div>
         </ShinyToolbar>
     }
 
@@ -98,6 +105,8 @@
                      SlideIndexChanged="OnSlideIndexChanged"
                      ReadOnly="ReadOnly"
                      SelectionChanged="StateHasChanged"
+                     AllowFileDrop="AllowFileDrop"
+                     DropRejected="DropRejected"
                      DeckChanged="OnDeckChanged" />
     </div>
 
@@ -135,6 +144,12 @@
     /// <summary>A one-line hint under the canvas saying what the current gesture will do.</summary>
     [Parameter] public bool ShowStatus { get; set; } = true;
 
+    /// <summary>Whether dragging an image file onto the slide inserts it. On by default.</summary>
+    [Parameter] public bool AllowFileDrop { get; set; } = true;
+
+    /// <summary>Raised when a dropped or chosen file could not be inserted, so a host can say so.</summary>
+    [Parameter] public EventCallback<OfficeDropRejected> DropRejected { get; set; }
+
     /// <summary>Extra items appended to the toolbar, after the built-in controls.</summary>
     [Parameter] public RenderFragment? ToolbarContent { get; set; }
 
@@ -143,10 +158,22 @@
         "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
     ];
 
-    [Parameter] public IReadOnlyList<int> FontSizes { get; set; } =
+    /// <summary>
+    /// The sizes the picker offers. Doubles rather than ints so the list matches what a deck can
+    /// actually hold — and what the MAUI SlideEditorView takes for the same property.
+    /// </summary>
+    [Parameter] public IReadOnlyList<double> FontSizes { get; set; } =
     [
         8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 44, 54, 66, 88
     ];
+
+    /// <summary>The size of shape the toolbar inserts, in slide pixels.</summary>
+    [Parameter] public double ShapeWidth { get; set; } = 240;
+
+    [Parameter] public double ShapeHeight { get; set; } = 180;
+
+    /// <summary>How wide an inserted picture is, in slide pixels.</summary>
+    [Parameter] public double PictureWidth { get; set; } = 400;
 
     [Parameter] public double ToolbarHeight { get; set; } = 44;
     [Parameter] public string ToolbarBackground { get; set; } = "#FFFFFF";
@@ -181,17 +208,7 @@
 
     SlideCaretFormat Format => this.Controller?.CaretFormat ?? SlideCaretFormat.Default;
 
-    /// <summary>The nearest offered size to what is actually at the caret.</summary>
-    int SelectedSize
-    {
-        get
-        {
-            var actual = this.Format.FontSize;
-            return this.FontSizes.OrderBy(x => Math.Abs(x - actual)).FirstOrDefault(18);
-        }
-    }
-
-    string ColorHex => $"#{this.Format.Color.R:x2}{this.Format.Color.G:x2}{this.Format.Color.B:x2}";
+    string ColorHex => OfficeColors.ToHex(this.Format.Color);
 
     async Task Run(Action<SlideEditorController> action)
     {
@@ -214,27 +231,62 @@
             Math.Max(0, c.Deck.SlideWidth / 2 - 160),
             Math.Max(0, c.Deck.SlideHeight / 2 - 32)));
 
+    Task OnHighlightPicked(ArgbColor? color) => this.Run(c => c.SetHighlight(color));
+
+    /// <summary>
+    /// Drops a new object into the middle of the slide.
+    /// </summary>
+    /// <remarks>
+    /// The middle rather than the top-left, and the same place the text box goes. A slide is an
+    /// artboard: something inserted at the origin lands under the title placeholder, where it is both
+    /// invisible and awkward to grab.
+    /// </remarks>
+    static (double X, double Y) Centred(SlideEditorController controller, double width, double height)
+        => (Math.Max(0, (controller.Deck.SlideWidth - width) / 2),
+            Math.Max(0, (controller.Deck.SlideHeight - height) / 2));
+
+    Task OnShapePicked(ShapeGeometry geometry) => this.Run(c =>
+    {
+        var (x, y) = Centred(c, this.ShapeWidth, this.ShapeHeight);
+        c.AddShape(geometry, x, y, this.ShapeWidth, this.ShapeHeight);
+    });
+
+    Task OnTablePicked((int Rows, int Columns) size) => this.Run(c =>
+    {
+        // Sized to the slide rather than to the grid: a 2x2 and an 8x8 both want to be a table on a
+        // slide, not a postage stamp and something that overflows the edge.
+        var width = c.Deck.SlideWidth * 0.7;
+        var height = Math.Min(c.Deck.SlideHeight * 0.6, size.Rows * 44);
+        var (x, y) = Centred(c, width, height);
+
+        c.AddTable(size.Rows, size.Columns, x, y, width, height);
+    });
+
+    Task OnImagePicked(OfficePickedImage image) => this.Run(c =>
+    {
+        var width = Math.Min(c.Deck.SlideWidth / 2, this.PictureWidth);
+        var height = width * 0.75;
+        var (x, y) = Centred(c, width, height);
+
+        c.AddPicture(image.Data, image.ContentType, x, y, width, height, Path.GetFileNameWithoutExtension(image.FileName));
+    });
+
     Task Align(TextAlignment alignment) => this.Run(c => c.SetAlignment(alignment));
 
-    Task OnFontChanged(ChangeEventArgs e)
-        => e.Value?.ToString() is { Length: > 0 } family
+    Task OnFontChanged(string family)
+        => family is { Length: > 0 }
             ? this.Run(c => c.SetFontFamily(family))
             : Task.CompletedTask;
 
-    Task OnSizeChanged(ChangeEventArgs e)
-        => double.TryParse(e.Value?.ToString(), out var size)
+    Task OnSizeChanged(double size)
+        => size > 0
             ? this.Run(c => c.SetFontSize(size))
             : Task.CompletedTask;
 
-    Task OnColorChanged(ChangeEventArgs e)
-    {
-        var value = e.Value?.ToString();
-        if (value is null || value.Length != 7 || value[0] != '#')
-            return Task.CompletedTask;
-
-        var rgb = uint.Parse(value[1..], System.Globalization.NumberStyles.HexNumber);
-        return this.Run(c => c.SetTextColor(ArgbColor.FromUInt32(0xFF000000u | rgb)));
-    }
+    Task OnColorChanged(string hex)
+        => OfficeColors.TryParse(hex, out var color)
+            ? this.Run(c => c.SetTextColor(color))
+            : Task.CompletedTask;
 
     async Task OnSlideIndexChanged(int index)
     {

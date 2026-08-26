@@ -36,7 +36,9 @@
 
 <p class="hint">
     Click to select, drag to extend, double-click or just start typing to edit. Enter and Tab commit;
-    Escape cancels. Drag a column header's right edge to resize.
+    Escape cancels. Drag a column header's right edge to resize. The tabs below the grid switch sheets
+    — double-click one to rename it, drag one to reorder, and use ⋯ for the rest. Ctrl+PageUp and
+    Ctrl+PageDown move between sheets from the keyboard.
 </p>
 
 @code {
@@ -69,6 +71,12 @@
 
         Set("A5", CellValue.FromText("Total"));
         this.workbook.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse("D5"), "SUM(D2:D4)"));
+
+        // A second sheet, so the tab strip has somewhere to go and the cross-sheet formula below has
+        // something to read. Try renaming Budget from its tab: this formula follows it.
+        this.workbook.Execute(new AddSheetCommand("Summary", 1));
+        this.workbook.Execute(new SetCellValueCommand("Summary", CellRef.Parse("A1"), CellValue.FromText("Budget total")));
+        this.workbook.Execute(new SetCellFormulaCommand("Summary", CellRef.Parse("B1"), "Budget!D5"));
     }
 
     void AddItem(int row, string name, double quantity, double unit)

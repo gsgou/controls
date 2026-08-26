@@ -1,0 +1,89 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    A list of font families, each drawn in its own typeface.
+
+    That is the whole point of it: a name in a dropdown tells you what a font is called, which is the
+    one thing about a font nobody needs help with. Seeing Georgia set in Georgia is what lets someone
+    choose without trying each one in turn - so the preview is the control, and the name is the label
+    on it.
+
+    The MAUI FontPicker is the same control for the other host; the two keep the same property names
+    on purpose, so a page ported between them changes its markup and nothing else.
+*@
+
+<div class="shiny-fontpicker @Class" style="@Style" role="listbox" aria-label="Font">
+    @foreach (var font in this.Fonts)
+    {
+        var selected = string.Equals(font, this.SelectedFont, StringComparison.OrdinalIgnoreCase);
+
+        <button type="button"
+                role="option"
+                aria-selected="@selected"
+                class="@(selected ? "shiny-fontpicker-item shiny-fontpicker-item-on" : "shiny-fontpicker-item")"
+                style="font-family:@Quote(font)"
+                @onclick="@(() => this.Select(font))">
+            <span class="shiny-fontpicker-name">@font</span>
+
+            @if (!string.IsNullOrEmpty(this.PreviewText))
+            {
+                <span class="shiny-fontpicker-preview" style="font-size:@(Css(this.PreviewFontSize))px">@this.PreviewText</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>The families to offer. Null falls back to <see cref="DefaultFonts"/>.</summary>
+    [Parameter] public IReadOnlyList<string>? AvailableFonts { get; set; }
+
+    [Parameter] public string? SelectedFont { get; set; }
+
+    [Parameter] public EventCallback<string> SelectedFontChanged { get; set; }
+
+    /// <summary>Raised when a family is chosen. Fires alongside <see cref="SelectedFontChanged"/>.</summary>
+    [Parameter] public EventCallback<string> FontChanged { get; set; }
+
+    /// <summary>The specimen shown beside each name. Empty leaves the names on their own.</summary>
+    [Parameter] public string PreviewText { get; set; } = "The quick brown fox";
+
+    [Parameter] public double PreviewFontSize { get; set; } = 16;
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>
+    /// The families every platform can be relied on to have, which is what makes them a sane default
+    /// for a document editor: a document set in one of these looks the same wherever it is opened.
+    /// </summary>
+    public static readonly IReadOnlyList<string> DefaultFonts =
+    [
+        "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
+    ];
+
+    IReadOnlyList<string> Fonts => this.AvailableFonts is { Count: > 0 } fonts ? fonts : DefaultFonts;
+
+    async Task Select(string font)
+    {
+        this.SelectedFont = font;
+
+        if (this.SelectedFontChanged.HasDelegate)
+            await this.SelectedFontChanged.InvokeAsync(font);
+
+        if (this.FontChanged.HasDelegate)
+            await this.FontChanged.InvokeAsync(font);
+    }
+
+    /// <summary>
+    /// Wraps a family name in quotes for the CSS font-family property.
+    /// </summary>
+    /// <remarks>
+    /// Unquoted, a name with a space in it - Times New Roman is the obvious one - is read as three
+    /// separate families, none of which exists, and the preview silently falls back to the default
+    /// face. Which defeats the entire control.
+    /// </remarks>
+    static string Quote(string font) => $"'{font.Replace("'", "\\'", StringComparison.Ordinal)}'";
+
+    static string Css(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

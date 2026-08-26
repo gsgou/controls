@@ -52,4 +52,15 @@ public class ImageOptions
 
     /// <summary>How long a single download may take before it is abandoned.</summary>
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// How many parsed SVG documents are kept. Zero or less turns the parse cache off.
+    /// </summary>
+    /// <remarks>
+    /// Counted rather than sized. A parsed document is a graph of small objects that no cheap
+    /// measurement describes honestly, and the count is the number that matters anyway - a screen
+    /// shows tens of distinct drawings, not thousands. The default holds every icon of a typical
+    /// app at once, which is the case this cache exists for.
+    /// </remarks>
+    public int SvgCacheEntryLimit { get; set; } = 32;
 }

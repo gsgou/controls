@@ -6,14 +6,12 @@ public sealed record StyledRun(string Text, TextStyle Style)
     /// <summary>A run that forces a line break rather than carrying text.</summary>
     public bool IsBreak { get; init; }
 
-    /// <summary>Non-null when this run is an inline image rather than text.</summary>
-    public InlineImage? Image { get; init; }
+    /// <summary>Non-null when this run is an inline object — a picture or a shape — rather than text.</summary>
+    public InlineObject? Inline { get; init; }
 }
 
-public sealed record InlineImage(byte[] Data, double Width, double Height, string? Description = null);
-
 /// <summary>A run positioned on a line.</summary>
-public sealed record LaidOutRun(string Text, TextStyle Style, double X, double Width, InlineImage? Image = null)
+public sealed record LaidOutRun(string Text, TextStyle Style, double X, double Width, InlineObject? Inline = null)
 {
     public double Height { get; init; }
 
@@ -100,13 +98,21 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
                 continue;
             }
 
-            if (run.Image is { } image)
+            if (run.Inline is { } inline)
             {
                 var available = width - indent - current.Sum(p => p.Width);
-                if (image.Width > available && current.Count > 0)
+
+                // An object too wide for what is left of the line starts a new one. It is never
+                // scaled to fit: the size is the author's, and a picture quietly shrunk to the
+                // margin is a different picture.
+                if (inline.Width > available && current.Count > 0)
                     Flush(lastLineOfParagraph: false);
 
-                current.Add(new PendingPiece(string.Empty, run.Style, image.Width, image.Height, 0, image, sourceOffset));
+                // Ascent is the whole height, descent zero: an inline object sits on the baseline
+                // rather than straddling it, which is where Word puts one.
+                current.Add(new PendingPiece(string.Empty, run.Style, inline.Width, inline.Height, 0, inline, sourceOffset));
+
+                // One character, so caret arithmetic after it stays right.
                 sourceOffset++;
                 continue;
             }
@@ -168,7 +174,7 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
     public static double HeightOf(IReadOnlyList<LaidOutLine> lines, double lineSpacing = 1.0)
         => lines.Count == 0 ? 0 : lines[^1].Y + lines[^1].Height * lineSpacing;
 
-    readonly record struct PendingPiece(string Text, TextStyle Style, double Width, double Ascent, double Descent, InlineImage? Image, int SourceOffset);
+    readonly record struct PendingPiece(string Text, TextStyle Style, double Width, double Ascent, double Descent, InlineObject? Inline, int SourceOffset);
 
     static LaidOutLine Commit(
         List<PendingPiece> pieces,
@@ -192,8 +198,8 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
         var descent = 0d;
         for (var i = 0; i < end; i++)
         {
-            ascent = Math.Max(ascent, pieces[i].Image is { } image ? image.Height : pieces[i].Ascent);
-            descent = Math.Max(descent, pieces[i].Image is null ? pieces[i].Descent : 0);
+            ascent = Math.Max(ascent, pieces[i].Inline is { } inline ? inline.Height : pieces[i].Ascent);
+            descent = Math.Max(descent, pieces[i].Inline is null ? pieces[i].Descent : 0);
         }
 
         if (end == 0)
@@ -231,9 +237,9 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
         for (var i = 0; i < end; i++)
         {
             var piece = pieces[i];
-            runs.Add(new LaidOutRun(piece.Text, piece.Style, x, piece.Width, piece.Image)
+            runs.Add(new LaidOutRun(piece.Text, piece.Style, x, piece.Width, piece.Inline)
             {
-                Height = piece.Image?.Height ?? piece.Ascent + piece.Descent,
+                Height = piece.Inline?.Height ?? piece.Ascent + piece.Descent,
                 SourceOffset = piece.SourceOffset
             });
 

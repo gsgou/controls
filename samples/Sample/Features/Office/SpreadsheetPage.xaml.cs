@@ -39,6 +39,12 @@ public partial class SpreadsheetPage : ContentPage
 
         this.Set("A5", CellValue.FromText("Total"));
         this.workbook.Execute(new SetCellFormulaCommand("Budget", CellRef.Parse("D5"), "SUM(D2:D4)"));
+
+        // A second sheet, so the tab strip has somewhere to go and the cross-sheet formula below has
+        // something to read. Renaming Budget from its tab rewrites this formula with it.
+        this.workbook.Execute(new AddSheetCommand("Summary", 1));
+        this.workbook.Execute(new SetCellValueCommand("Summary", CellRef.Parse("A1"), CellValue.FromText("Budget total")));
+        this.workbook.Execute(new SetCellFormulaCommand("Summary", CellRef.Parse("B1"), "Budget!D5"));
     }
 
     void Set(string reference, CellValue value)

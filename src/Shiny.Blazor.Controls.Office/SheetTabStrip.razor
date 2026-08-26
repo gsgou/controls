@@ -1,0 +1,332 @@
+@using Shiny.Controls.Office.Spreadsheet
+@using Shiny.Controls.Office.Spreadsheet.View
+
+@*
+    The row of sheet tabs under a workbook grid.
+
+    Below the grid rather than above it, where every spreadsheet program has put it for thirty years.
+    Hidden sheets are left out of the row - they are hidden in Excel too - and reachable instead
+    through the overflow button at the end, which is the only place anything can be unhidden from.
+
+    Every action here goes through the controller, so every action is on the same undo stack as a cell
+    edit. Nothing in this component mutates a workbook itself.
+*@
+
+<div class="shiny-sheet-tabs @Class" role="tablist" aria-label="Sheets">
+    @foreach (var sheet in this.Sheets)
+    {
+        var current = ReferenceEquals(sheet, this.Controller!.Sheet);
+
+        @if (this.renaming == sheet.Name)
+        {
+            <input class="sheet-rename"
+                   value="@this.draft"
+                   size="@Math.Max(4, this.draft.Length)"
+                   title="@this.error"
+                   aria-label="Sheet name"
+                   @ref="this.renameBox"
+                   @oninput="this.OnDraftInput"
+                   @onkeydown="this.OnRenameKeyDown"
+                   @onblur="this.CommitRename" />
+        }
+        else
+        {
+            <button type="button"
+                    role="tab"
+                    class="@(current ? "sheet-tab sheet-tab-on" : "sheet-tab")"
+                    aria-selected="@current"
+                    draggable="@(this.AllowEditing ? "true" : "false")"
+                    @ondragstart="@(() => this.dragging = sheet.Name)"
+                    @ondragover:preventDefault="true"
+                    @ondrop="@(() => this.DropOn(sheet))"
+                    @ondblclick="@(() => this.BeginRename(sheet))"
+                    @onclick="@(() => this.Select(sheet))">
+                @sheet.Name
+            </button>
+        }
+    }
+
+    @if (this.AllowEditing)
+    {
+        <button type="button" class="sheet-action" title="Add a sheet" @onclick="this.AddSheet">＋</button>
+    }
+
+    @if (this.AllowEditing || this.Hidden.Count > 0)
+    {
+        <button type="button"
+                class="sheet-action"
+                title="Sheet actions"
+                aria-haspopup="menu"
+                aria-expanded="@this.menuOpen"
+                @onclick="this.ToggleMenu">⋯</button>
+    }
+
+    @if (this.menuOpen)
+    {
+        @*
+            A click-catching backdrop rather than a document-level listener: this component owns no JS,
+            and a plain overlay dismisses on the same click that lands outside the menu.
+        *@
+        <div class="sheet-menu-backdrop" @onclick="this.CloseMenu"></div>
+
+        <div class="sheet-menu" role="menu">
+            @if (this.AllowEditing)
+            {
+                <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.BeginRename(this.Controller!.Sheet)))">Rename “@this.Controller!.Sheet.Name”</button>
+                <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.DuplicateSheet(this.Controller.Sheet)))">Duplicate</button>
+                <button type="button" role="menuitem" disabled="@(!this.CanRemoveCurrent)" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(this.Controller.Sheet, false)))">Hide</button>
+                <button type="button" role="menuitem" class="sheet-menu-danger" disabled="@(!this.CanRemoveCurrent)" @onclick="this.DeleteCurrent">Delete</button>
+
+                <div class="sheet-menu-rule"></div>
+
+                <button type="button" role="menuitem" disabled="@(this.Position <= 0)" @onclick="@(() => this.Move(-1))">Move left</button>
+                <button type="button" role="menuitem" disabled="@(this.Position < 0 || this.Position >= this.Controller!.Workbook.Sheets.Count - 1)" @onclick="@(() => this.Move(1))">Move right</button>
+            }
+
+            @if (this.Hidden.Count > 0)
+            {
+                <div class="sheet-menu-rule"></div>
+                <div class="sheet-menu-heading">Hidden</div>
+
+                @foreach (var sheet in this.Hidden)
+                {
+                    var target = sheet;
+
+                    @if (this.AllowEditing)
+                    {
+                        <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(target, true)))">Show “@target.Name”</button>
+                    }
+                    else
+                    {
+                        <div class="sheet-menu-heading">@target.Name</div>
+                    }
+                }
+            }
+        </div>
+    }
+
+    @if (this.error is { Length: > 0 } message)
+    {
+        <span class="sheet-error" role="alert">@message</span>
+    }
+</div>
+
+@code {
+    ElementReference renameBox;
+
+    /// <summary>The sheet whose tab has turned into a text box, or null when none has.</summary>
+    string? renaming;
+
+    /// <summary>What is in that text box. Not applied until it is committed and legal.</summary>
+    string draft = string.Empty;
+
+    /// <summary>Why the last rename or delete did not happen. Cleared by the next thing the user does.</summary>
+    string? error;
+
+    string? dragging;
+    bool menuOpen;
+    bool focusRenameBox;
+
+    /// <summary>The grid this strip belongs to. Every action is routed through it.</summary>
+    [Parameter, EditorRequired] public SpreadsheetController? Controller { get; set; }
+
+    /// <summary>
+    /// Whether tabs can be added, renamed, reordered, hidden and deleted. False leaves a strip that
+    /// only switches between the sheets already there.
+    /// </summary>
+    [Parameter] public bool AllowEditing { get; set; } = true;
+
+    /// <summary>Raised after anything that changes which sheet is showing or what sheets exist.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    IReadOnlyList<Worksheet> Sheets => this.Controller?.VisibleSheets ?? [];
+
+    IReadOnlyList<Worksheet> Hidden
+        => this.Controller?.Workbook.Sheets.Where(x => !x.IsVisible).ToList() ?? [];
+
+    int Position => this.Controller is null ? -1 : this.Controller.IndexOf(this.Controller.Sheet);
+
+    bool CanRemoveCurrent => this.Controller is { } c && c.CanRemoveFromView(c.Sheet);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.focusRenameBox)
+            return;
+
+        // The text box is created by the render this flag was set for, so focusing it can only happen
+        // once that render has actually gone out.
+        this.focusRenameBox = false;
+        try
+        {
+            await this.renameBox.FocusAsync();
+        }
+        catch (Exception)
+        {
+            // The tab can be torn down between the click and this running; a lost focus call is not
+            // worth failing the render over.
+        }
+    }
+
+    async Task Select(Worksheet sheet)
+    {
+        this.CloseMenu();
+        this.Controller?.SwitchSheet(sheet);
+        await this.RaiseChangedAsync();
+    }
+
+    async Task AddSheet()
+    {
+        this.CloseMenu();
+
+        if (this.Controller is not { } controller)
+            return;
+
+        var added = controller.AddSheet();
+
+        // Straight into a rename: a new tab is almost always about to be named something, and this is
+        // what double-clicking it would have done anyway.
+        this.BeginRename(added);
+        await this.RaiseChangedAsync();
+    }
+
+    void BeginRename(Worksheet sheet)
+    {
+        if (!this.AllowEditing)
+            return;
+
+        this.CloseMenu();
+        this.renaming = sheet.Name;
+        this.draft = sheet.Name;
+        this.error = null;
+        this.focusRenameBox = true;
+    }
+
+    void OnDraftInput(ChangeEventArgs e)
+    {
+        this.draft = e.Value?.ToString() ?? string.Empty;
+
+        // Say why a name will be refused while it is still being typed, rather than on commit.
+        this.error = this.Controller is { } controller && this.renaming is { } current
+            ? SheetNames.IsAvailable(this.draft, controller.Workbook.Sheets.Select(x => x.Name), current, out var reason) ? null : reason
+            : null;
+    }
+
+    async Task OnRenameKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await this.CommitRename();
+                break;
+
+            case "Escape":
+                this.renaming = null;
+                this.error = null;
+                break;
+        }
+    }
+
+    async Task CommitRename()
+    {
+        if (this.renaming is not { } current || this.Controller is not { } controller)
+            return;
+
+        this.renaming = null;
+
+        var sheet = controller.Workbook.Find(current);
+        if (sheet is null || string.Equals(sheet.Name, this.draft, StringComparison.Ordinal))
+        {
+            this.error = null;
+            return;
+        }
+
+        try
+        {
+            controller.RenameSheet(sheet, this.draft.Trim());
+            this.error = null;
+        }
+        catch (ArgumentException ex)
+        {
+            // The name was refused. The sheet keeps the one it had, and the reason stays on screen.
+            this.error = ex.Message;
+        }
+
+        await this.RaiseChangedAsync();
+    }
+
+    async Task DeleteCurrent()
+    {
+        this.CloseMenu();
+
+        if (this.Controller is not { } controller)
+            return;
+
+        try
+        {
+            controller.DeleteSheet(controller.Sheet);
+            this.error = null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            this.error = ex.Message;
+        }
+
+        await this.RaiseChangedAsync();
+    }
+
+    Task Move(int offset)
+    {
+        var position = this.Position;
+        return position < 0
+            ? Task.CompletedTask
+            : this.Run(() => this.Controller!.MoveSheet(this.Controller.Sheet, position + offset));
+    }
+
+    async Task DropOn(Worksheet target)
+    {
+        if (this.dragging is not { } name || this.Controller is not { } controller)
+            return;
+
+        this.dragging = null;
+
+        if (controller.Workbook.Find(name) is { } source && !ReferenceEquals(source, target))
+            controller.MoveSheet(source, controller.IndexOf(target));
+
+        await this.RaiseChangedAsync();
+    }
+
+    async Task Run(Action action)
+    {
+        this.CloseMenu();
+        this.error = null;
+
+        try
+        {
+            action();
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            this.error = ex.Message;
+        }
+
+        await this.RaiseChangedAsync();
+    }
+
+    void ToggleMenu()
+    {
+        this.menuOpen = !this.menuOpen;
+        this.error = null;
+    }
+
+    void CloseMenu() => this.menuOpen = false;
+
+    async Task RaiseChangedAsync()
+    {
+        this.StateHasChanged();
+
+        if (this.Changed.HasDelegate)
+            await this.Changed.InvokeAsync();
+    }
+}

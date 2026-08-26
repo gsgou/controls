@@ -2,6 +2,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
 using Shiny.Controls.Office.Packaging;
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using D = DocumentFormat.OpenXml.Drawing;
@@ -405,6 +406,11 @@ sealed class SlideReader
 
         if (this.drawing.ReadColor(properties.GetFirstChild<D.SolidFill>()) is { } color)
             style = style with { Color = color };
+
+        // a:highlight wraps a colour choice of its own rather than carrying one as an attribute, which
+        // is why it goes through the same reader as a solid fill instead of being parsed here.
+        if (properties.GetFirstChild<D.Highlight>() is { } highlight)
+            style = style with { Highlight = this.drawing.ReadColor(highlight) };
 
         // A '+' prefix means "the theme's major or minor font", which is resolved by the font scheme
         // rather than being a family name in its own right.

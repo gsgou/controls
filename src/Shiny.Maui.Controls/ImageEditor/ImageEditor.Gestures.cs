@@ -116,8 +116,33 @@ public partial class ImageEditor
                 Invalidate();
                 return;
             }
+
+            case ImageEditorToolMode.Rectangle:
+            case ImageEditorToolMode.Ellipse:
+            case ImageEditorToolMode.Circle:
+            {
+                var imageRect = drawable.GetImageRect();
+                if (imageRect is not { Width: > 0, Height: > 0 } || !imageRect.Contains(point))
+                    return;
+
+                touchStartPoint = point;
+                isDragging = true;
+                drawable.ActiveShapeStart = point;
+                drawable.ActiveShapeEnd = point;
+                drawable.ActiveShapeKind = ShapeFor(CurrentToolMode);
+                drawable.ActiveFillColor = ShapeFillColor;
+                Invalidate();
+                return;
+            }
         }
     }
+
+    static ImageEditorShape ShapeFor(ImageEditorToolMode mode) => mode switch
+    {
+        ImageEditorToolMode.Ellipse => ImageEditorShape.Ellipse,
+        ImageEditorToolMode.Circle => ImageEditorShape.Circle,
+        _ => ImageEditorShape.Rectangle
+    };
 
     void OnDragInteraction(object? sender, TouchEventArgs e)
     {
@@ -179,6 +204,20 @@ public partial class ImageEditor
                 }
                 break;
             }
+
+            case ImageEditorToolMode.Rectangle:
+            case ImageEditorToolMode.Ellipse:
+            case ImageEditorToolMode.Circle:
+            {
+                if (drawable.ActiveShapeStart.HasValue)
+                {
+                    var imageRect = drawable.GetImageRect();
+                    if (imageRect is { Width: > 0, Height: > 0 })
+                        drawable.ActiveShapeEnd = ClampToRect(point, imageRect);
+                    Invalidate();
+                }
+                break;
+            }
         }
     }
 
@@ -220,15 +259,23 @@ public partial class ImageEditor
             case ImageEditorToolMode.Arrow:
                 CommitCurrentLine();
                 break;
+
+            case ImageEditorToolMode.Rectangle:
+            case ImageEditorToolMode.Ellipse:
+            case ImageEditorToolMode.Circle:
+                CommitCurrentShape();
+                break;
         }
     }
 
-    /// <summary>Drops an in-progress stroke/line without committing it (a pinch took over).</summary>
+    /// <summary>Drops an in-progress stroke/line/shape without committing it (a pinch took over).</summary>
     void AbandonActiveToolGesture()
     {
         drawable.ActiveStrokePoints = null;
         drawable.ActiveLineStart = null;
         drawable.ActiveLineEnd = null;
+        drawable.ActiveShapeStart = null;
+        drawable.ActiveShapeEnd = null;
         activeCropHandle = CropHandle.None;
         isDragging = false;
         isPanning = false;
@@ -355,6 +402,50 @@ public partial class ImageEditor
 
         drawable.ActiveLineStart = null;
         drawable.ActiveLineEnd = null;
+        Invalidate();
+    }
+
+    #endregion
+
+    #region Shape commit
+
+    void CommitCurrentShape()
+    {
+        if (drawable.ActiveShapeStart is not { } start || drawable.ActiveShapeEnd is not { } end)
+        {
+            drawable.ActiveShapeStart = null;
+            drawable.ActiveShapeEnd = null;
+            return;
+        }
+
+        var kind = drawable.ActiveShapeKind;
+        drawable.ActiveShapeStart = null;
+        drawable.ActiveShapeEnd = null;
+
+        var imageRect = drawable.GetImageRect();
+        if (imageRect is { Width: > 0, Height: > 0 })
+        {
+            var rect = ImageEditorDrawable.BuildShapeRect(start, end, kind);
+
+            // Ignore taps without a real drag — the same threshold the line tool uses
+            if (rect.Width >= 2f && rect.Height >= 2f)
+            {
+                state.Push(new EditActions.ShapeAction
+                {
+                    Shape = kind,
+                    Bounds = new RectF(
+                        (rect.X - imageRect.X) / imageRect.Width,
+                        (rect.Y - imageRect.Y) / imageRect.Height,
+                        rect.Width / imageRect.Width,
+                        rect.Height / imageRect.Height),
+                    FillColor = ShapeFillColor,
+                    StrokeColor = DrawStrokeColor,
+                    StrokeWidth = (float)DrawStrokeWidth,
+                    ReferenceWidth = imageRect.Width
+                });
+            }
+        }
+
         Invalidate();
     }
 

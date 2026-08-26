@@ -3,36 +3,51 @@
 @implements IDisposable
 @inject IJSRuntime Js
 
-<div class="shiny-spreadsheet @Class"
-     style="@Style"
-     tabindex="0"
-     @ref="host"
-     @onkeydown="OnKeyDown"
-     @onkeydown:preventDefault="preventKeyDefault"
-     @onwheel="OnWheel"
-     @onwheel:preventDefault="true">
+@*
+    A workbook, drawn on a Skia canvas, with the sheet strip that makes it a workbook rather than a
+    grid. The strip is part of this control on purpose: a host that had to supply its own would be
+    reimplementing tab order, hidden sheets and rename validation against an API it can already see.
+*@
 
-    <SKCanvasView @ref="canvas"
-                  class="shiny-spreadsheet-canvas"
-                  IgnorePixelScaling="false"
-                  OnPaintSurface="OnPaint"
-                  @onpointerdown="OnPointerDown"
-                  @onpointermove="OnPointerMove"
-                  @onpointerup="OnPointerUp"
-                  @ondblclick="OnDoubleClick" />
+<div class="shiny-spreadsheet-host @Class" style="@Style">
 
-    @if (Controller?.EditingCell is { } editing)
+    <div class="shiny-spreadsheet"
+         tabindex="0"
+         @ref="host"
+         @onkeydown="OnKeyDown"
+         @onkeydown:preventDefault="preventKeyDefault"
+         @onwheel="OnWheel"
+         @onwheel:preventDefault="true">
+
+        <SKCanvasView @ref="canvas"
+                      class="shiny-spreadsheet-canvas"
+                      IgnorePixelScaling="false"
+                      OnPaintSurface="OnPaint"
+                      @onpointerdown="OnPointerDown"
+                      @onpointermove="OnPointerMove"
+                      @onpointerup="OnPointerUp"
+                      @ondblclick="OnDoubleClick" />
+
+        @if (Controller?.EditingCell is { } editing)
+        {
+            var rect = Controller.Viewport.CellRect(editing);
+
+            <input class="shiny-spreadsheet-editor"
+                   style="left:@(Css(rect.X))px;top:@(Css(rect.Y))px;width:@(Css(rect.Width))px;height:@(Css(rect.Height))px"
+                   value="@Controller.EditingText"
+                   @ref="editor"
+                   @oninput="OnEditorInput"
+                   @onkeydown="OnEditorKeyDown"
+                   @onkeydown:stopPropagation="true"
+                   @onblur="OnEditorBlur" />
+        }
+    </div>
+
+    @if (this.ShowSheetTabs && this.controller is not null)
     {
-        var rect = Controller.Viewport.CellRect(editing);
-
-        <input class="shiny-spreadsheet-editor"
-               style="left:@(Css(rect.X))px;top:@(Css(rect.Y))px;width:@(Css(rect.Width))px;height:@(Css(rect.Height))px"
-               value="@Controller.EditingText"
-               @ref="editor"
-               @oninput="OnEditorInput"
-               @onkeydown="OnEditorKeyDown"
-               @onkeydown:stopPropagation="true"
-               @onblur="OnEditorBlur" />
+        <SheetTabStrip Controller="this.controller"
+                       AllowEditing="@(this.AllowSheetEditing && !this.ReadOnly)"
+                       Changed="this.OnSheetsChanged" />
     }
 </div>
 
@@ -74,6 +89,27 @@
     /// <summary>Name of the sheet to show. Defaults to the first sheet.</summary>
     [Parameter] public string? SheetName { get; set; }
 
+    /// <summary>
+    /// Raised when the sheet on screen changes — a tab click, or a sheet edit that took the old one
+    /// away. Bind it with <c>@bind-SheetName</c> to keep a host's own idea of the sheet in step.
+    /// </summary>
+    [Parameter] public EventCallback<string> SheetNameChanged { get; set; }
+
+    /// <summary>
+    /// Whether to show the strip of sheet tabs under the grid. On by default: a workbook with no way
+    /// to reach its other sheets is a worse default than a single tab that does nothing.
+    /// </summary>
+    [Parameter] public bool ShowSheetTabs { get; set; } = true;
+
+    /// <summary>
+    /// Whether the tab strip can add, rename, reorder, hide and delete sheets, as opposed to only
+    /// switching between them.
+    /// </summary>
+    [Parameter] public bool AllowSheetEditing { get; set; } = true;
+
+    /// <summary>Blocks structural sheet edits. Cell editing is unaffected.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
     [Parameter] public SpreadsheetTheme Theme { get; set; } = SpreadsheetTheme.Light;
 
     [Parameter] public string? Class { get; set; }
@@ -99,6 +135,7 @@
 
         if (this.Workbook is null)
         {
+            this.Detach();
             this.controller = null;
             return;
         }
@@ -118,10 +155,38 @@
             return;
         }
 
+        this.Detach();
+
         this.controller = new SpreadsheetController(this.Workbook, sheet);
         this.controller.Changed += this.OnControllerChanged;
         this.controller.EditingChanged += this.OnEditingChanged;
+        this.controller.ActiveSheetChanged += this.OnActiveSheetChanged;
         this.controller.Resize(this.lastWidth > 0 ? this.lastWidth : 800, this.lastHeight > 0 ? this.lastHeight : 600);
+    }
+
+    /// <summary>
+    /// Keeps <see cref="SheetName"/> in step with the controller.
+    /// </summary>
+    /// <remarks>
+    /// Writing the parameter back as well as raising the callback matters: an unbound host leaves
+    /// SheetName at whatever it was, and the next OnParametersSet would then switch the grid straight
+    /// back to the sheet the user just navigated away from.
+    /// </remarks>
+    void OnActiveSheetChanged(object? sender, Worksheet sheet)
+    {
+        this.SheetName = sheet.Name;
+
+        if (this.SheetNameChanged.HasDelegate)
+            _ = this.InvokeAsync(() => this.SheetNameChanged.InvokeAsync(sheet.Name));
+
+        this.StateHasChanged();
+    }
+
+    Task OnSheetsChanged()
+    {
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+        return Task.CompletedTask;
     }
 
     void OnControllerChanged(object? sender, EventArgs e)
@@ -260,6 +325,10 @@
             case "F2": this.controller.BeginEdit(); break;
             case "Escape": this.controller.CancelEdit(); break;
 
+            // Excel's own sheet shortcuts, and the only way to change sheet without the mouse.
+            case "PageUp" when e.CtrlKey || e.MetaKey: this.StepSheet(-1); break;
+            case "PageDown" when e.CtrlKey || e.MetaKey: this.StepSheet(1); break;
+
             case "z" when e.CtrlKey || e.MetaKey:
                 if (e.ShiftKey)
                     this.controller.Redo();
@@ -281,6 +350,24 @@
 
                 break;
         }
+    }
+
+    /// <summary>Moves to the next or previous visible sheet, stopping at either end.</summary>
+    void StepSheet(int offset)
+    {
+        if (this.controller is not { } controller)
+            return;
+
+        var sheets = controller.VisibleSheets;
+        var at = -1;
+        for (var i = 0; i < sheets.Count && at < 0; i++)
+        {
+            if (ReferenceEquals(sheets[i], controller.Sheet))
+                at = i;
+        }
+
+        if (at >= 0 && sheets.ElementAtOrDefault(at + offset) is { } target)
+            controller.SwitchSheet(target);
     }
 
     void OnEditorInput(ChangeEventArgs e) => this.controller?.UpdateEditingText(e.Value?.ToString() ?? string.Empty);
@@ -322,14 +409,19 @@
         this.controller?.CommitEdit(EditCommitDirection.None);
     }
 
+    void Detach()
+    {
+        if (this.controller is null)
+            return;
+
+        this.controller.Changed -= this.OnControllerChanged;
+        this.controller.EditingChanged -= this.OnEditingChanged;
+        this.controller.ActiveSheetChanged -= this.OnActiveSheetChanged;
+    }
+
     public void Dispose()
     {
-        if (this.controller is not null)
-        {
-            this.controller.Changed -= this.OnControllerChanged;
-            this.controller.EditingChanged -= this.OnEditingChanged;
-        }
-
+        this.Detach();
         this.painter?.Dispose();
     }
 }

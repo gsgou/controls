@@ -1,0 +1,111 @@
+/*
+    The insert gallery: shapes, the table grid, and the picture button.
+
+    The shell classes at the top are deliberately the same names as in OfficeHighlightButton.razor.css
+    and deliberately duplicated - see the note there.
+*/
+.shiny-office-picker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+
+    /* The toolbar row is a flex container, and a flex item shrinks by default - so without this the
+       button squashes below its own width as soon as the bar runs out of room, instead of the bar
+       scrolling. */
+    flex: 0 0 auto;
+}
+
+.shiny-office-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.shiny-office-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 41;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #e4e4e7);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+/*
+    The file input is the button.
+
+    Kept in the layout and made invisible rather than display:none - a hidden input cannot be reached
+    by the keyboard, so the label would be focusable and pressing it would do nothing.
+*/
+.shiny-office-btn-file {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.shiny-office-btn-file ::deep input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 0;
+}
+
+.shape-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 28px);
+    gap: 3px;
+}
+
+.shape-cell {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+}
+
+.shape-cell:hover {
+    border-color: var(--shiny-color-outline-variant, #e4e4e7);
+    background: var(--shiny-color-surface-variant, #f4f4f5);
+}
+
+.table-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.table-row {
+    display: flex;
+    gap: 2px;
+}
+
+.table-cell {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 2px;
+    border: 1px solid var(--shiny-color-outline-variant, #e4e4e7);
+    background: transparent;
+}
+
+.table-cell.on {
+    border-color: var(--shiny-color-primary, #2f6fed);
+    background: color-mix(in srgb, var(--shiny-color-primary, #2f6fed) 30%, transparent);
+}
+
+.table-caption {
+    margin-top: 6px;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.75;
+}

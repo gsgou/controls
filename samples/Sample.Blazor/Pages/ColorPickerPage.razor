@@ -1,8 +1,37 @@
 @page "/colorpicker"
+@page "/pickers"
 
-<PageTitle>Color Picker</PageTitle>
+<PageTitle>Pickers</PageTitle>
 
-<h1>Color Picker</h1>
+<h1>Pickers</h1>
+
+<p>
+    The three pickers a toolbar is built from. Each comes in two forms: the panel or list itself, and a
+    button that opens it in a popover — which is the form that fits beside a Bold button.
+</p>
+
+<h2>ColorPickerButton</h2>
+
+<div class="demo-section" style="display:flex; align-items:center; gap:12px;">
+    <ColorPickerButton Text="Colour" @bind-SelectedColor="selectedColor" ShowOpacity="showOpacity" />
+    <code>@selectedColor</code>
+</div>
+
+<h2>FontPickerButton and FontSizePickerButton</h2>
+
+<div class="demo-section" style="display:flex; align-items:center; gap:12px;">
+    <FontPickerButton @bind-SelectedFont="family" />
+    <FontSizePickerButton @bind-SelectedFontSize="size" />
+</div>
+
+<div class="demo-section"
+     style="margin-top:12px; padding:20px; border:1px solid #ccc; border-radius:12px;
+            font-family:'@family'; font-size:@(size.ToString(System.Globalization.CultureInfo.InvariantCulture))pt;
+            color:@selectedColor;">
+    The quick brown fox jumps over the lazy dog
+</div>
+
+<h2>ColorPicker</h2>
 
 <div class="demo-section">
     <ColorPicker @bind-SelectedColor="selectedColor"
@@ -24,4 +53,6 @@
 @code {
     string selectedColor = "#6495ED";
     bool showOpacity = true;
+    string family = "Georgia";
+    double size = 20;
 }

@@ -1,24 +1,11 @@
+using DocumentFormat.OpenXml;
 using Shiny.Controls.Office.Editing;
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using D = DocumentFormat.OpenXml.Drawing;
 
 namespace Shiny.Controls.Office.Presentation;
-
-/// <summary>Which grab handle a drag started on.</summary>
-public enum ShapeHandle
-{
-    None,
-    Body,
-    TopLeft,
-    Top,
-    TopRight,
-    Right,
-    BottomRight,
-    Bottom,
-    BottomLeft,
-    Left
-}
 
 /// <summary>A rectangle in viewport coordinates.</summary>
 public readonly record struct SlideRect(double X, double Y, double Width, double Height)
@@ -657,6 +644,14 @@ public sealed class SlideEditorController : SlideController
 
     public void SetTextColor(ArgbColor color) => this.FormatRuns(ShapeTextEditor.SetColor(color), "Text colour");
 
+    /// <summary>Highlights the selection, or clears it when passed null.</summary>
+    public void SetHighlight(ArgbColor? color)
+        => this.FormatRuns(ShapeTextEditor.SetHighlight(color), color is null ? "Remove highlight" : "Highlight");
+
+    /// <summary>Highlights with <paramref name="color"/>, or clears when that colour is already on.</summary>
+    public void ToggleHighlight(ArgbColor color)
+        => this.SetHighlight(this.CaretFormat.Highlight == color ? null : color);
+
     public void SetAlignment(TextAlignment alignment)
         => this.FormatParagraphs(ShapeTextEditor.SetAlignment(alignment), "Alignment");
 
@@ -706,15 +701,93 @@ public sealed class SlideEditorController : SlideController
         if (this.IsReadOnly || this.deck.TreeAt(this.Index) is null)
             return;
 
-        var element = SlideShapeFactory.TextBox(slideX, slideY, width, height);
+        this.AddElement(SlideShapeFactory.TextBox(slideX, slideY, width, height));
+    }
+
+    /// <summary>Adds a preset-geometry shape at a point in slide coordinates, and selects it.</summary>
+    public void AddShape(
+        ShapeGeometry geometry,
+        double slideX,
+        double slideY,
+        double width = 200,
+        double height = 150,
+        ArgbColor? fill = null,
+        ArgbColor? outline = null)
+    {
+        this.AddElement(SlideShapeFactory.Preset(
+            geometry, slideX, slideY, width, height,
+            fill ?? new ArgbColor(255, 0x44, 0x72, 0xC4),
+            outline));
+    }
+
+    /// <summary>
+    /// Adds a picture at a point in slide coordinates, and selects it.
+    /// </summary>
+    /// <param name="data">The encoded image, in whatever format <paramref name="contentType"/> names.</param>
+    /// <param name="contentType">The MIME type, e.g. <c>image/png</c>.</param>
+    /// <remarks>
+    /// The bytes go in as they arrived. Re-encoding would mean choosing a quality on the user's
+    /// behalf, and a deck is where people put screenshots they intend to be legible.
+    /// </remarks>
+    public void AddPicture(
+        byte[] data,
+        string contentType,
+        double slideX,
+        double slideY,
+        double? width = null,
+        double? height = null,
+        string name = "Picture")
+    {
+        ArgumentNullException.ThrowIfNull(data);
+
+        if (this.IsReadOnly || data.Length == 0 || this.deck.TreeAt(this.Index) is null)
+            return;
+
+        if (this.deck.AddImagePart(this.Index, data, contentType) is not { } relationshipId)
+            return;
+
+        var (w, h) = ResolveSize(width, height);
+        this.AddElement(SlideShapeFactory.Image(relationshipId, slideX, slideY, w, h, name));
+    }
+
+    /// <summary>Adds an empty table at a point in slide coordinates, and selects it.</summary>
+    public void AddTable(int rows, int columns, double slideX, double slideY, double width = 480, double height = 200)
+        => this.AddElement(SlideShapeFactory.Table(rows, columns, slideX, slideY, width, height));
+
+    /// <summary>
+    /// Puts a prepared element into the slide's tree and selects whatever came out of it.
+    /// </summary>
+    /// <remarks>
+    /// The command clones what it is given, so the element handed in here is not the one that ends up
+    /// in the tree and cannot be compared against. The clone is appended, which makes it the tree's
+    /// last child — so that is what the new shape is found by. Searching the model list by name would
+    /// find the wrong shape as soon as a deck had two of anything.
+    /// </remarks>
+    void AddElement(OpenXmlElement element)
+    {
+        if (this.IsReadOnly || this.deck.TreeAt(this.Index) is not { } tree)
+            return;
+
         this.Execute(new InsertShapeCommand(this.Index, -1, element));
 
-        // Selecting by identity rather than by "the last one": the model list also carries the layout
-        // and master shapes, which are not in the slide's own tree at all.
-        var added = this.Current?.Shapes.ToList().FindIndex(x => x.Element is not null && x.Name == SlideShapeFactory.TextBoxName) ?? -1;
-        if (added >= 0)
-            this.Select(added);
+        if (tree.LastChild is not { } added)
+            return;
+
+        // Identity against the tree, not the model list: the model also carries the layout's and
+        // master's shapes, which are not in this tree at all.
+        var index = this.Current?.Shapes.ToList().FindIndex(x => ReferenceEquals(x.Element, added)) ?? -1;
+        if (index >= 0)
+            this.Select(index);
     }
+
+    /// <summary>Fills in whichever of width and height was not given, keeping a 4:3 default.</summary>
+    static (double Width, double Height) ResolveSize(double? width, double? height) => (width, height) switch
+    {
+        ({ } w, { } h) => (Math.Max(1, w), Math.Max(1, h)),
+        ({ } w, null) => (Math.Max(1, w), Math.Max(1, w * 0.75)),
+        (null, { } h) => (Math.Max(1, h * 4 / 3), Math.Max(1, h)),
+        _ => (320d, 240d)
+    };
 
     // ---- undo ----
 
@@ -837,6 +910,7 @@ public sealed class SlideEditorController : SlideController
             OoxmlUnits.PixelsToPointsApprox(style.FontSize),
             style.FontFamily,
             style.Color,
-            paragraph.Alignment);
+            paragraph.Alignment,
+            style.Highlight);
     }
 }

@@ -18,12 +18,22 @@ namespace Shiny.Controls.Office.Document;
 /// not model, and re-creating it to change one character throws all of that away.
 /// </para>
 /// <para>
-/// Only <see cref="W.Text"/>, <see cref="TabChar"/> and <see cref="Break"/> contribute to the offset
-/// space, matching what the reader projects. Anything else in a run is left strictly alone.
+/// Only <see cref="W.Text"/>, <see cref="TabChar"/> and <see cref="W.Drawing"/> contribute to the
+/// offset space, matching what the reader projects. Anything else in a run is left strictly alone.
 /// </para>
 /// </remarks>
 static class WordParagraphEditor
 {
+    /// <summary>
+    /// What an inline object contributes to the offset space.
+    /// </summary>
+    /// <remarks>
+    /// U+FFFC OBJECT REPLACEMENT CHARACTER, the codepoint Unicode reserves for exactly this. The
+    /// value barely matters — nothing ever renders it — but the <em>length</em> does: the layout
+    /// engine advances its source offset by one for an inline object, so anything here that was not
+    /// one character long would put every caret position after a picture in the wrong place.
+    /// </remarks>
+    public const string ObjectPlaceholder = "\uFFFC";
     /// <summary>The paragraph's text as the reader projects it, which is the offset space edits use.</summary>
     public static string TextOf(Paragraph paragraph)
     {
@@ -61,6 +71,13 @@ static class WordParagraphEditor
                         // every caret position after a tab is wrong by three.
                         yield return (child, "    ");
                         break;
+
+                    case W.Drawing:
+                        // One character, matching the layout engine. A drawing that contributed
+                        // nothing here would still occupy a position on screen, so the caret would
+                        // drift by one for every picture above it.
+                        yield return (child, ObjectPlaceholder);
+                        break;
                 }
             }
         }
@@ -87,6 +104,35 @@ static class WordParagraphEditor
             }
 
             cursor = end;
+        }
+
+        // The offset falls on an inline object rather than in text — typing immediately before or
+        // after a picture. There is no W.Text to grow, so a run is made for the character and placed
+        // on the correct side of the object's run.
+        var cursorBeforeObject = 0;
+        foreach (var (element, segment) in Segments(paragraph).ToList())
+        {
+            var end = cursorBeforeObject + segment.Length;
+
+            if (offset <= end && element is W.Drawing drawing && drawing.Parent is Run host)
+            {
+                var carrier = new Run();
+                if (host.RunProperties is { } hostProperties)
+                    carrier.RunProperties = (RunProperties)hostProperties.CloneNode(true);
+
+                var value = new W.Text(text);
+                Preserve(value);
+                carrier.AppendChild(value);
+
+                if (offset <= cursorBeforeObject)
+                    host.InsertBeforeSelf(carrier);
+                else
+                    host.InsertAfterSelf(carrier);
+
+                return;
+            }
+
+            cursorBeforeObject = end;
         }
 
         // An empty paragraph, or one whose only content is not text: start a run for the text to live in.
@@ -237,14 +283,17 @@ static class WordParagraphEditor
         var text = TextOf(paragraph);
         var trailing = offset >= text.Length ? string.Empty : text[offset..];
 
-        // Move the trailing runs across, splitting the one the caret sits inside.
+        // Move the trailing runs across, splitting the one the caret sits inside. The cursor counts
+        // everything the offset space counts — a run holding a picture is one character wide even
+        // though it has no W.Text — or a paragraph split after an image puts the break in the wrong
+        // place.
         var cursor = 0;
         foreach (var run in paragraph.Descendants<Run>().ToList())
         {
             var runText = run.GetFirstChild<W.Text>();
-            var value = runText?.Text ?? string.Empty;
+            var runLength = LengthOfRun(run);
             var runStart = cursor;
-            cursor += value.Length;
+            cursor += runLength;
 
             if (runStart >= offset)
             {
@@ -253,7 +302,9 @@ static class WordParagraphEditor
                 continue;
             }
 
-            if (runStart + value.Length > offset && runText is not null)
+            // Only text can be split part-way. An object-bearing run is atomic and has already been
+            // placed by the test above, on whichever side of the break it started.
+            if (runStart + runLength > offset && runText is not null)
             {
                 var local = offset - runStart;
                 var moved = SplitAt(run, local);
@@ -398,6 +449,29 @@ static class WordParagraphEditor
         properties.AppendChild(new W.Color { Val = $"{color.R:X2}{color.G:X2}{color.B:X2}" });
     };
 
+    /// <summary>
+    /// Sets or clears the highlight behind a run.
+    /// </summary>
+    /// <remarks>
+    /// <c>w:highlight</c> takes a name from a closed list, not a colour, so the requested colour is
+    /// resolved to the nearest one Word can express. Clearing writes nothing rather than
+    /// <c>val="none"</c>: an explicit none is only needed to override a highlight inherited from a
+    /// character style, and leaving the element out is what Word itself does for a run with no
+    /// highlight at all.
+    /// </remarks>
+    public static Action<RunProperties> SetHighlight(ArgbColor? color) => properties =>
+    {
+        properties.RemoveAllChildren<Highlight>();
+
+        if (color is null)
+            return;
+
+        properties.AppendChild(new Highlight { Val = new EnumValue<HighlightColorValues>
+        {
+            InnerText = HighlightPalette.NameOf(color)
+        } });
+    };
+
     public static Action<ParagraphProperties> SetAlignment(TextAlignment alignment) => properties =>
     {
         properties.RemoveAllChildren<Justification>();
@@ -419,4 +493,118 @@ static class WordParagraphEditor
         if (styleId is not null)
             properties.InsertAt(new ParagraphStyleId { Val = styleId }, 0);
     };
+
+    // ---- inline objects ----
+
+    /// <summary>How much of the offset space one run occupies.</summary>
+    static int LengthOfRun(Run run)
+    {
+        var length = 0;
+
+        foreach (var child in run.ChildElements)
+        {
+            length += child switch
+            {
+                W.Text text => (text.Text ?? string.Empty).Length,
+                TabChar => 4,
+                W.Drawing => ObjectPlaceholder.Length,
+                _ => 0
+            };
+        }
+
+        return length;
+    }
+
+    /// <summary>
+    /// Inserts a prepared run — a picture or a shape — at an offset, splitting text around it.
+    /// </summary>
+    /// <remarks>
+    /// The run arrives already built by <see cref="WordContentFactory"/> rather than being described
+    /// here, because the only thing this has to get right is <em>where</em> it goes; what a valid
+    /// <c>w:drawing</c> looks like is the factory's problem.
+    /// </remarks>
+    public static void InsertObject(Paragraph paragraph, int offset, Run element)
+    {
+        var cursor = 0;
+
+        foreach (var (segmentElement, segment) in Segments(paragraph).ToList())
+        {
+            var start = cursor;
+            var end = cursor + segment.Length;
+            cursor = end;
+
+            if (offset > end)
+                continue;
+
+            if (segmentElement.Parent is not Run host)
+                continue;
+
+            // Landing inside a text run means splitting it, so the object sits between the two
+            // halves rather than jumping to whichever end was nearer.
+            if (segmentElement is W.Text && offset > start && offset < end)
+            {
+                SplitAt(host, offset - start);
+                host.InsertAfterSelf(element);
+                return;
+            }
+
+            if (offset <= start)
+                host.InsertBeforeSelf(element);
+            else
+                host.InsertAfterSelf(element);
+
+            return;
+        }
+
+        // Past the last segment, or an empty paragraph: the object goes at the end.
+        paragraph.AppendChild(element);
+    }
+
+    /// <summary>
+    /// Resizes the inline object at an offset, returning false when there is none there.
+    /// </summary>
+    /// <remarks>
+    /// Both extents are written: <c>wp:extent</c> on the wrapper, which is what decides the space the
+    /// object takes in the flow, and the <c>a:ext</c> inside it, which is what the shape or picture
+    /// is drawn into. Writing only the first gives an object that reserves the new size and still
+    /// draws at the old one.
+    /// </remarks>
+    public static bool ResizeObject(Paragraph paragraph, int offset, double width, double height)
+    {
+        if (ObjectAt(paragraph, offset) is not { } drawing)
+            return false;
+
+        var cx = OoxmlUnits.PixelsToEmu(Math.Max(1, width));
+        var cy = OoxmlUnits.PixelsToEmu(Math.Max(1, height));
+
+        foreach (var extent in drawing.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>())
+        {
+            extent.Cx = cx;
+            extent.Cy = cy;
+        }
+
+        foreach (var extents in drawing.Descendants<DocumentFormat.OpenXml.Drawing.Extents>())
+        {
+            extents.Cx = cx;
+            extents.Cy = cy;
+        }
+
+        return true;
+    }
+
+    /// <summary>The inline object occupying an offset, or null when that offset is text.</summary>
+    public static W.Drawing? ObjectAt(Paragraph paragraph, int offset)
+    {
+        var cursor = 0;
+
+        foreach (var (element, segment) in Segments(paragraph))
+        {
+            if (element is W.Drawing drawing && offset >= cursor && offset < cursor + segment.Length)
+                return drawing;
+
+            cursor += segment.Length;
+        }
+
+        return null;
+    }
 }

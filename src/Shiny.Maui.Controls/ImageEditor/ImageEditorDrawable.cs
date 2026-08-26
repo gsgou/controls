@@ -23,6 +23,14 @@ internal sealed class ImageEditorDrawable : IDrawable
     public PointF? ActiveLineEnd { get; set; }
     public bool ActiveLineIsArrow { get; set; }
 
+    // In-progress shape, dragged corner to corner (world coordinates)
+    public PointF? ActiveShapeStart { get; set; }
+    public PointF? ActiveShapeEnd { get; set; }
+    public ImageEditorShape ActiveShapeKind { get; set; }
+
+    /// <summary>Interior colour for the shape tools. Null draws the outline only.</summary>
+    public Color? ActiveFillColor { get; set; }
+
     // Zoom/pan view transform. This is applied to the canvas rather than to the native
     // GraphicsView so that every tool keeps working while zoomed: the drawable re-renders
     // at the zoomed scale (staying crisp) and the editor converts touch points back into
@@ -78,6 +86,17 @@ internal sealed class ImageEditorDrawable : IDrawable
             && ActiveLineStart.HasValue && ActiveLineEnd.HasValue)
         {
             DrawLine(canvas, ActiveLineStart.Value, ActiveLineEnd.Value, ActiveStrokeColor, ActiveStrokeWidth, ActiveLineIsArrow);
+        }
+
+        if (ActiveShapeStart.HasValue && ActiveShapeEnd.HasValue && IsShapeMode(ToolMode))
+        {
+            DrawShape(
+                canvas,
+                ActiveShapeKind,
+                BuildShapeRect(ActiveShapeStart.Value, ActiveShapeEnd.Value, ActiveShapeKind),
+                ActiveFillColor,
+                ActiveStrokeColor,
+                ActiveStrokeWidth);
         }
 
         canvas.RestoreState();
@@ -195,6 +214,21 @@ internal sealed class ImageEditorDrawable : IDrawable
                     DrawLine(canvas, lineStart, lineEnd, line.StrokeColor, Rescale(line.StrokeWidth, line.ReferenceWidth), line.IsArrow);
                     break;
 
+                case ShapeAction shape:
+                    var bounds = new RectF(
+                        imageRect.X + shape.Bounds.X * imageRect.Width,
+                        imageRect.Y + shape.Bounds.Y * imageRect.Height,
+                        shape.Bounds.Width * imageRect.Width,
+                        shape.Bounds.Height * imageRect.Height);
+                    DrawShape(
+                        canvas,
+                        shape.Shape,
+                        bounds,
+                        shape.FillColor,
+                        shape.StrokeColor,
+                        Rescale(shape.StrokeWidth, shape.ReferenceWidth));
+                    break;
+
                 case TextAnnotationAction text:
                     var textX = imageRect.X + text.Position.X * imageRect.Width;
                     var textY = imageRect.Y + text.Position.Y * imageRect.Height;
@@ -309,6 +343,60 @@ internal sealed class ImageEditorDrawable : IDrawable
         path.LineTo(rightX, rightY);
         path.Close();
         canvas.FillPath(path);
+    }
+
+    public static bool IsShapeMode(ImageEditorToolMode mode)
+        => mode is ImageEditorToolMode.Rectangle or ImageEditorToolMode.Ellipse or ImageEditorToolMode.Circle;
+
+    /// <summary>
+    /// Turns the two corners of a shape drag into its bounds. A circle takes the smaller of the two
+    /// extents rather than the larger, so it can never escape the bounds the drag was clamped to.
+    /// </summary>
+    public static RectF BuildShapeRect(PointF start, PointF end, ImageEditorShape shape)
+    {
+        var x = MathF.Min(start.X, end.X);
+        var y = MathF.Min(start.Y, end.Y);
+        var w = MathF.Abs(end.X - start.X);
+        var h = MathF.Abs(end.Y - start.Y);
+
+        if (shape == ImageEditorShape.Circle)
+        {
+            var side = MathF.Min(w, h);
+
+            // Grow from whichever corner the drag started at, so the shape tracks the finger
+            if (end.X < start.X) x = start.X - side;
+            if (end.Y < start.Y) y = start.Y - side;
+            w = h = side;
+        }
+
+        return new RectF(x, y, w, h);
+    }
+
+    static void DrawShape(ICanvas canvas, ImageEditorShape shape, RectF rect, Color? fill, Color? stroke, float strokeWidth)
+    {
+        if (rect is { Width: <= 0 } or { Height: <= 0 })
+            return;
+
+        if (fill != null)
+        {
+            canvas.FillColor = fill;
+            if (shape == ImageEditorShape.Rectangle)
+                canvas.FillRectangle(rect);
+            else
+                canvas.FillEllipse(rect);
+        }
+
+        if (stroke == null || strokeWidth <= 0)
+            return;
+
+        canvas.StrokeColor = stroke;
+        canvas.StrokeSize = strokeWidth;
+        canvas.StrokeLineJoin = LineJoin.Round;
+
+        if (shape == ImageEditorShape.Rectangle)
+            canvas.DrawRectangle(rect);
+        else
+            canvas.DrawEllipse(rect);
     }
 
     static void DrawStroke(ICanvas canvas, IList<PointF> points, Color color, float width)

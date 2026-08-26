@@ -1,4 +1,5 @@
 using Shiny.Controls.Office.Document;
+using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Skia;
 using Shiny.Controls.Office.Spelling;
 using Shiny.Maui.Controls.Office;
@@ -9,11 +10,19 @@ namespace Sample.Features.Office;
 /// The .docx editor, with the platform's own spell checker.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The toolbar carries the insert gallery — shapes, a table and a picture — plus the highlight split
+/// button. Everything it inserts is inline, so it flows with the text; select one and drag a handle to
+/// resize it. Dragging an image file onto the canvas from the desktop does the same thing as the
+/// picture button, on the platforms that have a file drag.
+/// </para>
+/// <para>
 /// Nothing here registers a checker: <c>Shiny.Maui.Controls.Office</c> installs the platform one —
 /// UITextChecker on iOS, NSSpellChecker on macOS, Android's text services, the Windows COM checker —
 /// as soon as the package is touched. Right-click (or long-press) a red-underlined word for
 /// corrections; the same menu offers Ignore and Add to dictionary, and the last of those writes to
 /// the user's real dictionary, shared with every other app on the device.
+/// </para>
 /// </remarks>
 public partial class DocumentEditorPage : ContentPage
 {
@@ -36,9 +45,22 @@ public partial class DocumentEditorPage : ContentPage
         this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), editable: true);
         this.Editor.Document = this.document;
         this.Editor.DocumentChanged += this.OnDocumentChanged;
+        this.Editor.DropRejected += this.OnDropRejected;
 
         this.UpdateStatus();
     }
+
+    /// <summary>
+    /// A dropped file the editor would not take.
+    /// </summary>
+    /// <remarks>
+    /// Worth wiring in a sample because the alternative is what it looks like when it is not wired: a
+    /// drop that appears to have worked and did nothing.
+    /// </remarks>
+    void OnDropRejected(object? sender, OfficeDropRejected e)
+        => this.StatusLabel.Text = e.FileName.Length > 0
+            ? $"{e.FileName}: {e.Reason}"
+            : e.Reason;
 
     void OnToggleToolbar(object? sender, EventArgs e) => this.Editor.ShowToolbar = !this.Editor.ShowToolbar;
 
@@ -74,6 +96,7 @@ public partial class DocumentEditorPage : ContentPage
         if (this.Handler is null)
         {
             this.Editor.DocumentChanged -= this.OnDocumentChanged;
+            this.Editor.DropRejected -= this.OnDropRejected;
             this.document?.Dispose();
             this.document = null;
         }

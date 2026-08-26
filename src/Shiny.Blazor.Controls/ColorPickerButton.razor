@@ -1,0 +1,83 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    A swatch that opens the ColorPicker underneath it.
+
+    The picker is a 320px panel of canvases; this is how it gets into a toolbar. It is also the Blazor
+    half of the MAUI ColorPickerButton, and keeps the same property names so a page moving between
+    hosts changes its markup and nothing else.
+
+    Deliberately not <input type="color">: that opens the operating system's colour dialog, which looks
+    like nothing else in the app, cannot be themed, and on some platforms cannot express opacity at all.
+*@
+
+<div class="shiny-colorpickerbutton @Class" style="@Style">
+    <button type="button"
+            class="shiny-colorpickerbutton-trigger"
+            title="@Text"
+            aria-label="@Text"
+            disabled="@Disabled"
+            aria-haspopup="dialog"
+            aria-expanded="@open"
+            @onclick="Toggle">
+        @*
+            The swatch sits on a checkerboard so a translucent colour reads as translucent rather than
+            as a slightly different flat colour.
+        *@
+        <span class="shiny-colorpickerbutton-swatch">
+            <span class="shiny-colorpickerbutton-fill" style="background:@SelectedColor"></span>
+        </span>
+    </button>
+
+    @if (open)
+    {
+        <div class="shiny-colorpickerbutton-backdrop" @onclick="Close"></div>
+
+        <div class="shiny-colorpickerbutton-popover">
+            <ColorPicker SelectedColor="@SelectedColor"
+                         ShowOpacity="ShowOpacity"
+                         SelectedColorChanged="OnPicked" />
+
+            <button type="button" class="shiny-colorpickerbutton-done" @onclick="Close">Done</button>
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    [Parameter] public string SelectedColor { get; set; } = "#000000";
+
+    [Parameter] public EventCallback<string> SelectedColorChanged { get; set; }
+
+    /// <summary>Raised as the colour changes. Fires alongside <see cref="SelectedColorChanged"/>.</summary>
+    [Parameter] public EventCallback<string> ColorChanged { get; set; }
+
+    /// <summary>The trigger's accessible name and tooltip.</summary>
+    [Parameter] public string Text { get; set; } = "Colour";
+
+    [Parameter] public bool ShowOpacity { get; set; } = true;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    void Toggle() => this.open = !this.open;
+
+    void Close() => this.open = false;
+
+    async Task OnPicked(string color)
+    {
+        this.SelectedColor = color;
+
+        // Stays open on change, unlike the font buttons: choosing a colour is a drag across a
+        // spectrum, and a popover that closed on the first change would be unusable.
+        if (this.SelectedColorChanged.HasDelegate)
+            await this.SelectedColorChanged.InvokeAsync(color);
+
+        if (this.ColorChanged.HasDelegate)
+            await this.ColorChanged.InvokeAsync(color);
+    }
+}

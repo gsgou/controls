@@ -481,7 +481,8 @@ public readonly record struct SlideCaretFormat(
     double FontSize,
     string FontFamily,
     ArgbColor Color,
-    TextAlignment Alignment)
+    TextAlignment Alignment,
+    ArgbColor? Highlight = null)
 {
     public static SlideCaretFormat Default => new(
         false, false, false, false, 18, "Calibri", new ArgbColor(255, 0, 0, 0), TextAlignment.Left);

@@ -260,6 +260,46 @@
 </section>
 
 <section class="demo-section">
+    <h2>Highlighting rows, columns &amp; cells</h2>
+    <p>
+        A <code>DataGridHighlight</code> covers whatever it names: a row (<code>RowPredicate</code> or
+        <code>Item</code>), a column (<code>Column</code>), the one cell where they cross, or &mdash;
+        naming neither &mdash; the whole grid. <code>Fill</code> is a wash laid <em>behind</em> the text
+        at <code>FillOpacity</code> (0.25 by default), so the row's stripe and selection keep showing
+        through and nothing is ever obscured by its own highlight. <code>BorderColor</code> plus
+        <code>BorderStyle</code> traces the <strong>perimeter of the region</strong> &mdash; a highlighted
+        row is outlined as a row, not as a run of boxed cells.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <label><input type="checkbox" @bind="highlightColumn" /> Highlight the Salary column</label>
+        <label><input type="checkbox" @bind="highlightRows" /> Highlight inactive rows</label>
+        <label><input type="checkbox" @bind="highlightCell" /> Ring one cell</label>
+        <label>Border
+            <select @bind="highlightBorder">
+                @foreach (var v in Enum.GetValues<DataGridBorderStyle>())
+                {
+                    <option value="@v">@v</option>
+                }
+            </select>
+        </label>
+        <label>Fill opacity
+            <input type="range" min="0" max="1" step="0.05" @bind="highlightOpacity" @bind:event="oninput" />
+            @highlightOpacity.ToString("0.00")
+        </label>
+    </div>
+    <DataGrid TItem="Person" Items="people" SortMode="DataGridSortMode.Single"
+              Striped="true" Hover="true" Highlights="Highlights">
+        <Columns>
+            <PropertyColumn Property="x => x.FirstName" Title="First" Width="110px" />
+            <PropertyColumn Property="x => x.Department" Width="140px" />
+            <PropertyColumn Property="x => x.Salary" DisplayAs="DataGridColumnFormat.Currency" Decimals="0" Width="130px" />
+            <PropertyColumn Property="x => x.Active" Title="On" DisplayAs="DataGridColumnFormat.Boolean"
+                            Alignment="DataGridCellAlignment.Center" Width="70px" />
+        </Columns>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
     <h2>Detail (breakdown) rows</h2>
     <p>
         A <code>RowDetailTemplate</code> adds a caret column at the leading edge; expanding a row opens a
@@ -337,6 +377,57 @@
 </section>
 
 @code {
+    // ---- highlighting demo ----
+    bool highlightColumn = true;
+    bool highlightRows = true;
+    bool highlightCell;
+    DataGridBorderStyle highlightBorder = DataGridBorderStyle.Dashed;
+    double highlightOpacity = 0.25;
+
+    // Rebuilt per render rather than held in a field: the rules are derived from the toggles above, and
+    // a fresh list is cheaper to reason about than keeping one in sync with five bound controls.
+    IEnumerable<DataGridHighlight<Person>> Highlights
+    {
+        get
+        {
+            if (highlightColumn)
+            {
+                yield return new DataGridHighlight<Person>
+                {
+                    Column = nameof(Person.Salary),
+                    Fill = "var(--shiny-color-primary, #7c3aed)",
+                    FillOpacity = highlightOpacity
+                };
+            }
+
+            if (highlightRows)
+            {
+                yield return new DataGridHighlight<Person>
+                {
+                    RowPredicate = p => !p.Active,
+                    Fill = "var(--shiny-color-error, #c62828)",
+                    FillOpacity = highlightOpacity,
+                    BorderColor = "var(--shiny-color-error, #c62828)",
+                    BorderStyle = highlightBorder
+                };
+            }
+
+            if (highlightCell)
+            {
+                // Naming a row and a column together lands on exactly one cell, which is then boxed on
+                // all four sides rather than getting the row's or column's open-ended perimeter.
+                yield return new DataGridHighlight<Person>
+                {
+                    Item = people.FirstOrDefault(),
+                    Column = nameof(Person.Department),
+                    BorderColor = "var(--shiny-color-tertiary, #0f766e)",
+                    BorderStyle = DataGridBorderStyle.Solid,
+                    BorderWidth = "3px"
+                };
+            }
+        }
+    }
+
     string status = "Pick options and interact with the grid";
     DataGridExpandMode expandMode = DataGridExpandMode.Multiple;
     int frozenStart = 1, frozenEnd = 1;

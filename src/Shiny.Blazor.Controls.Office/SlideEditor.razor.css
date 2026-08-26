@@ -35,3 +35,22 @@
     white-space: pre;
     z-index: 2;
 }
+
+/*
+    Shown while a file is dragged over the editor.
+
+    An inset outline rather than a border: a border changes the element's box and shifts the canvas
+    underneath by a pixel as the highlight appears and disappears, which reads as the page twitching
+    every time the pointer crosses the edge.
+*/
+.shiny-office-drop-target::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    border-radius: 4px;
+    outline: 2px dashed var(--shiny-color-primary, #2f6fed);
+    outline-offset: -6px;
+    background: color-mix(in srgb, var(--shiny-color-primary, #2f6fed) 8%, transparent);
+}

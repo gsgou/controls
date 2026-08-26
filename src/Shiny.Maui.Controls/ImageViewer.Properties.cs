@@ -427,6 +427,50 @@ public partial class ImageViewer
     }
 
 
+    /// <summary>
+    /// The glyph or word on the built-in close button. Ignored once
+    /// <see cref="CloseButtonImage"/> or <see cref="CloseButtonTemplate"/> is set.
+    /// </summary>
+    public static readonly BindableProperty CloseButtonTextProperty = BindableProperty.Create(
+        nameof(CloseButtonText),
+        typeof(string),
+        typeof(ImageViewer),
+        DefaultCloseButtonText,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
+            ((ImageViewer)b).ApplyCloseButtonTemplate()));
+
+    /// <inheritdoc cref="CloseButtonTextProperty" />
+    public string CloseButtonText
+    {
+        get => (string)this.GetValue(CloseButtonTextProperty);
+        set => this.SetValue(CloseButtonTextProperty, value);
+    }
+
+
+    /// <summary>
+    /// Artwork for the built-in close button, in place of <see cref="CloseButtonText"/>. Ignored
+    /// once <see cref="CloseButtonTemplate"/> is set.
+    /// </summary>
+    /// <remarks>
+    /// The chip, its size and its corner are the same either way - this swaps what is drawn inside
+    /// it, which is the whole of what most apps want and is a good deal less than a template.
+    /// </remarks>
+    public static readonly BindableProperty CloseButtonImageProperty = BindableProperty.Create(
+        nameof(CloseButtonImage),
+        typeof(ImageSource),
+        typeof(ImageViewer),
+        null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageViewer), () =>
+            ((ImageViewer)b).ApplyCloseButtonTemplate()));
+
+    /// <inheritdoc cref="CloseButtonImageProperty" />
+    public ImageSource? CloseButtonImage
+    {
+        get => (ImageSource?)this.GetValue(CloseButtonImageProperty);
+        set => this.SetValue(CloseButtonImageProperty, value);
+    }
+
+
     /// <summary>Content pinned to the top of the overlay.</summary>
     public static readonly BindableProperty HeaderTemplateProperty = BindableProperty.Create(
         nameof(HeaderTemplate),
@@ -522,9 +566,44 @@ public partial class ImageViewer
     }
 
 
+    /// <summary>Invoked once the full-screen overlay has faded in.</summary>
+    public static readonly BindableProperty OpenedCommandProperty = BindableProperty.Create(
+        nameof(OpenedCommand), typeof(ICommand), typeof(ImageViewer)
+    );
+
+    /// <inheritdoc cref="OpenedCommandProperty" />
+    public ICommand? OpenedCommand
+    {
+        get => (ICommand?)this.GetValue(OpenedCommandProperty);
+        set => this.SetValue(OpenedCommandProperty, value);
+    }
+
+
+    /// <summary>Invoked once the full-screen overlay has faded out.</summary>
+    public static readonly BindableProperty ClosedCommandProperty = BindableProperty.Create(
+        nameof(ClosedCommand), typeof(ICommand), typeof(ImageViewer)
+    );
+
+    /// <inheritdoc cref="ClosedCommandProperty" />
+    public ICommand? ClosedCommand
+    {
+        get => (ICommand?)this.GetValue(ClosedCommandProperty);
+        set => this.SetValue(ClosedCommandProperty, value);
+    }
+
+
     /// <summary>Raised once the image is on screen.</summary>
     public event EventHandler<ImageLoadedEventArgs>? ImageLoaded;
 
     /// <summary>Raised when a load fails.</summary>
     public event EventHandler<ImageFailedEventArgs>? ImageFailed;
+
+    /// <summary>
+    /// Raised once the full-screen overlay has faded in, however it was opened - a tap on the
+    /// thumbnail and a <see cref="IsOpen"/> set from a view model both come through here.
+    /// </summary>
+    public event EventHandler? Opened;
+
+    /// <summary>Raised once the full-screen overlay has faded out and left the visual tree.</summary>
+    public event EventHandler? Closed;
 }

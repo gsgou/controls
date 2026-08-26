@@ -197,11 +197,13 @@
                                                @onchange="() => ToggleRowAsync(rowItem)" />
                                     </td>
                                 }
-                                @foreach (var col in VisibleColumns)
+                                @{ var rowColumns = VisibleColumns; }
+                                @for (var ci = 0; ci < rowColumns.Count; ci++)
                                 {
+                                    var col = rowColumns[ci];
                                     var editingThisCell = IsEditingCell(rowItem, col);
                                     var editingFormCell = EditMode == DataGridEditMode.Form && IsEditingRow(rowItem) && EffectiveEditable(col);
-                                    var cellStyle = CellStyleFor(col, rowItem);
+                                    var cellStyle = ResolveCellStyle(col, rowItem, ci == 0, ci == rowColumns.Count - 1, node.IsFirst, node.IsLast);
                                     <td class="@CellCssClass(col, cellStyle)"
                                         style="@CellInlineStyle(col, cellStyle)"
                                         data-dg-frozen="@FrozenAttr(col)"

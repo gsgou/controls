@@ -78,6 +78,27 @@ public sealed record DocumentPaintRequest
 
     /// <summary>Spans to underline as misspelled, in document coordinates.</summary>
     public IReadOnlyList<GridRectLike> Spelling { get; init; } = [];
+
+    /// <summary>The frame and handles around a selected inline object, or null when none is selected.</summary>
+    public DocumentObjectChrome? ObjectChrome { get; init; }
+}
+
+/// <summary>
+/// The selection frame and resize handles around an inline object.
+/// </summary>
+/// <remarks>
+/// The document counterpart of the slide editor's chrome, and deliberately smaller: an inline object
+/// cannot be moved to an arbitrary position — it sits in the text flow, and the caret is what moves it
+/// — so there is a resize frame and nothing else. Coordinates are the document's, like everything else
+/// in the paint request.
+/// </remarks>
+public sealed record DocumentObjectChrome
+{
+    public required GridRectLike Frame { get; init; }
+
+    public IReadOnlyList<GridRectLike> Handles { get; init; } = [];
+
+    public ArgbColor Accent { get; init; } = new(255, 0x2F, 0x6F, 0xED);
 }
 
 /// <summary>
@@ -136,6 +157,11 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
                 new SKRect((float)caret.X, (float)caret.Y, (float)(caret.X + Math.Max(1, caret.Width)), (float)caret.Bottom),
                 this.fill);
         }
+
+        // Last, over everything: the frame surrounds an object drawn a moment ago, and drawing it
+        // any earlier would let the object paint over its own selection.
+        if (request.ObjectChrome is { } objectChrome)
+            this.PaintObjectChrome(canvas, objectChrome);
 
         canvas.Restore();
     }
@@ -223,17 +249,59 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
         }
     }
 
+    /// <summary>Draws the frame and handles around the selected inline object.</summary>
+    void PaintObjectChrome(SKCanvas canvas, DocumentObjectChrome chrome)
+    {
+        this.stroke.Color = ToSk(chrome.Accent);
+        this.stroke.StrokeWidth = 1.5f;
+        canvas.DrawRect(ToRect(chrome.Frame), this.stroke);
+
+        foreach (var handle in chrome.Handles)
+        {
+            var rect = ToRect(handle);
+
+            // White fill under an accent border, so a handle stays visible over a dark picture as
+            // well as over the page.
+            this.fill.Color = SKColors.White;
+            canvas.DrawRect(rect, this.fill);
+
+            this.stroke.Color = ToSk(chrome.Accent);
+            canvas.DrawRect(rect, this.stroke);
+        }
+    }
+
+    static SKRect ToRect(GridRectLike r)
+        => new((float)r.X, (float)r.Y, (float)r.Right, (float)r.Bottom);
+
     void PaintRun(SKCanvas canvas, LaidOutRun run, double originX, double baseline, DocumentTheme theme)
     {
         var x = originX + run.X;
 
-        if (run.Image is { } image)
+        // An inline object sits on the baseline rather than straddling it, so its box runs upward
+        // from there by its own height — which is what the layout engine reserved for it.
+        if (run.Inline is { } inline)
         {
-            this.DrawImage(canvas, image.Data, new SKRect(
+            var box = new SKRect(
                 (float)x,
-                (float)(baseline - image.Height),
-                (float)(x + image.Width),
-                (float)baseline));
+                (float)(baseline - inline.Height),
+                (float)(x + inline.Width),
+                (float)baseline);
+
+            switch (inline)
+            {
+                case InlineImage image:
+                    this.DrawImage(canvas, image.Data, box);
+                    break;
+
+                case InlineShape shape:
+                    ShapePainting.DrawShape(
+                        canvas, this.fill, this.stroke, shape.Geometry, box, shape.Fill, shape.Outline, shape.CornerRadius);
+
+                    if (shape.Text.Count > 0)
+                        this.PaintShapeText(canvas, shape, box, theme);
+
+                    break;
+            }
 
             return;
         }
@@ -287,6 +355,51 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
                 canvas.DrawLine((float)x, middle, (float)(x + run.Width), middle, this.stroke);
             }
         }
+    }
+
+    /// <summary>
+    /// Draws a shape's label, wrapped to the shape and centred in it.
+    /// </summary>
+    /// <remarks>
+    /// Laid out here rather than during document layout because it does not affect the flow: the
+    /// shape's box is a fixed size whatever its text does, so measuring the text earlier would buy
+    /// nothing and would put a second text layout in the cached layout tree. Text taller than the
+    /// shape is clipped to it, which is what Word does for a text box with autofit off.
+    /// </remarks>
+    void PaintShapeText(SKCanvas canvas, InlineShape shape, SKRect box, DocumentTheme theme)
+    {
+        var engine = new TextLayoutEngine(measurer);
+        var inset = 4f;
+        var width = Math.Max(1, box.Width - (inset * 2));
+        var lines = engine.Layout(shape.Text, width, shape.TextAlignment);
+        var height = TextLayoutEngine.HeightOf(lines);
+
+        canvas.Save();
+        canvas.ClipRect(box);
+
+        var top = box.Top + Math.Max(0, (box.Height - (float)height) / 2);
+
+        foreach (var line in lines)
+        {
+            var baseline = top + (float)(line.Y + line.Ascent);
+
+            foreach (var piece in line.Runs)
+            {
+                if (piece.Text.Length == 0)
+                    continue;
+
+                this.fill.Color = ToSk(theme.OverrideDocumentColors ? theme.Text : Legible(piece.Style.Color, theme));
+                canvas.DrawText(
+                    piece.Text,
+                    box.Left + inset + (float)piece.X,
+                    baseline,
+                    SKTextAlign.Left,
+                    measurer.GetFont(piece.Style),
+                    this.fill);
+            }
+        }
+
+        canvas.Restore();
     }
 
     void PaintTable(SKCanvas canvas, LaidOutTable table, DocumentTheme theme)

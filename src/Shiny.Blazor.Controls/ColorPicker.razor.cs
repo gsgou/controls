@@ -22,6 +22,16 @@ public partial class ColorPicker : IAsyncDisposable
     [Parameter] public bool ShowHexInput { get; set; } = true;
     [Parameter] public bool ShowPreview { get; set; } = true;
 
+    protected override void OnInitialized()
+    {
+        // Seeded here rather than after the first render. These two only feed the preview swatch and
+        // the hex box, and assigning them in OnAfterRenderAsync leaves both showing the field's
+        // compile-time #FF0000 - that method does not queue a render, so nothing redraws them until
+        // the user drags the spectrum. The canvases were right and the readout beside them was red.
+        currentHex = SelectedColor;
+        currentCss = SelectedColor;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -34,8 +44,13 @@ public partial class ColorPicker : IAsyncDisposable
             await module.InvokeVoidAsync("init", spectrumEl, hueEl, opacityEl, selfRef, SelectedColor, ShowOpacity);
             initialized = true;
 
-            currentHex = SelectedColor;
-            currentCss = SelectedColor;
+            if (currentHex != SelectedColor)
+            {
+                // A SelectedColor that arrived between OnInitialized and the first render.
+                currentHex = SelectedColor;
+                currentCss = SelectedColor;
+                this.StateHasChanged();
+            }
         }
     }
 

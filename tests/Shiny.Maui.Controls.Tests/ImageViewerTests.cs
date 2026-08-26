@@ -185,6 +185,54 @@ public class ImageViewerTests
     }
 
 
+    [Fact]
+    public void CloseButton_DefaultsToTheGlyph_AndTakesWhateverTextIsGiven()
+    {
+        var viewer = Build(new StubImageService());
+
+        viewer.closeView.ShouldBeOfType<Button>().Text.ShouldBe("✕");
+
+        viewer.CloseButtonText = "Done";
+        viewer.closeView.ShouldBeOfType<Button>().Text.ShouldBe("Done");
+    }
+
+
+    [Fact]
+    public void CloseButtonImage_SwapsTheGlyphForArtwork_AndKeepsTheChip()
+    {
+        var viewer = Build(new StubImageService());
+        var artwork = ImageSource.FromFile("close.png");
+
+        viewer.CloseButtonImage = artwork;
+
+        var button = viewer.closeView.ShouldBeOfType<ImageButton>();
+        button.Source.ShouldBe(artwork);
+
+        // the target does not move when the glyph is swapped out
+        button.WidthRequest.ShouldBe(40);
+        button.HeightRequest.ShouldBe(40);
+        button.HorizontalOptions.ShouldBe(LayoutOptions.End);
+        button.VerticalOptions.ShouldBe(LayoutOptions.Start);
+
+        // dropping it goes back to the text one rather than leaving an empty chip
+        viewer.CloseButtonImage = null;
+        viewer.closeView.ShouldBeOfType<Button>();
+    }
+
+
+    [Fact]
+    public void CloseButtonTemplate_OutranksBothTextAndImage()
+    {
+        var viewer = Build(new StubImageService());
+        viewer.CloseButtonText = "Done";
+        viewer.CloseButtonImage = ImageSource.FromFile("close.png");
+
+        viewer.CloseButtonTemplate = new DataTemplate(() => new Label { Text = "x" });
+
+        viewer.closeView.ShouldBeOfType<Label>();
+    }
+
+
     sealed class StubImageService : IImageService
     {
         static readonly byte[] Payload = [0x89, 0x50, 0x4E, 0x47];

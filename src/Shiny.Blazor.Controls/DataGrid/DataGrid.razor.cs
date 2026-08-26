@@ -1353,9 +1353,6 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     internal string FooterCellCssClass(ColumnBase<TItem> col)
         => "shiny-dg-footer-cell" + this.FrozenCssClass(col) + AlignCssClass(col.EffectiveAlignment);
 
-    /// <summary>The column's per-row style, resolved once so the delegate is not called for class and style separately.</summary>
-    internal static DataGridCellStyle? CellStyleFor(ColumnBase<TItem> col, TItem item)
-        => col.CellStyle?.Invoke(item);
 
     static string? AlignCssClass(DataGridCellAlignment alignment)
         => alignment switch
@@ -1382,8 +1379,12 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         var sb = new System.Text.StringBuilder();
         if (!string.IsNullOrWhiteSpace(style.TextColor))
             sb.Append("color:").Append(style.TextColor).Append(';');
+        // background-color, not the `background` shorthand: the shorthand resets background-image,
+        // which is the layer a highlight's fill is painted on.
         if (!string.IsNullOrWhiteSpace(style.BackgroundColor))
-            sb.Append("background:").Append(style.BackgroundColor).Append(';');
+            sb.Append("background-color:").Append(style.BackgroundColor).Append(';');
+        sb.Append(FillCss(style));
+        sb.Append(BorderCss(style));
         if (style.Bold == true)
             sb.Append("font-weight:600;");
         if (!string.IsNullOrWhiteSpace(style.Style))

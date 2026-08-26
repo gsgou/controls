@@ -171,3 +171,55 @@ public enum DataGridCellAlignment
     /// <summary>Trailing edge (right in LTR).</summary>
     End
 }
+
+/// <summary>
+/// The stroke a highlight draws around its region. Maps to the CSS keyword of the same name on
+/// Blazor and to a dash pattern on MAUI.
+/// </summary>
+public enum DataGridBorderStyle
+{
+    /// <summary>No stroke, whatever <c>BorderColor</c> says.</summary>
+    None,
+
+    Solid,
+    Dashed,
+    Dotted,
+
+    /// <summary>Two parallel lines. On MAUI this is drawn as a single stroke of the same total weight.</summary>
+    Double
+}
+
+/// <summary>
+/// Which sides of a cell a highlight strokes. Left unset, the grid derives the edges from the
+/// highlight's <see cref="DataGridHighlightScope"/> so the stroke traces the perimeter of the
+/// highlighted region rather than boxing every cell in it.
+/// </summary>
+[Flags]
+public enum DataGridBorderEdges
+{
+    None = 0,
+    Top = 1,
+    Right = 2,
+    Bottom = 4,
+    Left = 8,
+    All = Top | Right | Bottom | Left
+}
+
+/// <summary>
+/// What a highlight covers. Derived from which of a highlight's targeting members are set rather
+/// than declared - see <c>DataGridHighlight</c>.
+/// </summary>
+public enum DataGridHighlightScope
+{
+    /// <summary>Every cell of the grid - neither a row nor a column was named.</summary>
+    Grid,
+
+    /// <summary>Every cell of the matched row(s).</summary>
+    Row,
+
+    /// <summary>Every cell of the named column.</summary>
+    Column,
+
+    /// <summary>One cell - the intersection of a matched row and a named column.</summary>
+    Cell
+}

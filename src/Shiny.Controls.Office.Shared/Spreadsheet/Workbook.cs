@@ -13,6 +13,8 @@ namespace Shiny.Controls.Office.Spreadsheet;
 public sealed class Workbook : OfficeDocument
 {
     readonly SpreadsheetDocument document;
+    readonly WorkbookPart workbookPart;
+    readonly DocumentFormat.OpenXml.Spreadsheet.Workbook workbookElement;
     readonly List<Worksheet> sheets = new();
     readonly WorkbookCalcContext calcContext;
     bool contentChanged;
@@ -29,6 +31,9 @@ public sealed class Workbook : OfficeDocument
 
         var workbookElement = workbookPart.Workbook
             ?? throw new InvalidDataException("The workbook part has no workbook element.");
+
+        this.workbookPart = workbookPart;
+        this.workbookElement = workbookElement;
 
         this.SharedStrings = new SharedStrings(workbookPart);
         this.Styles = new StyleResolver(workbookPart, unsupported);
@@ -52,6 +57,7 @@ public sealed class Workbook : OfficeDocument
             this.sheets.Add(new Worksheet(
                 this,
                 worksheetPart,
+                sheet,
                 sheet.Name?.Value ?? $"Sheet{this.sheets.Count + 1}",
                 sheet.SheetId?.Value ?? 0,
                 IsSheetVisible(sheet)));
@@ -75,6 +81,316 @@ public sealed class Workbook : OfficeDocument
     public Worksheet this[string name]
         => this.sheets.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase))
            ?? throw new KeyNotFoundException($"No sheet named '{name}'.");
+
+    /// <summary>The sheet with that name, or null. Names match the way Excel matches them: case-insensitively.</summary>
+    public Worksheet? Find(string? name)
+        => name is null
+            ? null
+            : this.sheets.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The sheets Excel would show tabs for, in book order.</summary>
+    public IEnumerable<Worksheet> VisibleSheets => this.sheets.Where(x => x.IsVisible);
+
+    /// <summary>
+    /// Raised after a sheet is added, removed, renamed, reordered, or shown or hidden.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="OfficeDocument.MarkDirty"/> because it means something different to a
+    /// view: a cell edit repaints the grid, but a structural change can invalidate the sheet a view is
+    /// pointing at entirely, and every host needs to hear about that whether or not it tracks dirt.
+    /// </remarks>
+    public event EventHandler? SheetsChanged;
+
+    // ---- structural sheet edits ----
+    //
+    // All of these are internal: they are the working end of the commands in Spreadsheet.Commands, and
+    // going around the command is what would leave the undo stack describing a workbook that no longer
+    // exists. Each one leaves the package in a state Excel will open, which is why they all end at
+    // AfterStructuralChange rather than just mutating and returning.
+
+    /// <summary>
+    /// Adds a sheet at <paramref name="index"/> in the tab order, either empty or from the XML of a
+    /// sheet that was deleted or copied.
+    /// </summary>
+    internal Worksheet InsertSheet(string name, int index, string? worksheetXml, bool visible)
+    {
+        if (!SheetNames.IsAvailable(name, this.sheets.Select(x => x.Name), except: null, out var error))
+            throw new ArgumentException(error, nameof(name));
+
+        var part = this.workbookPart.AddNewPart<WorksheetPart>();
+        part.Worksheet = worksheetXml is null
+            ? new DocumentFormat.OpenXml.Spreadsheet.Worksheet(new SheetData())
+            : new DocumentFormat.OpenXml.Spreadsheet.Worksheet(worksheetXml);
+
+        var entry = new Sheet
+        {
+            Id = this.workbookPart.GetIdOfPart(part),
+            SheetId = this.NextSheetId(),
+            Name = name
+        };
+
+        if (!visible)
+            entry.State = SheetStateValues.Hidden;
+
+        index = Math.Clamp(index, 0, this.sheets.Count);
+        var sheetsElement = this.SheetsElement();
+
+        // The XML list can hold chart and macro sheets this does not model, so the position in
+        // this.sheets is not the position in the element - it has to be resolved through the entry of
+        // whichever modelled sheet is currently there.
+        if (index < this.sheets.Count)
+            sheetsElement.InsertBefore(entry, this.sheets[index].Entry);
+        else
+            sheetsElement.AppendChild(entry);
+
+        var sheet = new Worksheet(this, part, entry, name, entry.SheetId!.Value, visible);
+        this.sheets.Insert(index, sheet);
+
+        this.AfterStructuralChange();
+        return sheet;
+    }
+
+    /// <summary>
+    /// Removes a sheet, returning everything needed to put it back exactly as it was.
+    /// </summary>
+    /// <remarks>
+    /// The snapshot carries the sheet's whole XML as text rather than the live part, because the part
+    /// is gone the moment this returns — and an undo that restored an empty sheet with the right name
+    /// would look like it worked while having thrown the contents away.
+    /// </remarks>
+    internal SheetSnapshot RemoveSheet(string name)
+    {
+        var sheet = this[name];
+
+        if (sheet.IsVisible && this.sheets.Count(x => x.IsVisible) == 1)
+            throw new InvalidOperationException("A workbook must keep at least one visible sheet.");
+
+        var snapshot = new SheetSnapshot(
+            sheet.Name,
+            this.sheets.IndexOf(sheet),
+            sheet.IsVisible,
+            sheet.Part.Worksheet?.OuterXml ?? new DocumentFormat.OpenXml.Spreadsheet.Worksheet(new SheetData()).OuterXml);
+
+        var xmlIndex = this.XmlIndexOf(sheet);
+
+        sheet.Entry.Remove();
+        this.workbookPart.DeletePart(sheet.Part);
+        this.sheets.Remove(sheet);
+
+        // A defined name scoped to the sheet has nothing left to be scoped to; the ones above it have
+        // shifted down by one, because LocalSheetId is a position in the list, not an identity.
+        this.RemapDefinedNameScopes(scope => scope == xmlIndex ? null : scope > xmlIndex ? scope - 1 : scope);
+
+        this.AfterStructuralChange();
+        return snapshot;
+    }
+
+    /// <summary>Renames a sheet and repoints every formula and defined name that referred to it.</summary>
+    internal void RenameSheet(string name, string newName)
+    {
+        var sheet = this[name];
+        if (string.Equals(sheet.Name, newName, StringComparison.Ordinal))
+            return;
+
+        if (!SheetNames.IsAvailable(newName, this.sheets.Select(x => x.Name), except: sheet.Name, out var error))
+            throw new ArgumentException(error, nameof(newName));
+
+        var previous = sheet.Name;
+
+        foreach (var other in this.sheets)
+            other.RewriteFormulas(text => FormulaSheetRenamer.Rename(text, previous, newName));
+
+        this.RewriteDefinedNames(previous, newName);
+
+        sheet.Entry.Name = newName;
+        sheet.Name = newName;
+
+        this.AfterStructuralChange();
+    }
+
+    /// <summary>Moves a sheet to a different position in the tab order.</summary>
+    internal void MoveSheet(string name, int index)
+    {
+        var sheet = this[name];
+        var from = this.sheets.IndexOf(sheet);
+        index = Math.Clamp(index, 0, this.sheets.Count - 1);
+
+        if (from == index)
+            return;
+
+        var scopeBefore = this.XmlSheetOrder();
+
+        this.sheets.RemoveAt(from);
+        this.sheets.Insert(index, sheet);
+
+        sheet.Entry.Remove();
+        var sheetsElement = this.SheetsElement();
+
+        // this.sheets is already in its new order, so the neighbour to insert before is the next
+        // modelled sheet after the new position - if there is one.
+        if (index + 1 < this.sheets.Count)
+            sheetsElement.InsertBefore(sheet.Entry, this.sheets[index + 1].Entry);
+        else
+            sheetsElement.AppendChild(sheet.Entry);
+
+        var scopeAfter = this.XmlSheetOrder();
+        this.RemapDefinedNameScopes(scope =>
+        {
+            // Map through identity: where did the sheet that used to be at this position end up?
+            if (scope >= scopeBefore.Count)
+                return scope;
+
+            var moved = scopeAfter.IndexOf(scopeBefore[(int)scope]);
+            return moved < 0 ? null : (uint)moved;
+        });
+
+        this.AfterStructuralChange();
+    }
+
+    /// <summary>Hides or shows a sheet. Hidden sheets still calculate and are still saved.</summary>
+    internal void SetSheetVisibility(string name, bool visible)
+    {
+        var sheet = this[name];
+        if (sheet.IsVisible == visible)
+            return;
+
+        if (!visible && this.sheets.Count(x => x.IsVisible) == 1)
+            throw new InvalidOperationException("A workbook must keep at least one visible sheet.");
+
+        // Absent is the schema default and what Excel writes for a visible sheet, so clearing the
+        // attribute is the correct way to unhide rather than writing state="visible".
+        sheet.Entry.State = visible ? null : SheetStateValues.Hidden;
+        sheet.IsVisible = visible;
+
+        this.AfterStructuralChange();
+    }
+
+    Sheets SheetsElement()
+        => this.workbookElement.Sheets ?? this.workbookElement.AppendChild(new Sheets());
+
+    /// <summary>Where a sheet sits in the raw <c>&lt;sheets&gt;</c> list, which is what LocalSheetId counts.</summary>
+    uint XmlIndexOf(Worksheet sheet)
+    {
+        var index = 0u;
+        foreach (var entry in this.SheetsElement().Elements<Sheet>())
+        {
+            if (ReferenceEquals(entry, sheet.Entry))
+                return index;
+
+            index++;
+        }
+
+        return index;
+    }
+
+    List<Sheet> XmlSheetOrder() => this.SheetsElement().Elements<Sheet>().ToList();
+
+    /// <summary>
+    /// A sheet id no sheet is using. Ids are not positions and Excel does not require them to be dense,
+    /// so counting past the highest is enough and avoids ever reusing the id of a deleted sheet.
+    /// </summary>
+    uint NextSheetId()
+    {
+        var highest = 0u;
+        foreach (var entry in this.SheetsElement().Elements<Sheet>())
+            highest = Math.Max(highest, entry.SheetId?.Value ?? 0u);
+
+        return highest + 1;
+    }
+
+    void RewriteDefinedNames(string oldName, string newName)
+    {
+        foreach (var defined in this.workbookElement.DefinedNames?.Elements<DefinedName>() ?? Enumerable.Empty<DefinedName>())
+        {
+            if (defined.Text is not { Length: > 0 } text)
+                continue;
+
+            var rewritten = FormulaSheetRenamer.Rename(text, oldName, newName);
+            if (!string.Equals(rewritten, text, StringComparison.Ordinal))
+                defined.Text = rewritten;
+        }
+    }
+
+    /// <summary>
+    /// Moves sheet-scoped defined names onto their sheet's new position, dropping the ones whose sheet
+    /// has gone. <paramref name="map"/> returns null for a scope that no longer exists.
+    /// </summary>
+    void RemapDefinedNameScopes(Func<uint, uint?> map)
+    {
+        var names = this.workbookElement.DefinedNames;
+        if (names is null)
+            return;
+
+        foreach (var defined in names.Elements<DefinedName>().ToList())
+        {
+            if (defined.LocalSheetId?.Value is not { } scope)
+                continue;
+
+            var moved = map(scope);
+            if (moved is null)
+                defined.Remove();
+            else if (moved.Value != scope)
+                defined.LocalSheetId = moved.Value;
+        }
+
+        if (!names.Elements<DefinedName>().Any())
+            names.Remove();
+    }
+
+    /// <summary>
+    /// Puts the workbook back in a consistent state after the sheet list changes, and tells the views.
+    /// </summary>
+    void AfterStructuralChange()
+    {
+        this.DropCalculationChain();
+        this.RebuildCalc();
+        this.OnContentChanged();
+        this.SheetsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Deletes the calculation chain part.
+    /// </summary>
+    /// <remarks>
+    /// calcChain.xml is a cache of the order Excel last computed cells in, and it names sheets by their
+    /// position. After a sheet is added, removed or moved, that cache points at the wrong cells — and
+    /// Excel does not recover from it gracefully, it declares the file corrupt and offers to repair it.
+    /// The part is optional and is rebuilt on the next calculation, so the fix is simply to drop it.
+    /// </remarks>
+    void DropCalculationChain()
+    {
+        if (this.workbookPart.CalculationChainPart is { } chain)
+            this.workbookPart.DeletePart(chain);
+    }
+
+    /// <summary>
+    /// Reindexes the calc engine against the sheets as they are now.
+    /// </summary>
+    /// <remarks>
+    /// Formulas are keyed by sheet name, so a rename orphans every entry for the old name and a delete
+    /// leaves entries for a sheet that is gone; both would go on feeding stale results to the grid.
+    /// Rebuilding wholesale is coarse, but structural edits are rare and a partial reindex here would be
+    /// a second, subtler copy of the dependency graph's rules.
+    /// </remarks>
+    /// <summary>
+    /// Reindexes and recomputes every formula. Needed after formula <em>text</em> changes in bulk —
+    /// a sheet copy repoints the copy's self-references, and the engine is still holding the originals.
+    /// </summary>
+    internal void Recalculate()
+    {
+        this.RebuildCalc();
+        this.OnContentChanged();
+    }
+
+    void RebuildCalc()
+    {
+        if (!this.formulasLoaded)
+            return;
+
+        this.Calc.Clear();
+        this.formulasLoaded = false;
+        this.EnsureFormulasLoaded();
+    }
 
     public static async Task<Workbook> OpenAsync(
         string path,
@@ -357,6 +673,15 @@ public sealed class Workbook : OfficeDocument
         base.Dispose(disposing);
     }
 }
+
+/// <summary>
+/// A deleted sheet, complete enough to be put back byte for byte.
+/// </summary>
+/// <param name="Name">The name it had, which is also the name every formula still expects.</param>
+/// <param name="Index">Its position in the tab order.</param>
+/// <param name="IsVisible">Whether it was showing.</param>
+/// <param name="Xml">The whole worksheet element, values, formulas, styles, merges and all.</param>
+public sealed record SheetSnapshot(string Name, int Index, bool IsVisible, string Xml);
 
 static class SpreadsheetDocumentExtensions
 {

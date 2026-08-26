@@ -8,10 +8,17 @@ public partial class ShinyImage
     // Source
 
     /// <summary>
-    /// The image to load. An absolute <c>http</c>/<c>https</c> URI goes through
-    /// <see cref="IImageService"/>; anything else is treated as a local file or bundled resource and
-    /// loaded directly, so no download machinery is involved.
+    /// The image to load.
     /// </summary>
+    /// <remarks>
+    /// <para>An absolute <c>http</c>/<c>https</c> URI goes through <see cref="IImageService"/>.
+    /// <c>resource://MyApp.Assets.logo.svg</c> reads an embedded resource - add <c>MyLib/</c> before
+    /// the name to say which assembly. A <c>data:</c> URI is decoded inline. Anything else is a file
+    /// path or a bundled asset, read from disk or from the app package. Only the first involves any
+    /// download machinery.</para>
+    /// <para>SVG is detected from the payload rather than the extension, so it works on an endpoint
+    /// that serves vectors from a URL that does not say so.</para>
+    /// </remarks>
     public static readonly BindableProperty UriProperty = BindableProperty.Create(
         nameof(Uri), typeof(string), typeof(ShinyImage), null,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ShinyImage), () => ((ShinyImage)b).BeginLoad())
@@ -126,6 +133,11 @@ public partial class ShinyImage
     // Appearance
 
     /// <summary>How the image is scaled into the control. Applies to the placeholder too.</summary>
+    /// <remarks>
+    /// For SVG this wins over the file's own <c>preserveAspectRatio</c> scaling, so a vector and a
+    /// raster in the same layout behave identically. The file's alignment - which corner the
+    /// leftover space goes to - is still honoured.
+    /// </remarks>
     public static readonly BindableProperty AspectProperty = BindableProperty.Create(
         nameof(Aspect), typeof(Aspect), typeof(ShinyImage), Aspect.AspectFit,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ShinyImage), () =>
@@ -133,6 +145,7 @@ public partial class ShinyImage
             var img = (ShinyImage)b;
             img.targetImage.Aspect = (Aspect)n;
             img.placeholderImage.Aspect = (Aspect)n;
+            img.ApplyVectorAppearance();
         })
     );
 
@@ -235,6 +248,29 @@ public partial class ShinyImage
     {
         get => (Color?)this.GetValue(ProgressTextColorProperty);
         set => this.SetValue(ProgressTextColorProperty, value);
+    }
+
+
+    /// <summary>
+    /// What <c>currentColor</c> resolves to in an SVG - the tint a single-colour icon takes on.
+    /// Null draws it black. Ignored by raster images, and by artwork that names its own colours.
+    /// </summary>
+    /// <remarks>
+    /// This is why an icon set ships one file per glyph rather than one per glyph per colour: the
+    /// artwork says <c>fill="currentColor"</c> and every placement decides for itself. The tint is
+    /// applied at draw time, so the same parsed document is shared by placements that disagree
+    /// about the colour.
+    /// </remarks>
+    public static readonly BindableProperty SvgTintColorProperty = BindableProperty.Create(
+        nameof(SvgTintColor), typeof(Color), typeof(ShinyImage), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ShinyImage), () => ((ShinyImage)b).ApplyVectorAppearance())
+    );
+
+    /// <inheritdoc cref="SvgTintColorProperty" />
+    public Color? SvgTintColor
+    {
+        get => (Color?)this.GetValue(SvgTintColorProperty);
+        set => this.SetValue(SvgTintColorProperty, value);
     }
 
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Shiny.Maui.Controls.Images.Svg;
 using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Images;
@@ -8,10 +9,17 @@ namespace Shiny.Maui.Controls.Images;
 /// loading ring, the image itself, or error artwork.
 /// </summary>
 /// <remarks>
-/// Remote URIs go through <see cref="IImageService"/>, which caches to memory and disk, caps how
-/// many downloads run at once, and collapses concurrent requests for the same URI into one. Replace
-/// <see cref="IImageDownloader"/> to control how the bytes are fetched (auth headers, your own
-/// <c>HttpClient</c>) without giving up any of that.
+/// <para>Remote URIs go through <see cref="IImageService"/>, which caches to memory and disk, caps
+/// how many downloads run at once, and collapses concurrent requests for the same URI into one.
+/// Replace <see cref="IImageDownloader"/> to control how the bytes are fetched (auth headers, your
+/// own <c>HttpClient</c>) without giving up any of that.</para>
+///
+/// <para>SVG is drawn as vectors rather than rasterized, so one file stays sharp at every size and
+/// can be tinted per placement with <see cref="SvgTintColor"/>. Parsing is the expensive half of a
+/// vector image, so parsed documents are shared through <see cref="Svg.SvgCache"/> - a list of a
+/// hundred rows showing the same icon parses it once. Artwork can come from
+/// <c>resource://</c> (an embedded resource), a file path or bundled asset, a <c>data:</c> URI, or
+/// an <c>http</c>/<c>https</c> URL.</para>
 /// </remarks>
 /// <example>
 /// <code>
@@ -20,6 +28,10 @@ namespace Shiny.Maui.Controls.Images;
 ///                   ErrorImage="broken_image.png"
 ///                   Aspect="AspectFill"
 ///                   HeightRequest="120" /&gt;
+///
+/// &lt;shiny:ShinyImage Uri="resource://MyApp.Assets.logo.svg"
+///                   SvgTintColor="{StaticResource Primary}"
+///                   HeightRequest="48" /&gt;
 /// </code>
 /// </example>
 public partial class ShinyImage : ContentView, IDisposable
@@ -28,12 +40,16 @@ public partial class ShinyImage : ContentView, IDisposable
     readonly Image targetImage;
     readonly Image placeholderImage;
     readonly Image errorImage;
+    readonly GraphicsView vectorImage;
+    readonly SvgDrawable vectorDrawable;
     readonly ContentView loadingHost;
     readonly ContentView errorHost;
     readonly LoadingRing ring;
 
     CancellationTokenSource? cts;
     IImageService? resolvedService;
+    SvgCache? resolvedSvgCache;
+    bool showingVector;
     bool isDisposed;
 
     /// <summary>Creates the control.</summary>
@@ -44,6 +60,20 @@ public partial class ShinyImage : ContentView, IDisposable
             Aspect = Aspect.AspectFit,
             Opacity = 0,
             IsVisible = false
+        };
+
+        this.vectorDrawable = new SvgDrawable();
+
+        // A second presenter rather than a rasterized ImageSource. A vector redrawn at the size it
+        // is actually shown at is the whole reason to ship SVG, and there is no cross-platform way
+        // to rasterize into an ImageSource without pulling a native imaging stack into a package
+        // that currently has none.
+        this.vectorImage = new GraphicsView
+        {
+            Drawable = this.vectorDrawable,
+            Opacity = 0,
+            IsVisible = false,
+            InputTransparent = true
         };
 
         this.placeholderImage = new Image
@@ -80,6 +110,7 @@ public partial class ShinyImage : ContentView, IDisposable
         this.root = new Grid();
         this.root.Children.Add(this.placeholderImage);
         this.root.Children.Add(this.targetImage);
+        this.root.Children.Add(this.vectorImage);
         this.root.Children.Add(this.errorHost);
         this.root.Children.Add(this.loadingHost);
         this.Content = this.root;
@@ -101,20 +132,32 @@ public partial class ShinyImage : ContentView, IDisposable
     /// </summary>
     public IImageService ImageService
     {
-        get => this.resolvedService ??= ResolveService(this);
+        get => this.resolvedService ??= Resolve(this, DefaultService);
         set => this.resolvedService = value;
     }
 
 
     /// <summary>
-    /// Re-fetches the image, skipping both cache tiers. The cache is refreshed with what comes back.
+    /// Where parsed SVG documents are shared from. Assign to give one screen its own, or to isolate
+    /// a test.
+    /// </summary>
+    public SvgCache SvgCache
+    {
+        get => this.resolvedSvgCache ??= Resolve(this, DefaultSvgCache);
+        set => this.resolvedSvgCache = value;
+    }
+
+
+    /// <summary>
+    /// Re-fetches the image, skipping both cache tiers - and, for SVG, re-parsing it. The caches are
+    /// refreshed with what comes back.
     /// </summary>
     public Task ReloadAsync() => this.LoadAsync(true);
 
 
     void OnControlLoaded(object? sender, EventArgs e)
     {
-        if (this.State is ImageLoadState.None or ImageLoadState.Failed || this.targetImage.Source is null)
+        if (this.State is ImageLoadState.None or ImageLoadState.Failed || !this.HasContent)
             this.BeginLoad();
     }
 
@@ -123,6 +166,9 @@ public partial class ShinyImage : ContentView, IDisposable
 
 
     void BeginLoad() => _ = this.LoadAsync(false);
+
+
+    bool HasContent => this.showingVector ? this.vectorDrawable.Document is not null : this.targetImage.Source is not null;
 
 
     async Task LoadAsync(bool bypassCache)
@@ -136,7 +182,7 @@ public partial class ShinyImage : ContentView, IDisposable
         if (source is not null)
         {
             // An explicit ImageSource is already resolved as far as we are concerned - there is
-            // nothing to download, queue or cache.
+            // nothing to download, queue, parse or cache.
             this.SetProgress(new ImageLoadProgress(ImageLoadState.Loaded));
             await this.ShowImageAsync(source).ConfigureAwait(true);
             this.RaiseLoaded(null, ImageOrigin.Memory, null);
@@ -146,27 +192,25 @@ public partial class ShinyImage : ContentView, IDisposable
         var uri = this.Uri;
         if (String.IsNullOrWhiteSpace(uri))
         {
-            this.targetImage.Source = null;
-            this.targetImage.Opacity = 0;
-            this.SetValue(LoadErrorPropertyKey, null);
-            this.SetProgress(ImageLoadProgress.None);
-            return;
-        }
-
-        // Local files and bundled resources never touch the service. Sending them through the
-        // download path would mean a queue slot and a cache copy for bytes already on the device.
-        if (!IsRemote(uri))
-        {
-            this.SetProgress(new ImageLoadProgress(ImageLoadState.Loaded));
-            await this.ShowImageAsync(ImageSource.FromFile(uri)).ConfigureAwait(true);
-            this.RaiseLoaded(uri, ImageOrigin.Disk, null);
+            this.ShowNothing();
             return;
         }
 
         var tokenSource = new CancellationTokenSource();
         this.cts = tokenSource;
-        var token = tokenSource.Token;
 
+        // Local files, bundled assets, embedded resources and data URIs never touch the service.
+        // Sending them through the download path would mean a queue slot and a cache copy for bytes
+        // already on the device.
+        if (IsRemote(uri))
+            await this.LoadRemoteAsync(uri, bypassCache, tokenSource.Token).ConfigureAwait(true);
+        else
+            await this.LoadLocalAsync(uri, bypassCache, tokenSource.Token).ConfigureAwait(true);
+    }
+
+
+    async Task LoadRemoteAsync(string uri, bool bypassCache, CancellationToken token)
+    {
         this.SetProgress(ImageLoadProgress.Queued);
 
         // Progress<T> captures the sync context at construction. Building it here - on the UI thread,
@@ -194,17 +238,38 @@ public partial class ShinyImage : ContentView, IDisposable
             result = ImageResult.Fail(ex);
         }
 
-        if (token.IsCancellationRequested || this.isDisposed)
-            return;
-
-        // The Uri changed while this load was in flight (a recycled cell, or a fast rebind). Showing
-        // these bytes now would put the previous row's picture in the new row.
-        if (!String.Equals(this.Uri, uri, StringComparison.Ordinal))
+        if (!this.StillWanted(uri, token))
             return;
 
         if (!result.Success)
         {
             this.ShowError(uri, result.Error ?? new InvalidOperationException("Image load failed"));
+            return;
+        }
+
+        // The URL's extension is only a hint - plenty of endpoints serve /avatar/1234 and negotiate
+        // the format - so the payload itself decides whether this is a vector.
+        byte[]? vector;
+        try
+        {
+            vector = await ReadVectorAsync(result, token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            this.ShowError(uri, ex);
+            return;
+        }
+
+        if (!this.StillWanted(uri, token))
+            return;
+
+        if (vector is not null)
+        {
+            await this.ShowVectorAsync(uri, vector, uri, bypassCache, result.Origin).ConfigureAwait(true);
             return;
         }
 
@@ -244,23 +309,47 @@ public partial class ShinyImage : ContentView, IDisposable
 
     async Task ShowImageAsync(ImageSource source)
     {
+        this.showingVector = false;
+        this.vectorDrawable.Document = null;
+        this.vectorImage.Opacity = 0;
+
         this.targetImage.Source = source;
-        this.targetImage.IsVisible = true;
         this.ApplyState();
 
+        await this.FadeInAsync(this.targetImage).ConfigureAwait(true);
+    }
+
+
+    async Task FadeInAsync(VisualElement element)
+    {
         if (this.FadeInDuration == 0)
         {
-            this.targetImage.Opacity = 1;
+            element.Opacity = 1;
             return;
         }
 
+        element.Opacity = 0;
+        await element.FadeToAsync(1, this.FadeInDuration).ConfigureAwait(true);
+    }
+
+
+    void ShowNothing()
+    {
+        this.showingVector = false;
+        this.vectorDrawable.Document = null;
+        this.vectorImage.Opacity = 0;
+        this.targetImage.Source = null;
         this.targetImage.Opacity = 0;
-        await this.targetImage.FadeToAsync(1, this.FadeInDuration).ConfigureAwait(true);
+        this.SetValue(LoadErrorPropertyKey, null);
+        this.SetProgress(ImageLoadProgress.None);
     }
 
 
     void ShowError(string? uri, Exception error)
     {
+        this.showingVector = false;
+        this.vectorDrawable.Document = null;
+        this.vectorImage.Opacity = 0;
         this.targetImage.Source = null;
         this.targetImage.Opacity = 0;
         this.SetValue(LoadErrorPropertyKey, error);
@@ -283,6 +372,20 @@ public partial class ShinyImage : ContentView, IDisposable
         if (command?.CanExecute(args) == true)
             command.Execute(args);
     }
+
+
+    /// <summary>
+    /// Whether a load that has just come back is still the one this control wants shown.
+    /// </summary>
+    /// <remarks>
+    /// The Uri check is the important one: it changed while this load was in flight (a recycled
+    /// cell, or a fast rebind), and showing these bytes now would put the previous row's picture in
+    /// the new row.
+    /// </remarks>
+    bool StillWanted(string uri, CancellationToken token)
+        => !token.IsCancellationRequested &&
+           !this.isDisposed &&
+           String.Equals(this.Uri, uri, StringComparison.Ordinal);
 
 
     void SetProgress(ImageLoadProgress progress)
@@ -314,7 +417,11 @@ public partial class ShinyImage : ContentView, IDisposable
 
         this.loadingHost.IsVisible = isLoading;
         this.errorHost.IsVisible = isFailed;
-        this.targetImage.IsVisible = isLoaded;
+
+        // Exactly one of the two presenters is ever live: a raster image and a vector drawing occupy
+        // the same cell of the grid.
+        this.targetImage.IsVisible = isLoaded && !this.showingVector;
+        this.vectorImage.IsVisible = isLoaded && this.showingVector;
 
         // Set on the ring itself, not just its host. Hiding a parent does not raise IsVisible on the
         // child, and the ring uses its own IsVisible to decide whether to hold the shared frame
@@ -383,7 +490,7 @@ public partial class ShinyImage : ContentView, IDisposable
 
 
     /// <summary>
-    /// Finds the registered service, falling back to a self-built one.
+    /// Finds a registered service, falling back to a self-built one.
     /// </summary>
     /// <remarks>
     /// The fallback is deliberate. A control constructed outside a running app - a headless test
@@ -391,15 +498,16 @@ public partial class ShinyImage : ContentView, IDisposable
     /// impossible to unit test and would crash the previewer over a service that has a perfectly
     /// good default.
     /// </remarks>
-    static IImageService ResolveService(ShinyImage image)
+    static T Resolve<T>(ShinyImage image, Lazy<T> fallback) where T : class
     {
         var services = image.Handler?.MauiContext?.Services
                        ?? Application.Current?.Handler?.MauiContext?.Services;
 
-        return services?.GetService<IImageService>() ?? DefaultService.Value;
+        return services?.GetService<T>() ?? fallback.Value;
     }
 
     static readonly Lazy<IImageService> DefaultService = new(() => new ImageService());
+    static readonly Lazy<SvgCache> DefaultSvgCache = new(() => new SvgCache());
 
 
     /// <summary>Cancels any in-flight load and releases the control's resources.</summary>

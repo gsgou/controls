@@ -239,10 +239,28 @@ public class DocumentEditor : ContentView, IDisposable
             PageWidth = this.controller.PageWidth,
             Selection = this.controller.SelectionRects().ToList(),
             Spelling = this.controller.SpellingRects().ToList(),
-            Caret = this.focused && !this.IsReadOnly
+            Caret = this.focused && !this.IsReadOnly && this.controller.SelectedObject is null
                 ? this.controller.CaretRect(this.controller.Selection.Focus)
-                : null
+                : null,
+
+            ObjectChrome = this.BuildObjectChrome()
         });
+    }
+
+    /// <summary>The frame and handles around a selected inline object, or null when none is selected.</summary>
+    DocumentObjectChrome? BuildObjectChrome()
+    {
+        if (this.IsReadOnly || this.controller is null)
+            return null;
+
+        if (this.controller.SelectedObjectBounds() is not { } bounds)
+            return null;
+
+        return new DocumentObjectChrome
+        {
+            Frame = bounds,
+            Handles = this.controller.SelectedObjectHandles().Select(x => x.Rect).ToList()
+        };
     }
 
     void OnTouch(object? sender, SKTouchEventArgs e)
@@ -262,6 +280,14 @@ public class DocumentEditor : ContentView, IDisposable
             case SKTouchAction.Pressed:
                 this.lastPanY = y;
                 this.CloseSpellingMenu();
+
+                // Objects first: a picture sits on top of the text it displaces, so a press inside
+                // one is always about the picture even though there is a caret position underneath.
+                if (this.controller.BeginObjectDrag(x, y))
+                {
+                    this.FocusEditor();
+                    break;
+                }
 
                 if (this.controller.PositionAt(x, y) is { } position)
                 {
@@ -283,6 +309,12 @@ public class DocumentEditor : ContentView, IDisposable
                 // that to be what the user meant, which is why this only runs while in contact.
                 this.CancelLongPress();
 
+                if (this.controller.IsDraggingObject)
+                {
+                    this.controller.DragObject(x, y);
+                    break;
+                }
+
                 if (this.controller.PositionAt(x, y) is { } dragged)
                     this.controller.Selection.ExtendTo(dragged);
 
@@ -291,6 +323,7 @@ public class DocumentEditor : ContentView, IDisposable
             case SKTouchAction.Released:
             case SKTouchAction.Cancelled:
                 this.CancelLongPress();
+                this.controller.EndObjectDrag();
                 break;
 
             case SKTouchAction.WheelChanged:

@@ -34,6 +34,51 @@ public partial class DataGridFormattingViewModel : ObservableObject
             ? new DataGridCellStyle { TextColor = Colors.Firebrick, FontAttributes = FontAttributes.Bold }
             : null;
 
+    /// <summary>
+    /// Row-wide highlighting driven from the view model. A wash rather than a repaint, so the striping
+    /// underneath it and the text on top of it both survive.
+    /// </summary>
+    public Func<object, DataGridCellStyle?> InactiveRowStyle
+        => item => ((Person)item).Active
+            ? null
+            : new DataGridCellStyle
+            {
+                Fill = Colors.Firebrick,
+                BorderColor = Colors.Firebrick,
+                BorderStyle = DataGridBorderStyle.Dashed
+            };
+
+    /// <summary>
+    /// The declarative form of the same idea, and the one that scales past a single rule: each entry
+    /// covers a row, a column, one cell, or the whole grid depending only on which of its targeting
+    /// members are set.
+    /// </summary>
+    public ObservableCollection<DataGridHighlight> Highlights { get; } =
+    [
+        // A column: named, no row - every cell of Salary is washed.
+        new() { Column = nameof(Person.Salary), Fill = Colors.Gold },
+
+        // A row: a predicate, no column - every cell of the rows it matches.
+        new()
+        {
+            RowPredicate = item => ((Person)item).Salary > 140000,
+            Fill = Colors.SeaGreen,
+            BorderColor = Colors.SeaGreen,
+            BorderStyle = DataGridBorderStyle.Solid
+        },
+
+        // A cell: both, so the stroke boxes the one place they cross rather than running off the
+        // edge of a row or a column.
+        new()
+        {
+            RowPredicate = item => ((Person)item).FirstName == "Margaret",
+            Column = nameof(Person.Department),
+            BorderColor = Colors.BlueViolet,
+            BorderStyle = DataGridBorderStyle.Dotted,
+            BorderWidth = 3
+        }
+    ];
+
     /// <summary>Tints the whole cell when a review is missing, so "Overdue" reads as a state, not a word.</summary>
     public Func<object, DataGridCellStyle?> ReviewStyle
         => item => ((Person)item).LastReview is null

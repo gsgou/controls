@@ -120,6 +120,7 @@ public partial class DataGrid : ContentView
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
+        this.ObserveDefaultHighlights();
         StyleGuard.MarkReady(this, typeof(DataGrid));
     }
 
@@ -210,6 +211,9 @@ public partial class DataGrid : ContentView
                     if (collapsed)
                         continue;
 
+                    // Each group is its own block, so a column highlight is closed off at the group
+                    // boundary rather than drawn straight through the header sitting between them.
+                    var groupStart = this.dataRows.Count;
                     foreach (var item in items)
                     {
                         var row = this.CreateRow(item, 0, index++);
@@ -217,6 +221,7 @@ public partial class DataGrid : ContentView
                         this.displayItems.Add(row);
                         this.AppendDetailRow(row);
                     }
+                    this.StampBlock(groupStart);
                 }
             }
         }
@@ -237,12 +242,28 @@ public partial class DataGrid : ContentView
             }
         }
 
+        if (!this.Grouped)
+            this.StampBlock(0);
+
         // Re-create the item template so density/striping changes take effect, and swap the whole
         // CollectionView out when the row *shape* changed - see EnsureRowStructure.
         this.collection.ItemTemplate = this.BuildItemTemplateSelector();
         this.EnsureRowStructure();
         this.RebuildFooter();
         this.UpdatePager();
+    }
+
+    /// <summary>
+    /// Marks the ends of one run of rows, so a highlight that spans them knows where to stop stroking.
+    /// A single-row block is both ends of itself, which is what boxes it in on all four sides.
+    /// </summary>
+    void StampBlock(int from)
+    {
+        if (from >= this.dataRows.Count)
+            return;
+
+        this.dataRows[from].IsFirstRow = true;
+        this.dataRows[^1].IsLastRow = true;
     }
 
     CollectionView CreateCollectionView()
@@ -269,7 +290,10 @@ public partial class DataGrid : ContentView
             .Append(this.TreeIndentSize).Append('|')
             .Append(this.Dense).Append('|')
             .Append(this.Bordered).Append('|')
-            .Append(this.RowHeight).Append('|');
+            .Append(this.RowHeight).Append('|')
+            // A styled cell is wrapped in a highlight host; an unstyled one is the bare label. Turning
+            // highlighting on has to drop the cells the CollectionView already built.
+            .Append(this.HasCellStyling).Append('|');
 
         foreach (var column in this.VisibleColumns)
             sb.Append(column.Id).Append(':').Append(this.ResolveWidth(column)).Append(',');
@@ -421,7 +445,7 @@ public partial class DataGrid : ContentView
 
     bool EffectiveGroupable(DataGridColumn col) => this.Groupable && col.Groupable && col.HasValue;
 
-    void ToggleGroupBy(DataGridColumn col)
+    internal void ToggleGroupBy(DataGridColumn col)
     {
         this.groupColumnId = this.groupColumnId == col.Id ? null : col.Id;
         this.collapsedGroups.Clear();
@@ -1273,12 +1297,22 @@ public partial class DataGrid : ContentView
         => this.TreeEnabled && ReferenceEquals(this.VisibleColumns.FirstOrDefault(), column);
 
     View BuildCellView(DataGridColumn column)
-        => this.IsTreeColumn(column)
-            ? this.WrapTreeCell(this.BuildPlainCellView(column))
-            : this.BuildPlainCellView(column);
-
-    View BuildPlainCellView(DataGridColumn column)
     {
+        var content = this.BuildPlainCellView(column, out var label);
+        if (this.IsTreeColumn(column))
+            content = this.WrapTreeCell(content);
+
+        return this.HasCellStyling ? this.WrapHighlight(content, label, column) : content;
+    }
+
+    /// <summary>
+    /// The cell's content. <paramref name="label"/> comes back set for the default text cell and null
+    /// for a templated one - the styling hook needs the label to colour its text, and a template owns
+    /// its own.
+    /// </summary>
+    View BuildPlainCellView(DataGridColumn column, out Label? label)
+    {
+        label = null;
         if (column.CellTemplate is not null)
         {
             var content = (View)column.CellTemplate.CreateContent();
@@ -1289,7 +1323,7 @@ public partial class DataGrid : ContentView
 
         // Fill rather than Center so the cell's own alignment and background cover the whole cell;
         // VerticalTextAlignment keeps the text centred exactly as LayoutOptions.Center used to.
-        var label = new Label
+        var cell = new Label
         {
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
@@ -1299,49 +1333,22 @@ public partial class DataGrid : ContentView
             Padding = this.CellPadding
         };
         if (column.MaxLines > 0)
-            label.MaxLines = column.MaxLines;
+            cell.MaxLines = column.MaxLines;
 
-        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        cell.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         if (!string.IsNullOrEmpty(column.PropertyName))
         {
             // Converter rather than the binding's own StringFormat: presets, prefix/suffix, the null
             // placeholder and a TextFormatter delegate all live in Column.FormatValue, and routing the
             // cell through it is what keeps the cell text identical to what search and export see.
-            label.SetBinding(Label.TextProperty, new Binding(
+            cell.SetBinding(Label.TextProperty, new Binding(
                 $"{nameof(DataGridRow.Data)}.{column.PropertyName}",
                 converter: new DataGridCellTextConverter(column)));
         }
-        this.HookCellStyle(label, column);
-        return label;
-    }
 
-    /// <summary>
-    /// Applies <see cref="DataGridColumn.CellStyle"/> whenever the cell binds to a row - including
-    /// when the virtualized list recycles this exact view onto a different item, which is why it has
-    /// to re-assert the themed defaults instead of only writing the overrides.
-    /// </summary>
-    void HookCellStyle(Label label, DataGridColumn column)
-    {
-        label.BindingContextChanged += (sender, _) =>
-        {
-            // Read the delegate at bind time, not at hook time: CellStyle can be a {Binding}, and the
-            // grid's BindingContext usually lands after the columns are added.
-            if (column.CellStyle is null)
-                return;
-
-            var lbl = (Label)sender!;
-            var item = (lbl.BindingContext as DataGridRow)?.Data;
-            var style = item is null ? null : column.CellStyle(item);
-
-            if (style?.TextColor is not null)
-                lbl.TextColor = style.TextColor;
-            else
-                lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-
-            lbl.BackgroundColor = style?.BackgroundColor ?? Colors.Transparent;
-            lbl.FontAttributes = style?.FontAttributes ?? FontAttributes.None;
-        };
+        label = cell;
+        return cell;
     }
 
     /// <summary>

@@ -452,6 +452,28 @@ static class ShapeTextEditor
             new D.RgbColorModelHex { Val = $"{color.R:X2}{color.G:X2}{color.B:X2}" }));
     };
 
+    /// <summary>
+    /// Sets or clears the highlight behind a run.
+    /// </summary>
+    /// <remarks>
+    /// Unlike Word's, DrawingML's <c>a:highlight</c> holds a real colour rather than a name from a
+    /// closed list, so the requested colour goes in exactly as asked. It has a fixed slot in the run
+    /// properties (after the effect list, before the underline fills), which is what
+    /// <see cref="InsertOrdered"/> is for — appending it lands it after <c>a:latin</c> and produces a
+    /// file PowerPoint refuses to open.
+    /// </remarks>
+    public static Action<D.RunProperties> SetHighlight(ArgbColor? color) => properties =>
+    {
+        foreach (var existing in properties.Elements<D.Highlight>().ToList())
+            existing.Remove();
+
+        if (color is not { } value)
+            return;
+
+        InsertOrdered(properties, new D.Highlight(
+            new D.RgbColorModelHex { Val = $"{value.R:X2}{value.G:X2}{value.B:X2}" }));
+    };
+
     static bool IsFill(OpenXmlElement element) => OrderOf(element) == 1;
 
     public static Action<D.ParagraphProperties> SetAlignment(TextAlignment alignment) => properties =>

@@ -8,7 +8,7 @@
              Title="Formatting"
              AutomationId="DataGridFormattingPage">
 
-    <Grid RowDefinitions="Auto,*,Auto,*" Padding="16" RowSpacing="8">
+    <Grid RowDefinitions="Auto,*,Auto,*,Auto,*" Padding="16" RowSpacing="8">
 
         <Label Grid.Row="0"
                Text="Every column below is a plain DataGridColumn - no CellTemplate anywhere. DisplayAs picks a preset, Decimals tunes it, NullText covers the gaps, and Prefix/Suffix decorate the value."
@@ -75,6 +75,30 @@
                                   CellStyle="{Binding ReviewStyle}" />
             <shiny:DataGridColumn Title="Notes" PropertyName="Notes"
                                   Wrap="True" MaxLines="2" Width="2*" />
+        </shiny:DataGrid>
+
+        <Label Grid.Row="4"
+               Text="Highlights cover a row, a column, one cell, or the whole grid - depending only on which targeting members are set. Fill is a wash behind the text, so striping and selection still read; the border traces the perimeter of the region, not each cell in it."
+               FontSize="13"
+               TextColor="Gray" />
+
+        <shiny:DataGrid Grid.Row="5"
+                        ItemsSource="{Binding People}"
+                        SortMode="Single"
+                        Striped="True"
+                        Highlights="{Binding Highlights}">
+            <shiny:DataGridColumn Title="First" PropertyName="FirstName" Width="1*" />
+            <shiny:DataGridColumn Title="Department" PropertyName="Department" Width="1.4*" />
+            <shiny:DataGridColumn Title="Salary" PropertyName="Salary"
+                                  DisplayAs="Currency" Decimals="0" Width="1.2*" />
+
+            <!-- A whole column highlighted from markup rather than from a rule. Same paint, and the
+                 rules above are laid over it. -->
+            <shiny:DataGridColumn Title="Tenure" PropertyName="YearsOfService" Suffix=" yrs" Width="1*">
+                <shiny:DataGridColumn.Highlight>
+                    <shiny:DataGridCellStyle Fill="LightSkyBlue" FillOpacity="0.35" />
+                </shiny:DataGridColumn.Highlight>
+            </shiny:DataGridColumn>
         </shiny:DataGrid>
     </Grid>
 </ContentPage>

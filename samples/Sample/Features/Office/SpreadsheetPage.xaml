@@ -25,7 +25,7 @@
 
         <Label Grid.Row="3"
                FontSize="12"
-               Text="Tap to select, drag to extend, double-tap a cell to edit. Drag a column header edge to resize."
+               Text="Tap to select, drag to extend, double-tap a cell to edit. Drag a column header edge to resize. The tabs below switch sheets; tap the one you are on for rename, duplicate, reorder, hide and delete."
                Opacity="0.7" />
     </Grid>
 </ContentPage>

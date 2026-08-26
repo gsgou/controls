@@ -24,6 +24,16 @@ sealed class DataGridRow : INotifyPropertyChanged
     /// <summary>Depth in the hierarchy (0 for a flat grid or a root row).</summary>
     public int Level { get; init; }
 
+    /// <summary>
+    /// First row of the block this one belongs to - the page, or one group when the grid is grouped.
+    /// A column highlight closes its stroke here rather than leaving it running off the top of the
+    /// block. Stamped after the rows are built, since "last" is not known until then.
+    /// </summary>
+    public bool IsFirstRow { get; set; }
+
+    /// <summary>Last row of the block - the other end of the same stroke.</summary>
+    public bool IsLastRow { get; set; }
+
     /// <summary>True when the row has (or may lazily load) child rows.</summary>
     public bool HasChildren { get; init; }
 

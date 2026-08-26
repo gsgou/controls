@@ -28,6 +28,10 @@ public partial class ImageEditorViewModel(IDialogs dialogs) : ObservableObject
     [ObservableProperty]
     double drawStrokeWidth = 4;
 
+    /// <summary>Null so the shape tools start as outlines — the toolbar's fill toggle turns it on.</summary>
+    [ObservableProperty]
+    Color? shapeFillColor;
+
     [ObservableProperty]
     double zoomLevel = 1;
 

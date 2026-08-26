@@ -16,6 +16,22 @@ public partial class ImagesViewModel(IImageService imageService) : ObservableObj
 
     public string BrokenImageUri => "https://shinylib.net/this-image-does-not-exist-404.png";
 
+    // Wikimedia serves the SVG logo itself as image/svg+xml over a stable URL, which makes it a fair
+    // demonstration of the remote path: a real download, a real cache entry, and a vector at the end.
+    public string RemoteSvgUri => "https://upload.wikimedia.org/wikipedia/commons/4/4f/SVG_Logo.svg";
+
+    // Percent-encoded rather than base64 so the markup stays readable in the source that carries it.
+    public string InlineSvgUri { get; } =
+        "data:image/svg+xml," + Uri.EscapeDataString(
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="30" fill="#10B981" />
+              <path d="M18 33 L28 43 L47 22" fill="none" stroke="#ffffff" stroke-width="6"
+                    stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            """
+        );
+
     public ObservableCollection<string> Photos { get; } = new(
         Enumerable.Range(1, 30).Select(i => $"https://picsum.photos/seed/shiny-grid-{i}/400/400")
     );

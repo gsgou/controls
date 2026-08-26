@@ -183,6 +183,12 @@
     cursor: default;
 }
 
+/* The shape fill toggle is a chrome button that latches, so it takes the tool selection colour */
+.shiny-imgeditor-btn.active {
+    background: var(--shiny-color-primary, #0a84ff);
+    color: var(--shiny-color-on-primary, #fff);
+}
+
 .shiny-imgeditor-zoomvalue {
     min-width: 44px;
     height: 38px;
@@ -304,6 +310,23 @@
 .shiny-imgeditor-color::-moz-color-swatch {
     border: none;
     border-radius: 50%;
+}
+
+/* Fill opacity — a colour input can't carry alpha, so the shape tools get a slider beside it */
+.shiny-imgeditor-range {
+    width: 72px;
+    height: 36px;
+    accent-color: var(--shiny-color-primary, #0a84ff);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Separates the shape's border options from its fill options in the same row */
+.shiny-imgeditor-divider {
+    width: var(--shiny-border-thin, 1px);
+    height: 24px;
+    background: rgba(255, 255, 255, 0.22);
+    flex-shrink: 0;
 }
 
 .shiny-imgeditor-text-input {

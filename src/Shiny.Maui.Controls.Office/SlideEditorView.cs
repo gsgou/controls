@@ -1,4 +1,7 @@
+using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Presentation;
+using Shiny.Controls.Office.Shapes;
+using Shiny.Maui.Controls.ColorPicker;
 using Shiny.Maui.Controls.FontPicker;
 using TextAlignment = Shiny.Controls.Office.Text.TextAlignment;
 
@@ -34,9 +37,14 @@ public class SlideEditorView : ContentView, IDisposable
     readonly Button outdent;
     readonly Button indent;
     readonly Button addTextBox;
+    readonly Button highlight;
+    readonly Button insertShape;
+    readonly Button insertTable;
+    readonly Button insertPicture;
     readonly Button deleteShape;
     readonly Button undo;
     readonly Button redo;
+    readonly ColorPickerButton textColor;
 
     View? fontPicker;
     View? sizePicker;
@@ -61,6 +69,18 @@ public class SlideEditorView : ContentView, IDisposable
         this.indent = this.MakeToggle("⇥", FontAttributes.None, () => this.editor.Controller?.ShiftLevel(1));
 
         this.addTextBox = this.MakeToggle("＋T", FontAttributes.None, this.AddTextBox);
+
+        this.highlight = this.MakeToggle("A\u0332", FontAttributes.None, () => { });
+        this.highlight.Clicked += async (_, _) => await this.PickHighlightAsync();
+
+        this.insertShape = this.MakeToggle("◇", FontAttributes.None, () => { });
+        this.insertShape.Clicked += async (_, _) => await this.InsertShapeAsync();
+
+        this.insertTable = this.MakeToggle("▦", FontAttributes.None, () => { });
+        this.insertTable.Clicked += async (_, _) => await this.InsertTableAsync();
+
+        this.insertPicture = this.MakeToggle("🖼", FontAttributes.None, () => { });
+        this.insertPicture.Clicked += async (_, _) => await this.InsertPictureAsync();
         this.deleteShape = this.MakeToggle("🗑", FontAttributes.None, () => this.editor.Controller?.DeleteSelectedShape());
 
         this.undo = this.MakeToggle("↶", FontAttributes.None, () => this.editor.Controller?.Undo());
@@ -81,6 +101,8 @@ public class SlideEditorView : ContentView, IDisposable
             Padding = new Thickness(10, 4),
             LineBreakMode = LineBreakMode.TailTruncation
         };
+
+        this.textColor = this.CreateColorPicker();
 
         this.bar = new HorizontalStackLayout { Spacing = 4, Padding = new Thickness(8, 6) };
         this.barScroller = new ScrollView
@@ -107,6 +129,7 @@ public class SlideEditorView : ContentView, IDisposable
         Grid.SetRow(this.status, 2);
 
         this.editor.DeckChanged += this.OnDeckChanged;
+        this.AttachDrop();
         this.editor.SlideChanged += this.OnSlideChanged;
         this.Content = this.root;
 
@@ -230,6 +253,38 @@ public class SlideEditorView : ContentView, IDisposable
     /// <summary>Raised after every edit.</summary>
     public event EventHandler? DeckChanged;
 
+    /// <summary>Raised when a dropped or chosen file could not be inserted, so a host can say so.</summary>
+    public event EventHandler<OfficeDropRejected>? DropRejected;
+
+    public static readonly BindableProperty ShapeWidthProperty = BindableProperty.Create(
+        nameof(ShapeWidth), typeof(double), typeof(SlideEditorView), 240d);
+
+    public static readonly BindableProperty ShapeHeightProperty = BindableProperty.Create(
+        nameof(ShapeHeight), typeof(double), typeof(SlideEditorView), 180d);
+
+    public static readonly BindableProperty PictureWidthProperty = BindableProperty.Create(
+        nameof(PictureWidth), typeof(double), typeof(SlideEditorView), 400d);
+
+    /// <summary>The size of shape the toolbar inserts, in slide pixels.</summary>
+    public double ShapeWidth
+    {
+        get => (double)this.GetValue(ShapeWidthProperty);
+        set => this.SetValue(ShapeWidthProperty, value);
+    }
+
+    public double ShapeHeight
+    {
+        get => (double)this.GetValue(ShapeHeightProperty);
+        set => this.SetValue(ShapeHeightProperty, value);
+    }
+
+    /// <summary>How wide an inserted picture is, in slide pixels.</summary>
+    public double PictureWidth
+    {
+        get => (double)this.GetValue(PictureWidthProperty);
+        set => this.SetValue(PictureWidthProperty, value);
+    }
+
     public SlideEditorController? Controller => this.editor.Controller;
 
     /// <summary>Routes a physical key press to the editor. See <see cref="SlideEditor.HandleKey"/>.</summary>
@@ -268,6 +323,9 @@ public class SlideEditorView : ContentView, IDisposable
         this.bar.Add(this.underline);
         this.bar.Add(this.strike);
         this.bar.Add(Separator());
+        this.bar.Add(this.textColor);
+        this.bar.Add(this.highlight);
+        this.bar.Add(Separator());
         this.bar.Add(this.alignLeft);
         this.bar.Add(this.alignCenter);
         this.bar.Add(this.alignRight);
@@ -275,6 +333,9 @@ public class SlideEditorView : ContentView, IDisposable
         this.bar.Add(this.indent);
         this.bar.Add(Separator());
         this.bar.Add(this.addTextBox);
+        this.bar.Add(this.insertShape);
+        this.bar.Add(this.insertTable);
+        this.bar.Add(this.insertPicture);
         this.bar.Add(this.deleteShape);
         this.bar.Add(Separator());
         this.bar.Add(this.undo);
@@ -283,6 +344,46 @@ public class SlideEditorView : ContentView, IDisposable
         this.RefreshBar();
     }
 
+    /// <summary>
+    /// The core package's colour picker, in its button form.
+    /// </summary>
+    /// <remarks>
+    /// Not a row of preset swatches: a deck's text can be any colour, and a fixed palette is a promise
+    /// the format does not make. The button shows the colour at the caret and opens the full spectrum —
+    /// the same control the Blazor toolbar puts in this slot.
+    /// </remarks>
+    ColorPickerButton CreateColorPicker()
+    {
+        var picker = new ColorPickerButton
+        {
+            Text = string.Empty,
+            ShowOpacity = false,
+            WidthRequest = 44,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        picker.ColorChanged += (_, color) =>
+        {
+            if (this.suppressPickerEvents)
+                return;
+
+            this.editor.Controller?.SetTextColor(ToArgb(color));
+            this.AfterCommand();
+        };
+
+        return picker;
+    }
+
+    /// <summary>MAUI colours are floats in 0..1; the document kernel stores bytes.</summary>
+    static ArgbColor ToArgb(Color color) => new(
+        (byte)Math.Round(color.Alpha * 255),
+        (byte)Math.Round(color.Red * 255),
+        (byte)Math.Round(color.Green * 255),
+        (byte)Math.Round(color.Blue * 255));
+
+    static Color FromArgb(ArgbColor color) => Color.FromRgba(color.R, color.G, color.B, color.A);
+
     /// <summary>The core package's font picker, which renders each family in its own typeface.</summary>
     FontPickerButton CreateFontPicker()
     {
@@ -290,7 +391,9 @@ public class SlideEditorView : ContentView, IDisposable
         {
             AvailableFonts = (this.FontFamilies ?? DefaultFontFamilies).ToList(),
             Placeholder = "Font",
-            WidthRequest = 150
+            WidthRequest = 150,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
         };
 
         picker.FontChanged += (_, family) =>
@@ -310,7 +413,9 @@ public class SlideEditorView : ContentView, IDisposable
         var picker = new FontSizePickerButton
         {
             AvailableFontSizes = (this.FontSizes ?? DefaultFontSizes).ToList(),
-            WidthRequest = 84
+            WidthRequest = 84,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
         };
 
         picker.FontSizeChanged += (_, size) =>
@@ -335,12 +440,153 @@ public class SlideEditorView : ContentView, IDisposable
             Math.Max(0, controller.Deck.SlideHeight / 2 - 32));
     }
 
+    // ---- insert ----
+
+    /// <summary>
+    /// Where a new object goes: the middle of the slide.
+    /// </summary>
+    /// <remarks>
+    /// Not the origin, which is under the title placeholder — an object inserted there is both hidden
+    /// and awkward to grab.
+    /// </remarks>
+    static (double X, double Y) Centred(SlideEditorController controller, double width, double height)
+        => (Math.Max(0, (controller.Deck.SlideWidth - width) / 2),
+            Math.Max(0, (controller.Deck.SlideHeight - height) / 2));
+
+    async Task PickHighlightAsync()
+    {
+        var (chosen, color) = await OfficeMenus.PickHighlightAsync(OfficeMenus.PageOf(this));
+        if (!chosen)
+            return;
+
+        this.editor.Controller?.SetHighlight(color);
+        this.AfterCommand();
+    }
+
+    async Task InsertShapeAsync()
+    {
+        if (this.editor.Controller is not { } controller)
+            return;
+
+        if (await OfficeMenus.PickShapeAsync(OfficeMenus.PageOf(this)) is not { } geometry)
+            return;
+
+        var (x, y) = Centred(controller, this.ShapeWidth, this.ShapeHeight);
+        controller.AddShape(geometry, x, y, this.ShapeWidth, this.ShapeHeight);
+        this.AfterCommand();
+    }
+
+    async Task InsertTableAsync()
+    {
+        if (this.editor.Controller is not { } controller)
+            return;
+
+        if (await OfficeMenus.PickTableAsync(OfficeMenus.PageOf(this)) is not { } size)
+            return;
+
+        // Sized to the slide rather than to the grid: a 2x2 and a 6x4 both want to be a table on a
+        // slide, not a postage stamp and something that overflows the edge.
+        var width = controller.Deck.SlideWidth * 0.7;
+        var height = Math.Min(controller.Deck.SlideHeight * 0.6, size.Rows * 44);
+        var (x, y) = Centred(controller, width, height);
+
+        controller.AddTable(size.Rows, size.Columns, x, y, width, height);
+        this.AfterCommand();
+    }
+
+    async Task InsertPictureAsync()
+    {
+        var (image, rejected) = await OfficeMenus.PickImageAsync();
+
+        if (rejected is not null)
+        {
+            this.DropRejected?.Invoke(this, rejected);
+            return;
+        }
+
+        if (image is not null)
+            this.InsertImage(image, null);
+    }
+
+    /// <summary>
+    /// Places a picture, at a point when one was given and in the middle otherwise.
+    /// </summary>
+    /// <remarks>
+    /// A drop knows where it landed and should use it; the toolbar button has no such point, and
+    /// centring is the honest answer rather than a guess at where the user was looking.
+    /// </remarks>
+    void InsertImage(OfficePickedImage image, (double X, double Y)? at)
+    {
+        if (this.editor.Controller is not { } controller)
+            return;
+
+        var width = Math.Min(controller.Deck.SlideWidth / 2, this.PictureWidth);
+        var height = width * 0.75;
+
+        var (x, y) = at is { } point
+            ? (point.X - (width / 2), point.Y - (height / 2))
+            : Centred(controller, width, height);
+
+        controller.AddPicture(
+            image.Data,
+            image.ContentType,
+            x,
+            y,
+            width,
+            height,
+            Path.GetFileNameWithoutExtension(image.FileName));
+
+        this.AfterCommand();
+    }
+
+    // ---- file drop ----
+
+    void AttachDrop()
+    {
+        var drop = new DropGestureRecognizer { AllowDrop = true };
+        drop.Drop += this.OnDropAsync;
+        this.editor.GestureRecognizers.Add(drop);
+    }
+
+    async void OnDropAsync(object? sender, DropEventArgs e)
+    {
+        if (this.IsReadOnly || this.Deck is null || this.editor.Controller is not { } controller)
+            return;
+
+        // Where the drop landed, in slide coordinates. Read before the await, while the gesture's
+        // position still means something.
+        var point = e.GetPosition(this.editor) is { } position
+            ? controller.ToSlide(position.X, position.Y)
+            : null;
+
+        try
+        {
+            foreach (var image in await OfficeFileDrop.ReadImagesAsync(e))
+                this.InsertImage(image, point);
+        }
+        catch (Exception ex)
+        {
+            this.DropRejected?.Invoke(this, new OfficeDropRejected(string.Empty, ex.Message));
+        }
+    }
+
     static readonly IList<string> DefaultFontFamilies =
         ["Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"];
 
     // Slide type runs large: 18pt is a small body size on a deck, where a document's is 11.
     static readonly IList<double> DefaultFontSizes =
         [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 44, 54, 66, 88];
+
+    /// <summary>
+    /// One height for every control in the bar.
+    /// </summary>
+    /// <remarks>
+    /// 36 rather than a rounder number because that is the minimum height the core package's
+    /// FontPickerButton and ColorPickerButton ask for. Anything shorter leaves the plain buttons a
+    /// couple of pixels above the pickers, which is small enough to look like a rendering bug and
+    /// large enough to see.
+    /// </remarks>
+    const double ToolbarItemHeight = 36;
 
     static BoxView Separator() => new()
     {
@@ -359,10 +605,15 @@ public class SlideEditorView : ContentView, IDisposable
             Text = text,
             FontAttributes = attributes,
             WidthRequest = 38,
-            HeightRequest = 34,
+            HeightRequest = ToolbarItemHeight,
             Padding = 0,
             CornerRadius = 5,
-            BackgroundColor = Colors.Transparent
+            BackgroundColor = Colors.Transparent,
+
+            // Centre, not the default Fill. A view with an explicit HeightRequest cannot fill, so MAUI
+            // falls back to placing it at the start of the row - which pinned every button to the top
+            // of a row whose height came from the taller pickers, two pixels above where it belonged.
+            VerticalOptions = LayoutOptions.Center
         };
 
         // A TapGestureRecognizer never fires on a Button, so Clicked is the only option here.
@@ -424,12 +675,13 @@ public class SlideEditorView : ContentView, IDisposable
         SetActive(this.italic, format.Italic);
         SetActive(this.underline, format.Underline);
         SetActive(this.strike, format.Strike);
+        SetActive(this.highlight, format.Highlight is not null);
 
         SetActive(this.alignLeft, format.Alignment == TextAlignment.Left);
         SetActive(this.alignCenter, format.Alignment == TextAlignment.Center);
         SetActive(this.alignRight, format.Alignment == TextAlignment.Right);
 
-        foreach (var button in new[] { this.bold, this.italic, this.underline, this.strike,
+        foreach (var button in new[] { this.bold, this.italic, this.underline, this.strike, this.highlight,
                                        this.alignLeft, this.alignCenter, this.alignRight,
                                        this.outdent, this.indent })
         {
@@ -437,6 +689,9 @@ public class SlideEditorView : ContentView, IDisposable
         }
 
         this.addTextBox.IsEnabled = enabled;
+        this.insertShape.IsEnabled = enabled;
+        this.insertTable.IsEnabled = enabled;
+        this.insertPicture.IsEnabled = enabled;
         this.deleteShape.IsEnabled = hasSelection;
 
         this.previous.IsEnabled = controller?.CanGoPrevious ?? false;
@@ -467,6 +722,9 @@ public class SlideEditorView : ContentView, IDisposable
             var sizes = this.FontSizes ?? DefaultFontSizes;
             size.SelectedFontSize = sizes.OrderBy(x => Math.Abs(x - format.FontSize)).FirstOrDefault();
         }
+
+        this.textColor.SelectedColor = FromArgb(format.Color);
+        this.textColor.IsEnabled = hasText;
 
         this.suppressPickerEvents = false;
     }

@@ -408,6 +408,16 @@ public partial class DataGrid<TItem>
         public string CaretGlyph
             => this.IsLoading || !this.HasChildren ? string.Empty
                 : this.IsExpanded ? "▾" : "▸";
+
+        /// <summary>
+        /// First row of the block this node was flattened into - the page, or one group when the grid
+        /// is grouped. A column highlight closes its stroke here rather than leaving it running off
+        /// the top of the block.
+        /// </summary>
+        public bool IsFirst { get; init; }
+
+        /// <summary>Last row of the block - the other end of the same stroke.</summary>
+        public bool IsLast { get; init; }
     }
 
     /// <summary>Flattens a set of items (already filtered/sorted) plus every expanded subtree under them.</summary>
@@ -415,6 +425,13 @@ public partial class DataGrid<TItem>
     {
         var rows = new List<RowNode>();
         this.Append(rows, items, 0);
+        if (rows.Count > 0)
+        {
+            // Stamped after the fact rather than tracked during the walk: Append recurses into
+            // expanded subtrees, so "last" is only known once the whole block is laid out.
+            rows[0] = rows[0] with { IsFirst = true };
+            rows[^1] = rows[^1] with { IsLast = true };
+        }
         return rows;
     }
 

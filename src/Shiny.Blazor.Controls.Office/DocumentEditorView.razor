@@ -1,13 +1,20 @@
 @using Shiny.Blazor.Controls
 @using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Packaging
+@using Shiny.Controls.Office.Shapes
 @using Shiny.Controls.Office.Spreadsheet
 
 @*
     DocumentEditor with formatting chrome on top.
 
-    The toolbar is a ShinyToolbar from the core Blazor package, filled through its ChildContent.
-    Blazor has no FontPicker (that control is MAUI-only), so the family and size are plain selects —
-    the MAUI DocumentEditorView uses FontPickerButton/FontSizePickerButton for the same two slots.
+    The toolbar is a ShinyToolbar from the core Blazor package, filled through its ChildContent, and
+    the pickers in it are the core package's own — FontPickerButton, FontSizePickerButton and
+    ColorPickerButton — which is what the MAUI DocumentEditorView puts in the same three slots.
+
+    The row inside is its own flex container. ShinyToolbar renders ChildContent into a plain block, so
+    left to itself every control here would be an inline-level box on a text line, aligned to the text
+    baseline — and a button's baseline, a select's baseline and a swatch's baseline are all in
+    different places, which is exactly what "the toolbar buttons look slightly off" is.
 *@
 <div class="shiny-doc-editor-view @Class" style="@Style">
 
@@ -25,27 +32,17 @@
                       SafeArea="false"
                       ZIndex="5">
 
-            <select class="doc-select doc-font"
-                    title="Font"
-                    disabled="@Disabled"
-                    value="@Format.FontFamily"
-                    @onchange="OnFontChanged">
-                @foreach (var font in FontFamilies)
-                {
-                    <option value="@font" selected="@(font == Format.FontFamily)">@font</option>
-                }
-            </select>
+        <div class="doc-toolbar">
 
-            <select class="doc-select doc-size"
-                    title="Size"
-                    disabled="@Disabled"
-                    value="@SelectedSize"
-                    @onchange="OnSizeChanged">
-                @foreach (var size in FontSizes)
-                {
-                    <option value="@size" selected="@(Math.Abs(size - Format.FontSize) < 0.51)">@size</option>
-                }
-            </select>
+            <FontPickerButton AvailableFonts="FontFamilies"
+                              SelectedFont="@Format.FontFamily"
+                              Disabled="Disabled"
+                              SelectedFontChanged="OnFontChanged" />
+
+            <FontSizePickerButton AvailableFontSizes="FontSizes"
+                                  SelectedFontSize="Format.FontSize"
+                                  Disabled="Disabled"
+                                  SelectedFontSizeChanged="OnSizeChanged" />
 
             <span class="doc-sep"></span>
 
@@ -56,12 +53,23 @@
 
             <span class="doc-sep"></span>
 
-            <input class="doc-color"
-                   type="color"
-                   title="Text colour"
-                   disabled="@Disabled"
-                   value="@ColorHex"
-                   @onchange="OnColorChanged" />
+            <ColorPickerButton Text="Text colour"
+                               SelectedColor="@ColorHex"
+                               ShowOpacity="false"
+                               Disabled="Disabled"
+                               SelectedColorChanged="OnColorChanged" />
+
+            <OfficeHighlightButton Current="Format.Highlight"
+                                   Disabled="Disabled"
+                                   Picked="OnHighlightPicked" />
+
+            <span class="doc-sep"></span>
+
+            <OfficeInsertMenu Disabled="Disabled"
+                              ShapePicked="OnShapePicked"
+                              TablePicked="OnTablePicked"
+                              ImagePicked="OnImagePicked"
+                              ImageRejected="DropRejected" />
 
             <span class="doc-sep"></span>
 
@@ -76,6 +84,7 @@
             <button class="doc-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
 
             @ToolbarContent
+        </div>
         </ShinyToolbar>
     }
 
@@ -87,6 +96,8 @@
                         ReadOnly="ReadOnly"
                         SpellChecker="SpellChecker"
                         SpellCheckEnabled="SpellCheckEnabled"
+                        AllowFileDrop="AllowFileDrop"
+                        DropRejected="DropRejected"
                         DocumentChanged="OnDocumentChanged" />
     </div>
 </div>
@@ -109,6 +120,20 @@
 
     [Parameter] public bool ShowToolbar { get; set; } = true;
 
+    /// <summary>Whether dragging an image file onto the document inserts it. On by default.</summary>
+    [Parameter] public bool AllowFileDrop { get; set; } = true;
+
+    /// <summary>Raised when a dropped or chosen file could not be inserted, so a host can say so.</summary>
+    [Parameter] public EventCallback<OfficeDropRejected> DropRejected { get; set; }
+
+    /// <summary>The size of shape the toolbar inserts, in pixels.</summary>
+    [Parameter] public double ShapeWidth { get; set; } = 160;
+
+    [Parameter] public double ShapeHeight { get; set; } = 120;
+
+    /// <summary>How wide an inserted picture is, in pixels. Its height follows the image's own ratio.</summary>
+    [Parameter] public double PictureWidth { get; set; } = 240;
+
     /// <summary>Extra items appended to the toolbar, after the built-in formatting controls.</summary>
     [Parameter] public RenderFragment? ToolbarContent { get; set; }
 
@@ -117,7 +142,11 @@
         "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
     ];
 
-    [Parameter] public IReadOnlyList<int> FontSizes { get; set; } =
+    /// <summary>
+    /// The sizes the picker offers. Doubles rather than ints so the list matches what a document can
+    /// actually hold — and what the MAUI DocumentEditorView takes for the same property.
+    /// </summary>
+    [Parameter] public IReadOnlyList<double> FontSizes { get; set; } =
     [
         8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72
     ];
@@ -141,17 +170,7 @@
 
     CaretFormat Format => this.editor?.Controller?.CaretFormat ?? CaretFormat.Default;
 
-    /// <summary>The nearest offered size to what is actually at the caret.</summary>
-    int SelectedSize
-    {
-        get
-        {
-            var actual = this.Format.FontSize;
-            return this.FontSizes.OrderBy(x => Math.Abs(x - actual)).FirstOrDefault(11);
-        }
-    }
-
-    string ColorHex => $"#{this.Format.Color.R:x2}{this.Format.Color.G:x2}{this.Format.Color.B:x2}";
+    string ColorHex => OfficeColors.ToHex(this.Format.Color);
 
     async Task Run(Action<DocumentEditorController> action)
     {
@@ -168,25 +187,35 @@
 
     Task Align(TextAlignment alignment) => this.Run(c => c.SetAlignment(alignment));
 
-    Task OnFontChanged(ChangeEventArgs e)
-        => e.Value?.ToString() is { Length: > 0 } family
+    Task OnFontChanged(string family)
+        => family is { Length: > 0 }
             ? this.Run(c => c.SetFontFamily(family))
             : Task.CompletedTask;
 
-    Task OnSizeChanged(ChangeEventArgs e)
-        => double.TryParse(e.Value?.ToString(), out var size)
+    Task OnSizeChanged(double size)
+        => size > 0
             ? this.Run(c => c.SetFontSize(size))
             : Task.CompletedTask;
 
-    Task OnColorChanged(ChangeEventArgs e)
-    {
-        var value = e.Value?.ToString();
-        if (value is null || value.Length != 7 || value[0] != '#')
-            return Task.CompletedTask;
+    Task OnColorChanged(string hex)
+        => OfficeColors.TryParse(hex, out var color)
+            ? this.Run(c => c.SetTextColor(color))
+            : Task.CompletedTask;
 
-        var rgb = uint.Parse(value[1..], System.Globalization.NumberStyles.HexNumber);
-        return this.Run(c => c.SetTextColor(ArgbColor.FromUInt32(0xFF000000u | rgb)));
-    }
+    Task OnHighlightPicked(ArgbColor? color) => this.Run(c => c.SetHighlight(color));
+
+    Task OnShapePicked(ShapeGeometry geometry)
+        => this.Run(c => c.InsertShape(geometry, this.ShapeWidth, this.ShapeHeight));
+
+    Task OnTablePicked((int Rows, int Columns) size)
+        => this.Run(c => c.InsertTable(size.Rows, size.Columns));
+
+    Task OnImagePicked(OfficePickedImage image)
+        => this.Run(c => c.InsertImage(
+            image.Data,
+            image.ContentType,
+            this.PictureWidth,
+            name: Path.GetFileNameWithoutExtension(image.FileName)));
 
     async Task OnDocumentChanged() => await this.RaiseChangedAsync();
 

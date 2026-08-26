@@ -78,6 +78,57 @@
                 </shiny:ShinyImage>
             </Border>
 
+            <!-- SVG: drawn as vectors, and parsed once no matter how many controls show it -->
+            <Label Text="SVG" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Vector artwork is drawn rather than rasterized, so the same file is sharp at any size. The format is detected from the payload, not the extension." />
+
+            <Label Text="resource:// - an embedded resource, tinted per placement" FontAttributes="Bold" />
+            <Label Text="The file has no colours of its own: it says fill=none stroke=currentColor, and SvgTintColor decides. All three share one parse." />
+
+            <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
+                <shiny:ShinyImage AutomationId="EmbeddedSvgSmall"
+                                  Uri="resource://Sample.Assets.embedded-icon.svg"
+                                  SvgTintColor="#7C3AED"
+                                  WidthRequest="32"
+                                  HeightRequest="32" />
+                <shiny:ShinyImage AutomationId="EmbeddedSvgMedium"
+                                  Uri="resource://Sample.Assets.embedded-icon.svg"
+                                  SvgTintColor="#0EA5E9"
+                                  WidthRequest="64"
+                                  HeightRequest="64" />
+                <shiny:ShinyImage AutomationId="EmbeddedSvgLarge"
+                                  Uri="resource://Sample.Assets.embedded-icon.svg"
+                                  SvgTintColor="#F59E0B"
+                                  WidthRequest="96"
+                                  HeightRequest="96" />
+            </HorizontalStackLayout>
+
+            <Label Text="A bundled asset - gradients, a clipPath, nested transforms and a &lt;style&gt; block" FontAttributes="Bold" />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="0">
+                <shiny:ShinyImage AutomationId="BundledSvg"
+                                  Uri="sample-vector.svg"
+                                  Aspect="AspectFit"
+                                  HeightRequest="180" />
+            </Border>
+
+            <Label Text="A data: URI - the markup travels inside the binding" FontAttributes="Bold" />
+
+            <shiny:ShinyImage AutomationId="InlineSvg"
+                              Uri="{Binding InlineSvgUri}"
+                              HeightRequest="72"
+                              HorizontalOptions="Start"
+                              WidthRequest="72" />
+
+            <Label Text="A remote SVG - the same download, cache and ring as any other image" FontAttributes="Bold" />
+
+            <Border Stroke="#E5E7EB" StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="12">
+                <shiny:ShinyImage AutomationId="RemoteSvg"
+                                  Uri="{Binding RemoteSvgUri}"
+                                  Aspect="AspectFit"
+                                  HeightRequest="140" />
+            </Border>
+
             <!-- Cache controls -->
             <Label Text="Cache" FontSize="18" FontAttributes="Bold" />
             <Label Text="{Binding CacheSize, StringFormat='Disk cache: {0}'}" />

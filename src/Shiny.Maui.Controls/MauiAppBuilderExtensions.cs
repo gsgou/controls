@@ -5,6 +5,7 @@ using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Dialogs;
 using Shiny.Maui.Controls.Flyout;
 using Shiny.Maui.Controls.Images;
+using Shiny.Maui.Controls.Images.Svg;
 using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Toast;
@@ -61,6 +62,10 @@ public static class ControlsMauiAppBuilderExtensions
             sp.GetRequiredService<ImageOptions>(),
             sp.GetRequiredService<IImageDownloader>()
         ));
+
+        // Parsed SVG documents are immutable and shared, so one cache for the whole app is right:
+        // an icon used on six screens is parsed once no matter which of them is showing.
+        builder.Services.TryAddSingleton(sp => new SvgCache(sp.GetRequiredService<ImageOptions>().SvgCacheEntryLimit));
 
         // Application.Current is not available during builder configuration, so defer applying the
         // theme until the app handler is created - the earliest point it exists, and crucially before

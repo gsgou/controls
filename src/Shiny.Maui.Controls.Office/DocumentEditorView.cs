@@ -1,4 +1,7 @@
 using Shiny.Controls.Office.Document;
+using Shiny.Controls.Office.Packaging;
+using Shiny.Controls.Office.Shapes;
+using Shiny.Maui.Controls.ColorPicker;
 using Shiny.Maui.Controls.FontPicker;
 using Shiny.Controls.Office.Spreadsheet;
 using TextAlignment = Shiny.Controls.Office.Text.TextAlignment;
@@ -31,6 +34,11 @@ public class DocumentEditorView : ContentView, IDisposable
     readonly Button alignCenter;
     readonly Button alignRight;
     readonly Button alignJustify;
+    readonly Button highlight;
+    readonly Button insertShape;
+    readonly Button insertTable;
+    readonly Button insertPicture;
+    readonly ColorPickerButton textColor;
 
     View? fontPicker;
     View? sizePicker;
@@ -49,8 +57,22 @@ public class DocumentEditorView : ContentView, IDisposable
         this.alignRight = MakeToggle("⯈", FontAttributes.None, () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
         this.alignJustify = MakeToggle("▤", FontAttributes.None, () => this.editor.Controller?.SetAlignment(TextAlignment.Justify));
 
+        this.highlight = MakeToggle("A\u0332", FontAttributes.None, () => { });
+        this.highlight.Clicked += async (_, _) => await this.PickHighlightAsync();
+
+        this.insertShape = MakeToggle("◇", FontAttributes.None, () => { });
+        this.insertShape.Clicked += async (_, _) => await this.InsertShapeAsync();
+
+        this.insertTable = MakeToggle("▦", FontAttributes.None, () => { });
+        this.insertTable.Clicked += async (_, _) => await this.InsertTableAsync();
+
+        this.insertPicture = MakeToggle("🖼", FontAttributes.None, () => { });
+        this.insertPicture.Clicked += async (_, _) => await this.InsertPictureAsync();
+
         this.undo = MakeToggle("↶", FontAttributes.None, () => this.editor.Controller?.Undo());
         this.redo = MakeToggle("↷", FontAttributes.None, () => this.editor.Controller?.Redo());
+
+        this.textColor = this.CreateColorPicker();
 
         this.bar = new HorizontalStackLayout { Spacing = 4, Padding = new Thickness(8, 6) };
         this.barScroller = new ScrollView
@@ -77,6 +99,7 @@ public class DocumentEditorView : ContentView, IDisposable
         this.Content = this.root;
 
         this.BuildBar();
+        this.AttachDrop();
     }
 
     public static readonly BindableProperty DocumentProperty = BindableProperty.Create(
@@ -211,6 +234,38 @@ public class DocumentEditorView : ContentView, IDisposable
 
     public event EventHandler? DocumentChanged;
 
+    /// <summary>Raised when a dropped or chosen file could not be inserted, so a host can say so.</summary>
+    public event EventHandler<OfficeDropRejected>? DropRejected;
+
+    public static readonly BindableProperty ShapeWidthProperty = BindableProperty.Create(
+        nameof(ShapeWidth), typeof(double), typeof(DocumentEditorView), 160d);
+
+    public static readonly BindableProperty ShapeHeightProperty = BindableProperty.Create(
+        nameof(ShapeHeight), typeof(double), typeof(DocumentEditorView), 120d);
+
+    public static readonly BindableProperty PictureWidthProperty = BindableProperty.Create(
+        nameof(PictureWidth), typeof(double), typeof(DocumentEditorView), 240d);
+
+    /// <summary>The size of shape the toolbar inserts, in pixels.</summary>
+    public double ShapeWidth
+    {
+        get => (double)this.GetValue(ShapeWidthProperty);
+        set => this.SetValue(ShapeWidthProperty, value);
+    }
+
+    public double ShapeHeight
+    {
+        get => (double)this.GetValue(ShapeHeightProperty);
+        set => this.SetValue(ShapeHeightProperty, value);
+    }
+
+    /// <summary>How wide an inserted picture is, in pixels. Its height follows the image's own ratio.</summary>
+    public double PictureWidth
+    {
+        get => (double)this.GetValue(PictureWidthProperty);
+        set => this.SetValue(PictureWidthProperty, value);
+    }
+
     /// <summary>Routes a physical key press to the editor. See <see cref="DocumentEditor.HandleKey"/>.</summary>
     public bool HandleKey(EditorKey key, bool shift = false, bool control = false)
     {
@@ -238,6 +293,13 @@ public class DocumentEditorView : ContentView, IDisposable
         this.bar.Add(this.underline);
         this.bar.Add(this.strike);
         this.bar.Add(Separator());
+        this.bar.Add(this.textColor);
+        this.bar.Add(this.highlight);
+        this.bar.Add(Separator());
+        this.bar.Add(this.insertShape);
+        this.bar.Add(this.insertTable);
+        this.bar.Add(this.insertPicture);
+        this.bar.Add(Separator());
         this.bar.Add(this.alignLeft);
         this.bar.Add(this.alignCenter);
         this.bar.Add(this.alignRight);
@@ -247,6 +309,46 @@ public class DocumentEditorView : ContentView, IDisposable
         this.bar.Add(this.redo);
     }
 
+    /// <summary>
+    /// The core package's colour picker, in its button form.
+    /// </summary>
+    /// <remarks>
+    /// Not a row of preset swatches: a document's text can be any colour, and a fixed palette is a
+    /// promise the format does not make. The button shows the colour at the caret and opens the full
+    /// spectrum — the same control the Blazor toolbar puts in this slot.
+    /// </remarks>
+    ColorPickerButton CreateColorPicker()
+    {
+        var picker = new ColorPickerButton
+        {
+            Text = string.Empty,
+            ShowOpacity = false,
+            WidthRequest = 44,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        picker.ColorChanged += (_, color) =>
+        {
+            if (this.suppressPickerEvents)
+                return;
+
+            this.editor.Controller?.SetTextColor(ToArgb(color));
+            this.AfterCommand();
+        };
+
+        return picker;
+    }
+
+    /// <summary>MAUI colours are floats in 0..1; the document kernel stores bytes.</summary>
+    static ArgbColor ToArgb(Color color) => new(
+        (byte)Math.Round(color.Alpha * 255),
+        (byte)Math.Round(color.Red * 255),
+        (byte)Math.Round(color.Green * 255),
+        (byte)Math.Round(color.Blue * 255));
+
+    static Color FromArgb(ArgbColor color) => Color.FromRgba(color.R, color.G, color.B, color.A);
+
     /// <summary>The core package's font picker, which renders each family in its own typeface.</summary>
     FontPickerButton CreateFontPicker()
     {
@@ -254,7 +356,9 @@ public class DocumentEditorView : ContentView, IDisposable
         {
             AvailableFonts = (this.FontFamilies ?? DefaultFontFamilies).ToList(),
             Placeholder = "Font",
-            WidthRequest = 150
+            WidthRequest = 150,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
         };
 
         picker.FontChanged += (_, family) =>
@@ -274,7 +378,9 @@ public class DocumentEditorView : ContentView, IDisposable
         var picker = new FontSizePickerButton
         {
             AvailableFontSizes = (this.FontSizes ?? DefaultFontSizes).ToList(),
-            WidthRequest = 84
+            WidthRequest = 84,
+            HeightRequest = ToolbarItemHeight,
+            VerticalOptions = LayoutOptions.Center
         };
 
         picker.FontSizeChanged += (_, size) =>
@@ -295,6 +401,17 @@ public class DocumentEditorView : ContentView, IDisposable
     static readonly IList<double> DefaultFontSizes =
         [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];
 
+    /// <summary>
+    /// One height for every control in the bar.
+    /// </summary>
+    /// <remarks>
+    /// 36 rather than a rounder number because that is the minimum height the core package's
+    /// FontPickerButton and ColorPickerButton ask for. Anything shorter leaves the plain buttons a
+    /// couple of pixels above the pickers, which is small enough to look like a rendering bug and
+    /// large enough to see.
+    /// </remarks>
+    const double ToolbarItemHeight = 36;
+
     static BoxView Separator() => new()
     {
         WidthRequest = 1,
@@ -312,10 +429,15 @@ public class DocumentEditorView : ContentView, IDisposable
             Text = text,
             FontAttributes = attributes,
             WidthRequest = 38,
-            HeightRequest = 34,
+            HeightRequest = ToolbarItemHeight,
             Padding = 0,
             CornerRadius = 5,
-            BackgroundColor = Colors.Transparent
+            BackgroundColor = Colors.Transparent,
+
+            // Centre, not the default Fill. A view with an explicit HeightRequest cannot fill, so MAUI
+            // falls back to placing it at the start of the row - which pinned every button to the top
+            // of a row whose height came from the taller pickers, two pixels above where it belonged.
+            VerticalOptions = LayoutOptions.Center
         };
 
         // A TapGestureRecognizer never fires on a Button, so Clicked is the only option here.
@@ -326,6 +448,97 @@ public class DocumentEditorView : ContentView, IDisposable
         };
 
         return button;
+    }
+
+    // ---- insert ----
+
+    async Task PickHighlightAsync()
+    {
+        var (chosen, color) = await OfficeMenus.PickHighlightAsync(OfficeMenus.PageOf(this));
+        if (!chosen)
+            return;
+
+        this.editor.Controller?.SetHighlight(color);
+        this.AfterCommand();
+    }
+
+    async Task InsertShapeAsync()
+    {
+        if (await OfficeMenus.PickShapeAsync(OfficeMenus.PageOf(this)) is not { } geometry)
+            return;
+
+        this.editor.Controller?.InsertShape(geometry, this.ShapeWidth, this.ShapeHeight);
+        this.AfterCommand();
+    }
+
+    async Task InsertTableAsync()
+    {
+        if (await OfficeMenus.PickTableAsync(OfficeMenus.PageOf(this)) is not { } size)
+            return;
+
+        this.editor.Controller?.InsertTable(size.Rows, size.Columns);
+        this.AfterCommand();
+    }
+
+    async Task InsertPictureAsync()
+    {
+        var (image, rejected) = await OfficeMenus.PickImageAsync();
+
+        if (rejected is not null)
+        {
+            this.DropRejected?.Invoke(this, rejected);
+            return;
+        }
+
+        if (image is null)
+            return;
+
+        this.InsertImage(image);
+    }
+
+    void InsertImage(OfficePickedImage image)
+    {
+        this.editor.Controller?.InsertImage(
+            image.Data,
+            image.ContentType,
+            this.PictureWidth,
+            name: Path.GetFileNameWithoutExtension(image.FileName));
+
+        this.AfterCommand();
+    }
+
+    // ---- file drop ----
+
+    /// <summary>
+    /// Attaches the drop gesture to the editor surface.
+    /// </summary>
+    /// <remarks>
+    /// On the editor rather than on this view, so a drop onto the toolbar is not a drop into the
+    /// document — the toolbar is chrome, and dropping a picture on the Bold button should do nothing.
+    /// </remarks>
+    void AttachDrop()
+    {
+        var drop = new DropGestureRecognizer { AllowDrop = true };
+        drop.Drop += this.OnDropAsync;
+        this.editor.GestureRecognizers.Add(drop);
+    }
+
+    async void OnDropAsync(object? sender, DropEventArgs e)
+    {
+        if (this.IsReadOnly || this.Document is null)
+            return;
+
+        try
+        {
+            // The deferral that keeps the payload alive across the await is taken inside, on the one
+            // platform that needs one — it lives on the platform args, not on these.
+            foreach (var image in await OfficeFileDrop.ReadImagesAsync(e))
+                this.InsertImage(image);
+        }
+        catch (Exception ex)
+        {
+            this.DropRejected?.Invoke(this, new OfficeDropRejected(string.Empty, ex.Message));
+        }
     }
 
     void AfterCommand()
@@ -361,6 +574,7 @@ public class DocumentEditorView : ContentView, IDisposable
         SetActive(this.italic, format.Italic);
         SetActive(this.underline, format.Underline);
         SetActive(this.strike, format.Strike);
+        SetActive(this.highlight, format.Highlight is not null);
 
         SetActive(this.alignLeft, format.Alignment == TextAlignment.Left);
         SetActive(this.alignCenter, format.Alignment == TextAlignment.Center);
@@ -386,6 +600,9 @@ public class DocumentEditorView : ContentView, IDisposable
             var sizes = this.FontSizes ?? DefaultFontSizes;
             size.SelectedFontSize = sizes.OrderBy(x => Math.Abs(x - format.FontSize)).FirstOrDefault();
         }
+
+        this.textColor.SelectedColor = FromArgb(format.Color);
+        this.textColor.IsEnabled = enabled;
 
         this.suppressPickerEvents = false;
     }

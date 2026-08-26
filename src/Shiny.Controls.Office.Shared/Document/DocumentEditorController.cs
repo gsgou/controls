@@ -1,3 +1,4 @@
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spelling;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
@@ -20,6 +21,10 @@ public sealed record CaretFormat
     public bool Underline { get; init; }
     public bool Strike { get; init; }
     public ArgbColor Color { get; init; } = new(255, 0, 0, 0);
+
+    /// <summary>The highlight behind the caret, or null when the text is not highlighted.</summary>
+    public ArgbColor? Highlight { get; init; }
+
     public TextAlignment Alignment { get; init; } = TextAlignment.Left;
     public string? StyleName { get; init; }
 }
@@ -64,6 +69,20 @@ public sealed class DocumentEditorController : DocumentController
 
     CancellationTokenSource? spellCheckDebounce;
 
+    /// <summary>
+    /// Formatting chosen with nothing selected, waiting for text to apply itself to.
+    /// </summary>
+    /// <remarks>
+    /// This is what Word does and what every editor is expected to do: put the caret somewhere, pick
+    /// 24pt, type, and what you type is 24pt. Without it a format chosen at a bare caret has no range
+    /// to act on, so the click does nothing at all — which reads as a broken toolbar rather than as a
+    /// missing feature.
+    /// </remarks>
+    readonly List<RunFormatChange> pending = new();
+
+    /// <summary>Where <see cref="pending"/> was chosen. Moving the caret off it abandons the choice.</summary>
+    DocumentPosition? pendingAt;
+
     public DocumentEditorController(WordDocument document, ITextMeasurer measurer, ISpellChecker? spellChecker = null)
         : base(document, measurer)
     {
@@ -76,6 +95,7 @@ public sealed class DocumentEditorController : DocumentController
         this.Spelling.Updated += (_, _) => this.Post(this.RaiseChanged);
         this.Selection.Changed += (_, _) =>
         {
+            this.DropPendingIfCaretMoved();
             this.RefreshCaretFormat();
             this.RaiseChanged();
         };
@@ -337,8 +357,34 @@ public sealed class DocumentEditorController : DocumentController
             return;
 
         var at = this.DeleteSelectionIfAny();
-        this.document.Execute(new InsertTextCommand(at, text));
-        this.Selection.MoveTo(at with { Offset = at.Offset + text.Length });
+        var end = at with { Offset = at.Offset + text.Length };
+
+        if (this.pending.Count == 0)
+        {
+            // The common path stays a single command. A transaction closes as a composite, which ends
+            // the coalescing run - so wrapping every keystroke in one would make each character its
+            // own undo step.
+            this.document.Execute(new InsertTextCommand(at, text));
+        }
+        else
+        {
+            // Taken and cleared before anything runs: applying the format moves through the document,
+            // and a half-applied queue left in place would be applied again by the next keystroke.
+            var formats = this.pending.ToList();
+            this.ClearPending();
+
+            // One undo step. A Ctrl+Z that took the characters away but left the formatting behind
+            // would leave the caret carrying a format nobody chose.
+            using (this.document.Undo.BeginTransaction("Typing"))
+            {
+                this.document.Execute(new InsertTextCommand(at, text));
+
+                foreach (var change in formats)
+                    this.document.Execute(new FormatRunsCommand(new DocumentRange(at, end), change));
+            }
+        }
+
+        this.Selection.MoveTo(end);
         this.AfterEdit();
     }
 
@@ -436,6 +482,17 @@ public sealed class DocumentEditorController : DocumentController
 
     public void SetTextColor(ArgbColor color) => this.ApplyRunFormat(RunFormatChange.Color(color));
 
+    /// <summary>Highlights the selection, or clears it when passed null.</summary>
+    public void SetHighlight(ArgbColor? color) => this.ApplyRunFormat(RunFormatChange.Highlight(color));
+
+    /// <summary>Highlights with <paramref name="color"/>, or clears when that colour is already on.</summary>
+    /// <remarks>
+    /// What the toolbar button does, as opposed to what the swatch gallery does: pressing the
+    /// highlight button on already-yellow text is a request to remove it, not to re-apply it.
+    /// </remarks>
+    public void ToggleHighlight(ArgbColor color)
+        => this.SetHighlight(this.CaretFormat.Highlight == color ? null : color);
+
     public void SetAlignment(TextAlignment alignment)
         => this.ApplyParagraphFormat(ParagraphFormatChange.Alignment(alignment));
 
@@ -443,24 +500,64 @@ public sealed class DocumentEditorController : DocumentController
         => this.ApplyParagraphFormat(ParagraphFormatChange.Style(styleId));
 
     /// <summary>
-    /// Applies run formatting to the selection.
+    /// Applies run formatting to the selection, or holds it for the next thing typed.
     /// </summary>
     /// <remarks>
-    /// With an empty selection the change is only reflected in <see cref="CaretFormat"/>. Word applies
-    /// it to whatever is typed next; carrying that through the OOXML needs a pending-format concept the
-    /// editor does not have yet, so the toolbar updates and the document does not.
+    /// With something selected this is immediate. With a bare caret there is no range to format, so the
+    /// change is held in <see cref="pending"/> and applied by the next <see cref="InsertText"/> — which
+    /// is what Word does. The toolbar shows it in the meantime, so the choice is visible before there
+    /// is any text carrying it.
     /// </remarks>
     void ApplyRunFormat(RunFormatChange change)
     {
         if (this.Selection.IsEmpty)
         {
-            this.CaretFormat = Preview(this.CaretFormat, change);
+            this.RememberPending(change);
+            this.RefreshCaretFormat();
             this.RaiseChanged();
             return;
         }
 
+        this.ClearPending();
         this.document.Execute(new FormatRunsCommand(this.Selection.Range, change));
         this.AfterEdit();
+    }
+
+    /// <summary>Queues a change for the next insertion, replacing any earlier one of the same kind.</summary>
+    void RememberPending(RunFormatChange change)
+    {
+        this.pendingAt = this.Selection.Focus;
+
+        // Kind rather than Name: "Bold" and "Remove Bold" are the same attribute, and the second has to
+        // replace the first rather than being applied after it.
+        if (change.Kind != RunFormatKind.Other)
+            this.pending.RemoveAll(x => x.Kind == change.Kind);
+
+        this.pending.Add(change);
+    }
+
+    void ClearPending()
+    {
+        this.pending.Clear();
+        this.pendingAt = null;
+    }
+
+    /// <summary>
+    /// Abandons a pending format when the caret is no longer where it was chosen.
+    /// </summary>
+    /// <remarks>
+    /// Anything else would be a trap: pick a colour, change your mind and click elsewhere, and the next
+    /// thing typed - somewhere unrelated, possibly much later - would come out in that colour.
+    /// </remarks>
+    void DropPendingIfCaretMoved()
+    {
+        if (this.pending.Count == 0)
+            return;
+
+        if (this.Selection.IsEmpty && this.pendingAt == this.Selection.Focus)
+            return;
+
+        this.ClearPending();
     }
 
     void ApplyParagraphFormat(ParagraphFormatChange change)
@@ -469,19 +566,408 @@ public sealed class DocumentEditorController : DocumentController
         this.AfterEdit();
     }
 
-    /// <summary>Reflects a change in the caret format without touching the document.</summary>
-    static CaretFormat Preview(CaretFormat format, RunFormatChange change) => change.Name switch
+    // ---- inserting objects ----
+
+    /// <summary>
+    /// Inserts a preset-geometry shape at the caret.
+    /// </summary>
+    /// <remarks>
+    /// Inline, in the text flow. The document view is a reflow engine with no float layer, so a shape
+    /// behaves like a very large character: it wraps with the line it is on and moves as text is typed
+    /// before it. That is a real limitation next to Word's anchored shapes, and it is also the only
+    /// honest thing to draw in a view that has no fixed page positions to anchor against.
+    /// </remarks>
+    public void InsertShape(
+        ShapeGeometry geometry,
+        double width = 160,
+        double height = 120,
+        ArgbColor? fill = null,
+        ArgbColor? outline = null,
+        string? text = null)
     {
-        "Bold" => format with { Bold = true },
-        "Remove Bold" => format with { Bold = false },
-        "Italic" => format with { Italic = true },
-        "Remove Italic" => format with { Italic = false },
-        "Underline" => format with { Underline = true },
-        "Remove Underline" => format with { Underline = false },
-        "Strikethrough" => format with { Strike = true },
-        "Remove Strikethrough" => format with { Strike = false },
-        _ => format
+        if (this.IsReadOnlyDocument)
+            return;
+
+        var run = WordContentFactory.Shape(
+            this.document.NextDrawingId(),
+            geometry,
+            width,
+            height,
+            fill ?? new ArgbColor(255, 0x44, 0x72, 0xC4),
+            outline,
+            text);
+
+        this.InsertObjectRun(run);
+    }
+
+    /// <summary>
+    /// Inserts a picture at the caret, adding its bytes to the package.
+    /// </summary>
+    /// <param name="data">The encoded image, in whatever format <paramref name="contentType"/> names.</param>
+    /// <param name="contentType">The MIME type, e.g. <c>image/png</c>.</param>
+    /// <param name="width">Display width in pixels. Null keeps the aspect ratio against <paramref name="height"/>.</param>
+    /// <param name="height">Display height in pixels. Null keeps the aspect ratio against <paramref name="width"/>.</param>
+    /// <remarks>
+    /// The bytes go in as they arrived — never re-encoded. A drop of a 12-megapixel JPEG produces a
+    /// large document, and the alternative is deciding on the user's behalf what quality their picture
+    /// should be, which is not a renderer's call to make.
+    /// </remarks>
+    public void InsertImage(
+        byte[] data,
+        string contentType,
+        double? width = null,
+        double? height = null,
+        string name = "Picture")
+    {
+        ArgumentNullException.ThrowIfNull(data);
+
+        if (this.IsReadOnlyDocument || data.Length == 0)
+            return;
+
+        if (this.document.AddImagePart(data, contentType) is not { } relationshipId)
+            return;
+
+        var (w, h) = ResolveSize(width, height);
+
+        this.InsertObjectRun(WordContentFactory.Picture(
+            this.document.NextDrawingId(), relationshipId, w, h, name));
+    }
+
+    /// <summary>
+    /// Inserts an empty table after the block the caret is in.
+    /// </summary>
+    /// <remarks>
+    /// After the paragraph rather than inside it: a table is a block, and OOXML has no way to put one
+    /// in the middle of a paragraph. Word splits the paragraph in that case; this places the table on
+    /// the boundary below, which loses nothing and never divides a sentence the user was in the middle
+    /// of writing.
+    /// </remarks>
+    public void InsertTable(int rows = 3, int columns = 3)
+    {
+        if (this.IsReadOnlyDocument)
+            return;
+
+        var block = Math.Clamp(this.Selection.Focus.Block, 0, Math.Max(0, this.Document.Blocks.Count - 1));
+
+        this.document.Execute(new InsertTableCommand(block, rows, columns));
+
+        // Into the first cell, which is where someone who just made a table wants to be typing.
+        this.Selection.MoveTo(new DocumentPosition(block + 1, 0));
+        this.AfterEdit();
+    }
+
+    void InsertObjectRun(DocumentFormat.OpenXml.Wordprocessing.Run run)
+    {
+        // An insertion replaces the selection, exactly as typing a character does.
+        if (!this.Selection.Range.IsEmpty)
+            this.document.Execute(new DeleteRangeCommand(this.Selection.Range));
+
+        var at = this.Selection.Range.Start;
+
+        this.document.Execute(new InsertInlineObjectCommand(at, run));
+        this.Selection.MoveTo(at with { Offset = at.Offset + 1 });
+        this.AfterEdit();
+    }
+
+    /// <summary>Fills in whichever of width and height was not given, keeping a 4:3 default.</summary>
+    static (double Width, double Height) ResolveSize(double? width, double? height) => (width, height) switch
+    {
+        ({ } w, { } h) => (Math.Max(1, w), Math.Max(1, h)),
+        ({ } w, null) => (Math.Max(1, w), Math.Max(1, w * 0.75)),
+        (null, { } h) => (Math.Max(1, h * 4 / 3), Math.Max(1, h)),
+        _ => (240d, 180d)
     };
+
+    bool IsReadOnlyDocument => !this.document.IsEditable;
+
+    // ---- inline object selection, drag and resize ----
+
+    DocumentPosition? selectedObject;
+    ShapeHandle dragging = ShapeHandle.None;
+    double dragOriginX;
+    double dragOriginY;
+    double dragStartWidth;
+    double dragStartHeight;
+
+    /// <summary>Size of an object's resize handle, in document pixels.</summary>
+    public double HandleSize { get; set; } = 8;
+
+    /// <summary>The position of the selected inline object, or null when none is selected.</summary>
+    public DocumentPosition? SelectedObject => this.selectedObject;
+
+    /// <summary>The selected inline object itself, or null.</summary>
+    public InlineObject? SelectedInline
+        => this.selectedObject is { } at && this.Document.Blocks.ElementAtOrDefault(at.Block) is DocumentParagraph paragraph
+            ? InlineAt(paragraph, at.Offset)
+            : null;
+
+    /// <summary>The inline object at an offset within a projected paragraph, or null.</summary>
+    static InlineObject? InlineAt(DocumentParagraph paragraph, int offset)
+    {
+        var cursor = 0;
+
+        foreach (var run in paragraph.Runs)
+        {
+            if (run.IsBreak)
+                continue;
+
+            var length = run.Inline is null ? run.Text.Length : 1;
+
+            if (run.Inline is { } inline && offset >= cursor && offset < cursor + length)
+                return inline;
+
+            cursor += length;
+        }
+
+        return null;
+    }
+
+    public bool IsDraggingObject => this.dragging != ShapeHandle.None;
+
+    /// <summary>Selects an inline object, or clears the selection when passed null.</summary>
+    public void SelectObject(DocumentPosition? at)
+    {
+        if (this.selectedObject == at)
+            return;
+
+        this.selectedObject = at;
+
+        // A selected object and a text caret are alternatives, not companions: leaving the caret
+        // blinking somewhere else while an image is framed reads as two selections at once.
+        if (at is { } position)
+            this.Selection.MoveTo(position);
+
+        this.CaretMoved?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void ClearObjectSelection() => this.SelectObject(null);
+
+    /// <summary>The inline object under a point in viewport coordinates, or null.</summary>
+    public DocumentPosition? ObjectAt(double x, double y)
+    {
+        var documentX = x - this.PageX - this.PagePadding;
+        var documentY = y + this.Viewport.ScrollY;
+        var blocks = this.Blocks;
+
+        for (var i = 0; i < blocks.Count; i++)
+        {
+            if (blocks[i] is not LaidOutParagraph paragraph)
+                continue;
+
+            if (documentY < paragraph.Y || documentY > paragraph.Y + paragraph.Height)
+                continue;
+
+            foreach (var line in paragraph.Lines)
+            {
+                foreach (var run in line.Runs)
+                {
+                    if (run.Inline is null)
+                        continue;
+
+                    var rect = RunBounds(paragraph, line, run);
+                    if (rect.Contains(documentX, documentY))
+                        return new DocumentPosition(i, run.SourceOffset);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The selected object's rectangle in document coordinates, or null.</summary>
+    public GridRectLike? SelectedObjectBounds()
+    {
+        if (this.selectedObject is not { } at)
+            return null;
+
+        if (this.Blocks.ElementAtOrDefault(at.Block) is not LaidOutParagraph paragraph)
+            return null;
+
+        foreach (var line in paragraph.Lines)
+        {
+            foreach (var run in line.Runs)
+            {
+                if (run.Inline is not null && run.SourceOffset == at.Offset)
+                    return RunBounds(paragraph, line, run);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The eight resize handles around the selected object, in document coordinates.
+    /// </summary>
+    /// <remarks>
+    /// Emitted even for an object too small to hold them, for the same reason the slide editor does:
+    /// a handle a user cannot grab is an object they cannot resize back.
+    /// </remarks>
+    public IEnumerable<(ShapeHandle Handle, GridRectLike Rect)> SelectedObjectHandles()
+    {
+        if (this.SelectedObjectBounds() is not { } bounds)
+            yield break;
+
+        var half = this.HandleSize / 2;
+
+        GridRectLike At(double x, double y)
+            => new(x - half, y - half, this.HandleSize, this.HandleSize);
+
+        yield return (ShapeHandle.TopLeft, At(bounds.X, bounds.Y));
+        yield return (ShapeHandle.Top, At(bounds.X + (bounds.Width / 2), bounds.Y));
+        yield return (ShapeHandle.TopRight, At(bounds.Right, bounds.Y));
+        yield return (ShapeHandle.Right, At(bounds.Right, bounds.Y + (bounds.Height / 2)));
+        yield return (ShapeHandle.BottomRight, At(bounds.Right, bounds.Bottom));
+        yield return (ShapeHandle.Bottom, At(bounds.X + (bounds.Width / 2), bounds.Bottom));
+        yield return (ShapeHandle.BottomLeft, At(bounds.X, bounds.Bottom));
+        yield return (ShapeHandle.Left, At(bounds.X, bounds.Y + (bounds.Height / 2)));
+    }
+
+    /// <summary>The handle under a point in viewport coordinates.</summary>
+    public ShapeHandle HandleAt(double x, double y)
+    {
+        var documentX = x - this.PageX - this.PagePadding;
+        var documentY = y + this.Viewport.ScrollY;
+
+        foreach (var (handle, rect) in this.SelectedObjectHandles())
+        {
+            if (rect.Contains(documentX, documentY))
+                return handle;
+        }
+
+        return ShapeHandle.None;
+    }
+
+    /// <summary>
+    /// Starts a pointer interaction on an inline object, returning true when one was taken.
+    /// </summary>
+    /// <remarks>
+    /// Returning false is the signal that the gesture belongs to the text caret instead, which is what
+    /// lets a host call this first and fall through to ordinary click-and-drag selection without
+    /// having to know anything about objects.
+    /// </remarks>
+    public bool BeginObjectDrag(double x, double y)
+    {
+        if (this.IsReadOnlyDocument)
+            return false;
+
+        // A handle on the current selection takes priority over whatever is underneath it: the
+        // handles sit on the object's own edge, so the two always overlap.
+        var handle = this.HandleAt(x, y);
+
+        if (handle == ShapeHandle.None)
+        {
+            if (this.ObjectAt(x, y) is not { } hit)
+            {
+                this.ClearObjectSelection();
+                return false;
+            }
+
+            this.SelectObject(hit);
+
+            // Selecting is the whole gesture; a drag only starts from a handle, because an inline
+            // object has no free position to be dragged to.
+            return true;
+        }
+
+        if (this.SelectedInline is not { } inline)
+            return false;
+
+        this.dragging = handle;
+        this.dragOriginX = x;
+        this.dragOriginY = y;
+        this.dragStartWidth = inline.Width;
+        this.dragStartHeight = inline.Height;
+
+        return true;
+    }
+
+    /// <summary>Extends a resize drag.</summary>
+    /// <remarks>
+    /// The size is always computed from where the drag <em>started</em> rather than from the previous
+    /// move, so rounding cannot accumulate across a long drag and the object cannot creep.
+    /// </remarks>
+    public void DragObject(double x, double y)
+    {
+        if (this.dragging == ShapeHandle.None || this.selectedObject is not { } at)
+            return;
+
+        var dx = x - this.dragOriginX;
+        var dy = y - this.dragOriginY;
+
+        var width = this.dragStartWidth;
+        var height = this.dragStartHeight;
+
+        switch (this.dragging)
+        {
+            case ShapeHandle.Right or ShapeHandle.TopRight or ShapeHandle.BottomRight:
+                width += dx;
+                break;
+
+            case ShapeHandle.Left or ShapeHandle.TopLeft or ShapeHandle.BottomLeft:
+                width -= dx;
+                break;
+        }
+
+        switch (this.dragging)
+        {
+            case ShapeHandle.Bottom or ShapeHandle.BottomLeft or ShapeHandle.BottomRight:
+                height += dy;
+                break;
+
+            case ShapeHandle.Top or ShapeHandle.TopLeft or ShapeHandle.TopRight:
+                height -= dy;
+                break;
+        }
+
+        // A corner keeps the aspect ratio, which is what stops a dragged picture from being squashed.
+        // An edge handle is the deliberate way to change one dimension alone.
+        if (this.dragging is ShapeHandle.TopLeft or ShapeHandle.TopRight or ShapeHandle.BottomLeft or ShapeHandle.BottomRight
+            && this.dragStartHeight > 0)
+        {
+            height = width * (this.dragStartHeight / this.dragStartWidth);
+        }
+
+        this.document.Execute(new ResizeInlineObjectCommand(
+            at,
+            Math.Max(MinimumObjectSize, width),
+            Math.Max(MinimumObjectSize, height)));
+
+        this.AfterEdit();
+    }
+
+    public void EndObjectDrag() => this.dragging = ShapeHandle.None;
+
+    /// <summary>Removes the selected inline object.</summary>
+    public void DeleteSelectedObject()
+    {
+        if (this.IsReadOnlyDocument || this.selectedObject is not { } at)
+            return;
+
+        this.document.Execute(new DeleteRangeCommand(new DocumentRange(at, at with { Offset = at.Offset + 1 })));
+        this.ClearObjectSelection();
+        this.Selection.MoveTo(at);
+        this.AfterEdit();
+    }
+
+    /// <summary>How small a drag is allowed to make an object before it stops shrinking.</summary>
+    /// <remarks>
+    /// Not zero, and not one: an object dragged to nothing has no handles left to drag it back out by,
+    /// so the floor is the size of a handle.
+    /// </remarks>
+    const double MinimumObjectSize = 12;
+
+    /// <summary>A laid-out run's box in document coordinates.</summary>
+    /// <remarks>
+    /// An inline object sits on the baseline and runs upward from it, which is where the layout engine
+    /// reserved its space and where the painter draws it.
+    /// </remarks>
+    static GridRectLike RunBounds(LaidOutParagraph paragraph, LaidOutLine line, LaidOutRun run)
+    {
+        var baseline = paragraph.Y + line.Y + line.Ascent;
+        var height = run.Inline?.Height ?? run.Height;
+
+        return new GridRectLike(paragraph.X + run.X, baseline - height, run.Width, height);
+    }
 
     public void Undo()
     {
@@ -680,6 +1166,10 @@ public sealed class DocumentEditorController : DocumentController
             if (x < run.X)
                 return run.SourceOffset;
 
+            // An object is one character and cannot be clicked into, only on one side or the other.
+            if (run.Inline is not null)
+                return run.SourceOffset + (x > run.X + (run.Width / 2) ? 1 : 0);
+
             // Walk the run's characters and take the boundary the click is closest to, so clicking the
             // right half of a glyph puts the caret after it rather than before.
             var local = 0;
@@ -717,6 +1207,14 @@ public sealed class DocumentEditorController : DocumentController
         {
             if (position.Offset < run.SourceOffset)
                 break;
+
+            // An inline object has no text to measure through: the caret is either at its left edge
+            // or, once the offset has passed it, at its right.
+            if (run.Inline is not null)
+            {
+                x = paragraph.X + run.X + (position.Offset > run.SourceOffset ? run.Width : 0);
+                continue;
+            }
 
             var local = Math.Min(position.Offset - run.SourceOffset, run.Text.Length);
             x = paragraph.X + run.X + this.Measurer.Measure(run.Text.AsSpan(0, local), run.Style).Width;
@@ -837,7 +1335,7 @@ public sealed class DocumentEditorController : DocumentController
             style = run.Style;
         }
 
-        this.CaretFormat = new CaretFormat
+        var format = new CaretFormat
         {
             FontFamily = style.FontFamily,
             FontSize = OoxmlUnits.PixelsToPointsApprox(style.FontSize),
@@ -846,9 +1344,18 @@ public sealed class DocumentEditorController : DocumentController
             Underline = style.Underline != UnderlineStyle.None,
             Strike = style.Strike,
             Color = style.Color,
+            Highlight = style.Highlight,
             Alignment = paragraph.Format.Alignment,
             StyleName = paragraph.StyleName
         };
+
+        // Layered over what the document says, in the order they were chosen. Without this the toolbar
+        // would snap back to the run under the caret the moment anything raised Changed - which the
+        // pending change itself does - and the choice would look like it had been ignored.
+        foreach (var change in this.pending)
+            format = change.PreviewCaret?.Invoke(format) ?? format;
+
+        this.CaretFormat = format;
     }
 }
 
@@ -857,4 +1364,7 @@ public readonly record struct GridRectLike(double X, double Y, double Width, dou
 {
     public double Right => this.X + this.Width;
     public double Bottom => this.Y + this.Height;
+
+    public bool Contains(double x, double y)
+        => x >= this.X && x <= this.Right && y >= this.Y && y <= this.Bottom;
 }

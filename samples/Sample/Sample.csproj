@@ -38,6 +38,11 @@
 		<MauiFont Include="Resources\Fonts\*" />
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiAsset Include="..\..\README.md" LogicalName="README.md" />
+
+		<!-- Shows ShinyImage's resource:// scheme against a real embedded resource. The explicit
+		     LogicalName is what the URI names, so the sample does not depend on how MSBuild would
+		     otherwise derive it from the folder. -->
+		<EmbeddedResource Include="Assets\embedded-icon.svg" LogicalName="Sample.Assets.embedded-icon.svg" />
 	</ItemGroup>
 
 	<ItemGroup>

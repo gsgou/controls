@@ -182,8 +182,12 @@ sealed class WordStyleResolver
 
                     break;
 
-                case Highlight highlight when OoxmlUnits.EnumAttribute(highlight, "val") is { } value:
-                    style = style with { Highlight = HighlightColor(value) };
+                case Highlight highlight when highlight.Val?.InnerText is { Length: > 0 } value:
+                    // Read off the typed Val rather than by attribute name: w:highlight's val is in
+                    // the w namespace, and asking for it in the empty one throws rather than
+                    // returning null — which meant every document carrying a highlight failed to
+                    // open at all.
+                    style = style with { Highlight = HighlightPalette.ColorOf(value) };
                     break;
 
                 case VerticalTextAlignment vertical when vertical.Val?.Value is { } alignment:
@@ -292,25 +296,6 @@ sealed class WordStyleResolver
         return true;
     }
 
-    static ArgbColor HighlightColor(string name) => name.ToLowerInvariant() switch
-    {
-        "yellow" => new ArgbColor(255, 255, 255, 0),
-        "green" => new ArgbColor(255, 0, 255, 0),
-        "cyan" => new ArgbColor(255, 0, 255, 255),
-        "magenta" => new ArgbColor(255, 255, 0, 255),
-        "blue" => new ArgbColor(255, 0, 0, 255),
-        "red" => new ArgbColor(255, 255, 0, 0),
-        "darkblue" => new ArgbColor(255, 0, 0, 139),
-        "darkcyan" => new ArgbColor(255, 0, 139, 139),
-        "darkgreen" => new ArgbColor(255, 0, 100, 0),
-        "darkmagenta" => new ArgbColor(255, 139, 0, 139),
-        "darkred" => new ArgbColor(255, 139, 0, 0),
-        "darkyellow" => new ArgbColor(255, 128, 128, 0),
-        "darkgray" => new ArgbColor(255, 169, 169, 169),
-        "lightgray" => new ArgbColor(255, 211, 211, 211),
-        "black" => new ArgbColor(255, 0, 0, 0),
-        _ => new ArgbColor(255, 255, 255, 0)
-    };
 }
 
 /// <summary>The major/minor font pair a theme defines, which styles reference instead of a font name.</summary>

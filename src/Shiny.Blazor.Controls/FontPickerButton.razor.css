@@ -1,0 +1,60 @@
+.shiny-fontpickerbutton {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    vertical-align: middle;
+}
+
+.shiny-fontpickerbutton-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--shiny-spacing-2, 8px);
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 132px;
+    height: var(--shiny-picker-height, 30px);
+    padding: 0 8px;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-radius: var(--shiny-shape-corner-small, 5px);
+    background: var(--shiny-color-surface, #fff);
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shiny-fontpickerbutton-trigger:disabled { opacity: 0.35; cursor: default; }
+
+.shiny-fontpickerbutton-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* The caret is chrome, so it stays in the UI face however the trigger is set. */
+.shiny-fontpickerbutton-caret {
+    flex: 0 0 auto;
+    font-family: var(--shiny-type-font-family, system-ui, sans-serif);
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+.shiny-fontpickerbutton-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.shiny-fontpickerbutton-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 41;
+    min-width: 280px;
+    border: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    border-radius: var(--shiny-shape-corner-medium, 8px);
+    background: var(--shiny-color-surface, #fff);
+    box-shadow: var(--shiny-elevation-3, 0 8px 24px rgba(0, 0, 0, 0.18));
+    overflow: hidden;
+}

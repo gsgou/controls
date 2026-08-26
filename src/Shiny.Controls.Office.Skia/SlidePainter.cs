@@ -1,4 +1,5 @@
 using Shiny.Controls.Office.Presentation;
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using SkiaSharp;
@@ -201,7 +202,7 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
         if (request.Slide.Background.IsEmpty)
             return;
 
-        this.ApplyFill(request.Slide.Background, bounds);
+        ShapePainting.ApplyFill(this.fill, request.Slide.Background, bounds);
         canvas.DrawRect(bounds, this.fill);
         this.fill.Shader = null;
     }
@@ -231,29 +232,10 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
         {
             this.PaintTable(canvas, table, bounds, theme);
         }
-        else if (shape.Geometry != ShapeGeometry.None)
+        else
         {
-            using var path = BuildPath(shape, bounds);
-
-            if (!shape.Fill.IsEmpty && shape.Geometry != ShapeGeometry.Line)
-            {
-                this.ApplyFill(shape.Fill, bounds);
-                canvas.DrawPath(path, this.fill);
-                this.fill.Shader = null;
-            }
-
-            if (shape.Outline is { } outline)
-            {
-                this.stroke.Color = ToSk(outline.Color);
-                this.stroke.StrokeWidth = (float)outline.Width;
-                this.stroke.PathEffect = outline.Dashed
-                    ? SKPathEffect.CreateDash([(float)outline.Width * 3, (float)outline.Width * 2], 0)
-                    : null;
-
-                canvas.DrawPath(path, this.stroke);
-                this.stroke.PathEffect?.Dispose();
-                this.stroke.PathEffect = null;
-            }
+            ShapePainting.DrawShape(
+                canvas, this.fill, this.stroke, shape.Geometry, bounds, shape.Fill, shape.Outline, shape.CornerRadius);
         }
 
         if (shape.Text is { } text)
@@ -262,245 +244,6 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
         canvas.Restore();
     }
 
-    static SKPath BuildPath(SlideShape shape, SKRect bounds)
-    {
-        var path = new SKPath();
-        var w = bounds.Width;
-        var h = bounds.Height;
-
-        switch (shape.Geometry)
-        {
-            case ShapeGeometry.Ellipse:
-                path.AddOval(bounds);
-                break;
-
-            case ShapeGeometry.RoundedRectangle:
-                var radius = (float)(Math.Min(w, h) * shape.CornerRadius);
-                path.AddRoundRect(bounds, radius, radius);
-                break;
-
-            case ShapeGeometry.Triangle:
-                path.MoveTo(bounds.MidX, bounds.Top);
-                path.LineTo(bounds.Right, bounds.Bottom);
-                path.LineTo(bounds.Left, bounds.Bottom);
-                path.Close();
-                break;
-
-            case ShapeGeometry.RightTriangle:
-                path.MoveTo(bounds.Left, bounds.Top);
-                path.LineTo(bounds.Left, bounds.Bottom);
-                path.LineTo(bounds.Right, bounds.Bottom);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Diamond:
-                path.MoveTo(bounds.MidX, bounds.Top);
-                path.LineTo(bounds.Right, bounds.MidY);
-                path.LineTo(bounds.MidX, bounds.Bottom);
-                path.LineTo(bounds.Left, bounds.MidY);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Line:
-                // A connector's box encodes its direction; flips are applied by the caller.
-                path.MoveTo(bounds.Left, bounds.Top);
-                path.LineTo(bounds.Right, bounds.Bottom);
-                break;
-
-            case ShapeGeometry.RightArrow:
-                AddArrow(path, bounds, 0);
-                break;
-
-            case ShapeGeometry.LeftArrow:
-                AddArrow(path, bounds, 180);
-                break;
-
-            case ShapeGeometry.UpArrow:
-                AddArrow(path, bounds, 270);
-                break;
-
-            case ShapeGeometry.DownArrow:
-                AddArrow(path, bounds, 90);
-                break;
-
-            case ShapeGeometry.Pentagon:
-                AddPolygon(path, bounds, 5, -90);
-                break;
-
-            case ShapeGeometry.Hexagon:
-                AddPolygon(path, bounds, 6, 0);
-                break;
-
-            case ShapeGeometry.Star5:
-                AddStar(path, bounds, 5);
-                break;
-
-            case ShapeGeometry.Chevron:
-                var notch = w * 0.25f;
-                path.MoveTo(bounds.Left, bounds.Top);
-                path.LineTo(bounds.Right - notch, bounds.Top);
-                path.LineTo(bounds.Right, bounds.MidY);
-                path.LineTo(bounds.Right - notch, bounds.Bottom);
-                path.LineTo(bounds.Left, bounds.Bottom);
-                path.LineTo(bounds.Left + notch, bounds.MidY);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Parallelogram:
-                var slant = w * 0.2f;
-                path.MoveTo(bounds.Left + slant, bounds.Top);
-                path.LineTo(bounds.Right, bounds.Top);
-                path.LineTo(bounds.Right - slant, bounds.Bottom);
-                path.LineTo(bounds.Left, bounds.Bottom);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Trapezoid:
-                var inset = w * 0.2f;
-                path.MoveTo(bounds.Left + inset, bounds.Top);
-                path.LineTo(bounds.Right - inset, bounds.Top);
-                path.LineTo(bounds.Right, bounds.Bottom);
-                path.LineTo(bounds.Left, bounds.Bottom);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Plus:
-                var armX = w * 0.33f;
-                var armY = h * 0.33f;
-                path.MoveTo(bounds.Left + armX, bounds.Top);
-                path.LineTo(bounds.Right - armX, bounds.Top);
-                path.LineTo(bounds.Right - armX, bounds.Top + armY);
-                path.LineTo(bounds.Right, bounds.Top + armY);
-                path.LineTo(bounds.Right, bounds.Bottom - armY);
-                path.LineTo(bounds.Right - armX, bounds.Bottom - armY);
-                path.LineTo(bounds.Right - armX, bounds.Bottom);
-                path.LineTo(bounds.Left + armX, bounds.Bottom);
-                path.LineTo(bounds.Left + armX, bounds.Bottom - armY);
-                path.LineTo(bounds.Left, bounds.Bottom - armY);
-                path.LineTo(bounds.Left, bounds.Top + armY);
-                path.LineTo(bounds.Left + armX, bounds.Top + armY);
-                path.Close();
-                break;
-
-            case ShapeGeometry.Can:
-                var lip = h * 0.12f;
-                path.AddOval(new SKRect(bounds.Left, bounds.Top, bounds.Right, bounds.Top + lip * 2));
-                path.AddRect(new SKRect(bounds.Left, bounds.Top + lip, bounds.Right, bounds.Bottom - lip));
-                path.AddOval(new SKRect(bounds.Left, bounds.Bottom - lip * 2, bounds.Right, bounds.Bottom));
-                break;
-
-            case ShapeGeometry.Cloud:
-                // Overlapping circles, which is close enough for a shape used decoratively.
-                path.AddOval(new SKRect(bounds.Left, bounds.Top + h * 0.3f, bounds.Left + w * 0.5f, bounds.Bottom));
-                path.AddOval(new SKRect(bounds.Left + w * 0.2f, bounds.Top, bounds.Left + w * 0.75f, bounds.Bottom - h * 0.15f));
-                path.AddOval(new SKRect(bounds.Left + w * 0.5f, bounds.Top + h * 0.25f, bounds.Right, bounds.Bottom));
-                break;
-
-            default:
-                path.AddRect(bounds);
-                break;
-        }
-
-        return path;
-    }
-
-    static void AddArrow(SKPath path, SKRect bounds, double rotationDegrees)
-    {
-        // Built pointing right, then rotated about the centre.
-        var w = bounds.Width;
-        var h = bounds.Height;
-        var headStart = bounds.Left + w * 0.6f;
-        var shaftTop = bounds.Top + h * 0.3f;
-        var shaftBottom = bounds.Bottom - h * 0.3f;
-
-        path.MoveTo(bounds.Left, shaftTop);
-        path.LineTo(headStart, shaftTop);
-        path.LineTo(headStart, bounds.Top);
-        path.LineTo(bounds.Right, bounds.MidY);
-        path.LineTo(headStart, bounds.Bottom);
-        path.LineTo(headStart, shaftBottom);
-        path.LineTo(bounds.Left, shaftBottom);
-        path.Close();
-
-        if (rotationDegrees != 0)
-            path.Transform(SKMatrix.CreateRotationDegrees((float)rotationDegrees, bounds.MidX, bounds.MidY));
-    }
-
-    static void AddPolygon(SKPath path, SKRect bounds, int sides, double startAngleDegrees)
-    {
-        var cx = bounds.MidX;
-        var cy = bounds.MidY;
-        var rx = bounds.Width / 2;
-        var ry = bounds.Height / 2;
-
-        for (var i = 0; i < sides; i++)
-        {
-            var angle = (startAngleDegrees + i * 360d / sides) * Math.PI / 180;
-            var x = (float)(cx + rx * Math.Cos(angle));
-            var y = (float)(cy + ry * Math.Sin(angle));
-
-            if (i == 0)
-                path.MoveTo(x, y);
-            else
-                path.LineTo(x, y);
-        }
-
-        path.Close();
-    }
-
-    static void AddStar(SKPath path, SKRect bounds, int points)
-    {
-        var cx = bounds.MidX;
-        var cy = bounds.MidY;
-        var outerX = bounds.Width / 2;
-        var outerY = bounds.Height / 2;
-        var innerRatio = 0.4;
-
-        for (var i = 0; i < points * 2; i++)
-        {
-            var angle = (-90 + i * 180d / points) * Math.PI / 180;
-            var ratio = i % 2 == 0 ? 1 : innerRatio;
-            var x = (float)(cx + outerX * ratio * Math.Cos(angle));
-            var y = (float)(cy + outerY * ratio * Math.Sin(angle));
-
-            if (i == 0)
-                path.MoveTo(x, y);
-            else
-                path.LineTo(x, y);
-        }
-
-        path.Close();
-    }
-
-    void ApplyFill(ShapeFill shapeFill, SKRect bounds)
-    {
-        this.fill.Shader?.Dispose();
-        this.fill.Shader = null;
-
-        if (shapeFill.Solid is { } solid)
-        {
-            this.fill.Color = ToSk(solid);
-            return;
-        }
-
-        if (shapeFill.GradientStops.Count == 0)
-            return;
-
-        var colors = shapeFill.GradientStops.Select(x => ToSk(x.Color)).ToArray();
-        var positions = shapeFill.GradientStops.Select(x => (float)x.Position).ToArray();
-
-        var radians = shapeFill.GradientAngle * Math.PI / 180;
-        var dx = (float)Math.Cos(radians) * bounds.Width / 2;
-        var dy = (float)Math.Sin(radians) * bounds.Height / 2;
-
-        this.fill.Color = SKColors.White;
-        this.fill.Shader = SKShader.CreateLinearGradient(
-            new SKPoint(bounds.MidX - dx, bounds.MidY - dy),
-            new SKPoint(bounds.MidX + dx, bounds.MidY + dy),
-            colors,
-            positions,
-            SKShaderTileMode.Clamp);
-    }
 
     void PaintTextBody(SKCanvas canvas, ShapeTextBody body, SKRect bounds, SlideTheme theme)
     {
@@ -541,11 +284,24 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
                     if (run.Text.Length == 0)
                         continue;
 
-                    this.fill.Color = ToSk(run.Style.Color);
                     this.fill.Shader = null;
-
                     var x = left + (float)run.X;
-                    canvas.DrawText(run.Text, x, baseline, SKTextAlign.Left, measurer.GetFont(run.Style), this.fill);
+                    var glyphFont = measurer.GetFont(run.Style);
+
+                    // Behind the glyphs, and sized from the font's own metrics rather than the line's:
+                    // a line box is as tall as its tallest run, so measuring the band from it would
+                    // give a small highlighted word a stripe the height of the heading beside it.
+                    if (run.Style.Highlight is { } runHighlight)
+                    {
+                        this.fill.Color = ToSk(runHighlight);
+                        var metrics = glyphFont.Metrics;
+                        canvas.DrawRect(
+                            new SKRect(x, baseline + metrics.Ascent, x + (float)run.Width, baseline + metrics.Descent),
+                            this.fill);
+                    }
+
+                    this.fill.Color = ToSk(run.Style.Color);
+                    canvas.DrawText(run.Text, x, baseline, SKTextAlign.Left, glyphFont, this.fill);
 
                     if (run.Style.Underline != UnderlineStyle.None)
                     {

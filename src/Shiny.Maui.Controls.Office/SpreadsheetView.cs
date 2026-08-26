@@ -23,6 +23,8 @@ public class SpreadsheetView : ContentView, IDisposable
     readonly SKCanvasView canvas;
     readonly Entry editor;
     readonly AbsoluteLayout root;
+    readonly SheetTabStrip sheetTabs;
+    readonly Grid layout;
     readonly SpreadsheetPainter painter = new();
 
     SpreadsheetController? controller;
@@ -52,7 +54,23 @@ public class SpreadsheetView : ContentView, IDisposable
         AbsoluteLayout.SetLayoutBounds(this.canvas, new Rect(0, 0, 1, 1));
         this.root.Add(this.editor);
 
-        this.Content = this.root;
+        this.sheetTabs = new SheetTabStrip();
+        this.sheetTabs.Changed += this.OnSheetTabsChanged;
+
+        this.layout = new Grid
+        {
+            RowDefinitions = [new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)]
+        };
+
+        this.layout.Add(this.root);
+        this.layout.Add(this.sheetTabs, 0, 1);
+
+        // The canvas no longer fills this view - the strip takes a slice off the bottom - so the grid
+        // has to be sized from the canvas rather than from the control, or every pointer coordinate
+        // and every visible row is out by the height of the tabs.
+        this.canvas.SizeChanged += this.OnCanvasSizeChanged;
+
+        this.Content = this.layout;
     }
 
     public static readonly BindableProperty WorkbookProperty = BindableProperty.Create(
@@ -72,7 +90,26 @@ public class SpreadsheetView : ContentView, IDisposable
         typeof(SpreadsheetTheme),
         typeof(SpreadsheetView),
         SpreadsheetTheme.Light,
-        propertyChanged: (b, _, _) => ((SpreadsheetView)b).Invalidate());
+        propertyChanged: (b, _, value) =>
+        {
+            var view = (SpreadsheetView)b;
+            view.sheetTabs.Theme = (SpreadsheetTheme)value;
+            view.Invalidate();
+        });
+
+    public static readonly BindableProperty ShowSheetTabsProperty = BindableProperty.Create(
+        nameof(ShowSheetTabs),
+        typeof(bool),
+        typeof(SpreadsheetView),
+        true,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateSheetTabs());
+
+    public static readonly BindableProperty AllowSheetEditingProperty = BindableProperty.Create(
+        nameof(AllowSheetEditing),
+        typeof(bool),
+        typeof(SpreadsheetView),
+        true,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateSheetTabs());
 
     public Workbook? Workbook
     {
@@ -92,20 +129,46 @@ public class SpreadsheetView : ContentView, IDisposable
         set => this.SetValue(ThemeProperty, value);
     }
 
+    /// <summary>
+    /// Whether to show the strip of sheet tabs under the grid. On by default: a workbook with no way
+    /// to reach its other sheets is a worse default than a single tab that does nothing.
+    /// </summary>
+    public bool ShowSheetTabs
+    {
+        get => (bool)this.GetValue(ShowSheetTabsProperty);
+        set => this.SetValue(ShowSheetTabsProperty, value);
+    }
+
+    /// <summary>
+    /// Whether the tab strip can add, rename, reorder, hide and delete sheets, as opposed to only
+    /// switching between them.
+    /// </summary>
+    public bool AllowSheetEditing
+    {
+        get => (bool)this.GetValue(AllowSheetEditingProperty);
+        set => this.SetValue(AllowSheetEditingProperty, value);
+    }
+
     /// <summary>The live controller, so a toolbar or formula bar can drive the same state.</summary>
     public SpreadsheetController? Controller => this.controller;
 
     /// <summary>Raised after a cell is committed.</summary>
     public event EventHandler<CellRef>? CellChanged;
 
+    /// <summary>Raised when the sheet on screen changes, by a tab tap or by a sheet edit.</summary>
+    public event EventHandler<Worksheet>? ActiveSheetChanged;
+
+    /// <summary>The tab strip, exposed so a host can hide or restyle it beyond the two properties above.</summary>
+    public SheetTabStrip SheetTabs => this.sheetTabs;
+
     void Rebuild()
     {
-        this.DetachController();
-
         var workbook = this.Workbook;
         if (workbook is null)
         {
+            this.DetachController();
             this.controller = null;
+            this.UpdateSheetTabs();
             this.Invalidate();
             return;
         }
@@ -116,23 +179,63 @@ public class SpreadsheetView : ContentView, IDisposable
 
         if (sheet is null)
         {
+            this.DetachController();
             this.controller = null;
+            this.UpdateSheetTabs();
             this.Invalidate();
             return;
         }
 
+        // Switch rather than rebuild when it is the same workbook. A new controller would throw away
+        // every sheet's remembered selection, scroll position and column widths - and since the tab
+        // strip writes the sheet name back through this property, that would happen on every tap.
+        if (this.controller is { } existing && ReferenceEquals(existing.Workbook, workbook))
+        {
+            if (!ReferenceEquals(existing.Sheet, sheet))
+                existing.SwitchSheet(sheet);
+
+            this.UpdateSheetTabs();
+            this.Invalidate();
+            return;
+        }
+
+        this.DetachController();
         this.controller = new SpreadsheetController(workbook, sheet);
         this.controller.Changed += this.OnControllerChanged;
         this.controller.EditingChanged += this.OnEditingChanged;
-        this.controller.Resize(this.Width > 0 ? this.Width : 800, this.Height > 0 ? this.Height : 600);
+        this.controller.ActiveSheetChanged += this.OnActiveSheetChanged;
+        this.controller.Resize(
+            this.canvas.Width > 0 ? this.canvas.Width : 800,
+            this.canvas.Height > 0 ? this.canvas.Height : 600);
+
+        this.UpdateSheetTabs();
         this.Invalidate();
     }
 
-    protected override void OnSizeAllocated(double width, double height)
+    void OnCanvasSizeChanged(object? sender, EventArgs e)
     {
-        base.OnSizeAllocated(width, height);
-        if (width > 0 && height > 0)
-            this.controller?.Resize(width, height);
+        if (this.canvas.Width > 0 && this.canvas.Height > 0)
+            this.controller?.Resize(this.canvas.Width, this.canvas.Height);
+    }
+
+    void UpdateSheetTabs()
+    {
+        this.sheetTabs.AllowEditing = this.AllowSheetEditing;
+        this.sheetTabs.Controller = this.ShowSheetTabs ? this.controller : null;
+        this.sheetTabs.Rebuild();
+    }
+
+    void OnSheetTabsChanged(object? sender, EventArgs e) => this.Invalidate();
+
+    void OnActiveSheetChanged(object? sender, Worksheet sheet)
+    {
+        // Written back so that a host binding SheetName and a tab tap do not fight: without this the
+        // next Rebuild would switch straight back to the sheet the user just left.
+        this.SetValue(SheetNameProperty, sheet.Name);
+
+        this.ActiveSheetChanged?.Invoke(this, sheet);
+        this.sheetTabs.Rebuild();
+        this.Invalidate();
     }
 
     void OnControllerChanged(object? sender, EventArgs e) => this.Invalidate();
@@ -149,7 +252,7 @@ public class SpreadsheetView : ContentView, IDisposable
         }
 
         // The surface is in device pixels while layout is in device-independent units.
-        var scale = this.Width > 0 ? (float)(e.Info.Width / this.Width) : 1f;
+        var scale = this.canvas.Width > 0 ? (float)(e.Info.Width / this.canvas.Width) : 1f;
 
         this.painter.Paint(e.Surface.Canvas, new SpreadsheetPaintRequest
         {
@@ -172,7 +275,7 @@ public class SpreadsheetView : ContentView, IDisposable
         }
 
         // Touch locations arrive in device pixels; the controller works in the same units as layout.
-        var scale = this.Width > 0 ? (float)(this.canvas.CanvasSize.Width / this.Width) : 1f;
+        var scale = this.canvas.Width > 0 ? (float)(this.canvas.CanvasSize.Width / this.canvas.Width) : 1f;
         var x = e.Location.X / scale;
         var y = e.Location.Y / scale;
 
@@ -264,6 +367,24 @@ public class SpreadsheetView : ContentView, IDisposable
 
     public void Redo() => this.controller?.Redo();
 
+    /// <summary>Moves to the next or previous visible sheet, stopping at either end.</summary>
+    public void StepSheet(int offset)
+    {
+        if (this.controller is not { } current)
+            return;
+
+        var sheets = current.VisibleSheets;
+        var at = -1;
+        for (var i = 0; i < sheets.Count && at < 0; i++)
+        {
+            if (ReferenceEquals(sheets[i], current.Sheet))
+                at = i;
+        }
+
+        if (at >= 0 && sheets.ElementAtOrDefault(at + offset) is { } target)
+            current.SwitchSheet(target);
+    }
+
     void DetachController()
     {
         if (this.controller is null)
@@ -271,6 +392,7 @@ public class SpreadsheetView : ContentView, IDisposable
 
         this.controller.Changed -= this.OnControllerChanged;
         this.controller.EditingChanged -= this.OnEditingChanged;
+        this.controller.ActiveSheetChanged -= this.OnActiveSheetChanged;
     }
 
     public void Dispose()
@@ -280,6 +402,9 @@ public class SpreadsheetView : ContentView, IDisposable
 
         this.disposed = true;
         this.DetachController();
+        this.sheetTabs.Changed -= this.OnSheetTabsChanged;
+        this.sheetTabs.Controller = null;
+        this.canvas.SizeChanged -= this.OnCanvasSizeChanged;
         this.canvas.PaintSurface -= this.OnPaintSurface;
         this.canvas.Touch -= this.OnTouch;
         this.editor.TextChanged -= this.OnEditorTextChanged;

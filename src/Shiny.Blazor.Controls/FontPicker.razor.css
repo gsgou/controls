@@ -1,0 +1,47 @@
+.shiny-fontpicker {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+
+    /* Tall enough to show a handful of faces at once - a list that shows two is a dropdown with extra
+       steps - and short enough to stay on a phone screen. */
+    max-height: 320px;
+}
+
+.shiny-fontpicker-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--shiny-spacing-3, 12px);
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border: 0;
+    background: transparent;
+    color: var(--shiny-color-on-surface, #111827);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.shiny-fontpicker-item:hover { background: var(--shiny-color-surface-variant, rgba(0, 0, 0, 0.05)); }
+
+.shiny-fontpicker-item-on {
+    background: var(--shiny-color-secondary-container, rgba(37, 99, 235, 0.14));
+    color: var(--shiny-color-on-secondary-container, inherit);
+}
+
+/* The name is metadata, so it is set in the UI face at a fixed size; only the specimen beside it is
+   allowed to inherit the family being previewed. */
+.shiny-fontpicker-name {
+    flex: 0 0 auto;
+    min-width: 116px;
+    font-family: var(--shiny-type-font-family, system-ui, sans-serif);
+    font-size: 13px;
+}
+
+.shiny-fontpicker-preview {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.75;
+}

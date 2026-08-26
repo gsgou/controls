@@ -9,6 +9,11 @@ public enum ImageEditorIcon
     Draw,
     Line,
     Arrow,
+    Rectangle,
+    Ellipse,
+    Circle,
+    Fill,
+    NoFill,
     Text,
     Undo,
     Redo,
@@ -61,6 +66,11 @@ internal sealed class ImageEditorIconDrawable : IDrawable
             case ImageEditorIcon.Draw: DrawPencil(canvas); break;
             case ImageEditorIcon.Line: canvas.DrawLine(5, 19, 19, 5); break;
             case ImageEditorIcon.Arrow: DrawArrow(canvas); break;
+            case ImageEditorIcon.Rectangle: canvas.DrawRoundedRectangle(3.5f, 6, 17, 12, 1.5f); break;
+            case ImageEditorIcon.Ellipse: canvas.DrawEllipse(2.5f, 6, 19, 12); break;
+            case ImageEditorIcon.Circle: canvas.DrawEllipse(3.5f, 3.5f, 17, 17); break;
+            case ImageEditorIcon.Fill: DrawFill(canvas, true); break;
+            case ImageEditorIcon.NoFill: DrawFill(canvas, false); break;
             case ImageEditorIcon.Text: DrawText(canvas); break;
             case ImageEditorIcon.Undo: DrawUndo(canvas, false); break;
             case ImageEditorIcon.Redo: DrawUndo(canvas, true); break;
@@ -127,6 +137,17 @@ internal sealed class ImageEditorIconDrawable : IDrawable
         canvas.DrawLine(4, 20, 19, 5);
         canvas.DrawLine(11.5f, 5, 19, 5);
         canvas.DrawLine(19, 5, 19, 12.5f);
+    }
+
+    /// <summary>The fill toggle — an outlined tile, filled in when on and struck through when off.</summary>
+    static void DrawFill(ICanvas canvas, bool filled)
+    {
+        canvas.DrawRoundedRectangle(3.5f, 3.5f, 17, 17, 3);
+
+        if (filled)
+            canvas.FillRoundedRectangle(6.5f, 6.5f, 11, 11, 1.5f);
+        else
+            canvas.DrawLine(5.5f, 18.5f, 18.5f, 5.5f);
     }
 
     static void DrawText(ICanvas canvas)

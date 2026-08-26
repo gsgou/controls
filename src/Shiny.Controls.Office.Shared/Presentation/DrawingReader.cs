@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Packaging;
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using D = DocumentFormat.OpenXml.Drawing;

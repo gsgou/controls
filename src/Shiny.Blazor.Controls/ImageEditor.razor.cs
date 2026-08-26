@@ -18,6 +18,13 @@ public partial class ImageEditor : IAsyncDisposable
     string activeColor = "#ffffff";
     double zoomLevel = 1;
 
+    // Shape fill. `shapeFill` is the composed rgba() the canvas gets, and null means "no fill" —
+    // the hex and the alpha are kept alongside it so turning fill back on restores what was set
+    // rather than resetting to white.
+    string? shapeFill;
+    string shapeFillHex = "#ffffff";
+    double shapeFillAlpha = 0.35;
+
     // Inline text input state
     bool isTextInputVisible;
     string textInputValue = "";
@@ -37,6 +44,22 @@ public partial class ImageEditor : IAsyncDisposable
     [Parameter] public bool AllowTextAnnotation { get; set; } = true;
     [Parameter] public bool AllowLine { get; set; } = true;
     [Parameter] public bool AllowArrow { get; set; } = true;
+    [Parameter] public bool AllowRectangle { get; set; } = true;
+    [Parameter] public bool AllowEllipse { get; set; } = true;
+    [Parameter] public bool AllowCircle { get; set; } = true;
+    /// <summary>
+    /// Interior colour for the shape tools as a <c>#rrggbb</c> hex string. Null or empty — the
+    /// default — leaves shapes unfilled, which is what you want for a highlight box over a photo;
+    /// a solid colour turns the same tool into a redaction block.
+    /// </summary>
+    [Parameter] public string? ShapeFillColor { get; set; }
+    /// <summary>
+    /// Opacity of <see cref="ShapeFillColor"/>, 0-1. It is separate from the colour because
+    /// <c>&lt;input type="color"&gt;</c> cannot express alpha (MAUI carries it in the Color itself).
+    /// </summary>
+    [Parameter] public double ShapeFillOpacity { get; set; } = 0.35;
+    /// <summary>Shows the fill swatch, opacity slider and fill on/off toggle while a shape tool is active.</summary>
+    [Parameter] public bool ShowShapeFillPicker { get; set; } = true;
     [Parameter] public bool AllowZoom { get; set; } = true;
     /// <summary>Lower zoom bound. 1.0 is fit-to-view.</summary>
     [Parameter] public double MinZoom { get; set; } = 1;
@@ -73,12 +96,23 @@ public partial class ImageEditor : IAsyncDisposable
 
     string? previousSource;
     byte[]? previousImageData;
+    string? previousShapeFillColor;
+    double previousShapeFillOpacity;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             activeColor = DrawStrokeColor;
+
+            shapeFillAlpha = Math.Clamp(ShapeFillOpacity, 0, 1);
+            previousShapeFillColor = ShapeFillColor;
+            previousShapeFillOpacity = ShapeFillOpacity;
+            if (!string.IsNullOrWhiteSpace(ShapeFillColor))
+            {
+                shapeFillHex = ShapeFillColor;
+                shapeFill = ComposeFill();
+            }
 
             module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
@@ -97,7 +131,8 @@ public partial class ImageEditor : IAsyncDisposable
                 TextFont = TextFontFamily,
                 AllowZoom = AllowZoom,
                 MinZoom = MinZoom,
-                MaxZoom = MaxZoom
+                MaxZoom = MaxZoom,
+                ShapeFill = shapeFill
             });
 
             initialized = true;
@@ -131,6 +166,27 @@ public partial class ImageEditor : IAsyncDisposable
         await module.InvokeVoidAsync("updateTextSettings", rootEl, activeColor, TextFontSize, TextFontFamily);
         await module.InvokeVoidAsync("updateAllowZoom", rootEl, AllowZoom);
         await module.InvokeVoidAsync("updateZoomLimits", rootEl, MinZoom, MaxZoom);
+
+        // Re-derive the fill only when the host actually changed it, so a re-render does not
+        // stomp on what the toolbar's own swatch and slider set
+        if (ShapeFillColor != previousShapeFillColor || Math.Abs(ShapeFillOpacity - previousShapeFillOpacity) > 0.0001)
+        {
+            previousShapeFillColor = ShapeFillColor;
+            previousShapeFillOpacity = ShapeFillOpacity;
+            shapeFillAlpha = Math.Clamp(ShapeFillOpacity, 0, 1);
+
+            if (string.IsNullOrWhiteSpace(ShapeFillColor))
+            {
+                shapeFill = null;
+            }
+            else
+            {
+                shapeFillHex = ShapeFillColor;
+                shapeFill = ComposeFill();
+            }
+        }
+
+        await module.InvokeVoidAsync("updateShapeSettings", rootEl, shapeFill);
     }
 
     async Task LoadImageAsync()
@@ -265,6 +321,74 @@ public partial class ImageEditor : IAsyncDisposable
         await SetModeAsync(newMode);
     }
 
+    async Task ToggleRectangle()
+    {
+        var newMode = currentMode == "rect" ? "none" : "rect";
+        await SetModeAsync(newMode);
+    }
+
+    async Task ToggleEllipse()
+    {
+        var newMode = currentMode == "ellipse" ? "none" : "ellipse";
+        await SetModeAsync(newMode);
+    }
+
+    async Task ToggleCircle()
+    {
+        var newMode = currentMode == "circle" ? "none" : "circle";
+        await SetModeAsync(newMode);
+    }
+
+    async Task OnFillColorChanged(ChangeEventArgs e)
+    {
+        shapeFillHex = e.Value?.ToString() ?? "#ffffff";
+        ShapeFillColor = shapeFillHex;
+        shapeFill = ComposeFill();
+        await PushShapeFillAsync();
+    }
+
+    async Task OnFillOpacityChanged(ChangeEventArgs e)
+    {
+        if (!double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any, Culture, out var percent))
+            return;
+
+        shapeFillAlpha = Math.Clamp(percent / 100d, 0, 1);
+        ShapeFillOpacity = shapeFillAlpha;
+
+        // Dragging the slider while fill is off is a request for fill, not a no-op
+        ShapeFillColor = shapeFillHex;
+        shapeFill = ComposeFill();
+        await PushShapeFillAsync();
+    }
+
+    async Task ToggleShapeFill()
+    {
+        shapeFill = shapeFill == null ? ComposeFill() : null;
+        ShapeFillColor = shapeFill == null ? null : shapeFillHex;
+        await PushShapeFillAsync();
+    }
+
+    async Task PushShapeFillAsync()
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("updateShapeSettings", rootEl, shapeFill);
+    }
+
+    /// <summary>Folds the opacity into the hex swatch, since a colour input can't carry alpha.</summary>
+    string ComposeFill()
+    {
+        var hex = shapeFillHex.TrimStart('#');
+        if (hex.Length != 6 || !int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, Culture, out var rgb))
+            return shapeFillHex;
+
+        var r = (rgb >> 16) & 0xFF;
+        var g = (rgb >> 8) & 0xFF;
+        var b = rgb & 0xFF;
+        return $"rgba({r},{g},{b},{shapeFillAlpha.ToString("0.###", Culture)})";
+    }
+
+    string FillOpacityPercent => Math.Round(shapeFillAlpha * 100).ToString("0", Culture);
+
     async Task OnColorChanged(ChangeEventArgs e)
     {
         var color = e.Value?.ToString() ?? "#ffffff";
@@ -331,6 +455,8 @@ public partial class ImageEditor : IAsyncDisposable
     bool IsSelectedWidth(double width) => Math.Abs(DrawStrokeWidth - width) < 0.01;
 
     bool IsInkMode => currentMode is "draw" or "line" or "arrow";
+
+    bool IsShapeMode => currentMode is "rect" or "ellipse" or "circle";
 
     string ToolbarOrderClass => ToolbarPosition == "top" ? "shiny-imgeditor-toolbar--top" : string.Empty;
 
@@ -432,5 +558,6 @@ public partial class ImageEditor : IAsyncDisposable
         public bool AllowZoom { get; set; }
         public double MinZoom { get; set; }
         public double MaxZoom { get; set; }
+        public string? ShapeFill { get; set; }
     }
 }

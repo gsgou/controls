@@ -90,6 +90,9 @@ public class DataGridColumn : BindableObject
     public static readonly BindableProperty CellStyleProperty = BindableProperty.Create(
         nameof(CellStyle), typeof(Func<object, DataGridCellStyle?>), typeof(DataGridColumn), null);
 
+    public static readonly BindableProperty HighlightProperty = BindableProperty.Create(
+        nameof(Highlight), typeof(DataGridCellStyle), typeof(DataGridColumn), null);
+
     public static readonly BindableProperty CultureProperty = BindableProperty.Create(
         nameof(Culture), typeof(System.Globalization.CultureInfo), typeof(DataGridColumn), null);
 
@@ -324,6 +327,17 @@ public class DataGridColumn : BindableObject
     {
         get => (Func<object, DataGridCellStyle?>?)this.GetValue(CellStyleProperty);
         set => this.SetValue(CellStyleProperty, value);
+    }
+
+    /// <summary>
+    /// Highlights the whole column - a fill, a stroke, or both, applied to every one of its cells.
+    /// Row-scoped and cell-scoped highlights are laid over it, and the column's own
+    /// <see cref="CellStyle"/> wins over all of them.
+    /// </summary>
+    public DataGridCellStyle? Highlight
+    {
+        get => (DataGridCellStyle?)this.GetValue(HighlightProperty);
+        set => this.SetValue(HighlightProperty, value);
     }
 
     /// <summary>Custom cell content. When null, a default <see cref="Label"/> bound to <see cref="PropertyName"/> is used.</summary>

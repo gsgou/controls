@@ -21,10 +21,27 @@
                        HorizontalTextAlignment="Center"
                        TextColor="Gray" />
 
+                <Label Text="{Binding LastViewerEvent, StringFormat='Last viewer event: {0}'}"
+                       FontSize="14"
+                       HorizontalTextAlignment="Center"
+                       TextColor="Gray" />
+
                 <shiny:ImageViewer Source="dotnet_bot.png"
                                    IsOpen="{Binding IsViewerOpen}"
                                    HeightRequest="200"
-                                   Aspect="AspectFit">
+                                   Aspect="AspectFit"
+                                   CloseButtonText="Done"
+                                   OpenedCommand="{Binding ViewerOpenedCommand}"
+                                   ClosedCommand="{Binding ViewerClosedCommand}">
+                    <shiny:ImageViewer.HeaderTemplate>
+                        <DataTemplate x:DataType="local:ImageViewerViewModel">
+                            <Label Text="dotnet_bot.png"
+                                   TextColor="White"
+                                   FontAttributes="Bold"
+                                   HorizontalTextAlignment="Center"
+                                   Margin="0,60,0,0" />
+                        </DataTemplate>
+                    </shiny:ImageViewer.HeaderTemplate>
                     <shiny:ImageViewer.FooterTemplate>
                         <DataTemplate x:DataType="local:ImageViewerViewModel">
                             <Button Text="Close"
@@ -49,9 +66,11 @@
                        HorizontalTextAlignment="Center"
                        TextColor="Gray" />
 
+                <!-- CloseButtonImage puts artwork in the same chip the glyph sits in -->
                 <shiny:ImageViewer Uri="https://picsum.photos/seed/shiny-viewer/1600/1200"
                                    PlaceholderImage="dotnet_bot.png"
                                    ErrorImage="dotnet_bot.png"
+                                   CloseButtonImage="dotnet_bot.png"
                                    HeightRequest="200"
                                    Aspect="AspectFill" />
 

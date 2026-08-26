@@ -1,0 +1,110 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    A toolbar-sized trigger that opens a FontSizePicker underneath it, and lets a size be typed.
+
+    The typed field matters more here than it does for a family: the list is a set of common sizes,
+    not the set of legal ones, and 13pt has to be reachable without adding it to the list first.
+*@
+
+<div class="shiny-fontsizepickerbutton @Class" style="@Style">
+    <input class="shiny-fontsizepickerbutton-input"
+           type="text"
+           inputmode="decimal"
+           title="Size"
+           aria-label="Font size"
+           disabled="@Disabled"
+           value="@Css(this.SelectedFontSize)"
+           @onchange="OnTyped" />
+
+    <button type="button"
+            class="shiny-fontsizepickerbutton-trigger"
+            title="Size"
+            disabled="@Disabled"
+            aria-haspopup="listbox"
+            aria-expanded="@open"
+            @onclick="Toggle">
+        <span aria-hidden="true">▾</span>
+    </button>
+
+    @if (open)
+    {
+        <div class="shiny-fontsizepickerbutton-backdrop" @onclick="Close"></div>
+
+        <div class="shiny-fontsizepickerbutton-popover">
+            <FontSizePicker AvailableFontSizes="AvailableFontSizes"
+                            SelectedFontSize="SelectedFontSize"
+                            PreviewText="@PreviewText"
+                            SelectedFontSizeChanged="OnPicked" />
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    [Parameter] public IReadOnlyList<double>? AvailableFontSizes { get; set; }
+
+    [Parameter] public double SelectedFontSize { get; set; } = 16;
+
+    [Parameter] public EventCallback<double> SelectedFontSizeChanged { get; set; }
+
+    /// <summary>Raised when a size is chosen or typed. Fires alongside <see cref="SelectedFontSizeChanged"/>.</summary>
+    [Parameter] public EventCallback<double> FontSizeChanged { get; set; }
+
+    [Parameter] public string PreviewText { get; set; } = "Aa";
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Below this a size is a typing slip, not a choice; above it, the same.</summary>
+    [Parameter] public double MinimumFontSize { get; set; } = 1;
+
+    [Parameter] public double MaximumFontSize { get; set; } = 409;
+
+    void Toggle() => this.open = !this.open;
+
+    void Close() => this.open = false;
+
+    Task OnPicked(double size)
+    {
+        this.open = false;
+        return this.Commit(size);
+    }
+
+    Task OnTyped(ChangeEventArgs e)
+    {
+        // A value that does not parse, or lands outside what a document can hold, puts the field back
+        // to what it was rather than committing something the editor would have to reject.
+        if (!double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out var typed))
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        var clamped = Math.Clamp(typed, this.MinimumFontSize, this.MaximumFontSize);
+        if (Math.Abs(clamped - this.SelectedFontSize) < 0.001)
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        return this.Commit(clamped);
+    }
+
+    async Task Commit(double size)
+    {
+        this.SelectedFontSize = size;
+
+        if (this.SelectedFontSizeChanged.HasDelegate)
+            await this.SelectedFontSizeChanged.InvokeAsync(size);
+
+        if (this.FontSizeChanged.HasDelegate)
+            await this.FontSizeChanged.InvokeAsync(size);
+    }
+
+    static string Css(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

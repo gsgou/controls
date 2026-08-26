@@ -243,13 +243,31 @@ public class SpreadsheetControllerTests
     [Fact]
     public async Task SwitchingSheetsRebuildsTheLayout()
     {
+        using var workbook = await Workbook.OpenAsync(new MemoryStream(WorkbookFixture.BuildMultiSheet()));
+        var controller = new SpreadsheetController(workbook, workbook["Data"]);
+        controller.Resize(600, 400);
+
+        controller.Selection.MoveTo(CellRef.Parse("C3"));
+        controller.BeginEdit();
+        controller.SwitchSheet(workbook["Summary"]);
+
+        // A sheet nobody has been on yet starts at A1, and an open editor does not follow the switch.
+        controller.Sheet.Name.ShouldBe("Summary");
+        controller.Selection.Active.ShouldBe(new CellRef(0, 0));
+        controller.EditingCell.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SwitchingToTheSheetAlreadyShowingChangesNothing()
+    {
+        // Clicking the tab you are already on must not throw away where you were - which is what
+        // rebuilding the layout unconditionally used to do.
         var (workbook, controller) = await SetupAsync();
         using var _ = workbook;
 
         controller.Selection.MoveTo(CellRef.Parse("C3"));
         controller.SwitchSheet(workbook["Data"]);
 
-        controller.Selection.Active.ShouldBe(new CellRef(0, 0));
-        controller.EditingCell.ShouldBeNull();
+        controller.Selection.Active.ShouldBe(CellRef.Parse("C3"));
     }
 }

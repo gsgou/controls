@@ -14,10 +14,11 @@ public sealed class Worksheet
     readonly WorksheetPart part;
     readonly SheetDataEditor editor;
 
-    internal Worksheet(Workbook workbook, WorksheetPart part, string name, uint sheetId, bool visible)
+    internal Worksheet(Workbook workbook, WorksheetPart part, Sheet entry, string name, uint sheetId, bool visible)
     {
         this.workbook = workbook;
         this.part = part;
+        this.Entry = entry;
         this.Name = name;
         this.SheetId = sheetId;
         this.IsVisible = visible;
@@ -33,9 +34,29 @@ public sealed class Worksheet
         this.editor = new SheetDataEditor(sheetData);
     }
 
-    public string Name { get; }
+    /// <summary>
+    /// The sheet's name. Only <see cref="Workbook"/> may change it, and only through a rename, which
+    /// has to rewrite every formula that refers to the sheet in the same step.
+    /// </summary>
+    public string Name { get; internal set; }
+
     public uint SheetId { get; }
-    public bool IsVisible { get; }
+
+    /// <summary>False for a sheet Excel is hiding. Hidden sheets are read, calculated and saved as normal.</summary>
+    public bool IsVisible { get; internal set; }
+
+    /// <summary>The part holding this sheet's XML, so the workbook can clone or delete it.</summary>
+    internal WorksheetPart Part => this.part;
+
+    /// <summary>
+    /// This sheet's entry in the workbook's <c>&lt;sheets&gt;</c> list.
+    /// </summary>
+    /// <remarks>
+    /// Name, visibility and sheet order all live on this element rather than in the sheet part, and
+    /// the element's position in its parent <em>is</em> the tab order — so structural edits move this
+    /// around rather than rewriting anything inside the sheet itself.
+    /// </remarks>
+    internal Sheet Entry { get; }
 
     /// <summary>The bounding box of every populated cell, or null for an empty sheet.</summary>
     public CellRange? UsedRange => this.editor.UsedRange();
@@ -197,6 +218,38 @@ public sealed class Worksheet
                     yield return (new CellRef(SheetDataEditor.ColumnOf(cell), rowIndex), formula);
             }
         }
+    }
+
+    /// <summary>
+    /// Rewrites every formula on the sheet through <paramref name="rewrite"/>, leaving cells whose text
+    /// comes back unchanged completely untouched.
+    /// </summary>
+    /// <remarks>
+    /// Used by a sheet rename. Skipping the unchanged ones is not an optimisation: assigning the same
+    /// text back still marks the element dirty, and a rename would then rewrite the XML of every sheet
+    /// in the workbook rather than of the few that actually mentioned the renamed one.
+    /// </remarks>
+    internal bool RewriteFormulas(Func<string, string> rewrite)
+    {
+        var changed = false;
+
+        foreach (var row in this.part.Worksheet?.GetFirstChild<SheetData>()?.Elements<Row>() ?? Enumerable.Empty<Row>())
+        {
+            foreach (var cell in row.Elements<Cell>())
+            {
+                if (cell.CellFormula?.Text is not { Length: > 0 } formula)
+                    continue;
+
+                var rewritten = rewrite(formula);
+                if (string.Equals(rewritten, formula, StringComparison.Ordinal))
+                    continue;
+
+                cell.CellFormula.Text = rewritten;
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 
     /// <summary>

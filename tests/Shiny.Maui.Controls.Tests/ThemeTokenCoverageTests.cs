@@ -38,6 +38,16 @@ public class ThemeTokenCoverageTests(ITestOutputHelper output)
         ["ColorPickerButton.cs"] = "the swatch fill and SelectedColor's default are the colour being picked - data, not chrome (its border, popup surface, backdrop and Done button are themed)",
         ["ScreenGlowOptions.cs"] = "the glow palette is the effect itself - a Siri-style rainbow wash whose colours are its identity, not chrome that should follow a theme pack",
         ["ImageEditor.cs"] = "toolbar chrome is a fixed dark scrim over arbitrary photos, so its separator must stay a mid grey that reads on that scrim in both schemes; only the semantic Delete/Confirm buttons are themed",
+
+        // The SVG renderer. Every colour in it is either a value the artwork itself declared or the
+        // spec's own default for one that did not - an SVG that says fill="red" must draw red on
+        // every theme pack, or it is not that drawing any more. The one colour an app does get to
+        // choose is ShinyImage.SvgTintColor, which a caller can bind to a theme token.
+        ["SvgPaint.cs"] = "SVG paint servers carry the colours the file declared - content, not chrome",
+        ["SvgParser.cs"] = "the spec's defaults for a file that declares no fill or no stop-color",
+        ["SvgStyle.cs"] = "the initial inherited style an SVG root starts from, which the spec fixes as black",
+        ["SvgDrawable.cs"] = "the currentColor fallback for artwork drawn without an explicit tint",
+        ["ShinyImage.Svg.cs"] = "the same currentColor fallback, applied when SvgTintColor is unset",
     };
 
     /// <summary>

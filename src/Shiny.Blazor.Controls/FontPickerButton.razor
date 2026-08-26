@@ -1,0 +1,87 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    A toolbar-sized trigger that opens a FontPicker underneath it.
+
+    The picker itself is a list 320px tall - fine in a panel, impossible in a toolbar - so this is the
+    form the picker takes anywhere it has to sit beside a Bold button. The label is set in the family
+    it names, which makes the current font readable without opening anything.
+*@
+
+<div class="shiny-fontpickerbutton @Class" style="@Style">
+    <button type="button"
+            class="shiny-fontpickerbutton-trigger"
+            title="@Placeholder"
+            disabled="@Disabled"
+            aria-haspopup="listbox"
+            aria-expanded="@open"
+            style="@(this.SelectedFont is { Length: > 0 } current ? $"font-family:{Quote(current)}" : null)"
+            @onclick="Toggle">
+        <span class="shiny-fontpickerbutton-label">@(this.SelectedFont is { Length: > 0 } name ? name : this.Placeholder)</span>
+        <span class="shiny-fontpickerbutton-caret" aria-hidden="true">▾</span>
+    </button>
+
+    @if (open)
+    {
+        @*
+            A click-catching backdrop rather than a document-level listener: this package's popovers
+            own no JS of their own, and a plain overlay dismisses on the same click that lands outside.
+        *@
+        <div class="shiny-fontpickerbutton-backdrop" @onclick="Close"></div>
+
+        <div class="shiny-fontpickerbutton-popover">
+            <FontPicker AvailableFonts="AvailableFonts"
+                        SelectedFont="@SelectedFont"
+                        PreviewText="@PreviewText"
+                        PreviewFontSize="PreviewFontSize"
+                        SelectedFontChanged="OnPicked" />
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    [Parameter] public IReadOnlyList<string>? AvailableFonts { get; set; }
+
+    [Parameter] public string? SelectedFont { get; set; }
+
+    [Parameter] public EventCallback<string> SelectedFontChanged { get; set; }
+
+    /// <summary>Raised when a family is chosen. Fires alongside <see cref="SelectedFontChanged"/>.</summary>
+    [Parameter] public EventCallback<string> FontChanged { get; set; }
+
+    /// <summary>What the trigger reads when nothing is selected.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Font";
+
+    [Parameter] public string PreviewText { get; set; } = "The quick brown fox";
+
+    [Parameter] public double PreviewFontSize { get; set; } = 16;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    void Toggle() => this.open = !this.open;
+
+    void Close() => this.open = false;
+
+    async Task OnPicked(string font)
+    {
+        this.SelectedFont = font;
+
+        // Closes on pick rather than needing a Done: one font is being chosen, and the choice is
+        // visible on the trigger the moment it is made.
+        this.open = false;
+
+        if (this.SelectedFontChanged.HasDelegate)
+            await this.SelectedFontChanged.InvokeAsync(font);
+
+        if (this.FontChanged.HasDelegate)
+            await this.FontChanged.InvokeAsync(font);
+    }
+
+    static string Quote(string font) => $"'{font.Replace("'", "\\'", StringComparison.Ordinal)}'";
+}

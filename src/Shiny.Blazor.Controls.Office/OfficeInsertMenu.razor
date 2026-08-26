@@ -1,0 +1,218 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Shiny.Controls.Office.Packaging
+@using Shiny.Controls.Office.Shapes
+
+@*
+    Insert: shapes, a table, a picture.
+
+    Shared by DocumentEditorView and SlideEditorView. The two hosts do different things with what
+    comes out — a document inserts inline, a slide places at a point — but the offer is identical, and
+    a shape gallery that differed between them would be a difference with no reason behind it.
+
+    The table picker is the drag-a-grid one everyone already knows. It is built as a fixed 8x8 of
+    buttons rather than tracked with pointer maths: hovering a cell highlights the rectangle from the
+    corner to it, which is all the interaction the gesture actually needs, and it works from a
+    keyboard and a screen reader as well as from a mouse.
+*@
+<div class="shiny-office-picker">
+    <button type="button"
+            class="shiny-office-btn"
+            title="Shapes"
+            aria-haspopup="true"
+            aria-expanded="@(this.panel == Panel.Shapes)"
+            disabled="@this.Disabled"
+            @onclick="() => this.Toggle(Panel.Shapes)">◇</button>
+
+    <button type="button"
+            class="shiny-office-btn"
+            title="Table"
+            aria-haspopup="true"
+            aria-expanded="@(this.panel == Panel.Table)"
+            disabled="@this.Disabled"
+            @onclick="() => this.Toggle(Panel.Table)">▦</button>
+
+    <label class="shiny-office-btn shiny-office-btn-file" title="Picture">
+        🖼
+        <InputFile OnChange="this.OnFileAsync" accept="@Accept" disabled="@this.Disabled" />
+    </label>
+
+    @if (this.panel != Panel.None)
+    {
+        <div class="shiny-office-backdrop" @onclick="() => this.panel = Panel.None"></div>
+    }
+
+    @if (this.panel == Panel.Shapes)
+    {
+        <div class="shiny-office-panel" role="dialog" aria-label="Shapes">
+            <div class="shape-grid">
+                @foreach (var (geometry, glyph, name) in Gallery)
+                {
+                    <button type="button"
+                            class="shape-cell"
+                            title="@name"
+                            aria-label="@name"
+                            @onclick="() => this.PickShapeAsync(geometry)">@glyph</button>
+                }
+            </div>
+        </div>
+    }
+
+    @if (this.panel == Panel.Table)
+    {
+        <div class="shiny-office-panel" role="dialog" aria-label="Table size">
+            <div class="table-grid" @onpointerleave="() => this.Hover(0, 0)">
+                @for (var r = 1; r <= GridMax; r++)
+                {
+                    var row = r;
+
+                    <div class="table-row">
+                        @for (var c = 1; c <= GridMax; c++)
+                        {
+                            var column = c;
+
+                            <button type="button"
+                                    class="@(row <= this.hoverRows && column <= this.hoverColumns ? "table-cell on" : "table-cell")"
+                                    aria-label="@($"{row} by {column}")"
+                                    @onpointerenter="() => this.Hover(row, column)"
+                                    @onfocus="() => this.Hover(row, column)"
+                                    @onclick="() => this.PickTableAsync(row, column)"></button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="table-caption">
+                @(this.hoverRows > 0 ? $"{this.hoverRows} × {this.hoverColumns}" : "Insert table")
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    enum Panel { None, Shapes, Table }
+
+    Panel panel;
+    int hoverRows;
+    int hoverColumns;
+
+    /// <summary>How large a table the grid picker offers. Beyond this, a dialog would be the honest UI.</summary>
+    const int GridMax = 8;
+
+    /// <summary>
+    /// The formats the file picker offers.
+    /// </summary>
+    /// <remarks>
+    /// Built from the shared map so the picker and the drop handler can never disagree about what is
+    /// accepted — an <c>accept</c> list that allows something the insert path then rejects is a
+    /// picker that lets a user choose a file and then does nothing.
+    /// </remarks>
+    static readonly string Accept = string.Join(",", ImageContentTypes.ByExtension.Keys);
+
+    /// <summary>
+    /// The shapes on offer, with the glyph that stands in for each.
+    /// </summary>
+    /// <remarks>
+    /// Unicode glyphs rather than drawn previews: the gallery has to look the same on both hosts and
+    /// at any toolbar height, and a row of geometric characters does that without shipping an icon
+    /// set. Where no character is close enough — the arrows, the can — the nearest recognisable one
+    /// is used, since the tooltip carries the actual name.
+    /// </remarks>
+    static readonly (ShapeGeometry Geometry, string Glyph, string Name)[] Gallery =
+    [
+        (ShapeGeometry.Rectangle, "▭", "Rectangle"),
+        (ShapeGeometry.RoundedRectangle, "▢", "Rounded rectangle"),
+        (ShapeGeometry.Ellipse, "◯", "Ellipse"),
+        (ShapeGeometry.Triangle, "△", "Triangle"),
+        (ShapeGeometry.RightTriangle, "◺", "Right triangle"),
+        (ShapeGeometry.Diamond, "◇", "Diamond"),
+        (ShapeGeometry.Pentagon, "⬠", "Pentagon"),
+        (ShapeGeometry.Hexagon, "⬡", "Hexagon"),
+        (ShapeGeometry.Star5, "☆", "Star"),
+        (ShapeGeometry.RightArrow, "→", "Right arrow"),
+        (ShapeGeometry.LeftArrow, "←", "Left arrow"),
+        (ShapeGeometry.UpArrow, "↑", "Up arrow"),
+        (ShapeGeometry.DownArrow, "↓", "Down arrow"),
+        (ShapeGeometry.Chevron, "❯", "Chevron"),
+        (ShapeGeometry.Parallelogram, "▰", "Parallelogram"),
+        (ShapeGeometry.Trapezoid, "⏢", "Trapezoid"),
+        (ShapeGeometry.Plus, "✚", "Plus"),
+        (ShapeGeometry.Can, "⛁", "Cylinder"),
+        (ShapeGeometry.Cloud, "☁", "Cloud"),
+        (ShapeGeometry.Line, "╱", "Line")
+    ];
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback<ShapeGeometry> ShapePicked { get; set; }
+
+    /// <summary>Raised with the chosen table size, rows first.</summary>
+    [Parameter] public EventCallback<(int Rows, int Columns)> TablePicked { get; set; }
+
+    [Parameter] public EventCallback<OfficePickedImage> ImagePicked { get; set; }
+
+    /// <summary>Raised when a chosen file could not be used, so a host can say so.</summary>
+    [Parameter] public EventCallback<OfficeDropRejected> ImageRejected { get; set; }
+
+    /// <summary>
+    /// The largest picture the toolbar will read.
+    /// </summary>
+    /// <remarks>
+    /// The same ceiling the drop script applies, for the same reason — and it has to be stated here
+    /// too, because <see cref="InputFile"/> defaults to refusing anything over 512KB and does it by
+    /// throwing.
+    /// </remarks>
+    const long MaxBytes = 32 * 1024 * 1024;
+
+    void Toggle(Panel which)
+    {
+        this.panel = this.panel == which ? Panel.None : which;
+        this.hoverRows = 0;
+        this.hoverColumns = 0;
+    }
+
+    void Hover(int rows, int columns)
+    {
+        this.hoverRows = rows;
+        this.hoverColumns = columns;
+    }
+
+    async Task PickShapeAsync(ShapeGeometry geometry)
+    {
+        this.panel = Panel.None;
+        await this.ShapePicked.InvokeAsync(geometry);
+    }
+
+    async Task PickTableAsync(int rows, int columns)
+    {
+        this.panel = Panel.None;
+        await this.TablePicked.InvokeAsync((rows, columns));
+    }
+
+    async Task OnFileAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null)
+            return;
+
+        if (ImageContentTypes.Resolve(file.Name, file.ContentType) is not { } contentType)
+        {
+            await this.ImageRejected.InvokeAsync(new OfficeDropRejected(file.Name, "That file is not an image the editor can insert."));
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            await this.ImagePicked.InvokeAsync(new OfficePickedImage(file.Name, contentType, buffer.ToArray()));
+        }
+        catch (IOException)
+        {
+            // OpenReadStream throws when the file is over the limit, which is the expected way to
+            // find that out — the size on the metadata is not trusted by the framework either.
+            await this.ImageRejected.InvokeAsync(new OfficeDropRejected(file.Name, "The file is too large to embed."));
+        }
+    }
+}

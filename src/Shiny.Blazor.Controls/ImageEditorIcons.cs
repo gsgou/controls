@@ -15,6 +15,15 @@ internal static class ImageEditorIcons
     public static readonly MarkupString Draw = Svg("M4 20l.8-3.8L15.6 5.4l3 3L7.8 19.2zM13.4 7.6l3 3");
     public static readonly MarkupString Line = Svg("M5 19 19 5");
     public static readonly MarkupString Arrow = Svg("M4 20 19 5M11.5 5H19v7.5");
+    public static readonly MarkupString Rectangle = Svg("M4.5 7h15a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 15.5v-7A1.5 1.5 0 0 1 4.5 7Z");
+    public static readonly MarkupString Ellipse = Svg("M12 6c5.25 0 9.5 2.7 9.5 6s-4.25 6-9.5 6-9.5-2.7-9.5-6S6.75 6 12 6Z");
+    public static readonly MarkupString Circle = Svg("M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17Z");
+    // The only two-path icon: the tile is stroked and its interior is genuinely filled, so the
+    // toggle shows what it does rather than describing it
+    public static readonly MarkupString Fill = Svg(
+        "M5 3.5h14A1.5 1.5 0 0 1 20.5 5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5Z",
+        """<path d="M6.5 6.5h11v11h-11z" fill="currentColor" stroke="none"/>""");
+    public static readonly MarkupString NoFill = Svg("M5 3.5h14A1.5 1.5 0 0 1 20.5 5v14a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V5A1.5 1.5 0 0 1 5 3.5ZM5.5 18.5l13-13");
     public static readonly MarkupString Text = Svg("M5 5.5h14M12 5.5V19M8.5 19h7");
     public static readonly MarkupString Undo = Svg("M9 14 4 9l5-5M4 9h9a7 7 0 0 1 0 14h-3.5");
     public static readonly MarkupString Redo = Svg("M15 14l5-5-5-5M20 9h-9a7 7 0 0 0 0 14h3.5");
@@ -28,6 +37,6 @@ internal static class ImageEditorIcons
     // width/height live on the element rather than in the stylesheet: this markup is injected as a
     // MarkupString, so it carries no CSS-isolation scope attribute and a scoped `... svg` rule
     // would not reliably match it.
-    static MarkupString Svg(string path) => new(
-        $"""<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{path}"/></svg>""");
+    static MarkupString Svg(string path, string extra = "") => new(
+        $"""<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{path}"/>{extra}</svg>""");
 }

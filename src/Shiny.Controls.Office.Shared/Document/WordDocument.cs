@@ -152,10 +152,71 @@ public sealed class WordDocument : OfficeDocument
 
     // ---- editing surface, driven by the commands ----
 
+    /// <summary>The main part, for the commands that need to add relationships to it.</summary>
+    internal MainDocumentPart? Main => this.document.MainDocumentPart;
+
+    /// <summary>
+    /// Stores image bytes as a part of the document and returns the relationship id to reference it by.
+    /// </summary>
+    /// <remarks>
+    /// Every insertion gets its own part, even for bytes already in the package. De-duplicating would
+    /// mean hashing every existing image on every drop, and two references to one part is a trap:
+    /// deleting either picture has to leave the part alone, which is a lifetime rule nothing else here
+    /// needs.
+    /// </remarks>
+    internal string? AddImagePart(byte[] data, string contentType)
+    {
+        if (this.Main is not { } main)
+            return null;
+
+        var part = main.AddImagePart(contentType);
+        using var stream = new MemoryStream(data, writable: false);
+        part.FeedData(stream);
+
+        return main.GetIdOfPart(part);
+    }
+
+    /// <summary>
+    /// An id no drawing in the document is using.
+    /// </summary>
+    /// <remarks>
+    /// Word requires <c>wp:docPr/@id</c> to be unique across the document and non-zero. A duplicate is
+    /// one of the few things it treats as corruption rather than repairing quietly, so the id is taken
+    /// from the current maximum rather than from a counter that would restart at one on the next open.
+    /// </remarks>
+    internal uint NextDrawingId()
+    {
+        var max = 0U;
+
+        foreach (var properties in this.body?.Descendants<Drawing.Wordprocessing.DocProperties>() ?? [])
+        {
+            if (properties.Id?.Value is { } id && id > max)
+                max = id;
+        }
+
+        return max + 1;
+    }
+
     internal Paragraph? ParagraphElementAt(int block)
-        => block >= 0 && block < this.blocks.Count && this.blocks[block] is DocumentParagraph paragraph
-            ? paragraph.Element
-            : null;
+        => this.BlockElementAt(block) as Paragraph;
+
+    /// <summary>
+    /// The body element a block was read from, whatever kind it is.
+    /// </summary>
+    /// <remarks>
+    /// The paragraph-typed accessor above is what the text commands want, since they have nothing to
+    /// say about a table. This one is what the block commands and the undo snapshot want, because a
+    /// body holds tables too and an undo that could only put paragraphs back would silently drop a
+    /// table it had just removed.
+    /// </remarks>
+    internal OpenXmlElement? BlockElementAt(int block) => block >= 0 && block < this.blocks.Count
+        ? this.blocks[block] switch
+        {
+            DocumentParagraph paragraph => paragraph.Element,
+            DocumentTable table => table.Element,
+            _ => null
+        }
+        : null;
 
     /// <summary>Re-reads one block from its (now edited) XML.</summary>
     internal void Reproject(int block)
@@ -163,15 +224,15 @@ public sealed class WordDocument : OfficeDocument
         if (block < 0 || block >= this.blocks.Count)
             return;
 
-        if (this.blocks[block] is DocumentParagraph { Element: { } element })
-            this.blocks[block] = this.reader.Reread(element);
+        if (this.BlockElementAt(block) is { } element)
+            this.blocks[block] = this.reader.RereadBlock(element);
 
         this.MarkChanged();
     }
 
-    internal void InsertBlockAfter(int block, Paragraph element)
+    internal void InsertBlockAfter(int block, OpenXmlElement element)
     {
-        this.blocks.Insert(block + 1, this.reader.Reread(element));
+        this.blocks.Insert(block + 1, this.reader.RereadBlock(element));
         this.MarkChanged();
     }
 
@@ -188,9 +249,7 @@ public sealed class WordDocument : OfficeDocument
         if (block < 0 || block >= this.blocks.Count)
             return;
 
-        if (this.blocks[block] is DocumentParagraph { Element: { } element })
-            element.Remove();
-
+        this.BlockElementAt(block)?.Remove();
         this.blocks.RemoveAt(block);
         this.MarkChanged();
     }
@@ -203,30 +262,29 @@ public sealed class WordDocument : OfficeDocument
 
     internal RestoreBlocksCommand CaptureBlocks(int start, int count)
     {
-        var snapshot = new List<Paragraph>();
+        var snapshot = new List<OpenXmlElement>();
         for (var i = start; i < start + count && i < this.blocks.Count; i++)
         {
-            if (this.blocks[i] is DocumentParagraph { Element: { } element })
-                snapshot.Add((Paragraph)element.CloneNode(true));
+            if (this.BlockElementAt(i) is { } element)
+                snapshot.Add(element.CloneNode(true));
         }
 
         return new RestoreBlocksCommand(start, snapshot.Count, snapshot);
     }
 
-    /// <summary>Replaces a span of blocks with cloned paragraphs, in the body and in the projection.</summary>
-    internal void ReplaceBlocks(int start, int count, IReadOnlyList<Paragraph> replacements)
+    /// <summary>Replaces a span of blocks with cloned elements, in the body and in the projection.</summary>
+    internal void ReplaceBlocks(int start, int count, IReadOnlyList<OpenXmlElement> replacements)
     {
         if (this.body is null)
             return;
 
         // Anchor on the element before the span, so the replacements land in the right place even when
         // the span itself is being removed entirely.
-        var anchor = start > 0 ? this.ParagraphElementAt(start - 1) : null;
+        var anchor = start > 0 ? this.BlockElementAt(start - 1) : null;
 
         for (var i = Math.Min(start + count, this.blocks.Count) - 1; i >= start; i--)
         {
-            if (this.blocks[i] is DocumentParagraph { Element: { } element })
-                element.Remove();
+            this.BlockElementAt(i)?.Remove();
 
             if (i < this.blocks.Count)
                 this.blocks.RemoveAt(i);
@@ -235,7 +293,7 @@ public sealed class WordDocument : OfficeDocument
         var index = start;
         foreach (var replacement in replacements)
         {
-            var clone = (Paragraph)replacement.CloneNode(true);
+            var clone = replacement.CloneNode(true);
 
             if (anchor is null)
                 this.body.InsertAt(clone, 0);
@@ -243,7 +301,7 @@ public sealed class WordDocument : OfficeDocument
                 anchor.InsertAfterSelf(clone);
 
             anchor = clone;
-            this.blocks.Insert(index++, this.reader.Reread(clone));
+            this.blocks.Insert(index++, this.reader.RereadBlock(clone));
         }
 
         this.MarkChanged();

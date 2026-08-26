@@ -1,4 +1,5 @@
 using Shiny.Controls.Office.Presentation;
+using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using Shouldly;

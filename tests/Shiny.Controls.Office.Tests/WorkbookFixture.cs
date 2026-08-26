@@ -61,6 +61,64 @@ public static class WorkbookFixture
         return buffer.ToArray();
     }
 
+    /// <summary>
+    /// A workbook with three sheets, one of them hidden, cross-sheet formulas in both the plain and
+    /// quoted spelling, and a sheet-scoped defined name.
+    /// </summary>
+    /// <remarks>
+    /// The quoted sheet and the defined name are the two things a rename or a delete is most likely to
+    /// get wrong, and neither is visible in a single-sheet fixture.
+    /// </remarks>
+    public static byte[] BuildMultiSheet()
+    {
+        using var buffer = new MemoryStream();
+        using (var document = SpreadsheetDocument.Create(buffer, SpreadsheetDocumentType.Workbook))
+        {
+            var workbookPart = document.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
+
+            var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+            stylesPart.Stylesheet = BuildStylesheet();
+
+            var sheets = workbookPart.Workbook.AppendChild(new Sheets());
+
+            Add("Data", 1, BuildSheetData(), null);
+
+            Add("Q1 Sales", 2, new SheetData(
+                new Row(new Cell { CellReference = "A1", CellValue = new CellValue("10") }) { RowIndex = 1u }), null);
+
+            Add("Summary", 3, new SheetData(
+                new Row(
+                    new Cell { CellReference = "A1", CellFormula = new CellFormula("Data!B1*2"), CellValue = new CellValue("84") },
+                    new Cell { CellReference = "B1", CellFormula = new CellFormula("SUM('Q1 Sales'!A1:A3)"), CellValue = new CellValue("10") },
+                    new Cell { CellReference = "C1", CellFormula = new CellFormula("\"Data!\"&Data!B1"), CellValue = new CellValue("Data!42") })
+                { RowIndex = 1u }), null);
+
+            Add("Scratch", 4, new SheetData(), SheetStateValues.Hidden);
+
+            // Scoped to Summary, which is index 2 in the sheet list - the value a delete or a move has
+            // to keep pointing at the right sheet.
+            workbookPart.Workbook.AppendChild(new DefinedNames(
+                new DefinedName("Data!$A$1:$A$5") { Name = "Region", LocalSheetId = 2u }));
+
+            workbookPart.Workbook.Save();
+
+            void Add(string name, uint id, SheetData data, SheetStateValues? state)
+            {
+                var part = workbookPart.AddNewPart<WorksheetPart>();
+                part.Worksheet = new Worksheet(data);
+
+                var sheet = new Sheet { Id = workbookPart.GetIdOfPart(part), SheetId = id, Name = name };
+                if (state is { } value)
+                    sheet.State = value;
+
+                sheets.AppendChild(sheet);
+            }
+        }
+
+        return buffer.ToArray();
+    }
+
     static SheetData BuildSheetData()
     {
         var data = new SheetData();

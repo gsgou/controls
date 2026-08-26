@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Shiny.Maui.Controls.FloatingPanel;
 using Shiny.Maui.Controls.Images;
 using Shiny.Maui.Controls.Infrastructure;
@@ -19,6 +20,8 @@ public partial class ImageViewer : ContentView, IDisposable
     const double MinScale = 1.0;
     const double DefaultMaxZoom = 5.0;
     const uint AnimationDuration = 250;
+    const string DefaultCloseButtonText = "✕";
+    const int CloseButtonSize = 40;
 
     // Thumbnail — visible when IsOpen=false
     internal readonly ShinyImage thumbnailImage;
@@ -27,7 +30,7 @@ public partial class ImageViewer : ContentView, IDisposable
     readonly Grid overlayGrid;
     readonly BoxView backdrop;
     internal readonly ShinyImage overlayImage;
-    View closeView;
+    internal View closeView;
     View? headerView;
     View? footerView;
     readonly TapGestureRecognizer doubleTapGesture;
@@ -294,25 +297,55 @@ public partial class ImageViewer : ContentView, IDisposable
         }
     }
 
-    Button CreateDefaultCloseButton()
+    /// <summary>
+    /// The close button used when there is no <see cref="CloseButtonTemplate"/>: an image button
+    /// when <see cref="CloseButtonImage"/> is set, a text one otherwise.
+    /// </summary>
+    /// <remarks>
+    /// Both come out the same size and in the same corner, so swapping the glyph for artwork does
+    /// not move the target - the chip is what is being aimed at either way.
+    /// </remarks>
+    View CreateDefaultCloseButton()
     {
-        var btn = new Button
+        // Translucent black chip on the dark Scrim backdrop, left as-is in both themes.
+        var chip = Color.FromRgba(0, 0, 0, 0.5);
+        View btn;
+
+        if (CloseButtonImage != null)
         {
-            Text = "✕",
-            FontSize = 20,
-            // Close button sits on the dark Scrim backdrop — use inverse-on-surface.
-            // Translucent black chip background left as-is.
-            BackgroundColor = Color.FromRgba(0, 0, 0, 0.5),
-            CornerRadius = 20,
-            WidthRequest = 40,
-            HeightRequest = 40,
-            Padding = 0,
-            HorizontalOptions = LayoutOptions.End,
-            VerticalOptions = LayoutOptions.Start,
-            Margin = new Thickness(0, 50, 16, 0)
-        };
-        btn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
-        btn.Clicked += (_, _) => IsOpen = false;
+            var image = new ImageButton
+            {
+                Source = CloseButtonImage,
+                Aspect = Aspect.AspectFit,
+                // artwork would otherwise run into the chip's edge on every side
+                Padding = 8,
+                BackgroundColor = chip,
+                CornerRadius = CloseButtonSize / 2
+            };
+            image.Clicked += (_, _) => IsOpen = false;
+            btn = image;
+        }
+        else
+        {
+            var text = new Button
+            {
+                Text = CloseButtonText,
+                FontSize = 20,
+                // Close button sits on the dark Scrim backdrop — use inverse-on-surface.
+                BackgroundColor = chip,
+                CornerRadius = CloseButtonSize / 2,
+                Padding = 0
+            };
+            text.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
+            text.Clicked += (_, _) => IsOpen = false;
+            btn = text;
+        }
+
+        btn.WidthRequest = CloseButtonSize;
+        btn.HeightRequest = CloseButtonSize;
+        btn.HorizontalOptions = LayoutOptions.End;
+        btn.VerticalOptions = LayoutOptions.Start;
+        btn.Margin = new Thickness(0, 50, 16, 0);
         return btn;
     }
 
@@ -384,6 +417,7 @@ public partial class ImageViewer : ContentView, IDisposable
         await Task.WhenAll(fadeTargets.Select(v => v.FadeTo(1, AnimationDuration)));
 
         isAnimating = false;
+        Raise(Opened, OpenedCommand);
     }
 
     async Task CloseAsync()
@@ -406,6 +440,20 @@ public partial class ImageViewer : ContentView, IDisposable
 
         ResetTransform();
         isAnimating = false;
+        Raise(Closed, ClosedCommand);
+    }
+
+    /// <summary>
+    /// Fires the pair a state change carries. Both go off at the end of the animation rather than
+    /// the start of it, so "opened" means the overlay is on screen and "closed" means it has left
+    /// the tree - a handler that reads the visual state gets the one it was told about.
+    /// </summary>
+    void Raise(EventHandler? evt, ICommand? command)
+    {
+        evt?.Invoke(this, EventArgs.Empty);
+
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
     }
 
     void ResetTransform()

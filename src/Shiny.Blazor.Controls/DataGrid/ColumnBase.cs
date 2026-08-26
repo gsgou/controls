@@ -83,6 +83,13 @@ public abstract class ColumnBase<TItem> : ComponentBase, IDisposable
     /// </summary>
     [Parameter] public Func<TItem, DataGridCellStyle?>? CellStyle { get; set; }
 
+    /// <summary>
+    /// Highlights the whole column - a fill, a stroke, or both, applied to every one of its cells.
+    /// Row-scoped and cell-scoped highlights are laid over it, and the column's own
+    /// <see cref="CellStyle"/> wins over all of them.
+    /// </summary>
+    [Parameter] public DataGridCellStyle? Highlight { get; set; }
+
     [Parameter] public RenderFragment? HeaderTemplate { get; set; }
     [Parameter] public RenderFragment<CellContext<TItem>>? CellTemplate { get; set; }
     [Parameter] public RenderFragment<CellContext<TItem>>? EditTemplate { get; set; }

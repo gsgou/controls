@@ -1,0 +1,76 @@
+.shiny-colorpickerbutton {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    vertical-align: middle;
+}
+
+.shiny-colorpickerbutton-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: var(--shiny-picker-height, 30px);
+    height: var(--shiny-picker-height, 30px);
+    padding: 3px;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-radius: var(--shiny-shape-corner-small, 5px);
+    background: var(--shiny-color-surface, #fff);
+    cursor: pointer;
+}
+
+.shiny-colorpickerbutton-trigger:disabled { opacity: 0.35; cursor: default; }
+
+/* The checkerboard is the only way to tell 50% black from mid grey, so it is painted here and the
+   chosen colour goes on the child that sits over it. */
+.shiny-colorpickerbutton-swatch {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    overflow: hidden;
+    background-color: #fff;
+    background-image:
+        linear-gradient(45deg, rgba(0, 0, 0, 0.16) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.16) 75%),
+        linear-gradient(45deg, rgba(0, 0, 0, 0.16) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.16) 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.shiny-colorpickerbutton-fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.shiny-colorpickerbutton-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.shiny-colorpickerbutton-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 41;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    border-radius: var(--shiny-shape-corner-medium, 8px);
+    background: var(--shiny-color-surface, #fff);
+    box-shadow: var(--shiny-elevation-3, 0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.shiny-colorpickerbutton-done {
+    margin: 0 12px 12px;
+    padding: 7px 0;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 6px);
+    background: var(--shiny-color-primary, #2563eb);
+    color: var(--shiny-color-on-primary, #fff);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}

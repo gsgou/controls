@@ -2,8 +2,12 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Shiny.Controls.Office.Packaging;
+using Shiny.Controls.Office.Presentation;
+using Shiny.Controls.Office.Shapes;
+using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using Drawing = DocumentFormat.OpenXml.Drawing;
+using Wps = DocumentFormat.OpenXml.Office2010.Word.DrawingShape;
 
 namespace Shiny.Controls.Office.Document;
 
@@ -16,8 +20,34 @@ sealed class WordBodyReader(
     WordNumbering numbering,
     IUnsupportedFeatureSink unsupported)
 {
+    /// <summary>
+    /// The DrawingML reader, sharing the document's theme.
+    /// </summary>
+    /// <remarks>
+    /// The same class the slide side uses. A shape in a Word drawing carries exactly the DrawingML a
+    /// shape on a slide does — <c>a:solidFill</c>, <c>a:ln</c>, <c>a:schemeClr</c> — so resolving it
+    /// with anything other than that reader would be a second, worse implementation of the same
+    /// vocabulary. Built once because it holds the resolved theme palette.
+    /// </remarks>
+    readonly DrawingReader drawing = new(ThemeColors.From(main.ThemePart));
+
     /// <summary>Re-projects one paragraph after its XML has been edited.</summary>
     public DocumentParagraph Reread(Paragraph paragraph) => this.ReadParagraph(paragraph);
+
+    /// <summary>
+    /// Re-projects any body-level element after its XML has been edited.
+    /// </summary>
+    /// <remarks>
+    /// Anything that is not a paragraph or a table becomes an empty paragraph rather than nothing, so
+    /// the block list stays the same length as the body it mirrors — an index that skips an element
+    /// puts every caret position after it in the wrong block.
+    /// </remarks>
+    public DocumentBlock RereadBlock(OpenXmlElement element) => element switch
+    {
+        Paragraph paragraph => this.ReadParagraph(paragraph),
+        Table table => this.ReadTable(table),
+        _ => new DocumentParagraph([], ParagraphFormat.Default)
+    };
 
     public IReadOnlyList<DocumentBlock> ReadBody(Body? body)
     {
@@ -194,9 +224,11 @@ sealed class WordBodyReader(
                     break;
 
                 case DocumentFormat.OpenXml.Wordprocessing.Drawing drawing:
-                    var image = this.ReadImage(drawing);
-                    if (image is not null)
-                        yield return new StyledRun(string.Empty, style) { Image = image };
+                    // A w:drawing is the wrapper for both pictures and shapes; which one it holds is
+                    // decided by what is under a:graphicData, so the picture is tried first and the
+                    // shape only if there was no blip to find.
+                    if (this.ReadInlineObject(drawing) is { } inline)
+                        yield return new StyledRun(string.Empty, style) { Inline = inline };
 
                     break;
 
@@ -212,6 +244,119 @@ sealed class WordBodyReader(
             }
         }
     }
+
+    /// <summary>
+    /// Whatever a <c>w:drawing</c> holds, or null when it is something the viewer cannot draw.
+    /// </summary>
+    /// <remarks>
+    /// Anchored (floating) drawings are read too, and land in the flow at the point they are anchored
+    /// from. That is not where Word puts them — a floating shape has an absolute position and text
+    /// wraps around it — but the alternative in a reflow view is to drop them, and a diagram in
+    /// roughly the right paragraph is far more use than no diagram at all. The substitution is
+    /// reported so the note above the document says so.
+    /// </remarks>
+    InlineObject? ReadInlineObject(DocumentFormat.OpenXml.Wordprocessing.Drawing drawing)
+    {
+        if (drawing.GetFirstChild<Drawing.Wordprocessing.Anchor>() is not null)
+        {
+            unsupported.Report(new UnsupportedFeature(
+                "document", "Floating drawing", UnsupportedSeverity.NotEditable,
+                "Shown in the text flow; the reflow view has no fixed positions to anchor it to."));
+        }
+
+        // A blip is what makes it a picture. Shapes have geometry instead.
+        if (drawing.Descendants<Drawing.Blip>().Any())
+            return this.ReadImage(drawing);
+
+        return this.ReadShape(drawing);
+    }
+
+    /// <summary>
+    /// The <c>wps:wsp</c> inside a drawing, as a shape.
+    /// </summary>
+    /// <remarks>
+    /// Looked up by descendant rather than by walking <c>a:graphic</c> / <c>a:graphicData</c>, because
+    /// the same shape reaches here under at least three different <c>graphicData</c> URIs depending on
+    /// which Word wrote it, and a group wraps it in another layer again. The element is what matters,
+    /// not the route to it.
+    /// </remarks>
+    InlineShape? ReadShape(DocumentFormat.OpenXml.Wordprocessing.Drawing drawing)
+    {
+        var wsp = drawing.Descendants<Wps.WordprocessingShape>().FirstOrDefault();
+        if (wsp is null)
+            return null;
+
+        var properties = wsp.GetFirstChild<Wps.ShapeProperties>();
+        var geometry = DrawingReader.MapGeometry(
+            OoxmlUnits.EnumAttribute(properties?.GetFirstChild<Drawing.PresetGeometry>(), "prst"));
+
+        // The extent on the wrapper is the authoritative size — a:xfrm inside the shape agrees with it
+        // when present and is absent altogether for a shape Word sized from its wrapper.
+        var (width, height) = ExtentOf(drawing);
+
+        var fill = this.drawing.ReadFill(properties);
+        var outline = this.drawing.ReadOutline(properties);
+
+        // Neither fill nor outline means an invisible shape. Word's default for a drawn shape is a
+        // themed fill, so an empty one is far more likely to be a shape whose theme colours could not
+        // be resolved than a deliberately invisible one — an outline keeps it findable either way.
+        if (fill.IsEmpty && outline is null)
+            outline = new ShapeOutline(new ArgbColor(255, 0x44, 0x72, 0xC4), 1);
+
+        return new InlineShape(geometry, width, height, DescriptionOf(drawing))
+        {
+            Fill = fill,
+            Outline = outline,
+            Text = this.ReadShapeText(wsp)
+        };
+    }
+
+    /// <summary>The text inside a shape's text box, flattened to runs.</summary>
+    /// <remarks>
+    /// Flattened rather than kept as paragraphs: the shape is painted with its text centred as a
+    /// single block, and a text box with enough content for the paragraph structure to matter wants a
+    /// nested editor, which is a different feature.
+    /// </remarks>
+    IReadOnlyList<StyledRun> ReadShapeText(Wps.WordprocessingShape wsp)
+    {
+        var box = wsp.GetFirstChild<Wps.TextBoxInfo2>()?.TextBoxContent;
+        if (box is null)
+            return [];
+
+        var runs = new List<StyledRun>();
+
+        foreach (var paragraph in box.Elements<Paragraph>())
+        {
+            if (runs.Count > 0)
+                runs.Add(new StyledRun(string.Empty, TextStyle.Default) { IsBreak = true });
+
+            foreach (var run in paragraph.Descendants<Run>())
+            {
+                var style = TextStyle.Default;
+                if (run.RunProperties is not null)
+                    style = WordStyleResolver.ApplyRunProperties(style, run.RunProperties, ThemeFonts.From(main.ThemePart));
+
+                foreach (var text in run.Elements<DocumentFormat.OpenXml.Wordprocessing.Text>())
+                    runs.Add(new StyledRun(text.Text ?? string.Empty, style));
+            }
+        }
+
+        return runs;
+    }
+
+    /// <summary>The drawing's stated size in pixels, falling back to a square when it has none.</summary>
+    static (double Width, double Height) ExtentOf(DocumentFormat.OpenXml.Wordprocessing.Drawing drawing)
+    {
+        var inline = drawing.Descendants<Drawing.Wordprocessing.Extent>().FirstOrDefault();
+
+        var width = inline?.Cx is { } cx ? OoxmlUnits.EmuToPixels(cx) : 0;
+        var height = inline?.Cy is { } cy ? OoxmlUnits.EmuToPixels(cy) : 0;
+
+        return width > 0 && height > 0 ? (width, height) : (120, 120);
+    }
+
+    static string? DescriptionOf(DocumentFormat.OpenXml.Wordprocessing.Drawing drawing)
+        => drawing.Descendants<Drawing.Wordprocessing.DocProperties>().FirstOrDefault()?.Description;
 
     InlineImage? ReadImage(DocumentFormat.OpenXml.Wordprocessing.Drawing drawing)
     {
@@ -321,6 +466,7 @@ sealed class WordBodyReader(
 
         return new DocumentTable(rows)
         {
+            Element = table,
             ColumnWidths = widths,
             HasBorders = hasBorders
         };

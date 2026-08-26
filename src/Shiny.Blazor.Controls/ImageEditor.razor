@@ -87,6 +87,27 @@
                                 @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Arrow</span> }
                             </button>
                         }
+                        @if (AllowRectangle)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("rect")" @onclick="ToggleRectangle" title="Rectangle">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Rectangle</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Rect</span> }
+                            </button>
+                        }
+                        @if (AllowEllipse)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("ellipse")" @onclick="ToggleEllipse" title="Ellipse">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Ellipse</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Ellipse</span> }
+                            </button>
+                        }
+                        @if (AllowCircle)
+                        {
+                            <button class="shiny-imgeditor-tool @Active("circle")" @onclick="ToggleCircle" title="Circle">
+                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Circle</span>
+                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Circle</span> }
+                            </button>
+                        }
                         @if (AllowTextAnnotation)
                         {
                             <button class="shiny-imgeditor-tool @Active("text")" @onclick="ToggleText" title="Text">
@@ -98,14 +119,16 @@
                 </div>
 
                 @* Options for the active tool only *@
-                @if (IsInkMode || currentMode == "text")
+                @if (IsInkMode || IsShapeMode || currentMode == "text")
                 {
                     <div class="shiny-imgeditor-scroller">
                         <div class="shiny-imgeditor-options">
+                            @* For a shape this swatch and these weights are the border — the
+                               interior gets its own swatch, opacity and on/off toggle below *@
                             <input type="color" class="shiny-imgeditor-color" value="@activeColor"
                                    @onchange="OnColorChanged" title="Colour" />
 
-                            @if (IsInkMode && ShowStrokeWidthPicker)
+                            @if ((IsInkMode || IsShapeMode) && ShowStrokeWidthPicker)
                             {
                                 @foreach (var width in StrokeWidthPresets)
                                 {
@@ -115,6 +138,21 @@
                                         <span style="width:@((6 + w * 1.6).ToString(Culture))px;height:@((6 + w * 1.6).ToString(Culture))px"></span>
                                     </button>
                                 }
+                            }
+
+                            @if (IsShapeMode && ShowShapeFillPicker)
+                            {
+                                <span class="shiny-imgeditor-divider"></span>
+                                <input type="color" class="shiny-imgeditor-color" value="@shapeFillHex"
+                                       @onchange="OnFillColorChanged" title="Fill colour" />
+                                <input type="range" class="shiny-imgeditor-range" min="0" max="100" step="1"
+                                       value="@FillOpacityPercent" @onchange="OnFillOpacityChanged"
+                                       title="Fill opacity" aria-label="Fill opacity" />
+                                <button class="shiny-imgeditor-btn @(shapeFill == null ? "" : "active")"
+                                        @onclick="ToggleShapeFill"
+                                        title="@(shapeFill == null ? "No fill" : "Fill")">
+                                    <span class="shiny-imgeditor-ico">@(shapeFill == null ? ImageEditorIcons.NoFill : ImageEditorIcons.Fill)</span>
+                                </button>
                             }
 
                             @if (currentMode == "text" && AllowFontSelection && AvailableFonts != null)

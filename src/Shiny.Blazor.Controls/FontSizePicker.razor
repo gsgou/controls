@@ -1,0 +1,69 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    A list of point sizes, each drawn at the size it names.
+
+    Same idea as FontPicker: 8 and 72 mean very little as numbers next to each other, and a great deal
+    when the row for one is a quarter the height of the row for the other. The specimen is capped in
+    the stylesheet so a 72 does not push the list off the screen.
+*@
+
+<div class="shiny-fontsizepicker @Class" style="@Style" role="listbox" aria-label="Font size">
+    @foreach (var size in this.Sizes)
+    {
+        var selected = Math.Abs(size - this.SelectedFontSize) < 0.51;
+
+        <button type="button"
+                role="option"
+                aria-selected="@selected"
+                class="@(selected ? "shiny-fontsizepicker-item shiny-fontsizepicker-item-on" : "shiny-fontsizepicker-item")"
+                @onclick="@(() => this.Select(size))">
+            <span class="shiny-fontsizepicker-value">@Css(size)</span>
+
+            @if (!string.IsNullOrEmpty(this.PreviewText))
+            {
+                <span class="shiny-fontsizepicker-preview" style="font-size:@(Css(size))pt">@this.PreviewText</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>The sizes to offer. Null falls back to <see cref="DefaultFontSizes"/>.</summary>
+    [Parameter] public IReadOnlyList<double>? AvailableFontSizes { get; set; }
+
+    [Parameter] public double SelectedFontSize { get; set; } = 16;
+
+    [Parameter] public EventCallback<double> SelectedFontSizeChanged { get; set; }
+
+    /// <summary>Raised when a size is chosen. Fires alongside <see cref="SelectedFontSizeChanged"/>.</summary>
+    [Parameter] public EventCallback<double> FontSizeChanged { get; set; }
+
+    /// <summary>The specimen shown beside each number. Empty leaves the numbers on their own.</summary>
+    [Parameter] public string PreviewText { get; set; } = "Aa";
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>The sizes Word and PowerPoint offer, which is what anyone reaches for out of habit.</summary>
+    public static readonly IReadOnlyList<double> DefaultFontSizes =
+    [
+        8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72
+    ];
+
+    IReadOnlyList<double> Sizes => this.AvailableFontSizes is { Count: > 0 } sizes ? sizes : DefaultFontSizes;
+
+    async Task Select(double size)
+    {
+        this.SelectedFontSize = size;
+
+        if (this.SelectedFontSizeChanged.HasDelegate)
+            await this.SelectedFontSizeChanged.InvokeAsync(size);
+
+        if (this.FontSizeChanged.HasDelegate)
+            await this.FontSizeChanged.InvokeAsync(size);
+    }
+
+    static string Css(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

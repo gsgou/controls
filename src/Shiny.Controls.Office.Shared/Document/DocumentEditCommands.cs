@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Shiny.Controls.Office.Editing;
 using Shiny.Controls.Office.Spreadsheet;
@@ -164,15 +165,63 @@ public sealed record FormatRunsCommand(DocumentRange Range, RunFormatChange Chan
 }
 
 /// <summary>A named run-property mutation, so a command can describe itself in the undo menu.</summary>
+/// <summary>Which run attribute a <see cref="RunFormatChange"/> sets.</summary>
+/// <remarks>
+/// Needed so a change chosen at a bare caret can replace an earlier one of the same attribute rather
+/// than queueing behind it: picking 12pt and then 14pt has to leave 14pt, not both in the order they
+/// were clicked.
+/// </remarks>
+public enum RunFormatKind
+{
+    Other,
+    Bold,
+    Italic,
+    Underline,
+    Strike,
+    FontFamily,
+    FontSize,
+    Color,
+    Highlight
+}
+
 public sealed record RunFormatChange(string Name, Action<RunProperties> Apply)
 {
-    public static RunFormatChange Bold(bool on) => new(on ? "Bold" : "Remove Bold", WordParagraphEditor.ToggleBold(on));
-    public static RunFormatChange Italic(bool on) => new(on ? "Italic" : "Remove Italic", WordParagraphEditor.ToggleItalic(on));
-    public static RunFormatChange Underline(bool on) => new(on ? "Underline" : "Remove Underline", WordParagraphEditor.ToggleUnderline(on));
-    public static RunFormatChange Strike(bool on) => new(on ? "Strikethrough" : "Remove Strikethrough", WordParagraphEditor.ToggleStrike(on));
-    public static RunFormatChange FontFamily(string family) => new("Font", WordParagraphEditor.SetFontFamily(family));
-    public static RunFormatChange FontSize(double points) => new("Font Size", WordParagraphEditor.SetFontSize(points));
-    public static RunFormatChange Color(ArgbColor color) => new("Text Colour", WordParagraphEditor.SetColor(color));
+    /// <summary>Which attribute this sets. See <see cref="RunFormatKind"/>.</summary>
+    public RunFormatKind Kind { get; init; } = RunFormatKind.Other;
+
+    /// <summary>
+    /// The same change expressed against <see cref="CaretFormat"/> — how it looks to a toolbar.
+    /// </summary>
+    /// <remarks>
+    /// A format chosen with nothing selected has not reached the document yet, so there is nothing in
+    /// the document to read it back from. The toolbar needs the change described in its own terms or
+    /// it would go on showing the format of whatever the caret happens to be sitting in.
+    /// </remarks>
+    public Func<CaretFormat, CaretFormat>? PreviewCaret { get; init; }
+
+    public static RunFormatChange Bold(bool on) => new(on ? "Bold" : "Remove Bold", WordParagraphEditor.ToggleBold(on))
+        { Kind = RunFormatKind.Bold, PreviewCaret = f => f with { Bold = on } };
+
+    public static RunFormatChange Italic(bool on) => new(on ? "Italic" : "Remove Italic", WordParagraphEditor.ToggleItalic(on))
+        { Kind = RunFormatKind.Italic, PreviewCaret = f => f with { Italic = on } };
+
+    public static RunFormatChange Underline(bool on) => new(on ? "Underline" : "Remove Underline", WordParagraphEditor.ToggleUnderline(on))
+        { Kind = RunFormatKind.Underline, PreviewCaret = f => f with { Underline = on } };
+
+    public static RunFormatChange Strike(bool on) => new(on ? "Strikethrough" : "Remove Strikethrough", WordParagraphEditor.ToggleStrike(on))
+        { Kind = RunFormatKind.Strike, PreviewCaret = f => f with { Strike = on } };
+
+    public static RunFormatChange FontFamily(string family) => new("Font", WordParagraphEditor.SetFontFamily(family))
+        { Kind = RunFormatKind.FontFamily, PreviewCaret = f => f with { FontFamily = family } };
+
+    public static RunFormatChange FontSize(double points) => new("Font Size", WordParagraphEditor.SetFontSize(points))
+        { Kind = RunFormatKind.FontSize, PreviewCaret = f => f with { FontSize = points } };
+
+    public static RunFormatChange Color(ArgbColor color) => new("Text Colour", WordParagraphEditor.SetColor(color))
+        { Kind = RunFormatKind.Color, PreviewCaret = f => f with { Color = color } };
+
+    public static RunFormatChange Highlight(ArgbColor? color) => new(color is null ? "Remove Highlight" : "Highlight", WordParagraphEditor.SetHighlight(color))
+        { Kind = RunFormatKind.Highlight, PreviewCaret = f => f with { Highlight = color } };
 }
 
 /// <summary>Applies paragraph-level formatting to every paragraph a range touches.</summary>
@@ -214,7 +263,7 @@ public sealed record ParagraphFormatChange(string Name, Action<ParagraphProperti
 /// The general-purpose inverse. Cloned XML is kept rather than a description of the change, because
 /// most edits split, merge or delete runs and there is no property-level undo that survives that.
 /// </remarks>
-public sealed record RestoreBlocksCommand(int Start, int RemovedCount, IReadOnlyList<Paragraph> Snapshot) : DocumentCommand
+public sealed record RestoreBlocksCommand(int Start, int RemovedCount, IReadOnlyList<OpenXmlElement> Snapshot) : DocumentCommand
 {
     public override string Name => "Undo";
 
@@ -223,8 +272,146 @@ public sealed record RestoreBlocksCommand(int Start, int RemovedCount, IReadOnly
         var inverse = context.CaptureBlocks(this.Start, this.RemovedCount);
         context.ReplaceBlocks(this.Start, this.RemovedCount, this.Snapshot);
 
-        // Redo must remove however many paragraphs this restore just put in.
+        // Redo must remove however many blocks this restore just put in.
         return inverse with { RemovedCount = this.Snapshot.Count };
+    }
+}
+
+/// <summary>
+/// Inserts an inline object — a picture or a shape — at the caret.
+/// </summary>
+/// <remarks>
+/// The run is built before the command is constructed, so anything that can fail (decoding an image,
+/// adding a part to the package) has already failed by the time the undo stack is involved. A command
+/// that could fail halfway would leave a redo that no longer works.
+/// </remarks>
+public sealed record InsertInlineObjectCommand(DocumentPosition At, Run Element) : DocumentCommand
+{
+    public override string Name => "Insert Object";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var paragraph = context.ParagraphElementAt(this.At.Block);
+        if (paragraph is null)
+            return new NoOpCommand();
+
+        WordParagraphEditor.InsertObject(paragraph, this.At.Offset, this.Element);
+        context.Reproject(this.At.Block);
+
+        // One character wide, like every inline object.
+        return new DeleteRangeCommand(new DocumentRange(
+            this.At,
+            this.At with { Offset = this.At.Offset + 1 }));
+    }
+}
+
+/// <summary>Resizes the inline object at a position.</summary>
+/// <remarks>
+/// Mergeable, so a drag that reports fifty pointer moves collapses into one undo step rather than
+/// fifty. The merge keeps this command's starting size as the thing to undo to, which is what makes
+/// a single Ctrl+Z put the object back to where the drag began.
+/// </remarks>
+public sealed record ResizeInlineObjectCommand(DocumentPosition At, double Width, double Height)
+    : DocumentCommand, IMergeableCommand<WordDocument>
+{
+    public override string Name => "Resize";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var paragraph = context.ParagraphElementAt(this.At.Block);
+        if (paragraph is null)
+            return new NoOpCommand();
+
+        // The size before the change is the undo, and it has to be read before the write.
+        var before = context.Blocks.ElementAtOrDefault(this.At.Block) is DocumentParagraph projected
+            ? SizeAt(projected, this.At.Offset)
+            : null;
+
+        if (!WordParagraphEditor.ResizeObject(paragraph, this.At.Offset, this.Width, this.Height))
+            return new NoOpCommand();
+
+        context.Reproject(this.At.Block);
+
+        return before is { } size
+            ? new ResizeInlineObjectCommand(this.At, size.Width, size.Height)
+            : new NoOpCommand();
+    }
+
+    public bool TryMerge(IEditCommand<WordDocument> next, out IEditCommand<WordDocument> merged)
+    {
+        merged = this;
+
+        if (next is not ResizeInlineObjectCommand other || other.At != this.At)
+            return false;
+
+        // The later size wins; the earlier undo is the one that matters.
+        merged = other;
+        return true;
+    }
+
+    /// <summary>The size of the inline object at an offset, from the projection.</summary>
+    static (double Width, double Height)? SizeAt(DocumentParagraph paragraph, int offset)
+    {
+        var cursor = 0;
+
+        foreach (var run in paragraph.Runs)
+        {
+            if (run.IsBreak)
+                continue;
+
+            var length = run.Inline is null ? run.Text.Length : 1;
+
+            if (run.Inline is { } inline && offset >= cursor && offset < cursor + length)
+                return (inline.Width, inline.Height);
+
+            cursor += length;
+        }
+
+        return null;
+    }
+}
+
+/// <summary>Inserts a table as a new block after <paramref name="Block"/>.</summary>
+/// <remarks>
+/// After rather than at, and followed by an empty paragraph, because a table needs a paragraph on the
+/// far side of it to be reachable: with nothing after it there is no caret position below the table
+/// and no way to type past the end of the document.
+/// </remarks>
+public sealed record InsertTableCommand(int Block, int Rows, int Columns) : DocumentCommand
+{
+    public override string Name => "Insert Table";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        if (context.BlockElementAt(this.Block) is not { } anchor)
+            return new NoOpCommand();
+
+        var table = WordContentFactory.Table(this.Rows, this.Columns);
+        var trailing = WordContentFactory.EmptyParagraph();
+
+        anchor.InsertAfterSelf(table);
+        table.InsertAfterSelf(trailing);
+
+        context.InsertBlockAfter(this.Block, table);
+        context.InsertBlockAfter(this.Block + 1, trailing);
+
+        return new RemoveBlocksCommand(this.Block + 1, 2);
+    }
+}
+
+/// <summary>Removes a span of blocks, restoring them on undo.</summary>
+public sealed record RemoveBlocksCommand(int Start, int Count) : DocumentCommand
+{
+    public override string Name => "Delete";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var restore = context.CaptureBlocks(this.Start, this.Count);
+
+        for (var i = 0; i < this.Count; i++)
+            context.RemoveBlock(this.Start);
+
+        return restore;
     }
 }
 

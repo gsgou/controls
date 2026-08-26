@@ -91,7 +91,8 @@
         <ImageEditor @ref="editor"
                      ImageData="@items[currentIndex].Data"
                      AllowCrop="true" AllowRotate="true" AllowDraw="true"
-                     AllowTextAnnotation="true" AllowLine="true" AllowArrow="true" />
+                     AllowTextAnnotation="true" AllowLine="true" AllowArrow="true"
+                     AllowRectangle="true" AllowEllipse="true" AllowCircle="true" />
         <div class="shiny-mediapicker-editor-actions">
             <button type="button" class="shiny-mediapicker-editor-save" @onclick="SaveEditAsync">&#10003; Save</button>
             <button type="button" class="shiny-mediapicker-editor-cancel" @onclick="() => editing = false">&#10005; Cancel</button>

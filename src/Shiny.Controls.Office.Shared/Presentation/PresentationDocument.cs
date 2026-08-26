@@ -189,6 +189,26 @@ public sealed class SlideDeck : OfficeDocument
     /// <summary>The shape tree a slide's own shapes live in.</summary>
     internal ShapeTree? TreeAt(int slide) => this.PartAt(slide)?.Slide?.CommonSlideData?.ShapeTree;
 
+    /// <summary>
+    /// Stores image bytes as a part of one slide and returns the relationship id to reference it by.
+    /// </summary>
+    /// <remarks>
+    /// The part hangs off the slide rather than the presentation, because that is where a picture's
+    /// <c>r:embed</c> is resolved from — a relationship on the presentation part is invisible to the
+    /// slide that would need it.
+    /// </remarks>
+    internal string? AddImagePart(int slide, byte[] data, string contentType)
+    {
+        if (this.PartAt(slide) is not { } part)
+            return null;
+
+        var image = part.AddImagePart(contentType);
+        using var stream = new MemoryStream(data, writable: false);
+        image.FeedData(stream);
+
+        return part.GetIdOfPart(image);
+    }
+
     /// <summary>Re-reads one slide from its (now edited) XML and marks it for saving.</summary>
     internal void Reproject(int slide)
     {

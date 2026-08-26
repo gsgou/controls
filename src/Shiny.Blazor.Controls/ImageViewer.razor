@@ -24,7 +24,16 @@
         }
         else
         {
-            <button type="button" class="shiny-imgviewer-close" @onclick="OnCloseClick">&#10005;</button>
+            <button type="button" class="shiny-imgviewer-close" @onclick="OnCloseClick" aria-label="Close">
+                @if (!String.IsNullOrWhiteSpace(CloseButtonImage))
+                {
+                    <img class="shiny-imgviewer-close-img" src="@CloseButtonImage" alt="" draggable="false" />
+                }
+                else
+                {
+                    @CloseButtonText
+                }
+            </button>
         }
         @if (FooterTemplate != null)
         {
@@ -47,8 +56,20 @@
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public double MaxZoom { get; set; } = 5.0;
     [Parameter] public RenderFragment? CloseButtonTemplate { get; set; }
+
+    /// <summary>The glyph or word on the built-in close button. Ignored once <see cref="CloseButtonImage"/> or <see cref="CloseButtonTemplate"/> is set.</summary>
+    [Parameter] public string CloseButtonText { get; set; } = "✕";
+
+    /// <summary>A url for artwork inside the built-in close button, in place of <see cref="CloseButtonText"/>. Ignored once <see cref="CloseButtonTemplate"/> is set.</summary>
+    [Parameter] public string? CloseButtonImage { get; set; }
     [Parameter] public RenderFragment? HeaderTemplate { get; set; }
     [Parameter] public RenderFragment? FooterTemplate { get; set; }
+
+    /// <summary>Raised once the overlay is on screen, however it was opened.</summary>
+    [Parameter] public EventCallback Opened { get; set; }
+
+    /// <summary>Raised once the overlay has gone, whether from the close button, the backdrop or <see cref="IsOpen"/>.</summary>
+    [Parameter] public EventCallback Closed { get; set; }
 
     protected override void OnInitialized() { rendered = true; wasOpen = IsOpen; }
 
@@ -61,22 +82,36 @@
                 "./_content/Shiny.Blazor.Controls/image-viewer.js");
             selfRef = DotNetObjectReference.Create(this);
             await module.InvokeVoidAsync("init", rootEl, backdropEl, imgEl, selfRef, MaxZoom);
-            if (IsOpen) await module.InvokeVoidAsync("open", rootEl);
+            if (IsOpen)
+            {
+                await module.InvokeVoidAsync("open", rootEl);
+                await Opened.InvokeAsync();
+            }
         }
         else if (IsOpen != wasOpen)
         {
             wasOpen = IsOpen;
             if (module is null) return;
-            if (IsOpen) await module.InvokeVoidAsync("open", rootEl);
-            else await module.InvokeVoidAsync("close", rootEl);
+            if (IsOpen)
+            {
+                await module.InvokeVoidAsync("open", rootEl);
+                await Opened.InvokeAsync();
+            }
+            else
+            {
+                await module.InvokeVoidAsync("close", rootEl);
+                await Closed.InvokeAsync();
+            }
         }
     }
 
+    // Deliberately does not clear wasOpen: letting the state change fall through to
+    // OnAfterRenderAsync is what makes the close button, the backdrop and IsOpen all raise Closed
+    // once, from one place, and reset the zoom on the way out.
     [JSInvokable]
     public Task OnRequestClose()
     {
         IsOpen = false;
-        wasOpen = false;
         return IsOpenChanged.InvokeAsync(false);
     }
 

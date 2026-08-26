@@ -1,0 +1,62 @@
+.shiny-fontsizepickerbutton {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    vertical-align: middle;
+}
+
+.shiny-fontsizepickerbutton-input {
+    box-sizing: border-box;
+    width: 46px;
+    height: var(--shiny-picker-height, 30px);
+    padding: 0 4px 0 6px;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-right: 0;
+    border-radius: var(--shiny-shape-corner-small, 5px) 0 0 var(--shiny-shape-corner-small, 5px);
+    background: var(--shiny-color-surface, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+}
+
+.shiny-fontsizepickerbutton-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 20px;
+    height: var(--shiny-picker-height, 30px);
+    padding: 0;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-radius: 0 var(--shiny-shape-corner-small, 5px) var(--shiny-shape-corner-small, 5px) 0;
+    background: var(--shiny-color-surface, #fff);
+    color: inherit;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shiny-fontsizepickerbutton-input:disabled,
+.shiny-fontsizepickerbutton-trigger:disabled { opacity: 0.35; cursor: default; }
+
+.shiny-fontsizepickerbutton-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.shiny-fontsizepickerbutton-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 41;
+    min-width: 132px;
+    border: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    border-radius: var(--shiny-shape-corner-medium, 8px);
+    background: var(--shiny-color-surface, #fff);
+    box-shadow: var(--shiny-elevation-3, 0 8px 24px rgba(0, 0, 0, 0.18));
+    overflow: hidden;
+}

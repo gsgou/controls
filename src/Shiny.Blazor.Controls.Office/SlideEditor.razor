@@ -1,5 +1,6 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
+@using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Presentation
 @implements IAsyncDisposable
 @inject IJSRuntime Js
@@ -10,6 +11,7 @@
 *@
 <div class="shiny-slide-editor @Class"
      style="@Style"
+     @ref="host"
      @onwheel="OnWheel"
      @onwheel:preventDefault="true"
      @onpointerdown="OnPointerDown"
@@ -42,6 +44,9 @@
 @code {
     SKCanvasView? canvas;
     ElementReference input;
+    ElementReference host;
+    IJSObjectReference? dropModule;
+    IJSObjectReference? dropHandle;
     IJSObjectReference? inputModule;
     IJSObjectReference? inputHandle;
     DotNetObjectReference<SlideEditor>? selfReference;
@@ -79,6 +84,12 @@
     [Parameter] public EventCallback<int> SlideIndexChanged { get; set; }
 
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Whether dragging an image file onto the slide inserts it. On by default.</summary>
+    [Parameter] public bool AllowFileDrop { get; set; } = true;
+
+    /// <summary>Raised when a dropped file could not be inserted, so a host can say so.</summary>
+    [Parameter] public EventCallback<OfficeDropRejected> DropRejected { get; set; }
 
     [Parameter] public string? Class { get; set; }
 
@@ -523,12 +534,90 @@
             }
 
             await this.AttachInputAsync();
+            await this.AttachDropAsync();
         }
 
         if (this.focusInput)
         {
             this.focusInput = false;
             await this.FocusAsync();
+        }
+    }
+
+    // ---- file drop ----
+
+    /// <summary>
+    /// Receives one dropped file from the browser, and places it where it landed.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the document, a slide has real positions: the picture goes exactly where the pointer
+    /// was, centred on it, which is what dropping onto a canvas is expected to mean. The size is
+    /// capped to the slide so a photograph dropped at full resolution does not arrive many times
+    /// larger than the deck it is in.
+    /// </remarks>
+    [JSInvokable]
+    public async Task HandleFileDrop(string name, string contentType, string? base64, double x, double y)
+    {
+        if (this.controller is null || this.ReadOnly)
+            return;
+
+        if (base64 is null)
+        {
+            await this.RaiseDropRejectedAsync(name, "The file is too large to embed.");
+            return;
+        }
+
+        if (ImageContentTypes.Resolve(name, contentType) is not { } resolved)
+        {
+            await this.RaiseDropRejectedAsync(name, "Only images can be dropped onto a slide.");
+            return;
+        }
+
+        if (this.controller.ToSlide(x, y) is not { } point)
+            return;
+
+        var width = Math.Min(this.controller.Deck.SlideWidth / 2, 400);
+        var height = width * 0.75;
+
+        this.controller.AddPicture(
+            Convert.FromBase64String(base64),
+            resolved,
+            point.X - (width / 2),
+            point.Y - (height / 2),
+            width,
+            height,
+            Path.GetFileNameWithoutExtension(name));
+
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+
+        if (this.DeckChanged.HasDelegate)
+            await this.DeckChanged.InvokeAsync();
+    }
+
+    async Task RaiseDropRejectedAsync(string name, string reason)
+    {
+        if (this.DropRejected.HasDelegate)
+            await this.DropRejected.InvokeAsync(new OfficeDropRejected(name, reason));
+    }
+
+    async Task AttachDropAsync()
+    {
+        if (!this.AllowFileDrop)
+            return;
+
+        try
+        {
+            this.dropModule = await this.Js.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls.Office/officeDrop.js");
+
+            this.dropHandle = await this.dropModule.InvokeAsync<IJSObjectReference>(
+                "attach", this.host, this.selfReference, nameof(HandleFileDrop));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] File drop is unavailable: {ex.Message}");
         }
     }
 
@@ -570,6 +659,12 @@
 
             if (this.inputModule is not null)
                 await this.inputModule.DisposeAsync();
+
+            if (this.dropModule is not null && this.dropHandle is not null)
+                await this.dropModule.InvokeVoidAsync("detach", this.dropHandle);
+
+            if (this.dropModule is not null)
+                await this.dropModule.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {

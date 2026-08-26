@@ -1,3 +1,4 @@
+using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Presentation;
 using Shiny.Controls.Office.Skia;
 
@@ -7,9 +8,16 @@ namespace Sample.Features.Office;
 /// The .pptx editor.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Tap a shape to select it, then drag it or its handles. Double-tap to put a caret inside its text.
 /// Physical keys need a platform hook — see <c>SlideEditor.HandleKey</c> — but tapping, dragging,
 /// typing and every toolbar command work without one.
+/// </para>
+/// <para>
+/// The toolbar's insert gallery — shapes, a table, a picture — is the same one the document editor
+/// has, and drops a new object in the middle of the slide with it already selected. Dragging an image
+/// file onto the canvas places it where it landed instead.
+/// </para>
 /// </remarks>
 public partial class SlideEditorPage : ContentPage
 {
@@ -33,6 +41,7 @@ public partial class SlideEditorPage : ContentPage
         this.deck = await SlideDeck.OpenAsync(new MemoryStream(bytes), editable: true);
         this.Editor.Deck = this.deck;
         this.Editor.DeckChanged += this.OnDeckChanged;
+        this.Editor.DropRejected += this.OnDropRejected;
 
         this.UpdateStatus();
     }
@@ -44,6 +53,10 @@ public partial class SlideEditorPage : ContentPage
         this.dark = !this.dark;
         this.Editor.Theme = this.dark ? SlideTheme.Dark : SlideTheme.Light;
     }
+
+    /// <summary>A dropped file the editor would not take, said out loud rather than swallowed.</summary>
+    void OnDropRejected(object? sender, OfficeDropRejected e)
+        => this.StatusLabel.Text = e.FileName.Length > 0 ? $"{e.FileName}: {e.Reason}" : e.Reason;
 
     void OnDeckChanged(object? sender, EventArgs e)
     {
@@ -62,6 +75,7 @@ public partial class SlideEditorPage : ContentPage
         if (this.Handler is null)
         {
             this.Editor.DeckChanged -= this.OnDeckChanged;
+            this.Editor.DropRejected -= this.OnDropRejected;
             this.deck?.Dispose();
             this.deck = null;
         }

@@ -20,6 +20,10 @@ export function init(root, canvas, dotnetRef, options) {
         drawWidth: options?.drawWidth || 3,
         // Line / arrow
         activeLine: null, // { start: {x,y}, end: {x,y}, isArrow: bool }
+        // Shapes. The border is the ink colour/width above; the fill is its own colour and is
+        // null when the shape is an outline only.
+        activeShape: null, // { kind: 'rect'|'ellipse'|'circle', start: {x,y}, end: {x,y}, square: bool }
+        shapeFill: options?.shapeFill || null,
         // Text
         textColor: options?.textColor || '#ffffff',
         textSize: options?.textSize || 16,
@@ -100,6 +104,7 @@ export function setMode(root, mode) {
         state.cropRect = null;
     }
     state.activeLine = null;
+    state.activeShape = null;
     redraw(state);
     updateCursor(state);
 }
@@ -142,6 +147,8 @@ export function reset(root) {
     state.redoStack = [];
     state.cropRect = null;
     state.currentStroke = null;
+    state.activeLine = null;
+    state.activeShape = null;
     state.mode = 'none';
     state.viewTransform = { scale: 1, tx: 0, ty: 0 };
     state.pinch = null;
@@ -177,6 +184,13 @@ export function updateDrawSettings(root, color, width) {
     if (!state) return;
     state.drawColor = color;
     state.drawWidth = width;
+}
+
+/** `fill` is any CSS colour, or null for an outline-only shape. */
+export function updateShapeSettings(root, fill) {
+    const state = states.get(root);
+    if (!state) return;
+    state.shapeFill = fill || null;
 }
 
 export function updateTextSettings(root, color, size, font) {
@@ -293,6 +307,12 @@ function redraw(state) {
         drawLine(ctx, state.activeLine.start, state.activeLine.end, state.drawColor, state.drawWidth, state.activeLine.isArrow);
     }
 
+    // Draw in-progress shape
+    if (state.activeShape) {
+        const s = state.activeShape;
+        drawShape(ctx, s.kind, buildShapeRect(s.start, s.end, s.kind, s.square), state.shapeFill, state.drawColor, state.drawWidth);
+    }
+
     ctx.restore();
 }
 
@@ -375,6 +395,15 @@ function replayActions(ctx, image, actions, canvasW, canvasH) {
             ctx.fillStyle = action.color;
             ctx.textBaseline = 'top';
             ctx.fillText(action.text, tx, ty);
+        } else if (action.type === 'shape') {
+            const bounds = {
+                x: drawRect.x + action.bounds.x * drawRect.w,
+                y: drawRect.y + action.bounds.y * drawRect.h,
+                w: action.bounds.w * drawRect.w,
+                h: action.bounds.h * drawRect.h
+            };
+            drawShape(ctx, action.shape, bounds, action.fill, action.stroke,
+                rescale(action.width, action.refWidth, drawRect.w));
         } else if (action.type === 'line') {
             const start = {
                 x: drawRect.x + action.start.x * drawRect.w,
@@ -480,6 +509,51 @@ function drawLine(ctx, start, end, color, width, arrow) {
     ctx.fill();
 }
 
+/**
+ * Turns the two corners of a shape drag into its bounds. A circle (or a shift-drag) takes the
+ * smaller of the two extents rather than the larger, so it can never escape the bounds the drag
+ * was clamped to.
+ */
+function buildShapeRect(start, end, kind, square) {
+    let x = Math.min(start.x, end.x);
+    let y = Math.min(start.y, end.y);
+    let w = Math.abs(end.x - start.x);
+    let h = Math.abs(end.y - start.y);
+
+    if (kind === 'circle' || square) {
+        const side = Math.min(w, h);
+        // Grow from whichever corner the drag started at, so the shape tracks the pointer
+        if (end.x < start.x) x = start.x - side;
+        if (end.y < start.y) y = start.y - side;
+        w = h = side;
+    }
+
+    return { x, y, w, h };
+}
+
+function drawShape(ctx, kind, rect, fill, stroke, width) {
+    if (rect.w <= 0 || rect.h <= 0) return;
+
+    ctx.beginPath();
+    if (kind === 'rect') {
+        ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    } else {
+        ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2);
+    }
+
+    if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+    }
+
+    if (stroke && width > 0) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = width;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    }
+}
+
 function drawStroke(ctx, points, color, width) {
     if (points.length < 2) return;
     ctx.strokeStyle = color;
@@ -505,6 +579,11 @@ function finalizeOperation(state) {
     // Commit in-progress line / arrow
     if (state.activeLine) {
         commitLine(state);
+    }
+
+    // Commit in-progress shape
+    if (state.activeShape) {
+        commitShape(state);
     }
 
     // Commit in-progress stroke
@@ -708,6 +787,17 @@ function onPointerDown(state, e) {
             redraw(state);
             break;
         }
+        case 'rect':
+        case 'ellipse':
+        case 'circle':
+        {
+            const ir = state.imageRect;
+            if (ir.w <= 0 || ir.h <= 0) break;
+            if (pt.x < ir.x || pt.x > ir.x + ir.w || pt.y < ir.y || pt.y > ir.y + ir.h) break;
+            state.activeShape = { kind: state.mode, start: pt, end: pt, square: e.shiftKey };
+            redraw(state);
+            break;
+        }
     }
 }
 
@@ -759,6 +849,20 @@ function onPointerMove(state, e) {
                 redraw(state);
             }
             break;
+        case 'rect':
+        case 'ellipse':
+        case 'circle':
+            if (state.activeShape) {
+                const ir = state.imageRect;
+                state.activeShape.end = {
+                    x: clamp(pt.x, ir.x, ir.x + ir.w),
+                    y: clamp(pt.y, ir.y, ir.y + ir.h)
+                };
+                // Held live rather than read at pointerdown, so shift can be taken or released mid-drag
+                state.activeShape.square = e.shiftKey;
+                redraw(state);
+            }
+            break;
     }
 }
 
@@ -793,6 +897,12 @@ function onPointerUp(state, e) {
         case 'line':
         case 'arrow':
             commitLine(state);
+            redraw(state);
+            break;
+        case 'rect':
+        case 'ellipse':
+        case 'circle':
+            commitShape(state);
             redraw(state);
             break;
     }
@@ -866,6 +976,7 @@ function updatePan(state, screen) {
 function abandonToolGesture(state) {
     state.currentStroke = null;
     state.activeLine = null;
+    state.activeShape = null;
     state.activeCropHandle = null;
     state.pan = null;
     redraw(state);
@@ -894,6 +1005,35 @@ function commitLine(state) {
         width: state.drawWidth,
         refWidth: ir.w,
         isArrow: isArrow
+    });
+    state.redoStack = [];
+    notifyUndoState(state);
+}
+
+function commitShape(state) {
+    if (!state.activeShape) return;
+    const { kind, start, end, square } = state.activeShape;
+    state.activeShape = null;
+
+    const ir = state.imageRect;
+    if (ir.w <= 0 || ir.h <= 0) return;
+
+    const rect = buildShapeRect(start, end, kind, square);
+    if (rect.w < 2 || rect.h < 2) return; // ignore taps without a drag
+
+    state.actions.push({
+        type: 'shape',
+        shape: kind,
+        bounds: {
+            x: (rect.x - ir.x) / ir.w,
+            y: (rect.y - ir.y) / ir.h,
+            w: rect.w / ir.w,
+            h: rect.h / ir.h
+        },
+        fill: state.shapeFill,
+        stroke: state.drawColor,
+        width: state.drawWidth,
+        refWidth: ir.w
     });
     state.redoStack = [];
     notifyUndoState(state);

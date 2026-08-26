@@ -59,7 +59,7 @@ public static class Catalog
         [
             new("textentry", "Text Entry", "✏", "Floating-label entry with validation states"),
             new("autocomplete", "AutoComplete", "≣", "Type-ahead suggestions from any source"),
-            new("colorpicker", "Color Picker", "◉", "Wheel, sliders and swatches"),
+            new("colorpicker", "Pickers", "◉", "Colour, font family and font size, as panels and as toolbar buttons"),
             new("countryaddress", "Country & Address", "⚑", "Country picker and structured address entry"),
             new("slider", "Slider", "━", "Single-value slider with ticks and labels"),
             new("rangeslider", "Range Slider", "≡", "Two-thumb range selection"),

@@ -233,12 +233,12 @@ public class DataGridColumnFormattingTests
             ? new DataGridCellStyle { TextColor = "#c62828", Bold = true, CssClass = "negative" }
             : null);
 
-        var negative = DataGrid<Row>.CellStyleFor(col, new Row { Salary = -1 });
+        var negative = grid.ResolveCellStyle(col, new Row { Salary = -1 }, true, true, true, true);
         grid.CellCssClass(col, negative).ShouldContain("negative");
         grid.CellInlineStyle(col, negative)!.ShouldContain("color:#c62828");
         grid.CellInlineStyle(col, negative)!.ShouldContain("font-weight:600");
 
-        var positive = DataGrid<Row>.CellStyleFor(col, new Row { Salary = 1 });
+        var positive = grid.ResolveCellStyle(col, new Row { Salary = 1 }, true, true, true, true);
         grid.CellCssClass(col, positive).ShouldNotContain("negative");
         grid.CellInlineStyle(col, positive).ShouldBeNullOrEmpty();
     }

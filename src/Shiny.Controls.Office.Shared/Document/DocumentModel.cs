@@ -81,6 +81,17 @@ public sealed record DocumentTableRow(IReadOnlyList<DocumentTableCell> Cells)
 
 public sealed record DocumentTable(IReadOnlyList<DocumentTableRow> Rows) : DocumentBlock
 {
+    /// <summary>
+    /// The <c>w:tbl</c> this table was read from, or null for one the editor has not yet attached.
+    /// </summary>
+    /// <remarks>
+    /// The same anchor <see cref="DocumentParagraph.Element"/> is, and for the same reason: a table
+    /// carries conditional formatting, cell margins and a style reference that the projection above
+    /// flattens away, so an edit that rebuilt the table from this model would save a plainer table
+    /// than the one it opened.
+    /// </remarks>
+    internal DocumentFormat.OpenXml.Wordprocessing.Table? Element { get; init; }
+
     /// <summary>Column widths in pixels, from the table grid. Empty when the grid is absent.</summary>
     public IReadOnlyList<double> ColumnWidths { get; init; } = [];
 

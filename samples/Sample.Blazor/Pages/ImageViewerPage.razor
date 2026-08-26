@@ -19,11 +19,23 @@
     </div>
 </div>
 
-<ImageViewer Source="@current" @bind-IsOpen="isOpen" MaxZoom="6" />
+<p><em>Last viewer event: @lastEvent</em></p>
+
+<ImageViewer Source="@current"
+             @bind-IsOpen="isOpen"
+             MaxZoom="6"
+             CloseButtonText="Done"
+             Opened="@(() => lastEvent = "Opened")"
+             Closed="@(() => lastEvent = "Closed")">
+    <HeaderTemplate>
+        <div style="padding:16px;color:white;text-align:center;font-weight:600;">@current</div>
+    </HeaderTemplate>
+</ImageViewer>
 
 @code {
     bool isOpen;
     string? current;
+    string lastEvent = "none yet";
     string[] samples = new[]
     {
         "https://picsum.photos/seed/blazor1/1200/800",

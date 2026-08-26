@@ -1,0 +1,47 @@
+.shiny-fontsizepicker {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 320px;
+}
+
+.shiny-fontsizepicker-item {
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-3, 12px);
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-3, 12px);
+    border: 0;
+    background: transparent;
+    color: var(--shiny-color-on-surface, #111827);
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.shiny-fontsizepicker-item:hover { background: var(--shiny-color-surface-variant, rgba(0, 0, 0, 0.05)); }
+
+.shiny-fontsizepicker-item-on {
+    background: var(--shiny-color-secondary-container, rgba(37, 99, 235, 0.14));
+    color: var(--shiny-color-on-secondary-container, inherit);
+}
+
+.shiny-fontsizepicker-value {
+    flex: 0 0 auto;
+    min-width: 32px;
+    font-family: var(--shiny-type-font-family, system-ui, sans-serif);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* Clipped rather than allowed to set the row height: at 72pt the specimen would otherwise make one
+   row taller than the whole popover. */
+.shiny-fontsizepicker-preview {
+    flex: 1 1 auto;
+    max-height: 40px;
+    overflow: hidden;
+    line-height: 1;
+    opacity: 0.75;
+}

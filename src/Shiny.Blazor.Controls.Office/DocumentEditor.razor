@@ -1,6 +1,8 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Packaging
+@using Shiny.Controls.Office.Skia
 @implements IAsyncDisposable
 @inject IJSRuntime Js
 
@@ -10,6 +12,7 @@
 *@
 <div class="shiny-doc-editor @Class"
      style="@Style"
+     @ref="host"
      @onwheel="OnWheel"
      @onwheel:preventDefault="true"
      @onpointerdown="OnPointerDown"
@@ -72,6 +75,9 @@
 @code {
     SKCanvasView? canvas;
     ElementReference input;
+    ElementReference host;
+    IJSObjectReference? dropModule;
+    IJSObjectReference? dropHandle;
     IJSObjectReference? inputModule;
     IJSObjectReference? inputHandle;
     DotNetObjectReference<DocumentEditor>? selfReference;
@@ -104,6 +110,12 @@
     [Parameter] public double Zoom { get; set; } = 1.0;
 
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Whether dragging an image file onto the editor inserts it. On by default.</summary>
+    [Parameter] public bool AllowFileDrop { get; set; } = true;
+
+    /// <summary>Raised when a dropped file could not be inserted, so a host can say so.</summary>
+    [Parameter] public EventCallback<OfficeDropRejected> DropRejected { get; set; }
 
     /// <summary>
     /// The spell checker for this editor.
@@ -233,6 +245,7 @@
             }
 
             await this.AttachInputAsync();
+            await this.AttachDropAsync();
         }
 
         if (this.focusInput)
@@ -277,15 +290,48 @@
 
             // The caret only belongs on screen while the editor has focus; a document showing a caret
             // it does not own reads as editable when it is not.
-            Caret = this.focused && !this.ReadOnly ? this.controller.CaretRect(this.controller.Selection.Focus) : null
+            Caret = this.focused && !this.ReadOnly && this.controller.SelectedObject is null
+                ? this.controller.CaretRect(this.controller.Selection.Focus)
+                : null,
+
+            ObjectChrome = this.BuildObjectChrome()
         });
+    }
+
+    /// <summary>The frame and handles around a selected inline object, or null when none is selected.</summary>
+    DocumentObjectChrome? BuildObjectChrome()
+    {
+        if (this.ReadOnly || this.controller is null)
+            return null;
+
+        if (this.controller.SelectedObjectBounds() is not { } bounds)
+            return null;
+
+        return new DocumentObjectChrome
+        {
+            Frame = bounds,
+            Handles = this.controller.SelectedObjectHandles().Select(x => x.Rect).ToList()
+        };
     }
 
     // ---- pointer ----
 
     void OnPointerDown(PointerEventArgs e)
     {
-        if (this.controller?.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
+        if (this.controller is null)
+            return;
+
+        this.spellingMenu = null;
+
+        // Objects first: a picture sits on top of the text it displaces, so a click inside one is
+        // always about the picture even though there is a caret position underneath it.
+        if (this.controller.BeginObjectDrag(e.OffsetX, e.OffsetY))
+        {
+            this.focusInput = true;
+            return;
+        }
+
+        if (this.controller.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
             return;
 
         if (e.ShiftKey)
@@ -294,7 +340,6 @@
             this.controller.Selection.MoveTo(position);
 
         this.dragging = true;
-        this.spellingMenu = null;
 
         // The click's default action would move focus off the hidden input the moment the browser
         // finishes handling it - which is why pointerdown is prevented on the host element. Without
@@ -304,14 +349,92 @@
 
     void OnPointerMove(PointerEventArgs e)
     {
-        if (!this.dragging || (e.Buttons & 1) != 1)
+        if (this.controller is null || (e.Buttons & 1) != 1)
             return;
 
-        if (this.controller?.PositionAt(e.OffsetX, e.OffsetY) is { } position)
+        if (this.controller.IsDraggingObject)
+        {
+            this.controller.DragObject(e.OffsetX, e.OffsetY);
+            return;
+        }
+
+        if (!this.dragging)
+            return;
+
+        if (this.controller.PositionAt(e.OffsetX, e.OffsetY) is { } position)
             this.controller.Selection.ExtendTo(position);
     }
 
-    void OnPointerUp(PointerEventArgs e) => this.dragging = false;
+    void OnPointerUp(PointerEventArgs e)
+    {
+        this.dragging = false;
+        this.controller?.EndObjectDrag();
+    }
+
+    // ---- file drop ----
+
+    /// <summary>
+    /// Receives one dropped file from the browser.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="base64"/> is null for a file the script refused to read because it was too
+    /// large. That is reported rather than ignored: a drop that silently does nothing reads as a
+    /// broken editor.
+    /// </remarks>
+    [JSInvokable]
+    public async Task HandleFileDrop(string name, string contentType, string? base64, double x, double y)
+    {
+        if (this.controller is null || this.ReadOnly)
+            return;
+
+        if (base64 is null)
+        {
+            await this.RaiseDropRejectedAsync(name, "The file is too large to embed.");
+            return;
+        }
+
+        if (ImageContentTypes.Resolve(name, contentType) is not { } resolved)
+        {
+            await this.RaiseDropRejectedAsync(name, "Only images can be dropped into a document.");
+            return;
+        }
+
+        // Dropped where the pointer was, not at wherever the caret happened to be left — the drop
+        // point is the only thing the user actually indicated.
+        if (this.controller.PositionAt(x, y) is { } position)
+            this.controller.Selection.MoveTo(position);
+
+        this.controller.InsertImage(Convert.FromBase64String(base64), resolved, name: Path.GetFileNameWithoutExtension(name));
+
+        await this.RaiseChangedAsync();
+        this.StateHasChanged();
+    }
+
+    async Task RaiseDropRejectedAsync(string name, string reason)
+    {
+        if (this.DropRejected.HasDelegate)
+            await this.DropRejected.InvokeAsync(new OfficeDropRejected(name, reason));
+    }
+
+    async Task AttachDropAsync()
+    {
+        if (!this.AllowFileDrop)
+            return;
+
+        try
+        {
+            this.dropModule = await this.Js.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls.Office/officeDrop.js");
+
+            this.dropHandle = await this.dropModule.InvokeAsync<IJSObjectReference>(
+                "attach", this.host, this.selfReference, nameof(HandleFileDrop));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Shiny.Office] File drop is unavailable: {ex.Message}");
+        }
+    }
 
     // ---- spelling menu ----
 
@@ -550,6 +673,12 @@
 
             if (this.inputModule is not null)
                 await this.inputModule.DisposeAsync();
+
+            if (this.dropModule is not null && this.dropHandle is not null)
+                await this.dropModule.InvokeVoidAsync("detach", this.dropHandle);
+
+            if (this.dropModule is not null)
+                await this.dropModule.DisposeAsync();
         }
         catch (Exception)
         {

@@ -8,5 +8,8 @@ public enum ImageEditorToolMode
     Draw,
     Text,
     Line,
-    Arrow
+    Arrow,
+    Rectangle,
+    Ellipse,
+    Circle
 }

@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, both editors sharing one gallery of twenty preset shapes plus tables, pictures and text highlighting, and both accepting an image dragged in from the desktop, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -691,7 +691,8 @@ A standalone duration picker control that opens a FloatingPanel for selection wi
 ### ShinyImage
 
 A remote image that always shows *something* — placeholder artwork, a loading ring, the image, or
-error artwork — with the download itself under your control on MAUI.
+error artwork — with the download itself under your control on MAUI. On MAUI it also renders **SVG**,
+as vectors rather than as a rasterized bitmap.
 
 <!-- TODO: capture screenshots for shiny-image -->
 
@@ -717,7 +718,7 @@ exactly the cases where a percentage would be a lie.
 
 | Property | Type | Description |
 |---|---|---|
-| Uri | string? | The image to load. `http`/`https` goes through `IImageService`; anything else loads as a local file |
+| Uri | string? | The image to load. `http`/`https` goes through `IImageService`; `resource://` reads an embedded resource; `data:` is decoded inline; anything else is a file path or bundled asset |
 | Source | ImageSource? | An explicit source (MAUI). Takes precedence over `Uri` and skips the service entirely |
 | PlaceholderImage / PlaceholderUri | ImageSource? / string? | Artwork shown before and during the load, **behind** the ring |
 | ErrorImage / ErrorUri | ImageSource? / string? | Artwork shown when the load fails |
@@ -730,7 +731,53 @@ exactly the cases where a percentage would be a lie.
 | DisableProgress | bool | Blazor: skip the streamed fetch and let the browser load the URL directly |
 | State, Progress, IsLoading, LoadError | read-only | The live load state |
 | ImageLoaded / ImageFailed | event / EventCallback | Completion callbacks (plus `ImageLoadedCommand` / `ImageFailedCommand` on MAUI) |
-| ReloadAsync() | method | Re-fetch, skipping the cache |
+| SvgTintColor | Color? | MAUI: what `currentColor` resolves to in an SVG. Ignored by rasters and by artwork with its own colours |
+| ReloadAsync() | method | Re-fetch, skipping the cache — and, for SVG, re-parse |
+
+#### SVG (MAUI)
+
+SVG is drawn rather than rasterized: one file stays sharp at every size, and a single-colour icon can
+be tinted per placement. The format is detected from the payload, not the file extension, so an
+endpoint that serves vectors from a URL that does not say so still works.
+
+```xml
+<!-- an embedded resource, tinted from the theme -->
+<shiny:ShinyImage Uri="resource://MyApp.Assets.logo.svg"
+                  SvgTintColor="{StaticResource Primary}"
+                  HeightRequest="48" />
+
+<!-- a file on disk, a bundled asset, or a remote URL - all the same property -->
+<shiny:ShinyImage Uri="/var/mobile/.../chart.svg" />
+<shiny:ShinyImage Uri="art/logo.svg" />
+<shiny:ShinyImage Uri="https://cdn.example.com/logo.svg" />
+```
+
+`resource://Name` searches the app assembly, then the entry assembly, then everything loaded, matching
+the manifest name exactly and then by suffix — so `resource://Assets.logo.svg` finds
+`MyApp.Assets.logo.svg`. Write `resource://MyLib/MyLib.Assets.logo.svg` to name the assembly outright.
+
+**Parsing is cached, not just the bytes.** `IImageService` already stops the same URL being downloaded
+twice, but turning bytes into geometry is an XML parse, a path-data parse per shape and a bounds
+measurement per shape — pure CPU on the UI thread, repeated for every cell in a list showing the same
+icon. Parsed documents are immutable and shared through an LRU `SvgCache`, so a hundred rows showing
+one icon parse it once. `SvgTintColor` is applied at draw time rather than baked in, so placements
+that disagree about the colour still share a parse.
+
+```csharp
+builder.UseShinyControls(cfg => cfg.ConfigureImages(o => o.SvgCacheEntryLimit = 32));
+```
+
+**What is drawn:** `path`, `rect`, `circle`, `ellipse`, `line`, `polyline`, `polygon`, `text`, `g`,
+`use`, `symbol`, `defs`, `switch`, `clipPath`, linear and radial gradients, presentation attributes,
+the `style` attribute, and the type/class/id rules inside a `<style>` element — which is how
+Illustrator, Figma and Sketch export shared appearance. `.svgz` is decompressed transparently.
+
+**What is not:** filters, masks, patterns, markers, embedded raster `<image>`, SMIL and CSS animation,
+and external references of any kind (an image file never becomes a fetch). An unsupported element is
+skipped rather than approximated, so it costs that element and nothing else. Gradient strokes fall
+back to their first stop — `ICanvas` fills with a paint but strokes with a colour.
+
+Blazor needs none of this: the browser renders SVG natively through `<img>`.
 
 #### ImageService (MAUI)
 
@@ -748,6 +795,7 @@ builder.UseShinyControls(cfg => cfg
         o.MemoryCacheEnabled     = true;
         o.MaxMemoryCacheBytes    = 32 * 1024 * 1024;
         o.MaxMemoryItemBytes     = 2 * 1024 * 1024;   // bigger images stay disk-only
+        o.SvgCacheEntryLimit     = 32;                // parsed SVG documents kept
     })
 );
 ```
@@ -886,7 +934,7 @@ On Blazor, `Source` is a URL string handed straight to `<img>` — the loading p
 
 ### ImageEditor
 
-An inline image editor with cropping, rotation, freehand drawing, line and arrow drawing, text annotations with font family and font size selection, and **zoom/pan that stays live in every tool** — pinch (or wheel / zoom buttons) to magnify up to 8x and draw, crop or place text with pixel accuracy, then two-finger drag to pan without leaving the tool. Includes a built-in undo/redo stack, reset-to-original, and export to PNG/JPEG/WEBP at configurable resolutions. Every feature can be toggled on/off, and the default toolbar can be replaced with a custom template.
+An inline image editor with cropping, rotation, freehand drawing, line and arrow drawing, **shapes — rectangle, ellipse and circle, each with its own fill and border** — text annotations with font family and font size selection, and **zoom/pan that stays live in every tool** — pinch (or wheel / zoom buttons) to magnify up to 8x and draw, crop or place text with pixel accuracy, then two-finger drag to pan without leaving the tool. Includes a built-in undo/redo stack, reset-to-original, and export to PNG/JPEG/WEBP at configurable resolutions. Every feature can be toggled on/off, and the default toolbar can be replaced with a custom template.
 
 The default toolbar is a floating rounded bar with vector (not glyph-font) icons, a horizontally scrollable tool row that never clips on narrow screens, a contextual options row for the active tool (colour swatch, pen weights, font pickers), and an action row with undo/redo/reset, a zoom cluster, and save.
 
@@ -908,12 +956,17 @@ The default toolbar is a floating rounded bar with vector (not glyph-font) icons
 | Property | Type | Default | Description |
 |---|---|---|---|
 | Source | ImageSource? | null | Image to edit (supports file, stream, URI) |
-| CurrentToolMode | ImageEditorToolMode | Move | Active tool (Move, Crop, Draw, Text, Line, Arrow) — TwoWay |
+| CurrentToolMode | ImageEditorToolMode | Move | Active tool (Move, Crop, Draw, Text, Line, Arrow, Rectangle, Ellipse, Circle) — TwoWay |
 | AllowCrop | bool | true | Enable/disable crop tool |
 | AllowRotate | bool | true | Enable/disable rotate action |
 | AllowDraw | bool | true | Enable/disable freehand drawing |
 | AllowTextAnnotation | bool | true | Enable/disable text annotation |
 | AllowLine | bool | true | Enable/disable line drawing tool |
+| AllowRectangle | bool | true | Enable/disable the rectangle shape tool |
+| AllowEllipse | bool | true | Enable/disable the ellipse shape tool |
+| AllowCircle | bool | true | Enable/disable the circle shape tool |
+| ShapeFillColor | Color? | null | Shape interior; null draws the outline only. Alpha honoured — TwoWay |
+| ShowShapeFillPicker | bool | true | Show the fill swatch and fill on/off toggle while a shape tool is active |
 | AllowFontSelection | bool | false | Show font picker button in text mode |
 | AllowFontSizeSelection | bool | false | Show font size picker button in text mode |
 | AllowZoom | bool | true | Enable/disable zoom & pan |
@@ -948,6 +1001,7 @@ The default toolbar is a floating rounded bar with vector (not glyph-font) icons
 - 90° rotation (or arbitrary angles)
 - Freehand drawing with configurable color and stroke width (constrained to image bounds)
 - Line and arrow drawing between two points with configurable color and width
+- Shapes — rectangle, ellipse and circle — dragged corner to corner. The ink colour and pen weight are the border; the fill is its own swatch with its own opacity and an on/off toggle, so the same tool draws a translucent highlight box or an opaque redaction block. The circle tool constrains the drag to a square, and on Blazor holding **Shift** does the same for the rectangle and ellipse.
 - Inline text annotations placed by tapping the image with optional font family and size selection
 - Integrated color picker for draw color
 - Font picker and font size picker integration (when `AllowFontSelection`/`AllowFontSizeSelection` enabled)
@@ -955,15 +1009,15 @@ The default toolbar is a floating rounded bar with vector (not glyph-font) icons
 - Reset to original image
 - Save via `SaveCommand` with `EditedImage` — call `ToStreamAsync(format)` to get PNG, JPEG, or WEBP
 - Image border showing the drawable surface area
-- Strokes, lines and text record the on-screen image size they were drawn at, so annotations made on a small preview (or while zoomed in) keep their proportions when exported at full resolution
+- Strokes, lines, shapes and text record the on-screen image size they were drawn at, so annotations made on a small preview (or while zoomed in) keep their proportions when exported at full resolution
 
-**Commands:** `UndoCommand`, `RedoCommand`, `RotateCommand`, `ResetCommand`, `CropCommand`, `DrawCommand`, `TextCommand`, `LineCommand`, `SaveCommand`, `ZoomInCommand`, `ZoomOutCommand`, `ZoomToFitCommand`
+**Commands:** `UndoCommand`, `RedoCommand`, `RotateCommand`, `ResetCommand`, `CropCommand`, `DrawCommand`, `TextCommand`, `LineCommand`, `RectangleCommand`, `EllipseCommand`, `CircleCommand`, `SaveCommand`, `ZoomInCommand`, `ZoomOutCommand`, `ZoomToFitCommand`
 
 **Methods:** `Undo()`, `Redo()`, `Rotate(float)`, `Reset()`, `ApplyCrop()`, `GetEditedImage()`, `ZoomIn()`, `ZoomOut()`, `ZoomToFit()`
 
 **Events:** `ZoomChanged`
 
-On Blazor the equivalents are `ZoomInAsync()`, `ZoomOutAsync()`, `ZoomToFitAsync()`, `SetZoomAsync(double)`, the `ZoomLevel` property and the `ZoomLevelChanged` callback, plus a `ToolbarActions` render fragment for host-supplied buttons at the trailing edge of the bar.
+On Blazor the equivalents are `ZoomInAsync()`, `ZoomOutAsync()`, `ZoomToFitAsync()`, `SetZoomAsync(double)`, the `ZoomLevel` property and the `ZoomLevelChanged` callback, plus a `ToolbarActions` render fragment for host-supplied buttons at the trailing edge of the bar. `ShapeFillColor` there is a `#rrggbb` string and carries its alpha in a companion `ShapeFillOpacity` (0-1), because `<input type="color">` cannot express alpha — MAUI keeps it in the `Color` itself.
 
 ### MediaPickerButton
 
@@ -1086,7 +1140,7 @@ calls are equivalent.
 
 ```razor
 <div style="height:420px">
-    <SpreadsheetView Workbook="workbook" Theme="SpreadsheetTheme.Dark" />
+    <SpreadsheetView Workbook="workbook" @bind-SheetName="sheetName" Theme="SpreadsheetTheme.Dark" />
 </div>
 ```
 
@@ -1100,10 +1154,32 @@ workbook.Undo.Undo();
 await workbook.SaveAsync();
 ```
 
+**Worksheets.** A workbook is a book, not a sheet, and the control shows it as one: a tab strip under
+the grid switches between the visible sheets and adds, renames, duplicates, reorders, hides and deletes
+them. Every one of those is an undoable command like any cell edit, and each sheet keeps its own
+selection, scroll position and hand-dragged column widths, so moving between tabs comes back to where
+you were. Hidden sheets stay off the strip — they are hidden in Excel too — and are reachable from the
+overflow menu, which is also the only place to unhide one. Set `ShowSheetTabs="false"` to leave the
+strip out, or `AllowSheetEditing="false"` to keep it as a switcher only.
+
+Renaming rewrites every formula and defined name that pointed at the old name — including the quoted
+spelling (`'Q1 Sales'!A1`) and both ends of a 3-D span — so a rename cannot leave `#REF!` behind.
+Formulas already read across sheets, and always did.
+
+```csharp
+workbook.Execute(new AddSheetCommand("Forecast", index: 1));
+workbook.Execute(new RenameSheetCommand("Sheet1", "Actuals"));   // rewrites Sheet1!B2 everywhere
+workbook.Execute(new DuplicateSheetCommand("Actuals", "Actuals (2)", index: 2));
+workbook.Execute(new MoveSheetCommand("Forecast", 0));
+workbook.Execute(new SetSheetVisibilityCommand("Scratch", false));
+workbook.Execute(new DeleteSheetCommand("Forecast"));            // undo restores it with its contents
+```
+
 | Capability | Notes |
 |---|---|
 | Rendering | Virtualized over all 1,048,576 rows; frozen panes, merged cells, number formats, fonts, fills, alignment, theme colours with tint |
 | Editing | Cell values and formulas, range clear, column/row resize, range selection, in-cell editing through a native `Entry` / `<input>` |
+| Worksheets | Tab strip on both hosts: switch, add, rename, duplicate, reorder, hide/unhide, delete — all undoable, with per-sheet selection and scroll |
 | Undo | Transactional, with typing-run coalescing; a range clear is one step |
 | Formulas | ~80 functions, dependency-ordered incremental recalculation, circular-reference detection |
 | Round-trip | Edits are surgical. An unmodified workbook saves byte-identical; macros, tracked changes, pivot caches and custom XML survive untouched |
@@ -1115,6 +1191,8 @@ runtime and the app fails in the browser, so `Shiny.Blazor.Controls.Office` fail
 with `SHINY0001` instead; bypass with `ShinySkipWasmToolsCheck=true`). MAUI requires `UseShinyOffice()` (which registers SkiaSharp, plus the AppKit canvas on `net10.0-macos`). Inserting and
 deleting rows and columns is deliberately not implemented — it requires rewriting references across
 formulas, merged cells, conditional formatting, defined names, data validation, charts and tables.
+Chart, dialog and macro sheets are preserved on save but have no tab: the grid has nothing to draw for
+them. Deleting a worksheet drops any defined name scoped to it, which is what Excel does.
 
 ### Document Editor
 
@@ -1139,10 +1217,11 @@ Edits are surgical on the OOXML runs: a run is split only where an edit actually
 is never rebuilt, so the language, proofing state and revision marks a run carries survive a
 formatting change. An unedited document still saves byte-identical.
 
-**The toolbar is asymmetric on purpose.** MAUI has `FontPickerButton`/`FontSizePickerButton` but no
-toolbar; Blazor has `ShinyToolbar` but no font picker. Each host composes what it actually has — MAUI a
-row of primitives around the two pickers, Blazor a `ShinyToolbar` with plain selects. The API and
-behaviour are the same on both.
+**Both toolbars are built from the same pickers.** `FontPickerButton`, `FontSizePickerButton` and
+`ColorPickerButton` now exist in the core package on both hosts, and both editors use all three — so
+the family list previews each face in its own typeface, and the colour swatch opens the full spectrum
+rather than the operating system's own dialog. What still differs is only the bar around them: Blazor
+composes `ShinyToolbar`, MAUI has no such control and lays out a scrolling row itself.
 
 | | Blazor | MAUI |
 |---|---|---|
@@ -1174,6 +1253,36 @@ SpellCheckers.Default = new MyChecker();   // derive from SpellCheckerBase; two 
 
 Checking is per paragraph, cached on the paragraph's text, limited to what is on screen and debounced,
 so scrolling re-checks nothing and typing re-checks one paragraph.
+
+**Shapes, pictures and tables insert inline.** Twenty preset geometries — the same
+`ShapeGeometry` set the slide editor draws, through the same path builder — plus pictures and tables,
+all from the toolbar:
+
+```csharp
+c.InsertShape(ShapeGeometry.Ellipse, width: 160, height: 120);
+c.InsertImage(bytes, "image/png", width: 240);
+c.InsertTable(rows: 3, columns: 4);
+```
+
+Inline means a `wp:inline`, never a `wp:anchor`: an object behaves like a very large character, wraps
+with its line, and moves as text is typed before it. The document view is a reflow engine with no
+float layer, so a floating shape could be written but never drawn where it claimed to be — anchored
+drawings in an opened file are read and shown in the flow, with the unsupported note saying so.
+
+Selecting one draws a frame with eight resize handles: a corner keeps the aspect ratio, an edge
+changes one dimension, and the whole drag is **one** undo step. An inline object counts as exactly one
+character, so an arrow key steps over it and a backspace takes all of it.
+
+**Dragging an image file onto the editor inserts it at the drop point** — Blazor everywhere, and on
+MAUI Windows, iOS/iPadOS and Mac Catalyst. Android has no file drag from a file manager and the
+AppKit/GTK heads have no drop implementation behind `DropGestureRecognizer`; there the toolbar's
+picture button is the gesture. `DropRejected` fires for a file over 32MB or in a format OOXML cannot
+store.
+
+**Highlighting** is a split button over a sixteen-swatch palette, shared with the slide editor.
+Word's `w:highlight` takes a name from a closed list rather than a colour, so a highlight resolves to
+the nearest one it can express; `HighlightPalette` is that list, and every swatch on offer round-trips
+exactly.
 
 ### Slide Editor
 
@@ -1213,6 +1322,24 @@ per pointer sample.
 | Select, move, resize, double-click into text | ✅ | ✅ |
 | Typing, IME, dictation, paste | ✅ via `beforeinput` | ✅ via a hidden `Entry` |
 | Physical keys (arrows, shortcuts) | ✅ | ⚠️ route through `HandleKey` — MAUI has no portable key-down event |
+
+**Shapes, pictures and tables** come from the same galleries the document editor offers, placed in
+slide coordinates and selected on arrival so the next gesture is a drag of the new object:
+
+```csharp
+c.AddShape(ShapeGeometry.Hexagon, x, y, width: 240, height: 180);
+c.AddPicture(bytes, "image/png", x, y, width: 400);
+c.AddTable(rows: 3, columns: 4, x, y, width: 480, height: 200);
+```
+
+`AddShape` writes a real drawn shape rather than a text box, which is what makes PowerPoint give it
+the theme fill. A table is a `p:graphicFrame` with a built-in table style, not a shape.
+
+**Dragging an image file onto a slide** drops it centred on the pointer, sized to at most half the
+slide — same platforms, same rejections, same `DropRejected` event as the document editor.
+
+**Highlighting** uses the same palette as the document side. `a:highlight` holds a real colour, so
+nothing is approximated here.
 
 ⚠️ Not implemented, deliberately: soft line breaks, editing table cells or grouped shapes, adding or
 reordering slides, and rotation handles.
@@ -1452,9 +1579,22 @@ A full-featured color picker with spectrum, hue bar, opacity slider, hex input, 
 
 **Event:** `ColorChanged` (EventHandler\<Color\>)
 
+Blazor has the same pair. `ColorPicker` is the panel; `ColorPickerButton` is the swatch that opens it,
+which is what goes in a toolbar. The swatch sits on a checkerboard so a translucent colour reads as
+translucent rather than as a slightly different flat one.
+
+```razor
+<ColorPickerButton Text="Text colour"
+                   @bind-SelectedColor="hex"
+                   ShowOpacity="false" />
+```
+
+`SelectedColor` is a hex string on Blazor rather than a `Color`: `#RRGGBB`, or `#AARRGGBB` when
+`ShowOpacity` is on — alpha first, so it drops straight into `ArgbColor.FromUInt32`.
+
 ### FontPicker
 
-Font family and font size picker controls for MAUI. Includes inline list (`FontPicker`, `FontSizePicker`) and popup button (`FontPickerButton`, `FontSizePickerButton`) variants. Each font is rendered in its own typeface for instant visual preview.
+Font family and font size picker controls, on both MAUI and Blazor. Includes inline list (`FontPicker`, `FontSizePicker`) and popup button (`FontPickerButton`, `FontSizePickerButton`) variants. Each font is rendered in its own typeface for instant visual preview, and each size at the size it names. The Blazor `FontSizePickerButton` also lets a size be typed, since the list is a set of common sizes rather than the set of legal ones.
 
 ```xml
 <shiny:FontPickerButton AvailableFonts="{Binding Fonts}"
@@ -1487,7 +1627,19 @@ Font family and font size picker controls for MAUI. Includes inline list (`FontP
 | CornerRadius | int | 8 | Button corner radius (button only) |
 | FontSizeChangedCommand | ICommand? | null | Command on selection (button only) |
 
-These controls are also integrated into the **ImageEditor** toolbar when `AllowFontSelection` and `AllowFontSizeSelection` are enabled.
+Blazor has the same four, with the parameter names unchanged, taking `IReadOnlyList<T>` where MAUI
+takes `IList<T>` and an `EventCallback` where MAUI takes an `ICommand`:
+
+```razor
+<FontPickerButton AvailableFonts="fonts" @bind-SelectedFont="family" />
+<FontSizePickerButton AvailableFontSizes="sizes" @bind-SelectedFontSize="size" />
+```
+
+The Blazor `FontSizePickerButton` puts a text field beside the caret so a size that is not on the list —
+13pt, say — can be typed; a value that will not parse, or falls outside `MinimumFontSize`/
+`MaximumFontSize`, snaps back rather than being committed.
+
+These controls are also integrated into the **ImageEditor** toolbar when `AllowFontSelection` and `AllowFontSizeSelection` are enabled, and into both **Office editor** toolbars on both hosts.
 
 ### TextEntry
 

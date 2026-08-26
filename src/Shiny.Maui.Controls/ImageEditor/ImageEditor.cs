@@ -15,12 +15,22 @@ public partial class ImageEditor : ContentView
     readonly ImageEditorState state;
     View? toolbarView;
     ColorPickerButton? drawColorButton;
+    ColorPickerButton? shapeFillButton;
+    Border? shapeFillToggle;
+    GraphicsView? shapeFillIcon;
     FontPickerButton? fontPickerButton;
     FontSizePickerButton? fontSizePickerButton;
     Label? zoomReadout;
     Border? undoButton;
     Border? redoButton;
     Border? resetButton;
+
+    /// <summary>
+    /// The colour the fill toggle switches back on. Turning fill off nulls
+    /// <see cref="ShapeFillColor"/>, and the user should get their colour back — not white — when
+    /// they turn it on again.
+    /// </summary>
+    Color lastShapeFill = Color.FromRgba(255, 255, 255, 0.35f);
 
     public ImageEditor()
     {
@@ -185,6 +195,93 @@ public partial class ImageEditor : ContentView
     {
         get => (bool)GetValue(AllowArrowProperty);
         set => SetValue(AllowArrowProperty, value);
+    }
+
+    public static readonly BindableProperty AllowRectangleProperty = BindableProperty.Create(
+        nameof(AllowRectangle), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    public bool AllowRectangle
+    {
+        get => (bool)GetValue(AllowRectangleProperty);
+        set => SetValue(AllowRectangleProperty, value);
+    }
+
+    public static readonly BindableProperty AllowEllipseProperty = BindableProperty.Create(
+        nameof(AllowEllipse), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    public bool AllowEllipse
+    {
+        get => (bool)GetValue(AllowEllipseProperty);
+        set => SetValue(AllowEllipseProperty, value);
+    }
+
+    public static readonly BindableProperty AllowCircleProperty = BindableProperty.Create(
+        nameof(AllowCircle), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    public bool AllowCircle
+    {
+        get => (bool)GetValue(AllowCircleProperty);
+        set => SetValue(AllowCircleProperty, value);
+    }
+
+    public static readonly BindableProperty ShapeFillColorProperty = BindableProperty.Create(
+        nameof(ShapeFillColor), typeof(Color), typeof(ImageEditor), null,
+        BindingMode.TwoWay,
+        // Updated in place rather than by rebuilding the bar: this fires while the user is dragging
+        // inside the fill picker's popup, and a rebuild would discard the very button that popup
+        // belongs to
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                var editor = (ImageEditor)b;
+                var color = (Color?)n;
+                editor.drawable.ActiveFillColor = color;
+
+                if (color != null)
+                {
+                    editor.lastShapeFill = color;
+                    if (editor.shapeFillButton != null && !editor.shapeFillButton.SelectedColor.Equals(color))
+                        editor.shapeFillButton.SelectedColor = color;
+                }
+
+                editor.UpdateShapeFillToggle();
+                editor.Invalidate();
+            }));
+
+    /// <summary>
+    /// Interior colour for the shape tools. Null — the default — leaves shapes unfilled, which is
+    /// what you want for a highlight box drawn over a photo; a solid colour turns the same tool into
+    /// a redaction block. Alpha is honoured, so a translucent fill tints without hiding.
+    /// </summary>
+    public Color? ShapeFillColor
+    {
+        get => (Color?)GetValue(ShapeFillColorProperty);
+        set => SetValue(ShapeFillColorProperty, value);
+    }
+
+    public static readonly BindableProperty ShowShapeFillPickerProperty = BindableProperty.Create(
+        nameof(ShowShapeFillPicker), typeof(bool), typeof(ImageEditor), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
+            {
+                ((ImageEditor)b).BuildDefaultToolbar();
+            }));
+
+    /// <summary>Shows the fill swatch and the fill on/off toggle while a shape tool is active.</summary>
+    public bool ShowShapeFillPicker
+    {
+        get => (bool)GetValue(ShowShapeFillPickerProperty);
+        set => SetValue(ShowShapeFillPickerProperty, value);
     }
 
     public static readonly BindableProperty AllowFontSelectionProperty = BindableProperty.Create(
@@ -664,6 +761,12 @@ public partial class ImageEditor : ContentView
         {
             CommitCurrentLine();
         }
+
+        // Finalize in-progress shape
+        if (drawable.ActiveShapeStart.HasValue && drawable.ActiveShapeEnd.HasValue)
+        {
+            CommitCurrentShape();
+        }
     }
 
     void Invalidate() => graphicsView.Invalidate();
@@ -697,6 +800,9 @@ public partial class ImageEditor : ContentView
         RemoveToolbar();
         zoomReadout = null;
         drawColorButton = null;
+        shapeFillButton = null;
+        shapeFillToggle = null;
+        shapeFillIcon = null;
         fontPickerButton = null;
         fontSizePickerButton = null;
         undoButton = redoButton = resetButton = null;
@@ -754,6 +860,15 @@ public partial class ImageEditor : ContentView
         if (AllowArrow)
             tools.Children.Add(CreateToolButton(ImageEditorIcon.Arrow, "Arrow", ImageEditorToolMode.Arrow));
 
+        if (AllowRectangle)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Rectangle, "Rect", ImageEditorToolMode.Rectangle));
+
+        if (AllowEllipse)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Ellipse, "Ellipse", ImageEditorToolMode.Ellipse));
+
+        if (AllowCircle)
+            tools.Children.Add(CreateToolButton(ImageEditorIcon.Circle, "Circle", ImageEditorToolMode.Circle));
+
         if (AllowTextAnnotation)
             tools.Children.Add(CreateToolButton(ImageEditorIcon.Text, "Text", ImageEditorToolMode.Text));
 
@@ -770,8 +885,9 @@ public partial class ImageEditor : ContentView
     {
         var isInk = CurrentToolMode is ImageEditorToolMode.Draw or ImageEditorToolMode.Line or ImageEditorToolMode.Arrow;
         var isText = CurrentToolMode == ImageEditorToolMode.Text;
+        var isShape = ImageEditorDrawable.IsShapeMode(CurrentToolMode);
 
-        if (!isInk && !isText)
+        if (!isInk && !isText && !isShape)
             return null;
 
         var row = new HorizontalStackLayout
@@ -780,12 +896,19 @@ public partial class ImageEditor : ContentView
             HorizontalOptions = LayoutOptions.Center
         };
 
+        // For a shape this swatch and these weights are the border — the interior gets its own pair
         row.Children.Add(CreateDrawColorButton());
 
-        if (isInk && ShowStrokeWidthPicker)
+        if ((isInk || isShape) && ShowStrokeWidthPicker)
         {
             foreach (var width in StrokeWidthPresets)
                 row.Children.Add(CreateStrokeWidthButton(width));
+        }
+
+        if (isShape && ShowShapeFillPicker)
+        {
+            row.Children.Add(CreateShapeFillButton());
+            row.Children.Add(CreateShapeFillToggle());
         }
 
         if (isText)
@@ -1072,6 +1195,77 @@ public partial class ImageEditor : ContentView
         };
         drawColorButton.ColorChanged += (_, color) => DrawStrokeColor = color;
         return drawColorButton;
+    }
+
+    /// <summary>
+    /// The shape interior. Opacity is on because a translucent fill is the common case — an outline
+    /// you can still see the photo through.
+    /// </summary>
+    ColorPickerButton CreateShapeFillButton()
+    {
+        shapeFillButton = new ColorPickerButton
+        {
+            SelectedColor = ShapeFillColor ?? lastShapeFill,
+            ShowOpacity = true,
+            CornerRadius = 8,
+            HeightRequest = 36,
+            WidthRequest = 36,
+            VerticalOptions = LayoutOptions.Center
+        };
+        shapeFillButton.ColorChanged += (_, color) => ShapeFillColor = color;
+        return shapeFillButton;
+    }
+
+    /// <summary>
+    /// Fill on/off. Its own builder rather than <see cref="CreateChromeButton"/> because the icon
+    /// and the selected tint are re-applied in place every time the fill colour changes.
+    /// </summary>
+    Border CreateShapeFillToggle()
+    {
+        shapeFillIcon = new GraphicsView
+        {
+            Drawable = new ImageEditorIconDrawable(),
+            HeightRequest = 22,
+            WidthRequest = 22,
+            InputTransparent = true,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        shapeFillToggle = new Border
+        {
+            Content = shapeFillIcon,
+            StrokeThickness = 0,
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
+            Padding = new Thickness(6, 4),
+            WidthRequest = 36,
+            HeightRequest = 36,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var tap = new TapGestureRecognizer();
+        tap.Tapped += (_, _) => ShapeFillColor = ShapeFillColor == null ? lastShapeFill : null;
+        shapeFillToggle.GestureRecognizers.Add(tap);
+
+        UpdateShapeFillToggle();
+        return shapeFillToggle;
+    }
+
+    void UpdateShapeFillToggle()
+    {
+        if (shapeFillToggle == null || shapeFillIcon?.Drawable is not ImageEditorIconDrawable icon)
+            return;
+
+        var filled = ShapeFillColor != null;
+
+        shapeFillToggle.BackgroundColor = filled ? AccentColor : Colors.Transparent;
+        icon.Icon = filled ? ImageEditorIcon.Fill : ImageEditorIcon.NoFill;
+        icon.Color = filled
+            ? ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White)
+            : ChromeForeground;
+
+        shapeFillIcon.Invalidate();
+        SemanticProperties.SetDescription(shapeFillToggle, filled ? "Fill on" : "Fill off");
     }
 
     FontPickerButton CreateFontPickerButton()

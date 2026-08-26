@@ -13,6 +13,9 @@ public partial class ImageEditor
     public ICommand CropCommand { get; private set; } = null!;
     public ICommand DrawCommand { get; private set; } = null!;
     public ICommand TextCommand { get; private set; } = null!;
+    public ICommand RectangleCommand { get; private set; } = null!;
+    public ICommand EllipseCommand { get; private set; } = null!;
+    public ICommand CircleCommand { get; private set; } = null!;
     public ICommand ZoomInCommand { get; private set; } = null!;
     public ICommand ZoomOutCommand { get; private set; } = null!;
     public ICommand ZoomToFitCommand { get; private set; } = null!;
@@ -35,6 +38,9 @@ public partial class ImageEditor
         TextCommand = new Command(() => CurrentToolMode = CurrentToolMode == ImageEditorToolMode.Text
             ? ImageEditorToolMode.Move
             : ImageEditorToolMode.Text);
+        RectangleCommand = new Command(() => ToggleTool(ImageEditorToolMode.Rectangle));
+        EllipseCommand = new Command(() => ToggleTool(ImageEditorToolMode.Ellipse));
+        CircleCommand = new Command(() => ToggleTool(ImageEditorToolMode.Circle));
 
         state.StateChanged += () =>
         {
@@ -42,6 +48,9 @@ public partial class ImageEditor
             ((Command)RedoCommand).ChangeCanExecute();
         };
     }
+
+    void ToggleTool(ImageEditorToolMode mode)
+        => CurrentToolMode = CurrentToolMode == mode ? ImageEditorToolMode.Move : mode;
 
     public void Undo()
     {
@@ -72,6 +81,8 @@ public partial class ImageEditor
         state.Reset();
         drawable.ActiveCropRect = null;
         drawable.ActiveStrokePoints = null;
+        drawable.ActiveShapeStart = null;
+        drawable.ActiveShapeEnd = null;
         CurrentToolMode = ImageEditorToolMode.Move;
         ResetViewTransform();
         Invalidate();

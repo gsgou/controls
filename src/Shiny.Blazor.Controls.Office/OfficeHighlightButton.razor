@@ -1,0 +1,110 @@
+@using Shiny.Controls.Office.Spreadsheet
+
+@*
+    The highlight control: a split button, exactly as Word and PowerPoint both draw it.
+
+    Pressing the swatch applies the colour showing on it — the last one used — which is the whole
+    point of the split: highlighting a second passage should not mean reopening the gallery to choose
+    the same colour again. The chevron opens the gallery to change it, or to clear.
+
+    Shared by DocumentEditorView and SlideEditorView so the two toolbars cannot drift apart. The
+    caller supplies the current highlight and receives the chosen one; nothing here knows which kind
+    of document it is over.
+*@
+<div class="shiny-office-picker">
+    <button type="button"
+            class="@(this.Current is not null ? "shiny-office-btn on" : "shiny-office-btn")"
+            title="@($"Highlight ({this.NameOf(this.selected)})")"
+            disabled="@this.Disabled"
+            @onclick="this.ApplySelectedAsync">
+        <span class="hl-glyph">
+            <span class="hl-letter">A</span>
+            <span class="hl-bar" style="@($"background:{Css(this.selected)}")"></span>
+        </span>
+    </button>
+
+    <button type="button"
+            class="shiny-office-btn shiny-office-btn-chevron"
+            title="Highlight colours"
+            aria-haspopup="true"
+            aria-expanded="@this.open"
+            disabled="@this.Disabled"
+            @onclick="() => this.open = !this.open">▾</button>
+
+    @if (this.open)
+    {
+        @*
+            A click anywhere else closes it. The backdrop is what makes that work without a document
+            level listener: it sits under the panel and over everything else, so any click that is not
+            on a swatch lands here.
+        *@
+        <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
+
+        <div class="shiny-office-panel" role="dialog" aria-label="Highlight colours">
+            <div class="hl-grid">
+                @foreach (var swatch in HighlightPalette.Swatches)
+                {
+                    <button type="button"
+                            class="@(swatch.Color == this.Current ? "hl-swatch on" : "hl-swatch")"
+                            style="@($"background:{Css(swatch.Color)}")"
+                            title="@swatch.DisplayName"
+                            aria-label="@swatch.DisplayName"
+                            @onclick="() => this.PickAsync(swatch.Color)"></button>
+                }
+            </div>
+
+            <button type="button" class="hl-clear" @onclick="() => this.PickAsync(null)">No colour</button>
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    /// <summary>
+    /// The colour the split button applies, remembered across uses.
+    /// </summary>
+    /// <remarks>
+    /// Yellow to start with, because that is what a highlight is until someone says otherwise.
+    /// </remarks>
+    ArgbColor selected = HighlightPalette.Swatches[0].Color;
+
+    /// <summary>The highlight under the caret, so the button can show as active.</summary>
+    [Parameter] public ArgbColor? Current { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Raised with the chosen colour, or null to clear the highlight.</summary>
+    [Parameter] public EventCallback<ArgbColor?> Picked { get; set; }
+
+    async Task PickAsync(ArgbColor? color)
+    {
+        this.open = false;
+
+        // Clearing does not change what the split button would apply next: someone who removes a
+        // highlight has not said they no longer want yellow.
+        if (color is { } value)
+            this.selected = value;
+
+        await this.Picked.InvokeAsync(color);
+    }
+
+    /// <summary>
+    /// Applies the remembered colour, or removes the highlight when that colour is already on.
+    /// </summary>
+    Task ApplySelectedAsync()
+        => this.Picked.InvokeAsync(this.Current == this.selected ? null : this.selected);
+
+    string NameOf(ArgbColor color)
+    {
+        foreach (var swatch in HighlightPalette.Swatches)
+        {
+            if (swatch.Color == color)
+                return swatch.DisplayName;
+        }
+
+        return "Custom";
+    }
+
+    static string Css(ArgbColor color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+}

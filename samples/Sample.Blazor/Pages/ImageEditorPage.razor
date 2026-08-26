@@ -33,6 +33,12 @@
                  AllowDraw="true"
                  AllowLine="true"
                  AllowArrow="true"
+                 AllowRectangle="true"
+                 AllowEllipse="true"
+                 AllowCircle="true"
+                 ShapeFillColor="@shapeFill"
+                 ShapeFillOpacity="@shapeFillOpacity"
+                 ShowShapeFillPicker="true"
                  AllowTextAnnotation="true"
                  AllowFontSelection="true"
                  AllowFontSizeSelection="true"
@@ -71,6 +77,10 @@
     bool canUndo, canRedo;
     string drawColor = "#ff0000";
     double drawWidth = 4;
+
+    // Null starts the shape tools as outlines; the toolbar's own fill swatch takes over from here
+    string? shapeFill;
+    double shapeFillOpacity = 0.35;
     double zoom = 1;
     string textFont = "Arial";
     double textFontSize = 16;

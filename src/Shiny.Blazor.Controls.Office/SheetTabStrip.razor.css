@@ -1,0 +1,129 @@
+.shiny-sheet-tabs {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    gap: 2px;
+    padding: 3px 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    background: var(--shiny-color-surface-variant, #f3f4f6);
+
+    /* The tabs are chrome, not content: a stray drag should not start a text selection across them. */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.sheet-tab,
+.sheet-action,
+.sheet-rename {
+    flex: 0 0 auto;
+    height: 26px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+    background: transparent;
+    color: var(--shiny-color-on-surface-variant, #4b5563);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sheet-tab:hover { background: rgba(0, 0, 0, 0.05); }
+
+/* The current tab reads as continuous with the grid above it, which is what the flat bottom edge and
+   the matching background are doing - not decoration. */
+.sheet-tab-on {
+    background: var(--shiny-color-surface, #fff);
+    border-color: var(--shiny-color-outline-variant, #e5e7eb);
+    border-bottom-color: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #111827);
+    font-weight: 600;
+}
+
+.sheet-action {
+    min-width: 26px;
+    padding: 0 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sheet-action:hover { background: rgba(0, 0, 0, 0.05); }
+
+.sheet-rename {
+    min-width: 60px;
+    border-radius: 4px 4px 0 0;
+    border-color: var(--shiny-spreadsheet-selection, #217a3c);
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #111827);
+    cursor: text;
+    outline: none;
+}
+
+.sheet-error {
+    align-self: center;
+    margin-left: 8px;
+    color: var(--shiny-color-error, #b91c1c);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* Covers the page so the next click anywhere dismisses the menu, and only then reaches whatever it
+   landed on - which is what every other menu on the platform does. */
+.sheet-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9;
+}
+
+.sheet-menu {
+    position: absolute;
+    right: 6px;
+
+    /* Opens upward: the strip is already at the bottom of the grid, so downward is off-screen. */
+    bottom: 32px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    padding: 4px;
+    border: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    border-radius: 6px;
+    background: var(--shiny-color-surface, #fff);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.sheet-menu button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--shiny-color-on-surface, #111827);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sheet-menu button:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
+.sheet-menu button:disabled { opacity: 0.35; cursor: default; }
+
+.sheet-menu-danger { color: var(--shiny-color-error, #b91c1c); }
+
+.sheet-menu-heading {
+    padding: 4px 10px;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.sheet-menu-rule {
+    height: 1px;
+    margin: 4px 2px;
+    background: var(--shiny-color-outline-variant, #e5e7eb);
+}
