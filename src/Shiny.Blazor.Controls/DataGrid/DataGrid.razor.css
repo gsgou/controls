@@ -211,11 +211,26 @@
     margin-left: 4px;
 }
 
+/* Nesting shows as an indent, not as nested tables - the group body is one flat run of rows. */
+.shiny-dg-group-indent {
+    display: inline-block;
+}
+
+.shiny-dg-group-key {
+    color: var(--shiny-color-on-surface, #222);
+}
+
 .shiny-dg-group-footer td {
     font-weight: 600;
     font-size: var(--shiny-type-body-small-size, 12px);
     color: var(--shiny-color-on-surface-variant, #555);
     background: color-mix(in srgb, var(--shiny-color-on-surface, #000) 2%, transparent);
+}
+
+/* A cell that opted out of the bold total treatment (a label sitting beside the number). */
+.shiny-dg-group-footer td.shiny-dg-summary-plain,
+.shiny-dg-table tfoot td.shiny-dg-summary-plain {
+    font-weight: 400;
 }
 
 .shiny-dg-editor {
@@ -355,6 +370,11 @@
     font-weight: 600;
     border-top: var(--shiny-border-medium, 2px) solid var(--shiny-color-outline-variant, #e0e0e0);
     background: var(--shiny-color-surface, #fff);
+}
+
+/* Stacked summary rows (subtotal / tax / total): only the block's top edge is the heavy rule. */
+.shiny-dg-table tfoot tr + tr td {
+    border-top: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #e0e0e0);
 }
 
 /* ---- Sticky header + frozen columns ----

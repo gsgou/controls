@@ -1,0 +1,19 @@
+@namespace Shiny.Blazor.Controls.Captchas
+
+<div class="shiny-captcha @CssClass" @attributes="AdditionalAttributes">
+    @if (provider is null)
+    {
+        <div class="shiny-captcha-missing" role="alert">
+            No captcha provider named "@Provider" is registered.
+        </div>
+    }
+    else
+    {
+        @provider.Render(renderContext)
+    }
+
+    @if (ShowError && error is not null)
+    {
+        <div class="shiny-captcha-failure" role="alert">@error</div>
+    }
+</div>

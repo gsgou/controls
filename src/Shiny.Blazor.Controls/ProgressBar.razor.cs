@@ -40,6 +40,19 @@ public partial class ProgressBar : IDisposable
     /// <summary>Overlay label size in px. The default, <c>-1</c>, follows the theme type scale.</summary>
     [Parameter] public double FontSize { get; set; } = -1;
 
+    // Fill animation
+    /// <summary>
+    /// Whether a change to <see cref="Value"/> slides the fill to its new width instead of snapping.
+    /// Applies in both directions, so a value that drops drains rather than jumping backwards.
+    /// </summary>
+    [Parameter] public bool AnimateProgress { get; set; } = true;
+
+    /// <summary>Length of the fill slide in milliseconds. Zero or less snaps.</summary>
+    [Parameter] public int ProgressAnimationDuration { get; set; } = 250;
+
+    /// <summary>CSS timing function for the fill slide.</summary>
+    [Parameter] public string ProgressAnimationEasing { get; set; } = "cubic-bezier(0.33, 1, 0.68, 1)";
+
     // Indeterminate
     [Parameter] public bool IsIndeterminate { get; set; }
 
@@ -68,7 +81,11 @@ public partial class ProgressBar : IDisposable
                 : BarColor;
             var lengthPct = Math.Clamp(PulseLength, 0.05, 1.0) * 100;
             var pulseVars = $"--pulse-color: {PulseColor}; --pulse-speed: {PulseSpeed}ms; --pulse-length: {lengthPct}%;";
-            return $"width: {width}; background: {bg}; border-radius: {CornerRadius}; {pulseVars}";
+
+            var duration = AnimateProgress && ProgressAnimationDuration > 0 ? ProgressAnimationDuration : 0;
+            var fillVars = $"--fill-duration: {duration}ms; --fill-easing: {ProgressAnimationEasing};";
+
+            return $"width: {width}; background: {bg}; border-radius: {CornerRadius}; {pulseVars} {fillVars}";
         }
     }
 

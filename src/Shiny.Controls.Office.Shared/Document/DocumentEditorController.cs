@@ -1008,6 +1008,37 @@ public sealed class DocumentEditorController : DocumentController
         this.Selection.Select(DocumentPosition.Start, new DocumentPosition(last, this.LengthOf(last)));
     }
 
+    /// <summary>
+    /// Selects the word under <paramref name="position"/> — what a double-click does.
+    /// </summary>
+    /// <remarks>
+    /// The gesture matters more than it looks. Every formatting command needs a range to act on, so
+    /// without a way to select a word by pointing at it the only route to bolding one is a careful
+    /// drag from one edge of it to the other. Selecting a word is the ordinary way to say which word.
+    /// </remarks>
+    public void SelectWordAt(DocumentPosition position)
+    {
+        var range = this.WordRangeAt(position);
+        this.Selection.Select(range.Start, range.End);
+    }
+
+    /// <summary>Selects the whole paragraph — what a triple-click does.</summary>
+    public void SelectParagraphAt(DocumentPosition position)
+        => this.Selection.Select(
+            position with { Offset = 0 },
+            position with { Offset = this.LengthOf(position.Block) });
+
+    /// <summary>The span of the word at <paramref name="position"/>, without changing the selection.</summary>
+    public DocumentRange WordRangeAt(DocumentPosition position)
+    {
+        var text = this.TextOf(position.Block);
+        if (text.Length == 0)
+            return new DocumentRange(position, position);
+
+        var (start, end) = WordBoundaries.RangeAt(text, position.Offset);
+        return new DocumentRange(position with { Offset = start }, position with { Offset = end });
+    }
+
     DocumentPosition Resolve(CaretMove move)
     {
         var caret = this.Selection.Focus;

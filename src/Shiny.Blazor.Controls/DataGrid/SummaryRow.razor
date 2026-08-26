@@ -1,0 +1,6 @@
+@namespace Shiny.Blazor.Controls
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+
+@* Renders nothing itself - it exists so its SummaryCell children can register against it. *@
+<CascadingValue Value="this" IsFixed="true">@ChildContent</CascadingValue>

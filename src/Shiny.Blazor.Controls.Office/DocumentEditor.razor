@@ -19,6 +19,7 @@
      @onpointerdown:preventDefault="true"
      @onpointermove="OnPointerMove"
      @onpointerup="OnPointerUp"
+     @onclick="OnClick"
      @oncontextmenu="OnContextMenu"
      @oncontextmenu:preventDefault="true">
 
@@ -369,6 +370,34 @@
     {
         this.dragging = false;
         this.controller?.EndObjectDrag();
+    }
+
+    /// <summary>
+    /// Widens the selection to a word on the second click and to the paragraph on the third.
+    /// </summary>
+    /// <remarks>
+    /// On click rather than on pointerdown because pointerdown does not carry a click count - its
+    /// <c>detail</c> is 0, measured, not assumed. The count lives on click, which still fires here even
+    /// though pointerdown's default is prevented; mousedown, by contrast, is suppressed entirely.
+    /// Pointerdown has already placed the caret by the time this runs, so this only has to widen.
+    /// </remarks>
+    void OnClick(MouseEventArgs e)
+    {
+        if (this.controller is null || e.Detail < 2)
+            return;
+
+        if (this.controller.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
+            return;
+
+        if (e.Detail >= 3)
+            this.controller.SelectParagraphAt(position);
+        else
+            this.controller.SelectWordAt(position);
+
+        // Pointerup has already cleared the drag flag, but a click arriving without one would leave a
+        // stray move able to collapse the selection that was just made.
+        this.dragging = false;
+        this.focusInput = true;
     }
 
     // ---- file drop ----

@@ -1,0 +1,81 @@
+@namespace Shiny.Blazor.Controls
+@implements IDisposable
+
+@{
+    RenderFragment indicator =
+        @<span class="shiny-expander__indicator" aria-hidden="true">
+            @if (IndicatorContent is not null)
+            {
+                @IndicatorContent
+            }
+            else
+            {
+                @(EffectiveIndicatorMode == ExpanderIndicatorMode.Swap && IsExpanded ? ExpandedIcon : CollapsedIcon)
+            }
+        </span>;
+
+    var showIndicator = EffectiveIndicatorMode != ExpanderIndicatorMode.None;
+    var indicatorAtStart = EffectiveIndicatorPosition == ExpanderIndicatorPosition.Start;
+}
+
+<div class="shiny-expander @StateClasses @CssClass @UserClass" style="@RootStyle" @attributes="ExtraAttributes">
+
+    @* Markup order stays header-then-content whatever ExpandDirection says: the visual flip is a
+       flex-direction on the root, and a screen reader is better served reading the label first. *@
+    <div class="shiny-expander__header"
+         role="button"
+         tabindex="@(IsToggleEnabled ? 0 : -1)"
+         aria-expanded="@(IsExpanded ? "true" : "false")"
+         aria-controls="@panelId"
+         aria-disabled="@(IsToggleEnabled ? null : "true")"
+         @onclick="OnHeaderActivated"
+         @onkeydown="OnHeaderKeyDown">
+
+        @if (showIndicator && indicatorAtStart)
+        {
+            @indicator
+        }
+
+        <span class="shiny-expander__header-body">
+            @if (Header is not null)
+            {
+                @Header
+            }
+            else
+            {
+                <span class="shiny-expander__title">@HeaderText</span>
+                @if (!String.IsNullOrWhiteSpace(HeaderDetail))
+                {
+                    <span class="shiny-expander__detail">@HeaderDetail</span>
+                }
+            }
+        </span>
+
+        @if (showIndicator && !indicatorAtStart)
+        {
+            @indicator
+        }
+    </div>
+
+    @if (ShowSeparator)
+    {
+        <div class="shiny-expander__separator"></div>
+    }
+
+    @* The height animation is the grid-template-rows 0fr -> 1fr trick, which is why the panel is a
+       grid and its inner wrapper carries min-height:0 with the overflow clip. No JS, no measuring,
+       and the content keeps its natural height once open. *@
+    <div class="shiny-expander__panel"
+         id="@panelId"
+         inert="@(IsExpanded ? null : "")"
+         aria-hidden="@(IsExpanded ? null : "true")">
+        <div class="shiny-expander__panel-inner">
+            <div class="shiny-expander__content">
+                @if (contentRealized)
+                {
+                    @ChildContent
+                }
+            </div>
+        </div>
+    </div>
+</div>

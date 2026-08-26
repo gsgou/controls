@@ -17,6 +17,7 @@
        xmlns:badge="clr-namespace:Sample.Features.Badge;assembly=Sample.Linux"
        xmlns:buttons="clr-namespace:Sample.Features.Buttons;assembly=Sample.Linux"
        xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery;assembly=Sample.Linux"
+       xmlns:expanders="clr-namespace:Sample.Features.Expanders;assembly=Sample.Linux"
        xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker;assembly=Sample.Linux"
        xmlns:countryaddress="clr-namespace:Sample.Features.CountryAddress;assembly=Sample.Linux"
        xmlns:datagrid="clr-namespace:Sample.Features.DataGrid;assembly=Sample.Linux"
@@ -43,6 +44,7 @@
        xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry;assembly=Sample.Linux"
        xmlns:scheduler="clr-namespace:Sample.Features.Scheduler;assembly=Sample.Linux"
        xmlns:securitypin="clr-namespace:Sample.Features.SecurityPin;assembly=Sample.Linux"
+       xmlns:pwstrength="clr-namespace:Sample.Features.PasswordStrength;assembly=Sample.Linux"
        xmlns:sigpad="clr-namespace:Sample.Features.SignaturePad;assembly=Sample.Linux"
        xmlns:skeleton="clr-namespace:Sample.Features.Skeleton;assembly=Sample.Linux"
        xmlns:slider="clr-namespace:Sample.Features.Slider;assembly=Sample.Linux"
@@ -67,6 +69,14 @@
     </FlyoutItem>
 
     <MenuItem Text="LAYOUT &amp; COLLECTIONS" IsEnabled="False" />
+
+    <FlyoutItem Title="Expander">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25BE;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate expanders:ExpanderPage}" Route="expander" />
+    </FlyoutItem>
 
     <FlyoutItem Title="Carousel Gallery">
         <ShellContent ContentTemplate="{DataTemplate carouselgallery:CarouselGalleryPage}" Route="carouselgallery" />
@@ -146,6 +156,7 @@
     </FlyoutItem>
     <FlyoutItem Title="Security Pin">
         <ShellContent ContentTemplate="{DataTemplate securitypin:SecurityPinPage}" Route="securitypin" />
+        <ShellContent ContentTemplate="{DataTemplate pwstrength:PasswordStrengthPage}" Route="passwordstrength" />
     </FlyoutItem>
     <FlyoutItem Title="Signature Pad">
         <ShellContent ContentTemplate="{DataTemplate sigpad:SignaturePadPage}" Route="signaturepad" />

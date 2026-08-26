@@ -115,7 +115,7 @@
         <div class="slide-status">
             @if (Controller is { SelectedShape: >= 0 } controller)
             {
-                <span>@(controller.IsEditingText ? "Editing text — Esc to leave" : "Shape selected — double-click to edit its text")</span>
+                <span>@(controller.IsEditingText ? "Editing text — double-click a word to select it, Esc to leave" : "Shape selected — double-click to edit its text")</span>
             }
             else
             {

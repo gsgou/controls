@@ -319,6 +319,282 @@ public class DocumentEditorControllerTests
     static int BodyBlock(WordDocument document)
         => document.Blocks.ToList().FindIndex(x => x is DocumentParagraph p && p.PlainText.StartsWith("Plain body text"));
 
+    // ---- selecting by word and paragraph ----
+    //
+    // Every formatting command needs a range to act on, so the gesture that makes one is part of the
+    // formatting feature rather than a nicety on top of it: without a way to select a word by pointing
+    // at it, the only route to bolding one is a careful drag from edge to edge.
+
+    static string SelectedText(WordDocument document, DocumentEditorController controller)
+    {
+        var range = controller.Selection.Range;
+        if (range.Start.Block != range.End.Block)
+            return "<multiple blocks>";
+
+        var text = ((DocumentParagraph)document.Blocks[range.Start.Block]).PlainText;
+        return text[range.Start.Offset..range.End.Offset];
+    }
+
+    [Fact]
+    public async Task DoubleClickingAWordSelectsExactlyThatWord()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var text = ((DocumentParagraph)document.Blocks[block]).PlainText;
+        var at = text.IndexOf("body", StringComparison.Ordinal);
+
+        // Landing anywhere inside the word has to give the same span, so the middle is what is tested.
+        controller.SelectWordAt(new DocumentPosition(block, at + 2));
+
+        SelectedText(document, controller).ShouldBe("body");
+    }
+
+    [Fact]
+    public async Task AWordSelectionStopsAtPunctuation()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var paragraph = (DocumentParagraph)document.Blocks[block];
+        var text = paragraph.PlainText;
+
+        // A full stop is not a word character, so double-clicking the last word must not swallow it.
+        var stop = text.IndexOf('.');
+        if (stop <= 0)
+            return;
+
+        controller.SelectWordAt(new DocumentPosition(block, stop - 1));
+        SelectedText(document, controller).ShouldNotContain(".");
+    }
+
+    [Fact]
+    public async Task ClickingBetweenWordsSelectsTheGapRatherThanNothing()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var text = ((DocumentParagraph)document.Blocks[block]).PlainText;
+        var space = text.IndexOf(' ');
+
+        controller.SelectWordAt(new DocumentPosition(block, space));
+
+        // Whitespace is a span of its own: selecting nothing at all would look like the gesture failed.
+        SelectedText(document, controller).ShouldBe(" ");
+    }
+
+    [Fact]
+    public async Task TripleClickingSelectsTheWholeParagraph()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var text = ((DocumentParagraph)document.Blocks[block]).PlainText;
+
+        controller.SelectParagraphAt(new DocumentPosition(block, 4));
+
+        controller.Selection.Range.Start.ShouldBe(new DocumentPosition(block, 0));
+        controller.Selection.Range.End.ShouldBe(new DocumentPosition(block, text.Length));
+    }
+
+    [Fact]
+    public async Task SelectingAWordThenFormattingAppliesToThatWordOnly()
+    {
+        // The whole point of the gesture, end to end.
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var text = ((DocumentParagraph)document.Blocks[block]).PlainText;
+        var at = text.IndexOf("body", StringComparison.Ordinal);
+
+        controller.SelectWordAt(new DocumentPosition(block, at + 2));
+        controller.ToggleBold();
+
+        StyleAt(document, block, at).Bold.ShouldBeTrue();
+        StyleAt(document, block, at + 3).Bold.ShouldBeTrue();
+
+        // The space before it is outside the word, and outside the change.
+        StyleAt(document, block, at - 1).Bold.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SelectingAWordInAnEmptyParagraphIsHarmless()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var empty = document.Blocks
+            .Select((block, index) => (block, index))
+            .FirstOrDefault(x => x.block is DocumentParagraph { PlainText.Length: 0 });
+
+        if (empty.block is null)
+            return;
+
+        Should.NotThrow(() => controller.SelectWordAt(new DocumentPosition(empty.index, 0)));
+        controller.Selection.Range.Start.ShouldBe(controller.Selection.Range.End);
+    }
+
+    // ---- formatting chosen at a bare caret ----
+    //
+    // Word applies a format picked with nothing selected to whatever is typed next. Without that, the
+    // toolbar has no range to act on and the click silently does nothing, which is indistinguishable
+    // from a broken toolbar.
+
+    /// <summary>The style of the run covering an offset, which is what a format has to land on.</summary>
+    static Shiny.Controls.Office.Text.TextStyle StyleAt(WordDocument document, int block, int offset)
+    {
+        var paragraph = (DocumentParagraph)document.Blocks[block];
+        var cursor = 0;
+
+        foreach (var run in paragraph.Runs)
+        {
+            if (run.IsBreak)
+                continue;
+
+            if (offset < cursor + run.Text.Length)
+                return run.Style;
+
+            cursor += run.Text.Length;
+        }
+
+        return paragraph.Runs.Count > 0 ? paragraph.Runs[^1].Style : Shiny.Controls.Office.Text.TextStyle.Default;
+    }
+
+    [Fact]
+    public async Task AFormatChosenAtABareCaretShowsOnTheToolbarBeforeAnythingIsTyped()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        controller.Selection.MoveTo(new DocumentPosition(BodyBlock(document), 3));
+        controller.SetFontFamily("Courier New");
+
+        // Nothing to read it back from in the document yet, so the toolbar has to be told directly -
+        // and it has to survive the Changed that the choice itself raises.
+        controller.CaretFormat.FontFamily.ShouldBe("Courier New");
+    }
+
+    [Fact]
+    public async Task AFormatChosenAtABareCaretAppliesToTheNextTypedText()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.SetFontFamily("Courier New");
+        controller.SetFontSize(24);
+        controller.SetTextColor(new ArgbColor(255, 0xC0, 0x00, 0x00));
+
+        controller.InsertText("XY");
+
+        var style = StyleAt(document, block, 0);
+        style.FontFamily.ShouldBe("Courier New");
+        style.Color.ShouldBe(new ArgbColor(255, 0xC0, 0x00, 0x00));
+
+        // The text around it is untouched - a pending format applies to what was typed, not the run
+        // it was typed into.
+        StyleAt(document, block, 5).FontFamily.ShouldNotBe("Courier New");
+    }
+
+    [Fact]
+    public async Task APendingFormatIsSpentOnce()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.SetFontFamily("Courier New");
+        controller.InsertText("A");
+
+        // Moving on and typing elsewhere must not pick the format up again.
+        controller.Selection.MoveTo(new DocumentPosition(block, 6));
+        controller.InsertText("B");
+
+        StyleAt(document, block, 6).FontFamily.ShouldNotBe("Courier New");
+    }
+
+    [Fact]
+    public async Task MovingTheCaretAbandonsAPendingFormat()
+    {
+        // Otherwise it is a trap: pick a colour, change your mind, click elsewhere, and the next thing
+        // typed - somewhere unrelated, possibly much later - comes out in that colour.
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.SetFontFamily("Courier New");
+
+        controller.Selection.MoveTo(new DocumentPosition(block, 6));
+        controller.CaretFormat.FontFamily.ShouldNotBe("Courier New");
+
+        controller.InsertText("Z");
+        StyleAt(document, block, 6).FontFamily.ShouldNotBe("Courier New");
+    }
+
+    [Fact]
+    public async Task ChoosingTwoSizesAtOneCaretKeepsTheSecond()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.SetFontSize(12);
+        controller.SetFontSize(30);
+
+        controller.CaretFormat.FontSize.ShouldBe(30);
+
+        controller.InsertText("Q");
+
+        // Styles carry pixels; the picker speaks points, which is the round trip that has to survive.
+        Shiny.Controls.Office.OoxmlUnits
+            .PixelsToPointsApprox(StyleAt(document, block, 0).FontSize)
+            .ShouldBe(30);
+    }
+
+    [Fact]
+    public async Task TypingWithAPendingFormatUndoesAsOneStep()
+    {
+        // The insert and the format are one action to the user. An undo that took the characters away
+        // and left the formatting behind would leave the caret carrying a format nobody chose.
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        var before = ((DocumentParagraph)document.Blocks[block]).PlainText;
+
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.SetFontFamily("Courier New");
+        controller.InsertText("XY");
+
+        controller.Undo();
+
+        ((DocumentParagraph)document.Blocks[block]).PlainText.ShouldBe(before);
+        StyleAt(document, block, 0).FontFamily.ShouldNotBe("Courier New");
+    }
+
+    [Fact]
+    public async Task FormattingWithASelectionStillAppliesImmediately()
+    {
+        var (document, controller) = await SetupAsync();
+        using var _ = document;
+
+        var block = BodyBlock(document);
+        controller.Selection.MoveTo(new DocumentPosition(block, 0));
+        controller.Selection.ExtendTo(new DocumentPosition(block, 5));
+        controller.SetFontFamily("Courier New");
+
+        StyleAt(document, block, 0).FontFamily.ShouldBe("Courier New");
+    }
+
     [Fact]
     public async Task TypingInsertsAndAdvancesTheCaret()
     {

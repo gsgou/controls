@@ -1,0 +1,131 @@
+@page "/captcha"
+
+<PageTitle>Captcha</PageTitle>
+
+<h1>Captcha</h1>
+
+<p>
+    One component, four providers. Nothing is registered in this sample, so <code>&lt;Captcha /&gt;</code>
+    falls back to the built-in local challenge — no account, no site key, no third-party script.
+    Registering <code>UseReCaptcha</code>, <code>UseHCaptcha</code> or <code>UseTurnstile</code> swaps the
+    widget without touching any of the markup below.
+</p>
+
+<div class="demo-section">
+    <h2>Default (local challenge)</h2>
+    <Captcha @ref="basic"
+             Solved="OnSolved"
+             Expired="OnExpired"
+             ValidChanged="v => basicValid = v" />
+
+    <div class="state">
+        Valid: <code>@basicValid</code> &nbsp; Token: <code>@(basic?.Response ?? "—")</code>
+    </div>
+
+    <button class="demo-button" @onclick="() => basic!.ResetAsync()">Reset</button>
+</div>
+
+<div class="demo-section">
+    <h2>Math mode, dark, case-sensitive off</h2>
+    <p>The arithmetic variant reads out properly to a screen reader, which the drawn characters cannot.</p>
+    <Captcha Provider="math"
+             Theme="CaptchaTheme.Dark"
+             Solved="e => mathToken = e.Response" />
+    <div class="state">Token: <code>@(mathToken ?? "—")</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Gating a submit button</h2>
+    <p>
+        <code>ValidChanged</code> flips as the challenge is solved and expires, so the button binds
+        straight to it.
+    </p>
+
+    <Captcha @ref="gate" ValidChanged="v => canSubmit = v" />
+
+    <button class="demo-button" disabled="@(!canSubmit)" style="@DisabledStyle" @onclick="SubmitAsync">
+        @(submitting ? "Submitting…" : "Submit")
+    </button>
+
+    @if (submitResult is not null)
+    {
+        <div class="state">@submitResult</div>
+    }
+</div>
+
+<div class="demo-section">
+    <h2>Server-side validation</h2>
+    <p>
+        <code>Validate</code> runs the moment the widget solves and decides whether the state counts as
+        valid. This is where the siteverify round trip belongs; here it rejects every other attempt so
+        you can watch the challenge redraw itself.
+    </p>
+
+    <Captcha Validate="FakeServerValidateAsync"
+             Solved="OnServerAccepted"
+             ValidChanged="v => serverValid = v" />
+
+    <div class="state">Valid: <code>@serverValid</code></div>
+    @foreach (var line in validationLog.Take(5))
+    {
+        <div class="state">@line</div>
+    }
+</div>
+
+<div class="demo-section">
+    <h2>Hosted providers</h2>
+    <p>
+        These need a site key and a <code>AddShinyCaptcha</code> registration, so they are shown as code
+        rather than rendered:
+    </p>
+<pre><code>builder.Services.AddShinyCaptcha(x => x
+    .UseTurnstile(builder.Configuration["Turnstile:SiteKey"]!)
+    .UseLocal()
+    .SetDefaultProvider("turnstile")
+);
+
+&lt;Captcha Provider="turnstile" Validate="VerifyOnServerAsync" /&gt;</code></pre>
+</div>
+
+@code {
+    Captcha? basic;
+    Captcha? gate;
+
+    bool basicValid;
+    bool canSubmit;
+    bool serverValid;
+    bool submitting;
+    string? mathToken;
+    string? submitResult;
+    int serverAttempt;
+    readonly List<string> validationLog = new();
+
+    string? DisabledStyle => canSubmit ? null : "opacity:0.45;cursor:not-allowed;";
+
+    void OnSolved(CaptchaState state) => submitResult = null;
+
+    void OnServerAccepted(CaptchaState state) => validationLog.Insert(0, "server accepted");
+
+    void OnExpired() => submitResult = "The challenge expired — solve it again.";
+
+    async Task SubmitAsync()
+    {
+        submitting = true;
+        await Task.Delay(600);
+        submitting = false;
+        submitResult = $"Posted with token {gate?.Response}";
+
+        // a token is single-use: whatever the server said, the widget starts again
+        await gate!.ResetAsync();
+    }
+
+    async Task<bool> FakeServerValidateAsync(CaptchaState state)
+    {
+        await Task.Delay(400);
+        var ok = ++serverAttempt % 2 == 1;
+        if (!ok)
+            validationLog.Insert(0, "server rejected — try again");
+
+        return ok;
+    }
+}

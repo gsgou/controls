@@ -10,9 +10,16 @@
 
 .shiny-pb-fill {
     height: 100%;
-    transition: width 0.3s ease;
+    /* Symmetric on purpose: a value that drops drains back rather than snapping. */
+    transition: width var(--fill-duration, 250ms) var(--fill-easing, cubic-bezier(0.33, 1, 0.68, 1));
     position: relative;
     overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-pb-fill {
+        transition: none;
+    }
 }
 
 /* Vista-style shimmer sweep: a gradient highlight that moves left-to-right */
@@ -63,6 +70,7 @@
 /* Indeterminate animation */
 .shiny-pb--indeterminate .shiny-pb-fill {
     width: 30%;
+    transition: none;
     animation: shiny-pb-indeterminate 1.4s ease-in-out infinite;
 }
 

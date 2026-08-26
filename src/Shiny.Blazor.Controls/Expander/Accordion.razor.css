@@ -1,0 +1,6 @@
+.shiny-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--shiny-accordion-gap, var(--shiny-spacing-2, 8px));
+    min-width: 0;
+}

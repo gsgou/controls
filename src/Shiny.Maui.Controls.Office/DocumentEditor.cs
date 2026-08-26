@@ -263,6 +263,37 @@ public class DocumentEditor : ContentView, IDisposable
         };
     }
 
+    /// <summary>
+    /// How long after a press a second one still counts as part of the same multi-tap.
+    /// </summary>
+    /// <remarks>
+    /// SkiaSharp's touch events carry no click count - unlike the browser, which works one out for us -
+    /// so a double tap has to be recognised from the timing and the distance here.
+    /// </remarks>
+    static readonly TimeSpan MultiTapInterval = TimeSpan.FromMilliseconds(450);
+
+    /// <summary>How far a second tap may land from the first and still be the same gesture.</summary>
+    const double MultiTapSlop = 10;
+
+    DateTime lastPressAt;
+    double lastPressX;
+    double lastPressY;
+    int pressCount;
+
+    /// <summary>Counts consecutive taps in the same spot: 1 places a caret, 2 a word, 3 a paragraph.</summary>
+    int CountPress(double x, double y)
+    {
+        var now = DateTime.UtcNow;
+        var near = Math.Abs(x - this.lastPressX) <= MultiTapSlop && Math.Abs(y - this.lastPressY) <= MultiTapSlop;
+
+        this.pressCount = near && now - this.lastPressAt <= MultiTapInterval ? this.pressCount + 1 : 1;
+        this.lastPressAt = now;
+        this.lastPressX = x;
+        this.lastPressY = y;
+
+        return this.pressCount;
+    }
+
     void OnTouch(object? sender, SKTouchEventArgs e)
     {
         if (this.controller is null)
@@ -289,16 +320,25 @@ public class DocumentEditor : ContentView, IDisposable
                     break;
                 }
 
+                var taps = this.CountPress(x, y);
+
                 if (this.controller.PositionAt(x, y) is { } position)
                 {
-                    this.controller.Selection.MoveTo(position);
+                    if (taps >= 3)
+                        this.controller.SelectParagraphAt(position);
+                    else if (taps == 2)
+                        this.controller.SelectWordAt(position);
+                    else
+                        this.controller.Selection.MoveTo(position);
+
                     this.FocusEditor();
 
                     // Right-click is the desktop gesture; touch gets the same menu from a long press,
                     // timed from this press because a pan gesture only starts once the finger moves.
+                    // A second tap is neither: arming it there would race the word selection.
                     if (e.MouseButton == SKMouseButton.Right)
                         _ = this.ShowSpellingMenuAsync(position, x, y);
-                    else
+                    else if (taps == 1)
                         this.ArmLongPress(position, x, y);
                 }
 
@@ -315,7 +355,9 @@ public class DocumentEditor : ContentView, IDisposable
                     break;
                 }
 
-                if (this.controller.PositionAt(x, y) is { } dragged)
+                // Only a single-tap drag extends. After a double tap the finger is still down over the
+                // word that was just selected, and extending from there would collapse it to a caret.
+                if (this.pressCount == 1 && this.controller.PositionAt(x, y) is { } dragged)
                     this.controller.Selection.ExtendTo(dragged);
 
                 break;

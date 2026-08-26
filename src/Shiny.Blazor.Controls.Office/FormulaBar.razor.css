@@ -1,0 +1,60 @@
+.shiny-formula-bar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
+    background: var(--shiny-color-surface, #fff);
+}
+
+.shiny-formula-name {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 88px;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-radius: 4px;
+    background: var(--shiny-color-surface, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+}
+
+.shiny-formula-fx {
+    flex: 0 0 auto;
+    padding: 0 2px;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Monospace on purpose: a formula is code, and column alignment is what makes a long nested one
+   readable at all. */
+.shiny-formula-input {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    border: 1px solid var(--shiny-color-outline, #d1d5db);
+    border-radius: 4px;
+    background: var(--shiny-color-surface, #fff);
+    color: inherit;
+    font-family: var(--shiny-type-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 12px;
+    outline: none;
+}
+
+.shiny-formula-input:focus,
+.shiny-formula-name:focus {
+    border-color: var(--shiny-spreadsheet-selection, #217a3c);
+}
+
+.shiny-formula-input:read-only {
+    background: var(--shiny-color-surface-variant, #f3f4f6);
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+}

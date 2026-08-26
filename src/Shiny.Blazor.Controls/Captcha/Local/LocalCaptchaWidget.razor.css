@@ -1,0 +1,165 @@
+.shiny-captcha-local {
+    /* one place to swap light for dark, so every rule below reads from the same four values */
+    --shiny-captcha-surface: var(--shiny-color-surface, #FFFFFF);
+    --shiny-captcha-on-surface: var(--shiny-color-on-surface, #111827);
+    --shiny-captcha-muted: var(--shiny-color-on-surface-variant, #6B7280);
+    --shiny-captcha-well: var(--shiny-color-surface-container-high, #F3F4F6);
+    --shiny-captcha-outline: var(--shiny-color-outline-variant, #D1D5DB);
+    --shiny-captcha-outline-strong: var(--shiny-color-outline, #9CA3AF);
+
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--shiny-spacing-2, 8px);
+    padding: var(--shiny-spacing-3, 12px);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline);
+    border-radius: var(--shiny-radius-md, 10px);
+    background-color: var(--shiny-captcha-surface);
+    color: var(--shiny-captcha-on-surface);
+    font-family: var(--shiny-type-font-family, inherit);
+}
+
+.shiny-captcha-challenge {
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-2, 8px);
+}
+
+.shiny-captcha-canvas {
+    display: block;
+    border-radius: var(--shiny-radius-sm, 6px);
+    background-color: var(--shiny-captcha-well);
+    /* the drawn characters are the point — do not let a long-press hand them to an OCR share sheet */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    pointer-events: none;
+}
+
+.shiny-captcha-math {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-4, 16px);
+    border-radius: var(--shiny-radius-sm, 6px);
+    background-color: var(--shiny-captcha-well);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.shiny-captcha-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline);
+    border-radius: var(--shiny-radius-sm, 6px);
+    background: transparent;
+    color: var(--shiny-captcha-muted);
+    cursor: pointer;
+    transition: transform 150ms ease, color 150ms ease;
+}
+
+.shiny-captcha-refresh:hover:not(:disabled) {
+    color: var(--shiny-color-primary, #6C63FF);
+    transform: rotate(-90deg);
+}
+
+.shiny-captcha-refresh:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.shiny-captcha-answer {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.shiny-captcha-input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline-strong);
+    border-radius: var(--shiny-radius-sm, 6px);
+    background-color: var(--shiny-captcha-surface);
+    color: var(--shiny-captcha-on-surface);
+    font-family: inherit;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+}
+
+.shiny-captcha-input:focus {
+    outline: none;
+    border-color: var(--shiny-color-primary, #6C63FF);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--shiny-color-primary, #6C63FF) 25%, transparent);
+}
+
+.shiny-captcha-check {
+    position: absolute;
+    right: var(--shiny-spacing-2, 8px);
+    display: inline-flex;
+    color: var(--shiny-color-success, #16A34A);
+}
+
+.is-solved .shiny-captcha-input {
+    border-color: var(--shiny-color-success, #16A34A);
+    padding-right: 32px;
+}
+
+.is-wrong .shiny-captcha-input {
+    border-color: var(--shiny-color-error, #DC2626);
+    animation: shiny-captcha-shake 320ms ease;
+}
+
+.shiny-captcha-message {
+    min-height: 1.1em;
+    font-size: 0.8rem;
+    color: var(--shiny-captcha-muted);
+}
+
+.shiny-captcha-error {
+    color: var(--shiny-color-error, #DC2626);
+}
+
+@keyframes shiny-captcha-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .is-wrong .shiny-captcha-input { animation: none; }
+    .shiny-captcha-refresh:hover:not(:disabled) { transform: none; }
+}
+
+/* Dark is an explicit choice (Theme="Dark") or the system preference under Theme="Auto". These are
+   literals rather than theme tokens on purpose: the tokens hold whatever scheme the page is already
+   in, so reading them here would leave a forced-dark widget looking light. captcha.js picks the
+   canvas colours the same way, so the two cannot disagree. */
+.shiny-captcha-local.is-dark {
+    --shiny-captcha-surface: #111827;
+    --shiny-captcha-on-surface: #F9FAFB;
+    --shiny-captcha-muted: #9CA3AF;
+    --shiny-captcha-well: #1F2937;
+    --shiny-captcha-outline: #374151;
+    --shiny-captcha-outline-strong: #4B5563;
+}
+
+@media (prefers-color-scheme: dark) {
+    .shiny-captcha-local.is-auto {
+        --shiny-captcha-surface: #111827;
+        --shiny-captcha-on-surface: #F9FAFB;
+        --shiny-captcha-muted: #9CA3AF;
+        --shiny-captcha-well: #1F2937;
+        --shiny-captcha-outline: #374151;
+        --shiny-captcha-outline-strong: #4B5563;
+    }
+}

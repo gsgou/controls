@@ -164,7 +164,50 @@ public sealed class SpreadsheetController
     /// <summary>The text a formula bar should show: the formula when there is one, otherwise the literal.</summary>
     public string ActiveCellText => this.CellText(this.Selection.Active);
 
-    string CellText(CellRef cell)
+    /// <summary>The active cell's address in A1 notation — what a formula bar's name box shows.</summary>
+    public string ActiveCellAddress => this.Selection.Active.Relative().ToString();
+
+    /// <summary>
+    /// Writes text into the active cell, reading it exactly as typing it into the cell would.
+    /// </summary>
+    /// <remarks>
+    /// For a formula bar, which edits the same cell from somewhere else on screen. It deliberately does
+    /// not go through <see cref="BeginEdit"/>: that raises <see cref="EditingChanged"/> and would open
+    /// the in-cell editor on top of the grid, leaving two editors live on one cell and each unaware of
+    /// what the other holds.
+    /// </remarks>
+    public void SetActiveCellText(string text) => this.SetCellText(this.Selection.Active, text);
+
+    /// <summary>
+    /// Writes text into a named cell, reading it exactly as typing it into that cell would.
+    /// </summary>
+    /// <remarks>
+    /// The cell is named rather than assumed to be the active one because a formula bar loses focus
+    /// <em>after</em> the click that moved the selection: committing to whatever is active by then
+    /// would put the text in the cell the user clicked on rather than the one they were editing.
+    /// </remarks>
+    public void SetCellText(CellRef cell, string text)
+    {
+        this.CancelEdit();
+        this.Workbook.Undo.BreakCoalescing();
+        this.Apply(cell.Relative(), text ?? string.Empty);
+        this.RaiseChanged();
+    }
+
+    /// <summary>
+    /// Moves the selection to a cell and scrolls it into view — what typing an address into the name
+    /// box does.
+    /// </summary>
+    public void GoTo(CellRef cell)
+    {
+        this.CancelEdit();
+        this.Selection.MoveTo(cell.Relative());
+        this.Viewport.ScrollIntoView(this.Selection.Active);
+        this.RaiseChanged();
+    }
+
+    /// <summary>What a cell would show in a formula bar: its formula when it has one, else its literal.</summary>
+    public string CellText(CellRef cell)
     {
         var formula = this.sheet.GetFormula(cell);
         if (formula is not null)

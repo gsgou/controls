@@ -26,6 +26,7 @@ public static class Catalog
         new("Layout & Collections", "#60A5FA",
         [
             new("layout", "Stacks & Grid", "▤", "VStack, HStack and a responsive 12-column grid"),
+            new("expander", "Expander", "▾", "Animated disclosure panels and accordion lists"),
             new("applayout", "App Layout", "◫", "Application shell with collapsible, resizable panels"),
             new("carousel", "Carousel Gallery", "◀", "Swipeable image gallery with indicators"),
             new("carousel-advanced", "Carousel", "▶", "Templated carousel with looping and autoplay"),
@@ -64,6 +65,8 @@ public static class Catalog
             new("slider", "Slider", "━", "Single-value slider with ticks and labels"),
             new("rangeslider", "Range Slider", "≡", "Two-thumb range selection"),
             new("securitypin", "Security Pin", "✱", "PIN entry with masking and shake-on-error"),
+            new("passwordstrength", "Password Strength", "▓", "Password field with a live strength meter and rule checklist"),
+            new("captcha", "Captcha", "🛡", "Human check — local challenge, reCAPTCHA, hCaptcha or Turnstile"),
             new("signaturepad", "Signature Pad", "✍", "Draw, clear and export a signature"),
             new("onscreenkeyboard", "On-Screen Keyboard", "⌨", "Touch / kiosk QWERTY that never steals the caret"),
             new("quickentry", "Quick Entry", "✧", "Assistant-style prompt popup with a Siri-style screen glow")
@@ -89,6 +92,7 @@ public static class Catalog
             new("toast", "Toast", "▬", "Queued toasts with progress and spinners"),
             new("dialogs", "Dialogs", "❕", "Owned alert, confirm, prompt and action sheet"),
             new("progressbar", "Progress Bar", "▣", "Determinate and indeterminate progress"),
+            new("progressline", "Progress Line", "━", "Page-edge loading line, docked and service-driven"),
             new("skeleton", "Skeleton", "☰", "Shimmering placeholders while content loads"),
             new("splashscreen", "Splash Screen", "☀", "Startup screen with status and progress"),
             new("motionicons", "Motion Icons", "✦", "42 animated icons on timer, hover, tap or command")

@@ -1,0 +1,16 @@
+.shiny-captcha {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--shiny-spacing-1, 4px);
+    font-family: var(--shiny-type-font-family, inherit);
+}
+
+.shiny-captcha-missing,
+.shiny-captcha-failure {
+    padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-error, #DC2626);
+    border-radius: var(--shiny-radius-sm, 6px);
+    background-color: var(--shiny-color-error-container, #FEE2E2);
+    color: var(--shiny-color-on-error-container, #991B1B);
+    font-size: 0.8rem;
+}

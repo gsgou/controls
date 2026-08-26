@@ -138,6 +138,30 @@ public partial class ProgressBar
         nameof(PulseSpeed), typeof(int), typeof(ProgressBar), 800);
     public int PulseSpeed { get => (int)GetValue(PulseSpeedProperty); set => SetValue(PulseSpeedProperty, value); }
 
+    // Fill animation
+    public static readonly BindableProperty AnimateProgressProperty = BindableProperty.Create(
+        nameof(AnimateProgress), typeof(bool), typeof(ProgressBar), true);
+    /// <summary>
+    /// Whether a change to <see cref="Value"/> slides the fill to its new width instead of snapping.
+    /// Applies in both directions, so a value that drops drains rather than jumping backwards.
+    /// </summary>
+    /// <remarks>
+    /// Only a value change animates. A width change driven by layout - the control being measured,
+    /// <see cref="TrackHeight"/> changing, leaving indeterminate mode - snaps, because animating
+    /// those makes the bar visibly reflow every time its container resizes.
+    /// </remarks>
+    public bool AnimateProgress { get => (bool)GetValue(AnimateProgressProperty); set => SetValue(AnimateProgressProperty, value); }
+
+    public static readonly BindableProperty ProgressAnimationDurationProperty = BindableProperty.Create(
+        nameof(ProgressAnimationDuration), typeof(int), typeof(ProgressBar), 250);
+    /// <summary>Length of the fill slide in milliseconds. Zero or less snaps.</summary>
+    public int ProgressAnimationDuration { get => (int)GetValue(ProgressAnimationDurationProperty); set => SetValue(ProgressAnimationDurationProperty, value); }
+
+    public static readonly BindableProperty ProgressAnimationEasingProperty = BindableProperty.Create(
+        nameof(ProgressAnimationEasing), typeof(Easing), typeof(ProgressBar), Easing.CubicOut);
+    /// <summary>Curve the fill slide follows. Defaults to <see cref="Easing.CubicOut"/>.</summary>
+    public Easing ProgressAnimationEasing { get => (Easing)GetValue(ProgressAnimationEasingProperty); set => SetValue(ProgressAnimationEasingProperty, value); }
+
     // Text
     public static readonly BindableProperty ShowTextProperty = BindableProperty.Create(
         nameof(ShowText), typeof(bool), typeof(ProgressBar), false,

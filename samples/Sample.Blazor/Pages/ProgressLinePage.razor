@@ -1,0 +1,153 @@
+@page "/progressline"
+@using Shiny.Blazor.Controls
+@inject IProgressLineService ProgressLine
+
+<PageTitle>Progress Line</PageTitle>
+
+<h1>Progress Line</h1>
+
+<p>
+    The thin line that runs across the top or bottom of the window while something is loading.
+    Unlike <code>ProgressBar</code>, it has no slot in the layout - it pins itself to a viewport edge.
+</p>
+
+<section class="demo-section">
+    <h2>Bound to a value</h2>
+    <p>The line pinned to the top of this window follows the slider.</p>
+
+    @* Renders at the top of the viewport, not here. *@
+    <ProgressLine Position="ProgressLinePosition.Top"
+                  Value="@value"
+                  BarColor="#F97316"
+                  LineHeight="4" />
+
+    <input type="range" min="0" max="100" step="1"
+           value="@value"
+           @oninput="OnSlide"
+           style="width: 100%; max-width: 420px;" />
+    <p><strong>@value.ToString("0")%</strong> - drag it back down to watch the fill drain rather than snap.</p>
+</section>
+
+<section class="demo-section">
+    <h2>Driven from code</h2>
+    <p><code>IProgressLineService</code> puts a line up with no markup at all. Needs one <code>&lt;ProgressLineHost /&gt;</code> in the layout.</p>
+    <p><strong>@status</strong></p>
+
+    <div class="demo-row">
+        <button class="demo-button" @onclick="RunTrickle">Trickle (no reported progress)</button>
+        <button class="demo-button" @onclick="RunReported">Reported percentages</button>
+        <button class="demo-button" @onclick="RunBottom">Bottom edge, gradient + shimmer</button>
+        <button class="demo-button" @onclick="RunIndeterminate">Indeterminate sweep</button>
+        <button class="demo-button" @onclick="RunOverlapping">Two overlapping operations</button>
+    </div>
+</section>
+
+<section class="demo-section">
+    <h2>Anchored to a container</h2>
+    <p><code>Anchor="Container"</code> runs the line along the edge of the nearest positioned ancestor instead of the window.</p>
+
+    <div style="position: relative; height: 120px; border: 1px solid var(--shiny-color-outline, #ccc); border-radius: 8px; padding: 16px;">
+        <ProgressLine Anchor="ProgressLineAnchor.Container"
+                      Position="ProgressLinePosition.Bottom"
+                      Value="@value"
+                      UseGradient="true"
+                      LineHeight="6" />
+        This panel owns its own line, along the bottom.
+    </div>
+</section>
+
+@code {
+    double value = 40;
+    string status = "Idle";
+
+    void OnSlide(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var parsed))
+            this.value = parsed;
+    }
+
+
+    /// <summary>The common case: wrap the work, report nothing, let the trickle carry it.</summary>
+    async Task RunTrickle()
+    {
+        using var run = this.ProgressLine.Start();
+        this.status = "Trickling…";
+        await Task.Delay(3000);
+        this.status = "Done";
+    }
+
+
+    /// <summary>Real percentages from a loop that knows how much is left.</summary>
+    async Task RunReported()
+    {
+        using var run = this.ProgressLine.Start(c =>
+        {
+            c.BarColor = "#22C55E";
+            c.LineHeight = 4;
+        });
+
+        for (var i = 1; i <= 10; i++)
+        {
+            run.SetProgress(i / 10d);
+            this.status = $"Uploading {i * 10}%";
+            this.StateHasChanged();
+            await Task.Delay(250);
+        }
+        this.status = "Uploaded";
+    }
+
+
+    async Task RunBottom()
+    {
+        using var run = this.ProgressLine.Start(c =>
+        {
+            c.Position = ProgressLinePosition.Bottom;
+            c.UseGradient = true;
+            c.PulseEnabled = true;
+            c.LineHeight = 4;
+        });
+
+        this.status = "Working along the bottom…";
+        await Task.Delay(3000);
+        this.status = "Done";
+    }
+
+
+    async Task RunIndeterminate()
+    {
+        using var run = this.ProgressLine.Start(c =>
+        {
+            c.Indeterminate = true;
+            c.BarColor = "#A78BFA";
+        });
+
+        this.status = "No idea how long this takes…";
+        await Task.Delay(3000);
+        this.status = "Done";
+    }
+
+
+    /// <summary>
+    /// Two overlapping runs — the line has to stay up until the slower one lands, not vanish when
+    /// the quick one does.
+    /// </summary>
+    async Task RunOverlapping()
+    {
+        this.status = "Two operations…";
+
+        var quick = Task.Run(async () =>
+        {
+            using var run = this.ProgressLine.Start(c => c.BarColor = "#F59E0B");
+            await Task.Delay(800);
+        });
+
+        var slow = Task.Run(async () =>
+        {
+            using var run = this.ProgressLine.Start(c => c.BarColor = "#F59E0B");
+            await Task.Delay(4000);
+        });
+
+        await Task.WhenAll(quick, slow);
+        this.status = "Both finished";
+    }
+}

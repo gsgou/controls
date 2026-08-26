@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:shiny="http://shiny.net/maui/controls"
+    xmlns:local="clr-namespace:Sample.Features.ProgressLine"
+    x:Class="Sample.Features.ProgressLine.ProgressLinePage"
+    x:DataType="local:ProgressLineViewModel"
+    Title="Progress Line"
+    AutomationId="ProgressLinePage">
+
+    <!--
+        Declared here, but it does not render here: the line moves itself onto the page's top edge,
+        under the navigation bar. That is the whole point of the control - set Dock="False" to keep
+        one inline instead.
+    -->
+    <shiny:ProgressLine AutomationId="BoundProgressLine"
+                        Position="Top"
+                        Value="{Binding BoundValue}"
+                        BarColor="#F97316"
+                        LineHeight="4" />
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="20">
+
+            <Label Text="{Binding Status}" FontSize="16" FontAttributes="Bold" />
+
+            <!-- Declarative, bound -->
+            <Label Text="Bound to a value" FontSize="18" FontAttributes="Bold" />
+            <Label Text="The orange line across the top of this page is bound to the value below."
+                   FontSize="13" />
+            <Label Text="{Binding BoundValue, StringFormat='{0:0}%'}" FontSize="13" />
+            <HorizontalStackLayout Spacing="12">
+                <Button Text="-15" AutomationId="DecrementButton" Command="{Binding DecrementCommand}" />
+                <Button Text="+15" AutomationId="IncrementButton" Command="{Binding IncrementCommand}" />
+            </HorizontalStackLayout>
+
+            <BoxView HeightRequest="1" Color="#33888888" />
+
+            <!-- Service driven -->
+            <Label Text="Driven from code" FontSize="18" FontAttributes="Bold" />
+            <Label Text="IProgressLineService puts a line up with no markup on the page at all."
+                   FontSize="13" />
+
+            <Button Text="Trickle (no reported progress)"
+                    AutomationId="TrickleButton"
+                    Command="{Binding RunTrickleCommand}" />
+
+            <Button Text="Reported percentages"
+                    AutomationId="ReportedButton"
+                    Command="{Binding RunReportedCommand}" />
+
+            <Button Text="Bottom edge, gradient + shimmer"
+                    AutomationId="BottomButton"
+                    Command="{Binding RunBottomCommand}" />
+
+            <Button Text="Indeterminate sweep"
+                    AutomationId="IndeterminateButton"
+                    Command="{Binding RunIndeterminateCommand}" />
+
+            <Button Text="Two overlapping operations"
+                    AutomationId="OverlappingButton"
+                    Command="{Binding RunOverlappingCommand}" />
+
+            <BoxView HeightRequest="1" Color="#33888888" />
+
+            <!-- Inline escape hatch -->
+            <Label Text="Dock=&quot;False&quot; keeps it inline" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Same control, rendered where it is declared - for a header you are drawing yourself."
+                   FontSize="13" />
+            <shiny:ProgressLine AutomationId="InlineProgressLine"
+                                Dock="False"
+                                Value="{Binding BoundValue}"
+                                LineHeight="6"
+                                CornerRadius="3"
+                                TrackColor="#22888888"
+                                UseGradient="True" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

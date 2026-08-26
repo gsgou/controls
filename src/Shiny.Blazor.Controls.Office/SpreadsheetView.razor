@@ -11,6 +11,13 @@
 
 <div class="shiny-spreadsheet-host @Class" style="@Style">
 
+    @if (this.ShowFormulaBar && this.controller is not null)
+    {
+        <FormulaBar Controller="this.controller"
+                    ReadOnly="this.ReadOnly"
+                    Changed="this.OnSheetsChanged" />
+    }
+
     <div class="shiny-spreadsheet"
          tabindex="0"
          @ref="host"
@@ -100,6 +107,16 @@
     /// to reach its other sheets is a worse default than a single tab that does nothing.
     /// </summary>
     [Parameter] public bool ShowSheetTabs { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show the name box and formula field above the grid.
+    /// </summary>
+    /// <remarks>
+    /// On by default. The grid paints the <em>result</em> of a formula, so without this a cell reading
+    /// 84 gives no way to discover that it holds <c>=B1*2</c> — and no way to edit it as a formula
+    /// rather than retyping it from scratch.
+    /// </remarks>
+    [Parameter] public bool ShowFormulaBar { get; set; } = true;
 
     /// <summary>
     /// Whether the tab strip can add, rename, reorder, hide and delete sheets, as opposed to only

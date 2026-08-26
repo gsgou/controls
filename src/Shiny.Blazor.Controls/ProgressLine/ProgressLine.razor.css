@@ -1,0 +1,85 @@
+.shiny-pl {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: var(--shiny-progressline-z, 1200);
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--pl-track, transparent);
+    height: var(--pl-height, 3px);
+    opacity: 1;
+    transition: opacity var(--pl-fade, 200ms) ease;
+}
+
+.shiny-pl--container {
+    position: absolute;
+}
+
+/*
+ * The offset is a single custom property rather than a literal top/bottom so an app shell can push
+ * the line below its own header by setting --shiny-progressline-offset on any ancestor, without the
+ * component having to know that header exists.
+ */
+.shiny-pl--top {
+    top: calc(var(--pl-offset, 0px) + var(--pl-safe-top, 0px) + var(--shiny-progressline-offset, 0px));
+}
+
+.shiny-pl--bottom {
+    bottom: calc(var(--pl-offset, 0px) + var(--pl-safe-bottom, 0px) + var(--shiny-progressline-offset, 0px));
+}
+
+.shiny-pl--hiding {
+    opacity: 0;
+}
+
+.shiny-pl-fill {
+    height: 100%;
+    /* Positioned + clipped so the ::after sheen has something to be offset within. */
+    position: relative;
+    overflow: hidden;
+    width: var(--pl-progress, 0%);
+    background: var(--pl-bar, var(--shiny-color-primary, #3B82F6));
+    border-radius: var(--pl-radius, 0);
+    /* Symmetric, so a value that drops drains back rather than snapping. */
+    transition: width var(--pl-duration, 250ms) var(--pl-easing, cubic-bezier(0.33, 1, 0.68, 1));
+}
+
+/* The sweep owns width and transform, so a width transition only fights it. */
+.shiny-pl--indeterminate .shiny-pl-fill {
+    width: 30%;
+    transition: none;
+    animation: shiny-pl-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes shiny-pl-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(333%); }
+}
+
+/* Vista-style sheen, matching ProgressBar's. */
+.shiny-pl--pulse .shiny-pl-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--pl-pulse-length, 40%);
+    background: linear-gradient(to right, transparent, var(--pl-pulse-color, rgba(255,255,255,0.6)), transparent);
+    animation: shiny-pl-sweep var(--pl-pulse-speed, 800ms) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes shiny-pl-sweep {
+    0% { left: -40%; }
+    100% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-pl,
+    .shiny-pl-fill {
+        transition: none;
+    }
+
+    .shiny-pl--indeterminate .shiny-pl-fill,
+    .shiny-pl--pulse .shiny-pl-fill::after {
+        animation: none;
+    }
+}

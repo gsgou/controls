@@ -24,6 +24,7 @@ public class SpreadsheetView : ContentView, IDisposable
     readonly Entry editor;
     readonly AbsoluteLayout root;
     readonly SheetTabStrip sheetTabs;
+    readonly FormulaBar formulaBar;
     readonly Grid layout;
     readonly SpreadsheetPainter painter = new();
 
@@ -57,13 +58,22 @@ public class SpreadsheetView : ContentView, IDisposable
         this.sheetTabs = new SheetTabStrip();
         this.sheetTabs.Changed += this.OnSheetTabsChanged;
 
+        this.formulaBar = new FormulaBar();
+        this.formulaBar.Changed += this.OnSheetTabsChanged;
+
         this.layout = new Grid
         {
-            RowDefinitions = [new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)]
+            RowDefinitions =
+            [
+                new RowDefinition(GridLength.Auto),
+                new RowDefinition(GridLength.Star),
+                new RowDefinition(GridLength.Auto)
+            ]
         };
 
-        this.layout.Add(this.root);
-        this.layout.Add(this.sheetTabs, 0, 1);
+        this.layout.Add(this.formulaBar);
+        this.layout.Add(this.root, 0, 1);
+        this.layout.Add(this.sheetTabs, 0, 2);
 
         // The canvas no longer fills this view - the strip takes a slice off the bottom - so the grid
         // has to be sized from the canvas rather than from the control, or every pointer coordinate
@@ -94,22 +104,30 @@ public class SpreadsheetView : ContentView, IDisposable
         {
             var view = (SpreadsheetView)b;
             view.sheetTabs.Theme = (SpreadsheetTheme)value;
+            view.formulaBar.Theme = (SpreadsheetTheme)value;
             view.Invalidate();
         });
+
+    public static readonly BindableProperty ShowFormulaBarProperty = BindableProperty.Create(
+        nameof(ShowFormulaBar),
+        typeof(bool),
+        typeof(SpreadsheetView),
+        true,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
 
     public static readonly BindableProperty ShowSheetTabsProperty = BindableProperty.Create(
         nameof(ShowSheetTabs),
         typeof(bool),
         typeof(SpreadsheetView),
         true,
-        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateSheetTabs());
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
 
     public static readonly BindableProperty AllowSheetEditingProperty = BindableProperty.Create(
         nameof(AllowSheetEditing),
         typeof(bool),
         typeof(SpreadsheetView),
         true,
-        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateSheetTabs());
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
 
     public Workbook? Workbook
     {
@@ -158,8 +176,25 @@ public class SpreadsheetView : ContentView, IDisposable
     /// <summary>Raised when the sheet on screen changes, by a tab tap or by a sheet edit.</summary>
     public event EventHandler<Worksheet>? ActiveSheetChanged;
 
+    /// <summary>
+    /// Whether to show the name box and formula field above the grid.
+    /// </summary>
+    /// <remarks>
+    /// On by default. The grid paints the <em>result</em> of a formula, so without this a cell reading
+    /// 84 gives no way to discover that it holds <c>=B1*2</c> — and no way to edit it as a formula
+    /// rather than retyping it from scratch.
+    /// </remarks>
+    public bool ShowFormulaBar
+    {
+        get => (bool)this.GetValue(ShowFormulaBarProperty);
+        set => this.SetValue(ShowFormulaBarProperty, value);
+    }
+
     /// <summary>The tab strip, exposed so a host can hide or restyle it beyond the two properties above.</summary>
     public SheetTabStrip SheetTabs => this.sheetTabs;
+
+    /// <summary>The formula bar, exposed so a host can make it read-only or restyle it.</summary>
+    public FormulaBar FormulaBar => this.formulaBar;
 
     void Rebuild()
     {
@@ -168,7 +203,7 @@ public class SpreadsheetView : ContentView, IDisposable
         {
             this.DetachController();
             this.controller = null;
-            this.UpdateSheetTabs();
+            this.UpdateChrome();
             this.Invalidate();
             return;
         }
@@ -181,7 +216,7 @@ public class SpreadsheetView : ContentView, IDisposable
         {
             this.DetachController();
             this.controller = null;
-            this.UpdateSheetTabs();
+            this.UpdateChrome();
             this.Invalidate();
             return;
         }
@@ -194,7 +229,7 @@ public class SpreadsheetView : ContentView, IDisposable
             if (!ReferenceEquals(existing.Sheet, sheet))
                 existing.SwitchSheet(sheet);
 
-            this.UpdateSheetTabs();
+            this.UpdateChrome();
             this.Invalidate();
             return;
         }
@@ -208,7 +243,7 @@ public class SpreadsheetView : ContentView, IDisposable
             this.canvas.Width > 0 ? this.canvas.Width : 800,
             this.canvas.Height > 0 ? this.canvas.Height : 600);
 
-        this.UpdateSheetTabs();
+        this.UpdateChrome();
         this.Invalidate();
     }
 
@@ -218,11 +253,14 @@ public class SpreadsheetView : ContentView, IDisposable
             this.controller?.Resize(this.canvas.Width, this.canvas.Height);
     }
 
-    void UpdateSheetTabs()
+    void UpdateChrome()
     {
         this.sheetTabs.AllowEditing = this.AllowSheetEditing;
         this.sheetTabs.Controller = this.ShowSheetTabs ? this.controller : null;
         this.sheetTabs.Rebuild();
+
+        this.formulaBar.Controller = this.ShowFormulaBar ? this.controller : null;
+        this.formulaBar.Refresh();
     }
 
     void OnSheetTabsChanged(object? sender, EventArgs e) => this.Invalidate();
@@ -235,6 +273,7 @@ public class SpreadsheetView : ContentView, IDisposable
 
         this.ActiveSheetChanged?.Invoke(this, sheet);
         this.sheetTabs.Rebuild();
+        this.formulaBar.Refresh();
         this.Invalidate();
     }
 
@@ -404,6 +443,8 @@ public class SpreadsheetView : ContentView, IDisposable
         this.DetachController();
         this.sheetTabs.Changed -= this.OnSheetTabsChanged;
         this.sheetTabs.Controller = null;
+        this.formulaBar.Changed -= this.OnSheetTabsChanged;
+        this.formulaBar.Detach();
         this.canvas.SizeChanged -= this.OnCanvasSizeChanged;
         this.canvas.PaintSurface -= this.OnPaintSurface;
         this.canvas.Touch -= this.OnTouch;

@@ -1,0 +1,153 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Spreadsheet
+@using Shiny.Controls.Office.Spreadsheet.View
+
+@*
+    The name box and formula field above a workbook grid.
+
+    Two jobs, and the second is the one that matters: it shows the *formula* in the active cell rather
+    than the value the formula produced, which is the only way to see what a cell actually contains.
+    A grid without one can display 84 and give you no way to find out that it is =B1*2.
+
+    It edits the same cell the grid does, through the controller, so a commit here is the same undoable
+    command as typing into the cell - not a second path into the workbook.
+*@
+
+<div class="shiny-formula-bar @Class">
+    <input class="shiny-formula-name"
+           title="Cell address"
+           aria-label="Cell address"
+           value="@this.NameText"
+           @onchange="this.OnAddressCommitted"
+           @onkeydown="this.OnAddressKeyDown" />
+
+    <span class="shiny-formula-fx" aria-hidden="true">fx</span>
+
+    <input class="shiny-formula-input"
+           title="Formula"
+           aria-label="Formula"
+           spellcheck="false"
+           readonly="@this.ReadOnly"
+           value="@this.Text"
+           @ref="this.field"
+           @oninput="this.OnInput"
+           @onkeydown="this.OnKeyDown"
+           @onfocus="this.OnFocus"
+           @onblur="this.OnBlur" />
+</div>
+
+@code {
+    ElementReference field;
+
+    /// <summary>
+    /// What is being typed, while it is being typed. Null when the bar is only reflecting the grid.
+    /// </summary>
+    /// <remarks>
+    /// The distinction is the whole state machine here. While it is null the bar redraws from the
+    /// controller on every change, which is what makes it follow the selection; while it holds a
+    /// string the controller is ignored, or an arrow key in the grid would overwrite a half-typed
+    /// formula.
+    /// </remarks>
+    string? draft;
+
+    /// <summary>
+    /// The cell the draft belongs to, captured when typing started.
+    /// </summary>
+    /// <remarks>
+    /// Not the active cell at commit time. Clicking from this field into the grid moves the selection
+    /// on pointerdown and only <em>then</em> blurs this field, so committing to whatever is active by
+    /// then would write into the cell that was clicked instead of the one being edited.
+    /// </remarks>
+    CellRef? editingCell;
+
+    [Parameter, EditorRequired] public SpreadsheetController? Controller { get; set; }
+
+    /// <summary>Shows the content but refuses edits.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Raised after a commit, so a host can repaint and track the dirty state.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    string NameText => this.Controller?.ActiveCellAddress ?? string.Empty;
+
+    string Text => this.draft ?? this.Controller?.ActiveCellText ?? string.Empty;
+
+    void OnFocus()
+    {
+        this.draft = this.Controller?.ActiveCellText ?? string.Empty;
+        this.editingCell = this.Controller?.Selection.Active;
+    }
+
+    void OnInput(ChangeEventArgs e) => this.draft = e.Value?.ToString() ?? string.Empty;
+
+    async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await this.CommitAsync(advance: true);
+                break;
+
+            case "Tab":
+                await this.CommitAsync(advance: false);
+                break;
+
+            case "Escape":
+                // Back to what the cell holds, without writing anything.
+                this.draft = null;
+                this.StateHasChanged();
+                break;
+        }
+    }
+
+    Task OnBlur() => this.CommitAsync(advance: false);
+
+    async Task CommitAsync(bool advance)
+    {
+        if (this.Controller is not { } controller || this.draft is not { } text || this.editingCell is not { } cell)
+            return;
+
+        var wrote = false;
+        this.draft = null;
+        this.editingCell = null;
+
+        if (!this.ReadOnly && text != controller.CellText(cell))
+        {
+            controller.SetCellText(cell, text);
+            wrote = true;
+
+            // Enter moves down, the way it does after an in-cell edit - but only when the cell that
+            // was edited is still the one selected. After a click into the grid it is not, and moving
+            // on from there would be a jump the user did not ask for.
+            if (advance && controller.Selection.Active.Relative() == cell.Relative())
+                controller.Advance(byRow: true);
+        }
+
+        this.StateHasChanged();
+
+        if (wrote && this.Changed.HasDelegate)
+            await this.Changed.InvokeAsync();
+    }
+
+    /// <summary>Typing an address into the name box goes there — the box's only real purpose.</summary>
+    void OnAddressCommitted(ChangeEventArgs e)
+    {
+        if (this.Controller is not { } controller)
+            return;
+
+        if (CellRef.TryParse(e.Value?.ToString()?.Trim() ?? string.Empty, out var cell))
+            controller.GoTo(cell);
+
+        // Redraw either way: a name that did not parse has to snap back to the real address rather
+        // than sitting there looking like it was accepted.
+        this.StateHasChanged();
+    }
+
+    void OnAddressKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            this.StateHasChanged();
+    }
+}

@@ -509,6 +509,7 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         if (!this.columns.Contains(column))
         {
             this.columns.Add(column);
+            this.InvalidateImplicitSummaryRow();
             this.StateHasChanged();
         }
     }
@@ -516,13 +517,24 @@ public partial class DataGrid<TItem> : IAsyncDisposable
     internal void RemoveColumn(ColumnBase<TItem> column)
     {
         if (this.columns.Remove(column))
+        {
+            this.InvalidateImplicitSummaryRow();
             this.StateHasChanged();
+        }
     }
 
-    internal void NotifyColumnsChanged() => this.StateHasChanged();
+    internal void NotifyColumnsChanged()
+    {
+        // A column's own Aggregate/FooterTemplate is what the synthesized summary row is built from.
+        this.InvalidateImplicitSummaryRow();
+        this.StateHasChanged();
+    }
 
     protected override void OnParametersSet()
     {
+        this.SyncGroupByParameter();
+        this.InvalidateImplicitSummaryRow();
+
         // Same for expansion - a caller can drive it from the outside.
         if (this.ExpandedItems.Count > 0 || this.expandedItems.Count > 0)
         {
@@ -1143,110 +1155,8 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         this.StateHasChanged();
     }
 
-    // ---- Grouping ----
-    [Parameter] public bool Groupable { get; set; }
-
-    string? groupColumnId;
-    readonly HashSet<object> collapsedGroups = new();
-
-    internal bool IsGrouped => this.groupColumnId is not null;
-
-    internal bool EffectiveGroupable(ColumnBase<TItem> col)
-        => this.Groupable && (col.Groupable ?? col.HasValue) && col.HasValue;
-
-    internal bool IsGroupedBy(ColumnBase<TItem> col) => this.groupColumnId == col.Id;
-
-    internal void ToggleGroupBy(ColumnBase<TItem> col)
-    {
-        this.groupColumnId = this.groupColumnId == col.Id ? null : col.Id;
-        this.collapsedGroups.Clear();
-        this.StateHasChanged();
-    }
-
-    internal ColumnBase<TItem>? GroupColumn
-        => this.groupColumnId is null ? null : this.columns.FirstOrDefault(c => c.Id == this.groupColumnId);
-
-    internal IReadOnlyList<(object? Key, IReadOnlyList<TItem> Items)> GetGroups()
-    {
-        var col = this.GroupColumn;
-        if (col is null)
-            return Array.Empty<(object?, IReadOnlyList<TItem>)>();
-
-        return this.ProcessedItems()
-            .GroupBy(col.GetValue)
-            .Select(g => (g.Key, (IReadOnlyList<TItem>)g.ToList()))
-            .ToList();
-    }
-
-    internal bool IsGroupCollapsed(object? key) => key is not null && this.collapsedGroups.Contains(key);
-
-    internal void ToggleGroupCollapse(object? key)
-    {
-        if (key is null)
-            return;
-        if (!this.collapsedGroups.Add(key))
-            this.collapsedGroups.Remove(key);
-        this.StateHasChanged();
-    }
-
-    internal string GroupAggregateText(ColumnBase<TItem> col, IReadOnlyList<TItem> items)
-        => col.Aggregate is null ? string.Empty : ComputeAggregate(col, items);
-
     internal Task OnHeaderClickAsync(ColumnBase<TItem> col, bool sortable)
         => sortable ? this.ToggleSortAsync(col) : Task.CompletedTask;
-
-    internal string ComputeAggregateText(ColumnBase<TItem> col)
-        => ComputeAggregate(col, this.ProcessedItems());
-
-    internal static string ComputeAggregate(ColumnBase<TItem> col, IReadOnlyList<TItem> items)
-    {
-        var agg = col.Aggregate;
-        if (agg is null)
-            return string.Empty;
-
-        if (agg.Type == DataGridAggregateType.Custom)
-            return agg.CustomAggregate?.Invoke(items) ?? string.Empty;
-
-        double result;
-        if (agg.Type == DataGridAggregateType.Count)
-        {
-            result = items.Count;
-        }
-        else
-        {
-            var nums = items
-                .Select(i => ToDouble(col.GetValue(i)))
-                .Where(d => d.HasValue)
-                .Select(d => d!.Value)
-                .ToList();
-
-            result = agg.Type switch
-            {
-                DataGridAggregateType.Sum => nums.Sum(),
-                DataGridAggregateType.Average => nums.Count > 0 ? nums.Average() : 0,
-                DataGridAggregateType.Min => nums.Count > 0 ? nums.Min() : 0,
-                DataGridAggregateType.Max => nums.Count > 0 ? nums.Max() : 0,
-                _ => 0
-            };
-        }
-
-        return agg.DisplayTemplate?.Invoke(result)
-            ?? result.ToString(agg.Format, System.Globalization.CultureInfo.CurrentCulture);
-    }
-
-    static double? ToDouble(object? value)
-    {
-        if (value is null)
-            return null;
-        try
-        {
-            return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture);
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
     string RootCssClass
     {
@@ -1276,8 +1186,6 @@ public partial class DataGrid<TItem> : IAsyncDisposable
         => string.IsNullOrEmpty(this.Height) ? this.Style : $"--shiny-dg-height:{this.Height};{this.Style}";
 
     internal int ColSpan => this.VisibleColumns.Count + this.LeadColumnCount;
-
-    internal bool HasFooter => this.VisibleColumns.Any(c => c.FooterTemplate is not null || c.Aggregate is not null);
 
     /// <summary>
     /// A declared width has to carry a <c>min-width</c> with it. Under <c>table-layout: auto</c> the

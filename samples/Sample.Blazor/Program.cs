@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sample.Blazor;
 using Sample.Blazor.DockPanels;
 using Shiny.Blazor.Controls;
+using Shiny.Blazor.Controls.Captchas;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -12,6 +13,16 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // store, docking and the on-screen keyboard. The individual AddShiny* calls still exist for apps
 // that want to keep the WASM payload tight; dock panels can only ever come from the app.
 builder.Services.AddShinyControls(cfg => cfg
+    // Captcha needs no registration at all - this only exists so the demo page can show the math
+    // variant beside the drawn one. A real app registers a hosted provider here instead.
+    .ConfigureCaptcha(c => c
+        .UseLocal()
+        .UseLocal(o =>
+        {
+            o.Mode = LocalCaptchaMode.Math;
+            o.ExpirySeconds = 60;
+        }, "math")
+    )
     .AddDockPanel<ExplorerPanel>("explorer", "Explorer", "📁")
     .AddDockPanel<PropertiesPanel>("properties", "Properties", "🔧")
     .AddDockPanel<OutputPanel>("output", "Output", "🖥️")

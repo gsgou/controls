@@ -417,10 +417,44 @@ public sealed class SlideEditorController : SlideController
         if (hit < 0)
             return;
 
+        // Already inside this shape's text, so the second double-click means the word under it - the
+        // same thing it means in the document editor. Re-entering text editing would only put the
+        // caret back where it already is, which is why double-clicking a word here used to do nothing.
+        if (this.IsEditingText && this.selected == hit && this.TextPositionAt(x, y) is { } inside)
+        {
+            this.SelectWordAt(inside);
+            return;
+        }
+
         this.Select(hit);
 
         if (this.Selection?.Text is not null)
             this.BeginTextEditing(x, y);
+    }
+
+    /// <summary>Selects the word at <paramref name="position"/> — what a double-click inside text does.</summary>
+    public void SelectWordAt(SlidePosition position)
+    {
+        if (this.Selection?.Text?.Paragraphs.ElementAtOrDefault(position.Paragraph) is not { } paragraph)
+            return;
+
+        var (start, end) = WordBoundaries.RangeAt(paragraph.PlainText, position.Offset);
+
+        this.anchor = position with { Offset = start };
+        this.caret = position with { Offset = end };
+
+        this.RefreshCaretFormat();
+        this.RaiseChanged();
+    }
+
+    /// <summary>Selects the whole paragraph the position is in.</summary>
+    public void SelectParagraphAt(SlidePosition position)
+    {
+        this.anchor = position with { Offset = 0 };
+        this.caret = position with { Offset = this.LengthOf(position.Paragraph) };
+
+        this.RefreshCaretFormat();
+        this.RaiseChanged();
     }
 
     // ---- text editing ----

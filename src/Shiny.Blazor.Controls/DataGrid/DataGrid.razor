@@ -5,6 +5,7 @@
 
 <CascadingValue Value="this" IsFixed="true">
     @Columns
+    @SummaryRows
     @{
         // Resolve the pinned blocks once per render - every frozen helper below is then a lookup.
         RefreshFrozenLayout();
@@ -103,8 +104,8 @@
                                         @if (EffectiveGroupable(col))
                                         {
                                             <span class="shiny-dg-group-icon @(IsGroupedBy(col) ? "shiny-dg-group-active" : "")"
-                                                  @onclick:stopPropagation="true" @onclick="() => ToggleGroupBy(col)"
-                                                  title="Group by @col.HeaderText">⊞</span>
+                                                  @onclick:stopPropagation="true" @onclick="() => ToggleGroupByAsync(col)"
+                                                  title="Group by @col.HeaderText">@GroupGlyph(col)</span>
                                         }
                                         @if (FilterMode == DataGridFilterMode.Menu && EffectiveFilterable(col))
                                         {
@@ -297,46 +298,66 @@
                                     </tr>
                                 }
                             </text>;
+
+                        @* One summary row - the grid's own (no group) or a group's. *@
+                        RenderFragment<GroupRenderNode<TItem>> summaryFragment = node =>
+                            @<tr class="@SummaryRowCssClass(node.Summary!, node.Group is not null)">
+                                @if (HasExpanderColumn)
+                                {
+                                    <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
+                                        style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></td>
+                                }
+                                @if (HasMultiSelect)
+                                {
+                                    <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
+                                        style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"></td>
+                                }
+                                @{ var summaryItems = node.Group?.Items ?? ProcessedItems(); }
+                                @foreach (var sc in VisibleColumns)
+                                {
+                                    <td class="@SummaryCellCssClass(node.Summary!, sc)"
+                                        style="@ColumnWidthStyle(sc)" data-dg-frozen="@FrozenAttr(sc)">
+                                        @SummaryCellContent(node.Summary!, sc, summaryItems, node.Group)
+                                    </td>
+                                }
+                            </tr>;
                     }
 
                     @if (IsGrouped)
                     {
-                        var gcol = GroupColumn!;
-                        @foreach (var group in GetGroups())
+                        @* Flattened in C# - a nested render tree would need recursion in markup and
+                           buys nothing, since the nesting shows as an indent rather than as DOM. *@
+                        @foreach (var node in GroupRenderNodes())
                         {
-                            var collapsed = IsGroupCollapsed(group.Key);
-                            <tr class="shiny-dg-group-header" @onclick="() => ToggleGroupCollapse(group.Key)">
-                                <td colspan="@ColSpan">
-                                    <span class="shiny-dg-group-caret">@(collapsed ? "▸" : "▾")</span>
-                                    <strong>@gcol.HeaderText:</strong> @gcol.FormatValue(group.Key)
-                                    <span class="shiny-dg-group-count">(@group.Items.Count)</span>
-                                </td>
-                            </tr>
-                            @if (!collapsed)
+                            @if (node.Header is not null)
                             {
-                                @foreach (var node in Flatten(group.Items))
+                                var info = node.Header;
+                                <tr class="shiny-dg-group-header" @onclick="() => ToggleGroupCollapse(info.Path)">
+                                    <td colspan="@ColSpan">
+                                        <span class="shiny-dg-group-indent" style="width:@(info.Level * GroupIndentSize)px"></span>
+                                        <span class="shiny-dg-group-caret">@(info.IsExpanded ? "▾" : "▸")</span>
+                                        @if (GroupHeaderTemplate is not null)
+                                        {
+                                            @GroupHeaderTemplate(info)
+                                        }
+                                        else
+                                        {
+                                            <strong>@info.Title:</strong>
+                                            <span class="shiny-dg-group-key">@info.KeyText</span>
+                                            <span class="shiny-dg-group-count">(@info.Count)</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            else if (node.Summary is not null)
+                            {
+                                @summaryFragment(node)
+                            }
+                            else if (node.Rows is not null)
+                            {
+                                @foreach (var gnode in Flatten(node.Rows))
                                 {
-                                    @rowWithEdit(node)
-                                }
-                                @if (HasFooter)
-                                {
-                                    <tr class="shiny-dg-group-footer">
-                                        @if (HasExpanderColumn)
-                                        {
-                                            <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
-                                                style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></td>
-                                        }
-                                        @if (HasMultiSelect)
-                                        {
-                                            <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
-                                                style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"></td>
-                                        }
-                                        @foreach (var c in VisibleColumns)
-                                        {
-                                            <td class="@FooterCellCssClass(c)"
-                                                style="@ColumnWidthStyle(c)" data-dg-frozen="@FrozenAttr(c)">@GroupAggregateText(c, group.Items)</td>
-                                        }
-                                    </tr>
+                                    @rowWithEdit(gnode)
                                 }
                             }
                         }
@@ -378,32 +399,10 @@
                 @if (HasFooter)
                 {
                     <tfoot>
-                        <tr>
-                            @if (HasExpanderColumn)
-                            {
-                                <td class="shiny-dg-expandcol@(LeadFrozenCssClass())"
-                                    style="@LeadFrozenOffsetStyle(0)" data-dg-frozen="@LeadFrozenAttr()"></td>
-                            }
-                            @if (HasMultiSelect)
-                            {
-                                <td class="shiny-dg-checkcol@(LeadFrozenCssClass())"
-                                    style="@LeadFrozenOffsetStyle(CheckColumnIndex)" data-dg-frozen="@LeadFrozenAttr()"></td>
-                            }
-                            @foreach (var col in VisibleColumns)
-                            {
-                                <td class="@FooterCellCssClass(col)"
-                                    style="@ColumnWidthStyle(col)" data-dg-frozen="@FrozenAttr(col)">
-                                    @if (col.FooterTemplate is not null)
-                                    {
-                                        @col.FooterTemplate
-                                    }
-                                    else if (col.Aggregate is not null)
-                                    {
-                                        @ComputeAggregateText(col)
-                                    }
-                                </td>
-                            }
-                        </tr>
+                        @foreach (var summary in EffectiveSummaryRows(group: false))
+                        {
+                            @summaryFragment(new GroupRenderNode<TItem> { Summary = summary })
+                        }
                     </tfoot>
                 }
             </table>

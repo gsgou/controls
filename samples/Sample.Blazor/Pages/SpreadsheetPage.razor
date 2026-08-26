@@ -22,12 +22,8 @@
     <span class="status">@Status</span>
 </div>
 
-<div class="formula-bar">
-    <span class="address">@(view?.Controller?.Selection.Active.Relative().ToString() ?? "A1")</span>
-    <span class="content">@(view?.Controller?.ActiveCellText)</span>
-</div>
-
 <div class="sheet-host">
+    @* The formula bar and sheet tabs are the control's own; ShowFormulaBar / ShowSheetTabs turn them off. *@
     <SpreadsheetView @ref="view"
                      Workbook="workbook"
                      Theme="@(dark ? SpreadsheetTheme.Dark : SpreadsheetTheme.Light)"
@@ -35,7 +31,9 @@
 </div>
 
 <p class="hint">
-    Click to select, drag to extend, double-click or just start typing to edit. Enter and Tab commit;
+    The bar above the grid shows the formula in the active cell, not its result - click B1 and then D5
+    to see the difference. Type an address into the name box to jump there. Click to select, drag to
+    extend, double-click or just start typing to edit. Enter and Tab commit;
     Escape cancels. Drag a column header's right edge to resize. The tabs below the grid switch sheets
     — double-click one to rename it, drag one to reorder, and use ⋯ for the rest. Ctrl+PageUp and
     Ctrl+PageDown move between sheets from the keyboard.

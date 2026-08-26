@@ -363,6 +363,127 @@ public class SheetEditingTests
         controller.CanRemoveFromView(workbook["Scratch"]).ShouldBeTrue();
     }
 
+    // ---- formula bar ----
+    //
+    // The bar edits the same cells the grid does, so its whole surface is these four members. Getting
+    // the target cell wrong is the failure that matters: it writes into the wrong cell silently.
+
+    [Fact]
+    public async Task FormulaBar_ShowsTheFormulaRatherThanTheResult()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+        controller.SwitchSheet("Summary");
+
+        // The grid paints 84; the bar has to say where the 84 came from.
+        controller.Selection.MoveTo(CellRef.Parse("A1"));
+
+        controller.ActiveCellAddress.ShouldBe("A1");
+        controller.ActiveCellText.ShouldBe("=Data!B1*2");
+        workbook.GetEffectiveValue("Summary", CellRef.Parse("A1")).AsNumber().ShouldBe(84);
+    }
+
+    [Fact]
+    public async Task FormulaBar_ShowsALiteralWithoutAnEqualsSign()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        controller.Selection.MoveTo(CellRef.Parse("B1"));
+        controller.ActiveCellText.ShouldBe("42");
+    }
+
+    [Fact]
+    public async Task FormulaBar_CommittingAFormulaRecalculates()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        controller.Selection.MoveTo(CellRef.Parse("D1"));
+        controller.SetActiveCellText("=B1*3");
+
+        workbook.GetEffectiveValue("Data", CellRef.Parse("D1")).AsNumber().ShouldBe(126);
+        controller.ActiveCellText.ShouldBe("=B1*3");
+    }
+
+    [Fact]
+    public async Task FormulaBar_CommittingALiteralIsReadTheWayTypingItWouldBe()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        controller.Selection.MoveTo(CellRef.Parse("D2"));
+        controller.SetActiveCellText("7.5");
+        workbook["Data"].GetValue(CellRef.Parse("D2")).AsNumber().ShouldBe(7.5);
+
+        controller.SetActiveCellText(string.Empty);
+        workbook["Data"].GetValue(CellRef.Parse("D2")).IsBlank.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task FormulaBar_WritesToTheCellItWasEditingNotTheOneNowSelected()
+    {
+        // The bar gives up focus *after* the click that moved the selection, so a commit that trusted
+        // the active cell would put the text in whichever cell was clicked on the way out.
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        var editing = CellRef.Parse("D3");
+        controller.Selection.MoveTo(editing);
+
+        // The click lands first...
+        controller.Selection.MoveTo(CellRef.Parse("A1"));
+
+        // ...and only then does the field commit what was typed into D3.
+        controller.SetCellText(editing, "=B1+1");
+
+        workbook.GetEffectiveValue("Data", CellRef.Parse("D3")).AsNumber().ShouldBe(43);
+        workbook["Data"].GetValue(CellRef.Parse("A1")).AsText().ShouldBe("Widget");
+    }
+
+    [Fact]
+    public async Task FormulaBar_CommitIsOneUndoStep()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        controller.Selection.MoveTo(CellRef.Parse("D4"));
+        controller.SetActiveCellText("=B1*2");
+        controller.SetActiveCellText("=B1*4");
+
+        // Two separate commits, not one coalesced run: each is a deliberate action in the bar.
+        controller.Undo();
+        controller.ActiveCellText.ShouldBe("=B1*2");
+    }
+
+    [Fact]
+    public async Task FormulaBar_NameBoxNavigatesAndScrolls()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+        controller.Resize(400, 300);
+
+        controller.GoTo(CellRef.Parse("H40"));
+
+        controller.ActiveCellAddress.ShouldBe("H40");
+
+        // Jumping somewhere off-screen has to bring it on-screen, or the box would move a selection
+        // the user cannot see.
+        controller.Viewport.ScrollY.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task FormulaBar_NameBoxDropsTheAbsoluteMarkers()
+    {
+        using var workbook = await OpenAsync();
+        var controller = ControllerFor(workbook);
+
+        controller.GoTo(CellRef.Parse("$C$7"));
+
+        // $C$7 and C7 are the same cell; the box shows where you are, not how you spelled it.
+        controller.ActiveCellAddress.ShouldBe("C7");
+    }
+
     static uint? Scope(byte[] package, string name)
         => DefinedNameOf(package, name)?.LocalSheetId?.Value;
 

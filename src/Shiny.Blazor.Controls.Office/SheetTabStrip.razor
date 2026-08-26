@@ -8,102 +8,131 @@
     Hidden sheets are left out of the row - they are hidden in Excel too - and reachable instead
     through the overflow button at the end, which is the only place anything can be unhidden from.
 
+    The tabs scroll; the buttons beside them do not. That split is structural rather than cosmetic:
+    the menu opens upward out of the strip, so it cannot live inside the box that clips the scroll.
+
     Every action here goes through the controller, so every action is on the same undo stack as a cell
     edit. Nothing in this component mutates a workbook itself.
 *@
 
-<div class="shiny-sheet-tabs @Class" role="tablist" aria-label="Sheets">
-    @foreach (var sheet in this.Sheets)
-    {
-        var current = ReferenceEquals(sheet, this.Controller!.Sheet);
-
-        @if (this.renaming == sheet.Name)
+<div class="shiny-sheet-tabs @Class">
+    <div class="sheet-tab-scroll" role="tablist" aria-label="Sheets">
+        @foreach (var sheet in this.Sheets)
         {
-            <input class="sheet-rename"
-                   value="@this.draft"
-                   size="@Math.Max(4, this.draft.Length)"
-                   title="@this.error"
-                   aria-label="Sheet name"
-                   @ref="this.renameBox"
-                   @oninput="this.OnDraftInput"
-                   @onkeydown="this.OnRenameKeyDown"
-                   @onblur="this.CommitRename" />
+            var current = ReferenceEquals(sheet, this.Controller!.Sheet);
+            var target = sheet;
+
+            @if (this.renaming == sheet.Name)
+            {
+                <input class="sheet-rename"
+                       value="@this.draft"
+                       size="@Math.Max(4, this.draft.Length)"
+                       title="@this.error"
+                       aria-label="Sheet name"
+                       @ref="this.renameBox"
+                       @oninput="this.OnDraftInput"
+                       @onkeydown="this.OnRenameKeyDown"
+                       @onblur="this.CommitRename" />
+            }
+            else
+            {
+                <button type="button"
+                        role="tab"
+                        class="@(current ? "sheet-tab sheet-tab-on" : "sheet-tab")"
+                        aria-selected="@current"
+                        draggable="@(this.AllowEditing ? "true" : "false")"
+                        @ondragstart="@(() => this.dragging = target.Name)"
+                        @ondragover:preventDefault="true"
+                        @ondrop="@(() => this.DropOn(target))"
+                        @ondblclick="@(() => this.BeginRename(target))"
+                        @oncontextmenu="@(() => this.OpenMenuFor(target))"
+                        @oncontextmenu:preventDefault="true"
+                        @onclick="@(() => this.Select(target))">
+                    @sheet.Name
+                </button>
+            }
         }
-        else
+    </div>
+
+    @*
+        Outside the scroller, so neither button scrolls away from a workbook with twenty sheets and -
+        the reason this markup is shaped the way it is - so the menu anchored to them is not clipped
+        by the scroller's overflow.
+    *@
+    <div class="sheet-tab-actions">
+        @if (this.AllowEditing)
+        {
+            <button type="button" class="sheet-action" title="Add a sheet" @onclick="this.AddSheet">＋</button>
+        }
+
+        @if (this.CanOpenMenu)
         {
             <button type="button"
-                    role="tab"
-                    class="@(current ? "sheet-tab sheet-tab-on" : "sheet-tab")"
-                    aria-selected="@current"
-                    draggable="@(this.AllowEditing ? "true" : "false")"
-                    @ondragstart="@(() => this.dragging = sheet.Name)"
-                    @ondragover:preventDefault="true"
-                    @ondrop="@(() => this.DropOn(sheet))"
-                    @ondblclick="@(() => this.BeginRename(sheet))"
-                    @onclick="@(() => this.Select(sheet))">
-                @sheet.Name
-            </button>
+                    class="sheet-action"
+                    title="Sheet actions"
+                    aria-haspopup="menu"
+                    aria-expanded="@this.menuOpen"
+                    @onclick="this.ToggleMenu">⋯</button>
         }
-    }
 
-    @if (this.AllowEditing)
-    {
-        <button type="button" class="sheet-action" title="Add a sheet" @onclick="this.AddSheet">＋</button>
-    }
+        @if (this.menuOpen)
+        {
+            @*
+                A click-catching backdrop rather than a document-level listener: this component owns no JS,
+                and a plain overlay dismisses on the same click that lands outside the menu.
+            *@
+            <div class="sheet-menu-backdrop" @onclick="this.CloseMenu"></div>
 
-    @if (this.AllowEditing || this.Hidden.Count > 0)
-    {
-        <button type="button"
-                class="sheet-action"
-                title="Sheet actions"
-                aria-haspopup="menu"
-                aria-expanded="@this.menuOpen"
-                @onclick="this.ToggleMenu">⋯</button>
-    }
-
-    @if (this.menuOpen)
-    {
-        @*
-            A click-catching backdrop rather than a document-level listener: this component owns no JS,
-            and a plain overlay dismisses on the same click that lands outside the menu.
-        *@
-        <div class="sheet-menu-backdrop" @onclick="this.CloseMenu"></div>
-
-        <div class="sheet-menu" role="menu">
-            @if (this.AllowEditing)
-            {
-                <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.BeginRename(this.Controller!.Sheet)))">Rename “@this.Controller!.Sheet.Name”</button>
-                <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.DuplicateSheet(this.Controller.Sheet)))">Duplicate</button>
-                <button type="button" role="menuitem" disabled="@(!this.CanRemoveCurrent)" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(this.Controller.Sheet, false)))">Hide</button>
-                <button type="button" role="menuitem" class="sheet-menu-danger" disabled="@(!this.CanRemoveCurrent)" @onclick="this.DeleteCurrent">Delete</button>
-
-                <div class="sheet-menu-rule"></div>
-
-                <button type="button" role="menuitem" disabled="@(this.Position <= 0)" @onclick="@(() => this.Move(-1))">Move left</button>
-                <button type="button" role="menuitem" disabled="@(this.Position < 0 || this.Position >= this.Controller!.Workbook.Sheets.Count - 1)" @onclick="@(() => this.Move(1))">Move right</button>
-            }
-
-            @if (this.Hidden.Count > 0)
-            {
-                <div class="sheet-menu-rule"></div>
-                <div class="sheet-menu-heading">Hidden</div>
-
-                @foreach (var sheet in this.Hidden)
+            <div class="sheet-menu" role="menu">
+                @if (this.AllowEditing && this.Target is { } target)
                 {
-                    var target = sheet;
-
-                    @if (this.AllowEditing)
+                    @*
+                        Deleting takes a sheet and everything on it away, and the undo stack is the only
+                        way back. That is worth a second click, and a second click inside the menu is the
+                        one confirmation this component can ask for without a dialog or any JS.
+                    *@
+                    @if (this.confirming)
                     {
-                        <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(target, true)))">Show “@target.Name”</button>
+                        <div class="sheet-menu-heading">Delete “@target.Name” and everything on it?</div>
+                        <button type="button" role="menuitem" class="sheet-menu-danger" @onclick="@(() => this.Delete(target))">Delete</button>
+                        <button type="button" role="menuitem" @onclick="@(() => this.confirming = false)">Cancel</button>
                     }
                     else
                     {
-                        <div class="sheet-menu-heading">@target.Name</div>
+                        <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.BeginRename(target)))">Rename “@target.Name”</button>
+                        <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.DuplicateSheet(target)))">Duplicate</button>
+                        <button type="button" role="menuitem" disabled="@(!this.CanRemoveTarget)" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(target, false)))">Hide</button>
+                        <button type="button" role="menuitem" class="sheet-menu-danger" disabled="@(!this.CanRemoveTarget)" @onclick="@(() => this.confirming = true)">Delete</button>
+
+                        <div class="sheet-menu-rule"></div>
+
+                        <button type="button" role="menuitem" disabled="@(this.Position <= 0)" @onclick="@(() => this.Move(-1))">Move left</button>
+                        <button type="button" role="menuitem" disabled="@(this.Position < 0 || this.Position >= this.Controller!.Workbook.Sheets.Count - 1)" @onclick="@(() => this.Move(1))">Move right</button>
                     }
                 }
-            }
-        </div>
-    }
+
+                @if (this.Hidden.Count > 0 && !this.confirming)
+                {
+                    <div class="sheet-menu-rule"></div>
+                    <div class="sheet-menu-heading">Hidden</div>
+
+                    @foreach (var sheet in this.Hidden)
+                    {
+                        var hiddenSheet = sheet;
+
+                        @if (this.AllowEditing)
+                        {
+                            <button type="button" role="menuitem" @onclick="@(() => this.Run(() => this.Controller!.SetSheetVisible(hiddenSheet, true)))">Show “@hiddenSheet.Name”</button>
+                        }
+                        else
+                        {
+                            <div class="sheet-menu-heading">@hiddenSheet.Name</div>
+                        }
+                    }
+                }
+            </div>
+        }
+    </div>
 
     @if (this.error is { Length: > 0 } message)
     {
@@ -122,6 +151,15 @@
 
     /// <summary>Why the last rename or delete did not happen. Cleared by the next thing the user does.</summary>
     string? error;
+
+    /// <summary>
+    /// The sheet the open menu acts on, when it was opened by right-clicking a tab rather than by the
+    /// overflow button. Null means the menu acts on whichever sheet is showing.
+    /// </summary>
+    Worksheet? menuSheet;
+
+    /// <summary>Whether the menu is showing the delete confirmation rather than its usual items.</summary>
+    bool confirming;
 
     string? dragging;
     bool menuOpen;
@@ -146,9 +184,17 @@
     IReadOnlyList<Worksheet> Hidden
         => this.Controller?.Workbook.Sheets.Where(x => !x.IsVisible).ToList() ?? [];
 
-    int Position => this.Controller is null ? -1 : this.Controller.IndexOf(this.Controller.Sheet);
+    /// <summary>The sheet the menu acts on: the right-clicked one, or the one on screen.</summary>
+    Worksheet? Target => this.menuSheet ?? this.Controller?.Sheet;
 
-    bool CanRemoveCurrent => this.Controller is { } c && c.CanRemoveFromView(c.Sheet);
+    /// <summary>Whether there is anything for the menu to offer.</summary>
+    bool CanOpenMenu => this.AllowEditing || this.Hidden.Count > 0;
+
+    int Position
+        => this.Controller is { } controller && this.Target is { } target ? controller.IndexOf(target) : -1;
+
+    bool CanRemoveTarget
+        => this.Controller is { } controller && this.Target is { } target && controller.CanRemoveFromView(target);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -256,7 +302,7 @@
         await this.RaiseChangedAsync();
     }
 
-    async Task DeleteCurrent()
+    async Task Delete(Worksheet sheet)
     {
         this.CloseMenu();
 
@@ -265,7 +311,7 @@
 
         try
         {
-            controller.DeleteSheet(controller.Sheet);
+            controller.DeleteSheet(sheet);
             this.error = null;
         }
         catch (InvalidOperationException ex)
@@ -279,9 +325,9 @@
     Task Move(int offset)
     {
         var position = this.Position;
-        return position < 0
+        return position < 0 || this.Target is not { } target
             ? Task.CompletedTask
-            : this.Run(() => this.Controller!.MoveSheet(this.Controller.Sheet, position + offset));
+            : this.Run(() => this.Controller!.MoveSheet(target, position + offset));
     }
 
     async Task DropOn(Worksheet target)
@@ -314,13 +360,34 @@
         await this.RaiseChangedAsync();
     }
 
-    void ToggleMenu()
+    /// <summary>Opens the menu against one particular tab, rather than against the sheet on screen.</summary>
+    void OpenMenuFor(Worksheet sheet)
     {
-        this.menuOpen = !this.menuOpen;
+        if (!this.CanOpenMenu)
+            return;
+
+        this.menuSheet = sheet;
+        this.menuOpen = true;
+        this.confirming = false;
         this.error = null;
     }
 
-    void CloseMenu() => this.menuOpen = false;
+    void ToggleMenu()
+    {
+        this.menuOpen = !this.menuOpen;
+
+        // The overflow button is not attached to any one tab, so it acts on the sheet being looked at.
+        this.menuSheet = null;
+        this.confirming = false;
+        this.error = null;
+    }
+
+    void CloseMenu()
+    {
+        this.menuOpen = false;
+        this.menuSheet = null;
+        this.confirming = false;
+    }
 
     async Task RaiseChangedAsync()
     {

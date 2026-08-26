@@ -12,10 +12,19 @@ public partial class ProgressBar : ContentView, IDisposable
     readonly Grid fillGrid;
     readonly Grid trackGrid;
 
+    const string FillAnimationName = "ShinyProgressFill";
+
     IDispatcherTimer? pulseTimer;
     bool isAnimatingPulse;
     bool isAnimatingIndeterminate;
     double trackWidth;
+
+    /// <summary>
+    /// The fill width currently on screen, which during a slide is not the width
+    /// <see cref="Value"/> implies. Read as the start point of the next slide so that retargeting
+    /// mid-flight continues from where the bar actually is rather than snapping to the last target.
+    /// </summary>
+    double currentFillWidth;
 
     public ProgressBar()
     {
@@ -101,7 +110,7 @@ public partial class ProgressBar : ContentView, IDisposable
 
     void OnValueChanged(double oldValue, double newValue)
     {
-        UpdateVisuals();
+        UpdateVisuals(animate: true);
 
         if (PulseEnabled && PulseOnValueChange && Math.Abs(newValue - oldValue) > double.Epsilon)
             TriggerPulse();
@@ -110,7 +119,11 @@ public partial class ProgressBar : ContentView, IDisposable
         ValueChangedEvent?.Invoke(this, newValue);
     }
 
-    void UpdateVisuals()
+    /// <param name="animate">
+    /// True only when <see cref="Value"/> (or its bounds) moved. Layout-driven refreshes pass false
+    /// so the bar does not re-animate every time it is measured.
+    /// </param>
+    void UpdateVisuals(bool animate = false)
     {
         if (trackWidth <= 0) return;
         if (IsIndeterminate) return;
@@ -125,20 +138,17 @@ public partial class ProgressBar : ContentView, IDisposable
         trackBackground.HeightRequest = TrackHeight;
         trackBackground.CornerRadius = new CornerRadius(CornerRadius);
 
-        // Fill container (clips the pulse)
-        fillGrid.WidthRequest = fillWidth;
         fillGrid.HeightRequest = TrackHeight;
 
         // Fill bar — fill the container
-        trackFill.WidthRequest = fillWidth;
         trackFill.HeightRequest = TrackHeight;
         trackFill.CornerRadius = new CornerRadius(CornerRadius);
         trackFill.HorizontalOptions = LayoutOptions.Fill;
 
         ApplyFillPaint();
 
-        // Pulse sheen sizing
-        UpdatePulseOverlaySize();
+        // Fill container (clips the pulse). Last, so the slide runs against final paint and sizing.
+        SetFillWidth(fillWidth, animate);
 
 
         // Text
@@ -148,6 +158,58 @@ public partial class ProgressBar : ContentView, IDisposable
             var displayPercent = percent * 100;
             progressLabel.Text = string.Format(TextFormat, displayPercent);
         }
+    }
+
+    /// <summary>
+    /// Moves the fill to <paramref name="target"/>, sliding when the change came from a value change
+    /// and snapping otherwise.
+    /// </summary>
+    /// <remarks>
+    /// The slide is symmetric on purpose: a value that drops drains back at the same rate it filled,
+    /// rather than the fill-only easing most progress bars ship, which makes a downward correction
+    /// read as a glitch.
+    /// </remarks>
+    void SetFillWidth(double target, bool animate)
+    {
+        this.AbortAnimation(FillAnimationName);
+
+        var from = Math.Clamp(currentFillWidth, 0, Math.Max(trackWidth, 0));
+        var shouldAnimate = animate
+            && AnimateProgress
+            && ProgressAnimationDuration > 0
+            && Math.Abs(target - from) > 0.5;
+
+        if (!shouldAnimate)
+        {
+            ApplyFillWidth(target);
+            UpdatePulseOverlaySize();
+            return;
+        }
+
+        new Animation(ApplyFillWidth, from, target, ProgressAnimationEasing)
+            .Commit(
+                this,
+                FillAnimationName,
+                length: (uint)ProgressAnimationDuration,
+                finished: (_, _) =>
+                {
+                    ApplyFillWidth(target);
+                    UpdatePulseOverlaySize();
+                }
+            );
+    }
+
+    /// <summary>
+    /// Test seam. The fill's width is the only externally observable result of the slide, and it
+    /// lives on a private child.
+    /// </summary>
+    internal double CurrentFillWidth => this.currentFillWidth;
+
+    void ApplyFillWidth(double width)
+    {
+        currentFillWidth = width;
+        fillGrid.WidthRequest = width;
+        trackFill.WidthRequest = width;
     }
 
     void UpdatePulseOverlaySize()
@@ -250,7 +312,8 @@ public partial class ProgressBar : ContentView, IDisposable
         if (isAnimatingIndeterminate) return;
         isAnimatingIndeterminate = true;
 
-        fillGrid.WidthRequest = trackWidth;
+        this.AbortAnimation(FillAnimationName);
+        ApplyFillWidth(trackWidth);
         fillGrid.HeightRequest = TrackHeight;
 
         trackFill.HeightRequest = TrackHeight;
@@ -324,6 +387,10 @@ public partial class ProgressBar : ContentView, IDisposable
         isAnimatingIndeterminate = false;
         Microsoft.Maui.Controls.ViewExtensions.CancelAnimations(trackFill);
         trackFill.TranslationX = 0;
+
+        // Snap: the fill is currently a 30% bar parked mid-track, so sliding from there to the real
+        // value would read as the bar running backwards rather than as the mode change it is.
+        currentFillWidth = 0;
         UpdateVisuals();
     }
 
@@ -333,6 +400,7 @@ public partial class ProgressBar : ContentView, IDisposable
         isAnimatingIndeterminate = false;
         Microsoft.Maui.Controls.ViewExtensions.CancelAnimations(trackFill);
         this.AbortAnimation("PulseSweep");
+        this.AbortAnimation(FillAnimationName);
         GC.SuppressFinalize(this);
     }
 }

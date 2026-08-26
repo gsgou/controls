@@ -26,10 +26,7 @@ public partial class DataGrid : ContentView
     readonly ObservableCollection<object> displayItems = new();
     readonly SelectionBackgroundConverter selectionConverter = new();
     readonly SelectionBackgroundConverter frozenBackgroundConverter = new() { Opaque = true };
-    readonly Grid footerGrid;
-    Border? footerWrapper;
-    string? groupColumnId;
-    readonly HashSet<object> collapsedGroups = new();
+    readonly Border footerWrapper;
     DataGridRow? editingRow;
     readonly Dictionary<string, object?> editValues = new();
     Border? editActionsBar;
@@ -55,6 +52,8 @@ public partial class DataGrid : ContentView
     public DataGrid()
     {
         this.Columns.CollectionChanged += this.OnColumnsCollectionChanged;
+        this.SummaryRows.CollectionChanged += this.OnSummaryRowsChanged;
+        this.InitGrouping();
 
         this.headerGrid = new Grid { ColumnSpacing = 0 };
         this.filterRowGrid = new Grid { ColumnSpacing = 0, IsVisible = false };
@@ -81,8 +80,8 @@ public partial class DataGrid : ContentView
         (this.toolbarBar, this.quickSearchEntry) = this.BuildToolbar();
         this.filterPopup = this.BuildFilterPopup();
 
-        this.footerGrid = new Grid { ColumnSpacing = 0 };
-        this.footerWrapper = new Border { Content = this.footerGrid, StrokeThickness = 0, Padding = 0, IsVisible = false };
+        this.footerStack = new VerticalStackLayout { Spacing = 0 };
+        this.footerWrapper = new Border { Content = this.footerStack, StrokeThickness = 0, Padding = 0, IsVisible = false };
         this.footerWrapper.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         this.bodyGrid = new Grid
@@ -151,6 +150,8 @@ public partial class DataGrid : ContentView
     {
         foreach (var column in this.Columns)
             SetInheritedBindingContext(column, this.BindingContext);
+
+        this.PushBindingContextToSummaryRows();
     }
 
     protected override void OnBindingContextChanged()
@@ -185,10 +186,9 @@ public partial class DataGrid : ContentView
             MainThread.BeginInvokeOnMainThread(this.RebuildRows);
     }
 
-    bool Grouped => this.groupColumnId is not null && this.Groupable;
-
     void RebuildRows()
     {
+        this.InvalidateImplicitSummaryRow();
         foreach (var row in this.dataRows)
             row.PropertyChanged -= this.OnRowPropertyChanged;
         this.dataRows.Clear();
@@ -200,30 +200,9 @@ public partial class DataGrid : ContentView
         var index = 0;
         if (this.Grouped)
         {
-            var col = this.Columns.FirstOrDefault(c => c.Id == this.groupColumnId);
-            if (col is not null)
-            {
-                foreach (var g in this.ProcessedData().GroupBy(col.GetCellValue))
-                {
-                    var items = g.ToList();
-                    var collapsed = g.Key is not null && this.collapsedGroups.Contains(g.Key);
-                    this.displayItems.Add(new DataGridGroupHeader(g.Key, col.FormatValue(g.Key), col.Title, items.Count, collapsed, items));
-                    if (collapsed)
-                        continue;
-
-                    // Each group is its own block, so a column highlight is closed off at the group
-                    // boundary rather than drawn straight through the header sitting between them.
-                    var groupStart = this.dataRows.Count;
-                    foreach (var item in items)
-                    {
-                        var row = this.CreateRow(item, 0, index++);
-                        this.dataRows.Add(row);
-                        this.displayItems.Add(row);
-                        this.AppendDetailRow(row);
-                    }
-                    this.StampBlock(groupStart);
-                }
-            }
+            // Grouping owns the whole list: it pages nothing (a page of rows would slice groups in
+            // half) and walks every level itself, rows included.
+            this.AppendGroupRows(this.ProcessedData(), 0, string.Empty, ref index);
         }
         else if (this.TreeEnabled)
         {
@@ -333,6 +312,8 @@ public partial class DataGrid : ContentView
         {
             RowTemplate = new DataTemplate(this.BuildRowView),
             GroupTemplate = new DataTemplate(this.BuildGroupHeaderView),
+            SummaryTemplates = this.BuildSummaryTemplates(),
+            BlankTemplate = new DataTemplate(() => new Grid()),
             EditRowTemplate = new DataTemplate(this.BuildEditRowView),
             DetailTemplate = new DataTemplate(this.BuildDetailRowView),
             DetailLoadingTemplate = new DataTemplate(this.BuildDetailLoadingRowView)
@@ -441,149 +422,6 @@ public partial class DataGrid : ContentView
         };
         entry.TextChanged += (_, e) => this.editValues[capture.Id] = e.NewTextValue;
         return entry;
-    }
-
-    bool EffectiveGroupable(DataGridColumn col) => this.Groupable && col.Groupable && col.HasValue;
-
-    internal void ToggleGroupBy(DataGridColumn col)
-    {
-        this.groupColumnId = this.groupColumnId == col.Id ? null : col.Id;
-        this.collapsedGroups.Clear();
-        this.RebuildHeader();
-        this.RebuildRows();
-    }
-
-    void OnGroupHeaderTapped(DataGridGroupHeader header)
-    {
-        if (header.Key is null)
-            return;
-        if (!this.collapsedGroups.Add(header.Key))
-            this.collapsedGroups.Remove(header.Key);
-        this.RebuildRows();
-    }
-
-    View BuildGroupHeaderView()
-    {
-        var caret = new Label { VerticalOptions = LayoutOptions.Center, WidthRequest = 18 }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
-        caret.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.CaretGlyph));
-        caret.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-
-        var text = new Label { FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center };
-        text.SetBinding(Label.TextProperty, nameof(DataGridGroupHeader.Display));
-        text.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
-
-        var layout = new HorizontalStackLayout { Spacing = 4, Padding = this.CellPadding, Children = { caret, text } };
-
-        // The group label spans every column, so it would slide out of view with the rest of the
-        // content; pin it to the leading edge alongside the frozen cells.
-        if (this.FrozenEnabled)
-            this.TrackPane(layout, start: true);
-
-        var container = new Grid();
-        container.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
-        container.Add(layout);
-
-        var tap = new TapGestureRecognizer();
-        tap.Tapped += (s, _) =>
-        {
-            if (((View)s!).BindingContext is DataGridGroupHeader h)
-                this.OnGroupHeaderTapped(h);
-        };
-        container.GestureRecognizers.Add(tap);
-        return container;
-    }
-
-    void RebuildFooter()
-    {
-        if (this.footerWrapper is null)
-            return;
-
-        this.footerGrid.Children.Clear();
-        var hasFooter = this.Columns.Any(c => c.IsVisible && (c.Aggregate is not null || c.FooterTemplate is not null));
-        this.footerWrapper.IsVisible = hasFooter;
-        if (!hasFooter)
-            return;
-
-        this.footerGrid.ColumnDefinitions = this.BuildColumnDefinitions();
-        var items = this.ProcessedData();
-
-        this.LayoutCells(
-            this.footerGrid,
-            this.LeadingPlaceholders(),
-            column => BuildFooterCell(column, items),
-            this.StyleSurfacePane
-        );
-
-        View BuildFooterCell(DataGridColumn column, IReadOnlyList<object> data)
-        {
-            if (column.FooterTemplate is not null)
-                return (View)column.FooterTemplate.CreateContent();
-
-            if (column.Aggregate is null)
-                return new Label();
-
-            var lbl = new Label
-            {
-                Text = ComputeAggregate(column, data),
-                FontAttributes = FontAttributes.Bold,
-                Padding = this.CellPadding,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Center,
-                HorizontalTextAlignment = this.ResolveAlignment(column, column.Alignment)
-            };
-            lbl.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-            return lbl;
-        }
-    }
-
-    internal static string ComputeAggregate(DataGridColumn col, IReadOnlyList<object> items)
-    {
-        var agg = col.Aggregate;
-        if (agg is null)
-            return string.Empty;
-
-        if (agg.Type == DataGridAggregateType.Custom)
-            return agg.CustomAggregate?.Invoke(items) ?? string.Empty;
-
-        double result;
-        if (agg.Type == DataGridAggregateType.Count)
-        {
-            result = items.Count;
-        }
-        else
-        {
-            var nums = items
-                .Select(i => ToDouble(col.GetCellValue(i)))
-                .Where(d => d.HasValue)
-                .Select(d => d!.Value)
-                .ToList();
-
-            result = agg.Type switch
-            {
-                DataGridAggregateType.Sum => nums.Sum(),
-                DataGridAggregateType.Average => nums.Count > 0 ? nums.Average() : 0,
-                DataGridAggregateType.Min => nums.Count > 0 ? nums.Min() : 0,
-                DataGridAggregateType.Max => nums.Count > 0 ? nums.Max() : 0,
-                _ => 0
-            };
-        }
-
-        return agg.DisplayTemplate?.Invoke(result)
-            ?? result.ToString(agg.Format, System.Globalization.CultureInfo.CurrentCulture);
-    }
-
-    static double? ToDouble(object? value)
-    {
-        if (value is null)
-            return null;
-        try
-        {
-            return Convert.ToDouble(value, System.Globalization.CultureInfo.CurrentCulture);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     void Reload()
@@ -890,10 +728,13 @@ public partial class DataGrid : ContentView
 
                 if (this.EffectiveGroupable(column))
                 {
-                    var grouped = this.groupColumnId == column.Id;
+                    var level = this.GroupLevelOf(column);
+                    var grouped = level >= 0;
                     var groupGlyph = new Label
                     {
-                        Text = "⊞",
+                        // Multi-level grouping numbers the glyph so the header says which level a
+                        // column is, not merely that it is one of several.
+                        Text = grouped && this.GroupColumns.Count > 1 ? $"⊞{level + 1}" : "⊞",
                         VerticalOptions = LayoutOptions.Center,
                         Opacity = grouped ? 1 : 0.5
                     }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);

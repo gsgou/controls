@@ -205,3 +205,36 @@ public enum DataGridHighlightScope
     /// <summary>One cell - the intersection of a matched row and a named column.</summary>
     Cell
 }
+
+/// <summary>
+/// Whether a <see cref="DataGridSummaryRow"/> is shown under the whole grid, inside each group, or both.
+/// </summary>
+public enum DataGridSummaryScope
+{
+    /// <summary>Under the grid and inside every group (the default).</summary>
+    Both,
+
+    /// <summary>Only under the grid.</summary>
+    Grid,
+
+    /// <summary>Only inside each group.</summary>
+    Group
+}
+
+/// <summary>
+/// Where a group's summary rows sit relative to the group's own rows.
+/// </summary>
+public enum DataGridGroupSummaryPlacement
+{
+    /// <summary>No summary rows inside groups; the grid keeps its own.</summary>
+    None,
+
+    /// <summary>After the group's rows - hidden along with them when the group is collapsed.</summary>
+    Footer,
+
+    /// <summary>Directly under the group's title, so the totals stay visible when it is collapsed.</summary>
+    Header,
+
+    /// <summary>Both.</summary>
+    Both
+}

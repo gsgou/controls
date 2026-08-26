@@ -704,7 +704,7 @@ public class SlideEditorView : ContentView, IDisposable
 
         this.status.Text = controller switch
         {
-            { SelectedShape: >= 0, IsEditingText: true } => "Editing text — Esc to leave",
+            { SelectedShape: >= 0, IsEditingText: true } => "Editing text — double-tap a word to select it, Esc to leave",
             { SelectedShape: >= 0 } => "Shape selected — double-tap to edit its text",
             _ => "Tap a shape to select it; double-tap to edit its text."
         };

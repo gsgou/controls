@@ -1,0 +1,38 @@
+@namespace Shiny.Blazor.Controls
+@implements IDisposable
+@inject ProgressLineService Service
+
+@if (Service.IsVisible && Service.Config is { } config)
+{
+    <ProgressLine Position="config.Position"
+                  Anchor="config.Anchor"
+                  Value="Service.Value"
+                  IsIndeterminate="config.Indeterminate"
+                  IsActive="Service.IsActive"
+                  BarColor="config.BarColor"
+                  TrackColor="config.TrackColor"
+                  LineHeight="config.LineHeight"
+                  CornerRadius="config.CornerRadius"
+                  UseGradient="config.UseGradient"
+                  GradientStartColor="config.GradientStartColor"
+                  GradientEndColor="config.GradientEndColor"
+                  PulseEnabled="config.PulseEnabled"
+                  Offset="config.Offset"
+                  RespectSafeArea="config.RespectSafeArea"
+                  FadeDuration="config.FadeDuration"
+                  ProgressAnimationDuration="config.ProgressAnimationDuration" />
+}
+
+@code {
+    protected override void OnInitialized()
+        => this.Service.OnChanged += this.Rerender;
+
+    /// <summary>
+    /// Hops to the renderer's context first: the trickle timer fires on a thread-pool thread, and
+    /// calling StateHasChanged from there is the classic way to get a torn render on Blazor Server.
+    /// </summary>
+    void Rerender() => _ = this.InvokeAsync(this.StateHasChanged);
+
+    public void Dispose()
+        => this.Service.OnChanged -= this.Rerender;
+}

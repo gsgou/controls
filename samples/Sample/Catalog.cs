@@ -24,6 +24,7 @@ public static class Catalog
     [
         new("Layout & Collections", "#60A5FA",
         [
+            new("expander", "Expander", "▾", "Animated disclosure panels and accordion lists"),
             new("carouselgallery", "Carousel Gallery", "◀", "Swipeable image gallery with indicators"),
             new("staggeredgrid", "Staggered Grid", "▦", "Pinterest-style masonry of variable-height items"),
             new("virtualizedgrid", "Virtualized Grid", "▣", "Windowed grid that stays smooth over huge lists"),
@@ -67,6 +68,7 @@ public static class Catalog
             new("slider", "Slider", "━", "Single-value slider with ticks and labels"),
             new("rangeslider", "Range Slider", "≡", "Two-thumb range selection"),
             new("securitypin", "Security Pin", "✱", "PIN entry with masking and shake-on-error"),
+            new("passwordstrength", "Password Strength", "▓", "Password field with a live strength meter and rule checklist"),
             new("signaturepad", "Signature Pad", "✍", "Draw, clear and export a signature"),
             new("onscreenkeyboard", "On-Screen Keyboard", "⌨", "Desktop virtual keyboard for kiosks")
         ]),

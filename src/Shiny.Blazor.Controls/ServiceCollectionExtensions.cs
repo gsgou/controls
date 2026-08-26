@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Shiny.Blazor.Controls.Captchas;
 using Shiny.Blazor.Controls.Dialogs;
 using Shiny.Blazor.Controls.Docking;
 using Shiny.Blazor.Controls.Images;
@@ -15,9 +16,9 @@ namespace Shiny.Blazor.Controls;
 public static class ShinyControlsServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers everything the host components need — Toast, Dialogs, the splash screen, the
-    /// walkthrough store, docking and the on-screen keyboard — in one call, mirroring MAUI's
-    /// <c>UseShinyControls</c>.
+    /// Registers everything the host components need — Toast, the progress line, Dialogs, the splash
+    /// screen, the walkthrough store, docking and the on-screen keyboard — in one call, mirroring
+    /// MAUI's <c>UseShinyControls</c>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -46,6 +47,7 @@ public static class ShinyControlsServiceCollectionExtensions
         configure?.Invoke(cfg);
 
         services.AddShinyToast();
+        services.AddShinyProgressLine();
         services.AddShinyDialogs(cfg.DialogConfigure);
         services.AddShinySplashScreen();
         services.AddShinyWalkthrough();
@@ -144,6 +146,39 @@ public class ShinyControlConfiguration(IServiceCollection services)
         services.AddShinyImages();
         return this;
     }
+
+    /// <summary>
+    /// Register captcha providers and defaults — the local challenge, reCAPTCHA, hCaptcha,
+    /// Turnstile, or your own.
+    /// </summary>
+    /// <remarks>
+    /// Optional: <c>&lt;Captcha /&gt;</c> renders the local challenge with nothing registered. This is
+    /// for picking a hosted provider, setting its site key, or changing the app-wide defaults.
+    /// </remarks>
+    public ShinyControlConfiguration ConfigureCaptcha(Action<CaptchaConfiguration> configure)
+    {
+        services.AddShinyCaptcha(configure);
+        return this;
+    }
+
+
+    /// <summary>
+    /// Replace how <see cref="PasswordStrength"/> scores passwords — zxcvbn, a Have I Been Pwned
+    /// range query, or your server's own policy endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Entirely optional: with nothing registered the component uses
+    /// <see cref="DefaultPasswordStrengthEvaluator"/>, which needs no network and no data files.
+    /// Read <see cref="IPasswordStrengthEvaluator"/>'s remarks before writing one that goes to the
+    /// wire — the password itself must never leave the browser.
+    /// </remarks>
+    public ShinyControlConfiguration SetCustomPasswordStrengthEvaluator<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
+        where T : class, IPasswordStrengthEvaluator
+    {
+        services.AddScoped<IPasswordStrengthEvaluator, T>();
+        return this;
+    }
+
 
     /// <summary>Route <see cref="ShinyImage"/> downloads through your own <see cref="IImageDownloader"/>.</summary>
     public ShinyControlConfiguration SetCustomImageDownloader<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IImageDownloader

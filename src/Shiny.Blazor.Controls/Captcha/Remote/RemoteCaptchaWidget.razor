@@ -1,0 +1,7 @@
+@namespace Shiny.Blazor.Controls.Captchas
+@implements ICaptchaWidget
+@implements IAsyncDisposable
+
+@* The provider script owns everything inside this element, so Blazor must never diff its children —
+   an empty element with no child content is exactly that contract. *@
+<div class="shiny-captcha-remote" @ref="hostEl"></div>

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Maui.Handlers;
 using Shiny.Maui.Controls;
@@ -42,6 +43,11 @@ public static class ControlsMauiAppBuilderExtensions
         builder.Services.TryAddSingleton<QuickEntryService>();
         builder.Services.TryAddSingleton<IQuickEntryService>(sp => sp.GetRequiredService<QuickEntryService>());
         builder.Services.TryAddSingleton<IToaster, Toaster>();
+
+        // The page-edge progress line. Singleton because the line is one piece of window chrome that
+        // follows navigation, not per-page state - two instances would mean two lines stacked on the
+        // same edge the moment a second operation started.
+        builder.Services.TryAddSingleton<IProgressLineService, ProgressLineService>();
 
         // Lets a view model drive whatever flyout is on the page that is showing, without the page
         // having to hand its FlyoutView over. The registry it reads is weak, so this holds nothing alive.
@@ -303,6 +309,24 @@ public class ShinyControlConfiguration(IServiceCollection services)
     public ShinyControlConfiguration SetCustomToaster<T>() where T : class, IToaster
     {
         services.TryAddSingleton<IToaster, Toaster>();
+        return this;
+    }
+
+
+    /// <summary>
+    /// Replace how <see cref="PasswordStrength"/> scores passwords — zxcvbn, a Have I Been Pwned
+    /// range query, or your server's own policy endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Entirely optional: with nothing registered the control uses
+    /// <see cref="DefaultPasswordStrengthEvaluator"/>, which needs no network and no data files.
+    /// Read <see cref="IPasswordStrengthEvaluator"/>'s remarks before writing one that goes to the
+    /// wire — the password itself must never leave the device.
+    /// </remarks>
+    public ShinyControlConfiguration SetCustomPasswordStrengthEvaluator<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>()
+        where T : class, IPasswordStrengthEvaluator
+    {
+        services.AddSingleton<IPasswordStrengthEvaluator, T>();
         return this;
     }
 

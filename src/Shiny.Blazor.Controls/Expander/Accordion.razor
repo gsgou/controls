@@ -1,0 +1,31 @@
+@namespace Shiny.Blazor.Controls
+@implements IAccordionHost
+
+<div class="shiny-accordion @CssClass @UserClass" style="@RootStyle" @attributes="ExtraAttributes">
+    @* IsFixed: the host never changes for the life of the accordion, and fixing it stops every
+       expander re-rendering whenever this one does. *@
+    <CascadingValue TValue="IAccordionHost" Value="this" IsFixed="true">
+        @ChildContent
+
+        @if (Items is not null)
+        {
+            @foreach (var data in Items)
+            {
+                @* A null element has nothing to title or bind, so it is skipped rather than rendered
+                   as a blank expander. *@
+                if (data is null)
+                {
+                    continue;
+                }
+
+                <Expander @key="data"
+                          Item="data"
+                          HeaderText="@(ItemHeader is null ? data.ToString() : null)"
+                          Header="@(ItemHeader is null ? null : ItemHeader(data))"
+                          LoadContentOnDemand="LoadContentOnDemand">
+                    @ItemContent?.Invoke(data)
+                </Expander>
+            }
+        }
+    </CascadingValue>
+</div>

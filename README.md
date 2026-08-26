@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar, Overlay/LoadingOverlay, SkeletonView, AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, both editors sharing one gallery of twenty preset shapes plus tables, pictures and text highlighting, and both accepting an image dragged in from the desktop, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, PasswordStrength (a password field with a live strength meter, a rule checklist and a pluggable scorer), SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar (with an animated, bidirectional fill), ProgressLine (the thin page-edge loading line, docked clear of the nav and tab bars and drivable from code), Overlay/LoadingOverlay, SkeletonView, Expander/Accordion (a disclosure panel whose fade, slide and height reveals combine and are aimed at any of the four edges, and the accordion list that coordinates a stack of them), AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, both editors sharing one gallery of twenty preset shapes plus tables, pictures and text highlighting, and both accepting an image dragged in from the desktop, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -231,6 +231,7 @@ register your own first — first registration wins.
 | `<shiny:Overlay>` in `<shiny:ShinyContentPage.Panels>` | `<Overlay>` (wraps ChildContent; custom content in `<OverlayContent>` slot) |
 | `<shiny:LoadingOverlay>` in `<shiny:ShinyContentPage.Panels>` | `<LoadingOverlay>` (wraps ChildContent) |
 | `<shiny:ProgressBar>` | `<ProgressBar>` |
+| `<shiny:ProgressLine>` | `<ProgressLine>` + `<ProgressLineHost>` |
 | `<MauiSplashScreen>` (native, build-time) | `SplashScreen` — `index.html` markup + `splash.js`, driven by `ISplashScreen` / `<SplashScreenHost />` |
 
 `ISchedulerEventProvider` is identical across both hosts.
@@ -1140,7 +1141,10 @@ calls are equivalent.
 
 ```razor
 <div style="height:420px">
-    <SpreadsheetView Workbook="workbook" @bind-SheetName="sheetName" Theme="SpreadsheetTheme.Dark" />
+    <SpreadsheetView Workbook="workbook"
+                 @bind-SheetName="sheetName"
+                 ShowFormulaBar="true"
+                 Theme="SpreadsheetTheme.Dark" />
 </div>
 ```
 
@@ -1153,6 +1157,13 @@ workbook.Undo.Undo();
 
 await workbook.SaveAsync();
 ```
+
+**Formula bar.** A name box and formula field above the grid, on by default and turned off with
+`ShowFormulaBar="false"`. It matters because the grid paints the *result*: a cell reading 156.75 gives
+no way to discover that it holds `=SUM(D2:D4)`, and no way to edit it as a formula rather than retyping
+it. Editing there is the same undoable command as typing into the cell; Enter commits and moves down,
+Escape reverts, and clicking away commits into the cell that was being edited rather than the one
+clicked. Typing an address into the name box goes there.
 
 **Worksheets.** A workbook is a book, not a sheet, and the control shows it as one: a tab strip under
 the grid switches between the visible sheets and adds, renames, duplicates, reorders, hides and deletes
@@ -1179,6 +1190,7 @@ workbook.Execute(new DeleteSheetCommand("Forecast"));            // undo restore
 |---|---|
 | Rendering | Virtualized over all 1,048,576 rows; frozen panes, merged cells, number formats, fonts, fills, alignment, theme colours with tint |
 | Editing | Cell values and formulas, range clear, column/row resize, range selection, in-cell editing through a native `Entry` / `<input>` |
+| Formula bar | Name box and formula field on both hosts, `ShowFormulaBar` to hide; shows the formula, not the result |
 | Worksheets | Tab strip on both hosts: switch, add, rename, duplicate, reorder, hide/unhide, delete — all undoable, with per-sheet selection and scroll |
 | Undo | Transactional, with typing-run coalescing; a range clear is one step |
 | Formulas | ~80 functions, dependency-ordered incremental recalculation, circular-reference detection |
@@ -1227,10 +1239,21 @@ composes `ShinyToolbar`, MAUI has no such control and lays out a scrolling row i
 |---|---|---|
 | Typing, IME, dictation, paste | ✅ via `beforeinput` | ✅ via a hidden `Entry` |
 | Click, drag-select, toolbar commands | ✅ | ✅ |
+| Double-click/tap a word, triple a paragraph | ✅ | ✅ |
 | Physical keys (arrows, shortcuts) | ✅ | ⚠️ route through `HandleKey` — MAUI has no portable key-down event |
 
-⚠️ Formatting with an **empty selection** updates the toolbar state only, not the document. Word
-applies it to whatever is typed next; that needs a pending-format concept the editor does not have yet.
+**Selecting what to format.** Drag across text, **double-click a word**, or **triple-click a
+paragraph** — the same gestures on MAUI, where the click count is timed from the taps because
+SkiaSharp's touch events do not carry one. Slides get the word gesture too: the first double-click
+puts a caret in a shape's text, and a second one selects the word under it. A word stops at
+punctuation but keeps its apostrophes, so `don't` selects whole and `end.` does not take the full stop.
+
+**Formatting with nothing selected applies to what you type next**, the way Word does: put the caret
+somewhere, pick a font, size, colour or weight, and the next text carries it. The choice shows on the
+toolbar while it is pending, is spent by the first insertion, undoes together with the characters it
+formatted, and is abandoned if the caret moves off the spot where it was made — so a colour picked and
+thought better of cannot resurface in something typed later. Slides do the same thing through
+PowerPoint's own mechanism, the paragraph end mark.
 
 **Spell check uses the platform's own dictionary.** On MAUI nothing has to be registered — referencing
 the package installs `UITextChecker` (iOS, Mac Catalyst), `NSSpellChecker` (macOS), Android's
@@ -1814,7 +1837,7 @@ A two-thumb variant of Slider that selects a lower/upper value pair. It reuses t
 
 ### ProgressBar
 
-A progress bar control with gradient fill and a configurable Vista-style shimmer pulse that sweeps left-to-right across the bar. Supports determinate, indeterminate, text overlay, and timed/value-triggered pulse animations.
+A progress bar control with gradient fill and a configurable Vista-style shimmer pulse that sweeps left-to-right across the bar. Supports determinate, indeterminate, text overlay, and timed/value-triggered pulse animations. The fill **slides** to each new value rather than snapping, in both directions - a value that drops drains back at the same rate it filled - configurable via `AnimateProgress`, `ProgressAnimationDuration` and `ProgressAnimationEasing`, and skipped for width changes that come from layout rather than from progress.
 
 ```xml
 <shiny:ProgressBar Value="{Binding Progress}"
@@ -1853,8 +1876,62 @@ A progress bar control with gradient fill and a configurable Vista-style shimmer
 | TextColor | Color/string | White | Text color |
 | FontSize | double | 11 | Text font size |
 | IsIndeterminate | bool | false | Indeterminate sliding animation |
+| AnimateProgress | bool | true | Slide the fill to each new value instead of snapping (both directions) |
+| ProgressAnimationDuration | int | 250 | Length of the fill slide in ms; `0` snaps |
+| ProgressAnimationEasing | Easing/string | CubicOut / `cubic-bezier(0.33, 1, 0.68, 1)` | Curve the fill slide follows |
 
 Events: `ValueChangedEvent`. Commands: `ValueChangedCommand`.
+
+### ProgressLine
+
+The thin line that runs across the **top or bottom of the window** while something loads. A sibling of `ProgressBar`, not a mode of it: `ProgressBar` fills a slot you gave it in a layout, whereas `ProgressLine` is page chrome - it has no slot, it moves itself onto the page edge, and it knows about the navigation bar, the tab bar and the safe area so it lands *against* them rather than under them. The drawing is `ProgressBar`'s, so the gradient, the shimmer and the animated fill all behave identically.
+
+On MAUI, a line declared anywhere in a page's markup **relocates itself** onto the edge named by `Position` (set `Dock="False"` to keep it inline). The inset resolves from one rule: a bar earns an offset exactly when it is painted inside the same coordinate space the line is - so a `ShinyTabBar` docked over a Shell page pushes the line up by its height, while a `ShinyTabbedPage`, a native `TabbedPage` or a native `NavigationPage` needs no offset because the page's content area already excludes their chrome. On Blazor the equivalent is `position: fixed` with `env(safe-area-inset-*)`, plus `Anchor="Container"` to run the line along a panel's edge instead of the window's, and a `--shiny-progressline-offset` custom property any ancestor can set to push it below an `AppLayout` header.
+
+```xml
+<!-- Declared here, rendered across the top of the page -->
+<shiny:ProgressLine Position="Top"
+                    Value="{Binding Progress}"
+                    BarColor="#F97316"
+                    LineHeight="4" />
+```
+
+```razor
+<ProgressLine Position="ProgressLinePosition.Top" Value="@progress" BarColor="#F97316" LineHeight="4" />
+```
+
+It is also driven from code, with no markup on the page at all, via `IProgressLineService` (MAUI: registered by `UseShinyControls()`; Blazor: `AddShinyControls()`/`AddShinyProgressLine()` plus one `<ProgressLineHost />` in the layout). Runs are **reference-counted**, so two overlapping operations produce one line that stays up until the slower of them lands:
+
+```csharp
+using var run = progressLine.Start(c => c.BarColor = Colors.Orange);
+run.SetProgress(0.6);   // or report nothing and let it trickle
+run.Complete();         // sweeps to 100%, then fades - Dispose() does the same
+```
+
+With nothing reported, the line **trickles**: it decelerates toward `TrickleCeiling` (0.9) and never arrives, because a line that reaches 100% on its own has told the user the work finished when it has not. `Indeterminate = true` runs the sweep instead.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| Position | ProgressLinePosition | Top | Which page edge the line runs along |
+| Value / Minimum / Maximum | double | 0 / 0 / 100 | Progress, as on `ProgressBar` |
+| IsIndeterminate | bool | false | Sweeping animation instead of a fill |
+| BarColor | Color?/string | theme Primary | Fill color |
+| TrackColor | Color?/string | Transparent | The unfilled remainder - off by default, unlike `ProgressBar` |
+| LineHeight | double | 3 | Thickness |
+| CornerRadius | double/string | 0 | Square by default, so the line meets the window edges |
+| UseGradient | bool | false | Enable gradient fill |
+| GradientStartColor / GradientEndColor | Color?/string | theme Primary / Tertiary | Gradient ends |
+| PulseEnabled | bool | false | Shimmer sheen along the fill |
+| AnimateProgress / ProgressAnimationDuration / ProgressAnimationEasing | bool / int / Easing | true / 250 / CubicOut | Fill slide, as on `ProgressBar` |
+| IsActive | bool | true | The animated show/hide switch (not `IsVisible`) |
+| FadeDuration | int | 200 | Length of the `IsActive` fade in ms |
+| Dock | bool | true | **MAUI** - relocate onto the page edge; `False` keeps it inline |
+| AutoInset | bool | true | **MAUI** - offset past the nav/tab bar and safe area |
+| Offset | Thickness/string | 0 | Extra distance from the edge, on top of `AutoInset` |
+| Anchor | ProgressLineAnchor | Viewport | **Blazor** - `Container` pins to the nearest positioned ancestor |
+| RespectSafeArea | bool | true | **Blazor** - clear the notch/home indicator via `env(safe-area-inset-*)` |
+
+`ProgressLineConfig` (the `Start` argument) carries the same appearance settings plus `Trickle`, `StartProgress`, `TrickleCeiling`, `TrickleInterval` and `TrickleRate`.
 
 ### Overlay & LoadingOverlay
 
@@ -2377,6 +2454,84 @@ Colors default to the theme CSS variables (`--shiny-color-primary`, `--shiny-col
 }
 ```
 
+### Expander & Accordion
+
+A header you tap and content that animates in beneath — or above — it, on both hosts. **`Accordion`**
+stacks them and decides how many may be open at once.
+
+**Motion.** `Animation` is a flags enum, so the three effects combine: `Fade`, `Slide` and `Height`.
+`Height` is the one that makes an accordion read as an accordion — the panel grows and shrinks between
+zero and the content's size, so everything below it moves with the reveal instead of being uncovered by
+it. `SlideFrom` aims the slide at `Top`, `Bottom`, `Left` or `Right`, and `AnimationDuration` /
+`AnimationEasing` set its pace. `ExpandDirection="Up"` puts the content above the header, which is what
+a panel pinned to the bottom of a page wants.
+
+On MAUI `Height` measures the content and animates a clipped panel; where there is nothing to measure
+yet — the very first reveal, before layout has run — it stands down and lets fade and slide carry the
+transition on their own. On Blazor the whole reveal is CSS: the panel is a grid transitioning
+`grid-template-rows` between `0fr` and `1fr`, so there is no measuring, no JS interop, and content that
+changes size while open still lays out normally. Both hosts honour `prefers-reduced-motion` / a zero
+duration.
+
+**Chrome.** `BorderColor`, `BorderThickness`, `CornerRadius`, `HasShadow`, `HeaderBackgroundColor`,
+`ContentBackgroundColor`, `HeaderPadding`, `ContentPadding`, `ShowSeparator` and `SeparatorColor` are all
+yours; leave one alone and it follows the active theme. The indicator is a glyph that either rotates
+(`IndicatorMode="Rotate"`, the default) or swaps between `CollapsedIcon` and `ExpandedIcon`
+(`"Swap"`), sits at either end (`IndicatorPosition`), or is replaced outright by a view of your own.
+`Header` / `HeaderTemplate` take over the whole header when the built-in `HeaderText` + `HeaderDetail`
+pair is not enough.
+
+**State.** `IsExpanded` is two-way. `Expanding` and `Collapsing` are cancelable — set `Cancel` to keep a
+section shut until a form validates — and `Expanded`, `Collapsed` and `ExpandedChanged` report what
+happened. `LoadContentOnDemand` holds `ContentTemplate` (MAUI) / `ChildContent` (Blazor) back until the
+first open, so a list of twenty expanders over twenty forms builds one form rather than twenty.
+
+```xml
+<shiny:Expander HeaderText="Shipping" HeaderDetail="Arrives Tuesday"
+                Animation="Height,Slide,Fade" SlideFrom="Top"
+                BorderColor="#7C3AED" CornerRadius="18">
+    <Label Text="123 Fake Street" />
+</shiny:Expander>
+```
+
+```razor
+<Expander HeaderText="Shipping" HeaderDetail="Arrives Tuesday"
+          Animation="ExpanderAnimation.Height | ExpanderAnimation.Slide | ExpanderAnimation.Fade">
+    <p>123 Fake Street</p>
+</Expander>
+```
+
+**Accordion.** `SelectionMode` is `Single` (opening one closes the rest) or `Multiple`.
+`AllowCollapseAll="False"` refuses to end up with nothing open: the last open item stops responding to
+taps and a list that starts closed opens its first item. `ExpandedIndex` is two-way, `ExpandedIndexes`
+reports every open item, and `ExpandAll()` / `CollapseAll()` / `ExpandItem(index)` drive it from code.
+
+Items can be written out one by one, generated from data, or both — the generated ones are appended after
+whatever was declared in markup. On MAUI bind `ItemsSource` with a `HeaderTemplate` and `ContentTemplate`
+(or an `ItemTemplate` that returns a whole `Expander`); on Blazor a plain `@foreach` of `<Expander>` inside
+the accordion is usually nicer, since the models stay strongly typed, with an `Items` parameter there for
+when the shape is only known at runtime.
+
+The accordion's motion and chrome properties are **defaults**: they reach every item that did not set the
+same property itself, so one odd expander in the list stays odd. `ItemStyle` (MAUI) takes a
+`TargetType="shiny:Expander"` style for anything the shortcuts do not cover.
+
+```xml
+<shiny:Accordion SelectionMode="Single" AllowCollapseAll="False"
+                 ExpandedIndex="{Binding ExpandedIndex}"
+                 Animation="Height,Fade" CornerRadius="14">
+    <shiny:Expander HeaderText="Account">…</shiny:Expander>
+    <shiny:Expander HeaderText="Billing">…</shiny:Expander>
+</shiny:Accordion>
+```
+
+```razor
+<Accordion SelectionMode="AccordionSelectionMode.Single" @bind-ExpandedIndex="index">
+    <Expander HeaderText="Account">…</Expander>
+    <Expander HeaderText="Billing">…</Expander>
+</Accordion>
+```
+
 ### StateView & Wizard
 
 Two related controls on both hosts. **`StateView`** shows exactly one of several named branches, chosen by
@@ -2793,6 +2948,104 @@ Events: `Completed` fires with a `SecurityPinCompletedEventArgs` once the entere
 
 Methods: `Focus()`, `Unfocus()`, `Clear()`.
 
+### PasswordStrength
+
+A password field with a live strength meter and a rule checklist underneath it, on both hosts. The
+defaults follow passphrase-first guidance: fifteen characters, commonly breached values refused, and
+**no character-composition rules at all** — those push people towards `Passw0rd!`, which is short,
+memorable to nobody and already in every wordlist. Turn them on only when an external policy forces
+your hand.
+
+<!-- TODO: capture screenshots for passwordstrength -->
+
+**MAUI**
+
+```xml
+<shiny:PasswordStrength Placeholder="Passphrase"
+                        Variant="Floating"
+                        Password="{Binding Passphrase}"
+                        IsAcceptable="{Binding CanSubmit}"
+                        StrengthChanged="OnStrengthChanged" />
+
+<Button Text="Create account" IsEnabled="{Binding CanSubmit}" />
+```
+
+**Blazor**
+
+```razor
+<PasswordStrength @ref="field" @bind-Password="passphrase" Placeholder="Passphrase" />
+<button disabled="@(field?.IsAcceptable != true)">Create account</button>
+```
+
+Bind your submit button to **`IsAcceptable`**, not to `Score`. The score says how hard the password
+is to crack; only `IsAcceptable` says whether it satisfies the policy, and the two genuinely
+disagree — a forty-character passphrase scores 100 and still fails a rule demanding a digit.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| Password | string | "" | The value being typed (TwoWay / `@bind-Password`) |
+| Placeholder | string | "Password" | Placeholder / floating label |
+| Variant | TextEntryVariant | Classic | Passed through to the underlying TextEntry |
+| MinimumLength | int | 15 | Shortest acceptable password |
+| RequireUppercase / RequireLowercase / RequireNumber / RequireSpecialCharacter | bool | false | Composition rules — off by design |
+| SpecialCharacters | string | printable ASCII symbols | What counts as special |
+| RequireNotCompromisedPassword | bool | true | Refuse the commonly breached values and their disguises |
+| BlockedPasswords | IList&lt;string&gt;? | null | Extra values to refuse |
+| UserInputs | IList&lt;string&gt;? | null | This user's email / name — refused, and discounted when scoring |
+| Evaluator | IPasswordStrengthEvaluator? | null | Per-field scorer override |
+| DebounceMilliseconds | int | 250 | Pause before scoring; 0 scores every keystroke |
+| Localizer | PasswordStrengthLocalizer? | null | Replaces the wording; return null to keep a default |
+| MeterStyle | PasswordStrengthMeterStyle | Segments | Four blocks, or one bar filled to the score |
+| MeterHeight / MeterCornerRadius / SegmentSpacing | double | 6 / 3 / 4 | Meter geometry |
+| TrackColor / WeakColor / FairColor / GoodColor / StrongColor | Color? | null | Null follows the surface-container-highest / critical / caution / warning / success tokens |
+| RuleTextColor / RuleFontSize | Color? / double | null / 13 | Checklist appearance |
+| ShowMeter / ShowStrengthLabel / ShowRules / ShowWarning / ShowVisibilityToggle | bool | true | What is drawn |
+| ShowPasswordIcon / HidePasswordIcon | ImageSource? (MAUI) / string? (Blazor) | null | Toggle content; null uses the words "Show" / "Hide" |
+| Score | int | 0 | 0-100, read-only |
+| Level | PasswordStrengthLevel | None | None / Weak / Fair / Good / Strong, read-only |
+| IsAcceptable | bool | false | Every rule met, read-only |
+| Result | PasswordStrengthResult? | null | The full verdict — rules, warning, suggestions |
+
+Events: `StrengthChanged` (`PasswordStrengthChangedEventArgs`) fires when the verdict changes;
+`Completed` fires on the return key. MAUI also has `StrengthChangedCommand`.
+
+Methods: `EvaluateNowAsync()` bypasses the debounce — call it after mutating a `UserInputs` or
+`BlockedPasswords` list in place. MAUI adds `Focus()` / `Unfocus()`.
+
+**Pluggable scoring.** The built-in `DefaultPasswordStrengthEvaluator` estimates entropy after
+discounting what a cracker gets free — repeats, sequences, repeated blocks, and any word from the
+built-in list of commonly breached passwords (seen through case, leet substitution and a bolted-on
+year). It needs no network and no data files. Replace it with zxcvbn, a Have I Been Pwned range
+query, or your own policy endpoint:
+
+```csharp
+public class HibpEvaluator : IPasswordStrengthEvaluator
+{
+    public async ValueTask<PasswordStrengthResult> EvaluateAsync(
+        PasswordStrengthRequest request,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // ... hash locally, send only the first five hex characters ...
+    }
+}
+
+// MAUI
+builder.UseShinyControls(x => x.SetCustomPasswordStrengthEvaluator<HibpEvaluator>());
+
+// Blazor
+services.AddShinyControls(x => x.SetCustomPasswordStrengthEvaluator<HibpEvaluator>());
+```
+
+The interface is asynchronous and cancellable precisely so a network-backed implementation is
+possible: keystrokes are debounced and the previous evaluation is cancelled before the next starts.
+If a custom evaluator throws, the built-in one answers instead, so losing the network downgrades the
+meter rather than freezing it.
+
+**Never send the password itself anywhere.** HIBP's range API takes the first five characters of the
+SHA-1 hash and returns a bucket of suffixes exactly so the password — and its full hash — never
+leaves the device.
+
 ### SignaturePad
 
 A signature capture control that opens in a FloatingPanel overlay (MAUI) or SheetView (Blazor). Users draw on a canvas and tap Sign to export the signature as a PNG. The Sign button is disabled until the user actually draws something.
@@ -3035,8 +3288,8 @@ A feature-rich data grid for both hosts, modeled on MudBlazor's DataGrid. Blazor
 HTML `<table>` (generic `DataGrid<TItem>`); MAUI is a pure cross-platform composite (a `Grid` header
 over a virtualized `CollectionView`, no native handlers). Same feature surface on both: typed
 `PropertyColumn` + `TemplateColumn`, sorting (single + multi), column **filtering** (menu / row /
-toolbar quick-search), **grouping** with expandable groups, footer/group **aggregates**
-(Count/Sum/Average/Min/Max/Custom), single/multi **selection** with checkboxes, inline **editing**
+toolbar quick-search), **multi-level grouping** with expandable groups, **summary (total) rows**
+under the grid and inside every group (Count/Sum/Average/Min/Max/Custom), single/multi **selection** with checkboxes, inline **editing**
 (cell + form), **detail ("breakdown") rows**, a **tree/hierarchy mode** (`TreeDataGrid`) with lazy child
 loading, **paging**, **virtualization**, column **resize/reorder**, **frozen columns** and a
 frozen (sticky) header, loading + empty states, a `ServerData` delegate for server-side data, and
@@ -3179,6 +3432,71 @@ row's own stripe/selection state. On **MAUI this needs `HorizontalScroll="True"`
 scrolling there is nothing to pin against — and in that mode star widths cannot survive the scroller's
 unbounded measure, so each resolves to `DefaultColumnWidth` (150 by default) x its star factor. Blazor
 needs no extra flag; give the pinned columns a px `Width` and the offsets are exact on the first paint.
+
+**Grouping** — `GroupBy` is a list of columns, outermost first, and grouping is on whenever it has an
+entry: `<shiny:DataGrid.GroupBy>` / `GroupBy="{Binding GroupColumns}"` on MAUI, `@bind-GroupBy` on
+Blazor. Levels nest, each header indenting from its parent and carrying the count of every row beneath
+it. `Groupable` is a separate switch: it adds the ⊞ button to each header so the *user* can add or
+remove a level (the glyph numbers itself once more than one is in play) — it does not gate a grouping
+you declared yourself. Groups order by key (`GroupSortDirection`, ascending by default),
+`GroupsInitiallyExpanded` sets whether they start open, `ExpandAllGroups()`/`CollapseAllGroups()` drive
+them from code, and `GroupHeaderTemplate` replaces the header's content. Collapse state is tracked per
+group *path*, so a "West" under one department is independent of the "West" under another. Paging is
+skipped while grouped — a page boundary would slice a group in half.
+
+**Summary (total) rows** — `SummaryRows` holds any number of rows, each a set of cells pointing at
+columns. A cell either **aggregates** its column (`Aggregate="Sum"`, plus `Count`/`Average`/`Min`/`Max`,
+or `Custom` with a `CustomAggregate` delegate over the rows) or simply **fills its slot with a label**
+(`Text="Total"`, `Alignment="End"`) — which is what puts the word in one column and the number in the
+next. A column with no cell is left blank, and `CellTemplate` (MAUI) / the cell's child content (Blazor)
+takes over the slot entirely. Stack rows for a subtotal / tax / total block.
+
+The same declarations serve the grid's own footer **and** every group, each aggregating exactly the rows
+under it; `Scope="Grid"` / `"Group"` narrows a row to one of the two. `GroupSummaryPlacement` says where
+a group's rows sit: `Footer` (the default) puts them after the group's rows so they collapse with them,
+`Header` puts them under the group's title so the totals stay visible while it is collapsed, `Both` does
+both, `None` leaves groups plain. An aggregate with no `StringFormat` is formatted the way its column's
+own cells are — the total under a currency column is currency, without repeating the format — except a
+`Count`, which is always a plain number. The older per-column `Aggregate`/`FooterTemplate` still works
+and produces the single footer row it always did.
+
+```razor
+@* Blazor *@
+<DataGrid TItem="Sale" Items="sales" @bind-GroupBy="groupBy" Groupable="true"
+          GroupSummaryPlacement="DataGridGroupSummaryPlacement.Footer">
+    <Columns>
+        <PropertyColumn Property="x => x.Department" />
+        <PropertyColumn Property="x => x.Rep" />
+        <PropertyColumn Property="x => x.Revenue" DisplayAs="DataGridColumnFormat.Currency" Decimals="0" />
+    </Columns>
+    <SummaryRows>
+        <SummaryRow>
+            <SummaryCell Column="Rep" Text="Total" Alignment="DataGridCellAlignment.End" />
+            <SummaryCell Column="Revenue" Aggregate="DataGridAggregateType.Sum" />
+        </SummaryRow>
+    </SummaryRows>
+</DataGrid>
+@code { IReadOnlyList<string> groupBy = ["Department", "Region"]; }
+```
+
+```xml
+<!-- MAUI -->
+<shiny:DataGrid ItemsSource="{Binding Sales}" Groupable="True"
+                GroupBy="{Binding GroupColumns}"
+                GroupSummaryPlacement="Footer">
+    <shiny:DataGrid.SummaryRows>
+        <shiny:DataGridSummaryRow>
+            <shiny:DataGridSummaryCell Column="Rep" Text="Total" Alignment="End" />
+            <shiny:DataGridSummaryCell Column="Revenue" Aggregate="Sum" />
+        </shiny:DataGridSummaryRow>
+    </shiny:DataGrid.SummaryRows>
+
+    <shiny:DataGridColumn Title="Department" PropertyName="Department" Width="*" />
+    <shiny:DataGridColumn Title="Rep" PropertyName="Rep" Width="*" />
+    <shiny:DataGridColumn Title="Revenue" PropertyName="Revenue"
+                          DisplayAs="Currency" Decimals="0" Width="*" />
+</shiny:DataGrid>
+```
 
 **Detail ("breakdown") rows** — set a `RowDetailTemplate` and the grid grows a caret column at the
 leading edge; expanding a row opens a full-width row beneath it that can host any controls you like.

@@ -1,0 +1,246 @@
+@page "/expander"
+
+<PageTitle>Expander</PageTitle>
+
+<h1>Expander</h1>
+
+<section class="demo-section">
+    <h2>Header + content</h2>
+    <p>
+        A header you click and content that animates in beneath it. Every colour and size falls back to
+        a design token when you leave it alone, so it follows the theme.
+    </p>
+
+    <Expander HeaderText="Shipping" HeaderDetail="Arrives Tuesday">
+        <p style="margin:0 0 4px;">123 Fake Street</p>
+        <p style="margin:0 0 4px;">Springfield</p>
+        <p style="margin:0;">Standard delivery, no signature required.</p>
+    </Expander>
+</section>
+
+
+<section class="demo-section">
+    <h2>Motion</h2>
+    <p>
+        Fade, slide and height are independent flags — turn on any combination. Height is the one that
+        makes everything below the expander move with the reveal, and it is a pure CSS
+        <code>grid-template-rows</code> transition, so there is no measuring and no JS.
+    </p>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+        <label><input type="checkbox" @bind="useFade" /> Fade</label>
+        <label><input type="checkbox" @bind="useSlide" /> Slide</label>
+        <label><input type="checkbox" @bind="useHeight" /> Height</label>
+    </div>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+        <label>
+            Slide from
+            <select @bind="slideFrom">
+                @foreach (var value in Enum.GetValues<ExpanderSlideFrom>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <label>
+            Direction
+            <select @bind="direction">
+                @foreach (var value in Enum.GetValues<ExpandDirection>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <label>
+            Indicator
+            <select @bind="indicatorMode">
+                @foreach (var value in Enum.GetValues<ExpanderIndicatorMode>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <label>
+            Side
+            <select @bind="indicatorPosition">
+                @foreach (var value in Enum.GetValues<ExpanderIndicatorPosition>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <label>
+            Duration
+            <input type="range" min="0" max="1200" step="50" @bind="duration" @bind:event="oninput" />
+            <span>@duration ms</span>
+        </label>
+    </div>
+
+    <Expander HeaderText="Try the settings above"
+              HeaderDetail="@($"{duration}ms")"
+              Animation="Animation"
+              SlideFrom="slideFrom"
+              ExpandDirection="direction"
+              IndicatorMode="indicatorMode"
+              IndicatorPosition="indicatorPosition"
+              AnimationDuration="duration">
+        <p>Collapse and expand this to see the combination you picked.</p>
+        <div style="height:60px; background:#60A5FA; border-radius:8px;"></div>
+        <p style="margin-bottom:0;">Slide direction only matters while the Slide flag is on.</p>
+    </Expander>
+</section>
+
+
+<section class="demo-section">
+    <h2>Border, colour and chrome</h2>
+    <p>Outline, radius, fills, elevation and the separator are all yours; anything you leave alone follows the theme.</p>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+        <Expander HeaderText="Coloured border"
+                  BorderColor="#7C3AED"
+                  BorderThickness="2px"
+                  CornerRadius="18px"
+                  HeaderBackground="#EDE9FE"
+                  HeaderTextColor="#4C1D95">
+            <p style="margin:0;">A two pixel stroke, an eighteen pixel radius and a tinted header.</p>
+        </Expander>
+
+        <Expander HeaderText="No border, elevated instead"
+                  BorderThickness="0"
+                  HasShadow="true"
+                  ShowSeparator="false"
+                  IndicatorPosition="ExpanderIndicatorPosition.Start"
+                  IndicatorMode="ExpanderIndicatorMode.Swap"
+                  CollapsedIcon="＋"
+                  ExpandedIcon="－">
+            <p style="margin:0;">
+                Indicator on the leading edge, swapping glyphs instead of rotating, and a drop shadow
+                standing in for the outline.
+            </p>
+        </Expander>
+
+        <Expander HeaderText="Opens upwards"
+                  ExpandDirection="ExpandDirection.Up"
+                  SlideFrom="ExpanderSlideFrom.Bottom"
+                  Animation="ExpanderAnimation.Height | ExpanderAnimation.Slide | ExpanderAnimation.Fade">
+            <p style="margin:0;">Content sits above the header — what a panel pinned to the bottom of the page wants.</p>
+        </Expander>
+
+        <Expander>
+            <Header>
+                <span style="display:inline-flex; align-items:center; gap:10px;">
+                    <Pill Text="LIVE" PillType="PillType.Critical" />
+                    <strong>Custom header markup</strong>
+                </span>
+            </Header>
+            <ChildContent>
+                <p style="margin:0;">Anything can be the header — the indicator and the click target are still handled for you.</p>
+            </ChildContent>
+        </Expander>
+    </div>
+</section>
+
+
+<section class="demo-section">
+    <h2>Accordion</h2>
+    <p>
+        Drop expanders into an <code>Accordion</code> and they agree on how many may be open. The
+        accordion's motion and chrome are <em>defaults</em> — an item that sets its own keeps it.
+    </p>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+        <label>
+            Mode
+            <select @bind="selectionMode">
+                @foreach (var value in Enum.GetValues<AccordionSelectionMode>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <label><input type="checkbox" @bind="allowCollapseAll" /> Allow all closed</label>
+    </div>
+
+    <Accordion SelectionMode="selectionMode"
+               AllowCollapseAll="allowCollapseAll"
+               @bind-ExpandedIndex="expandedIndex"
+               CornerRadius="14px">
+        <Expander HeaderText="Account" HeaderDetail="Name, email, password">
+            <p style="margin:0;">Everything about who you are.</p>
+        </Expander>
+        <Expander HeaderText="Billing" HeaderDetail="Cards and invoices">
+            <p style="margin:0;">Everything about who pays.</p>
+        </Expander>
+        <Expander HeaderText="Notifications" HeaderDetail="Push, email, SMS">
+            <p style="margin:0;">Everything about when we bother you.</p>
+        </Expander>
+    </Accordion>
+
+    <p style="font-size:0.875rem; margin-top:12px;">ExpandedIndex: <strong>@expandedIndex</strong></p>
+</section>
+
+
+<section class="demo-section">
+    <h2>Accordion over data</h2>
+    <p>
+        A plain <code>@@foreach</code> of expanders inside the accordion is the natural Blazor way to do
+        a data-driven list — the models stay strongly typed, and the accordion coordinates them all the
+        same. <code>LoadContentOnDemand</code> keeps each body out of the DOM until it is first opened.
+    </p>
+
+    <Accordion SelectionMode="AccordionSelectionMode.Single"
+               LoadContentOnDemand="true"
+               OnItemExpanded="@(e => lastEvent = $"opened item {e.Index}")">
+        @foreach (var faq in faqs)
+        {
+            <Expander @key="faq" Item="faq" HeaderText="@faq.Question" HeaderDetail="@faq.Category">
+                <p style="margin:0;">@faq.Answer</p>
+            </Expander>
+        }
+    </Accordion>
+
+    <p style="font-size:0.875rem; margin-top:12px;">Last event: <strong>@lastEvent</strong></p>
+</section>
+
+@code {
+    record Faq(string Question, string Answer, string Category);
+
+    bool useFade = true;
+    bool useSlide;
+    bool useHeight = true;
+
+    ExpanderSlideFrom slideFrom = ExpanderSlideFrom.Top;
+    ExpandDirection direction = ExpandDirection.Down;
+    ExpanderIndicatorMode indicatorMode = ExpanderIndicatorMode.Rotate;
+    ExpanderIndicatorPosition indicatorPosition = ExpanderIndicatorPosition.End;
+    int duration = 250;
+
+    AccordionSelectionMode selectionMode = AccordionSelectionMode.Single;
+    bool allowCollapseAll = true;
+    int expandedIndex = -1;
+    string lastEvent = "nothing yet";
+
+    ExpanderAnimation Animation
+    {
+        get
+        {
+            var animation = ExpanderAnimation.None;
+            if (useFade)
+                animation |= ExpanderAnimation.Fade;
+            if (useSlide)
+                animation |= ExpanderAnimation.Slide;
+            if (useHeight)
+                animation |= ExpanderAnimation.Height;
+            return animation;
+        }
+    }
+
+    readonly Faq[] faqs =
+    [
+        new("How do I install it?", "Add the Shiny.Blazor.Controls NuGet package and reference its stylesheet.", "Getting started"),
+        new("Does it need JS interop?", "The expander does not — the reveal is a CSS grid-row transition.", "Implementation"),
+        new("Can I theme it?", "Every colour and size reads a --shiny-* custom property, so a theme swap reaches inside.", "Theming"),
+        new("Is the source available?", "MIT licensed, on GitHub at shinyorg/controls.", "Licensing")
+    ];
+}

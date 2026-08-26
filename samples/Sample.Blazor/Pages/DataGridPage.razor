@@ -236,6 +236,61 @@
 </section>
 
 <section class="demo-section">
+    <h2>Grouping &amp; summary rows</h2>
+    <p>
+        <code>GroupBy</code> is a list of columns, outermost first &mdash; bind it and the grid re-groups
+        itself. <code>Groupable</code> adds the &#9746; button to every header, and each tap appends a
+        level. One set of <code>SummaryRows</code> serves the grid's footer <em>and</em> every group:
+        a cell either aggregates its column or simply fills the slot with a label, which is what puts
+        &ldquo;Total&rdquo; in one column and the number in the next. <code>GroupSummaryPlacement</code>
+        decides whether a group's totals sit under its rows (and collapse with them) or under its title,
+        where they stay visible while it is collapsed.
+    </p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <button class="btn btn-primary" @onclick="@(() => groupBy = [nameof(Person.Department)])">Department</button>
+        <button class="btn btn-primary" @onclick="@(() => groupBy = [nameof(Person.Department), nameof(Person.Region)])">Dept + Region</button>
+        <button class="btn btn-primary" @onclick="@(() => groupBy = [])">Ungroup</button>
+        <label>Group summaries
+            <select @bind="groupSummaryPlacement">
+                @foreach (var v in Enum.GetValues<DataGridGroupSummaryPlacement>())
+                {
+                    <option value="@v">@v</option>
+                }
+            </select>
+        </label>
+    </div>
+    <DataGrid TItem="Person"
+              Items="people"
+              @bind-GroupBy="groupBy"
+              Groupable="true"
+              GroupSummaryPlacement="groupSummaryPlacement"
+              SortMode="DataGridSortMode.Single"
+              Striped="true" Bordered="true" Hover="true">
+        <Columns>
+            <PropertyColumn Property="x => x.Department" Width="150px" />
+            <PropertyColumn Property="x => x.Region" Width="120px" />
+            <PropertyColumn Property="x => x.LastName" Title="Name" Width="140px" />
+            @* No format on the summary cell below: an aggregate wears its own column's dress, so the
+               total under a currency column is currency too. *@
+            <PropertyColumn Property="x => x.Salary" DisplayAs="DataGridColumnFormat.Currency" Decimals="0" Width="130px" />
+            <PropertyColumn Property="x => x.Age" Width="80px" />
+        </Columns>
+        <SummaryRows>
+            <SummaryRow>
+                <SummaryCell Column="@nameof(Person.LastName)" Text="Total" Alignment="DataGridCellAlignment.End" />
+                <SummaryCell Column="@nameof(Person.Salary)" Aggregate="DataGridAggregateType.Sum" />
+                <SummaryCell Column="@nameof(Person.Age)" Aggregate="DataGridAggregateType.Count" />
+            </SummaryRow>
+            <SummaryRow>
+                <SummaryCell Column="@nameof(Person.LastName)" Text="Average" Alignment="DataGridCellAlignment.End" Bold="false" />
+                <SummaryCell Column="@nameof(Person.Salary)" Aggregate="DataGridAggregateType.Average" Bold="false" />
+                <SummaryCell Column="@nameof(Person.Age)" Aggregate="DataGridAggregateType.Average" StringFormat="N1" Bold="false" />
+            </SummaryRow>
+        </SummaryRows>
+    </DataGrid>
+</section>
+
+<section class="demo-section">
     <h2>Conditional cell styling &amp; wrapping</h2>
     <p>
         <code>CellStyle</code> takes the row and returns colours/weight for that one cell, so "highlight
@@ -462,6 +517,10 @@
         await Task.Delay(900);
         activity[p.CostCentre] = $"{p.LastName.Length + 3} approvals this quarter";
     }
+
+    // ---- grouping demo ----
+    IReadOnlyList<string> groupBy = [nameof(Person.Department)];
+    DataGridGroupSummaryPlacement groupSummaryPlacement = DataGridGroupSummaryPlacement.Footer;
 
     List<Person> people = Person.Sample();
     List<CostNode> accounts = CostNode.Sample();

@@ -20,6 +20,7 @@
                   xmlns:kitchensink="clr-namespace:Sample.Features.KitchenSink"
                   xmlns:markdown="clr-namespace:Sample.Features.Markdown"
                   xmlns:securitypin="clr-namespace:Sample.Features.SecurityPin"
+                  xmlns:pwstrength="clr-namespace:Sample.Features.PasswordStrength"
                   xmlns:fab="clr-namespace:Sample.Features.Fab"
                   xmlns:buttons="clr-namespace:Sample.Features.Buttons"
                   xmlns:colorpicker="clr-namespace:Sample.Features.ColorPicker"
@@ -45,7 +46,9 @@
                   xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry"
                   xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
+                  xmlns:progressline="clr-namespace:Sample.Features.ProgressLine"
                   xmlns:slider="clr-namespace:Sample.Features.Slider"
+                  xmlns:expanders="clr-namespace:Sample.Features.Expanders"
                   xmlns:carouselgallery="clr-namespace:Sample.Features.CarouselGallery"
                   xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid"
                   xmlns:virtualizedgrid="clr-namespace:Sample.Features.VirtualizedGrid"
@@ -303,6 +306,14 @@
         </MenuItem.IconImageSource>
     </MenuItem>
 
+    <FlyoutItem Title="Expander">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25BE;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate expanders:ExpanderPage}" Route="expander" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Carousel Gallery">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x25C0;" Size="20"
@@ -351,6 +362,7 @@
         <ShellContent Title="Grid" ContentTemplate="{DataTemplate datagrid:DataGridPage}" Route="datagrid" />
         <ShellContent Title="Tree" ContentTemplate="{DataTemplate datagrid:TreeDataGridPage}" Route="treedatagrid" />
         <ShellContent Title="Formatting" ContentTemplate="{DataTemplate datagrid:DataGridFormattingPage}" Route="datagridformatting" />
+        <ShellContent Title="Grouping" ContentTemplate="{DataTemplate datagrid:DataGridGroupingPage}" Route="datagridgrouping" />
         <ShellContent Title="Spreadsheet" ContentTemplate="{DataTemplate office:SpreadsheetPage}" Route="spreadsheet" />
         <ShellContent Title="Document" ContentTemplate="{DataTemplate office:DocumentViewerPage}" Route="documentviewer" />
         <ShellContent Title="Doc Editor" ContentTemplate="{DataTemplate office:DocumentEditorPage}" Route="documenteditor" />
@@ -607,6 +619,14 @@
         <ShellContent ContentTemplate="{DataTemplate securitypin:SecurityPinPage}" Route="securitypin" />
     </FlyoutItem>
 
+    <FlyoutItem Title="Password Strength">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2593;" Size="20"
+                             Color="{AppThemeBinding Light=#059669, Dark=#34D399}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate pwstrength:PasswordStrengthPage}" Route="passwordstrength" />
+    </FlyoutItem>
+
     <FlyoutItem Title="Signature Pad">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x270D;" Size="20"
@@ -739,6 +759,14 @@
                              Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate progressbar:ProgressBarPage}" Route="progressbar" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Progress Line">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2501;" Size="20"
+                             Color="{AppThemeBinding Light=#DB2777, Dark=#F472B6}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate progressline:ProgressLinePage}" Route="progressline" />
     </FlyoutItem>
 
     <FlyoutItem Title="Skeleton">

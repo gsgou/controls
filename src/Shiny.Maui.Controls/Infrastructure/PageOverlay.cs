@@ -49,6 +49,12 @@ static class PageOverlay
     internal sealed class TabBarLayer : Grid, IOverlayLayer;
 
     /// <summary>
+    /// Where <see cref="ProgressLine"/> docks. Above the tab bar, because a load indicator that runs
+    /// underneath the chrome it is reporting on is not an indicator.
+    /// </summary>
+    internal sealed class ProgressLineLayer : Grid, IOverlayLayer;
+
+    /// <summary>
     /// Where <see cref="ShinyTabBar"/> puts its centre menu when it is hosted on a page it does not
     /// own the layout of - a Shell page, chiefly. A <see cref="ShinyTabbedPage"/> hands the bar its
     /// own layer instead and never comes through here, because installing an overlay root re-parents
@@ -71,6 +77,12 @@ static class PageOverlay
     {
         /// <summary>Page chrome: above the page's content, below everything that annotates it.</summary>
         public const int TabBar = 8_400;
+
+        /// <summary>
+        /// The page-edge progress line, just above the tab bar it sits against so the two never
+        /// overlap ambiguously, and below any menu either bar opens.
+        /// </summary>
+        public const int ProgressLine = 8_450;
 
         /// <summary>Below a tooltip: the tab bar's menu is page chrome, not an annotation on top of it.</summary>
         public const int TabMenu = 8_500;
