@@ -273,10 +273,11 @@ public partial class FloatingPanel : ContentView
             {
                 Margin = new Thickness(0, 0, 0, -bottomInset);
                 safeAreaFill.HeightRequest = bottomInset;
-                // When closed (header only), match the header color; when open, match the panel content
-                safeAreaFill.Color = IsOpen
-                    ? PanelBackgroundColor
-                    : HeaderBackgroundColor ?? PanelBackgroundColor;
+                // sheetContainer.BackgroundColor already reflects PanelBackgroundColor (via Tint()),
+                // with SurfaceContainerLow as its theme fallback. Transparent covers the rest.
+                safeAreaFill.Color = (IsOpen
+                    ? sheetContainer.BackgroundColor
+                    : HeaderBackgroundColor ?? sheetContainer.BackgroundColor) ?? Colors.Transparent;
                 safeAreaFill.IsVisible = true;
                 return;
             }
