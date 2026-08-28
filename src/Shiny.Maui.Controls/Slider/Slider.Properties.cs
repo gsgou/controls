@@ -62,7 +62,7 @@ public partial class Slider
         nameof(TrackHeight), typeof(double), typeof(Slider), 8.0,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
-                ((Slider)b).UpdateVisuals();
+                ((Slider)b).Refresh();
             }));
     public double TrackHeight { get => (double)GetValue(TrackHeightProperty); set => SetValue(TrackHeightProperty, value); }
 
@@ -71,7 +71,7 @@ public partial class Slider
         nameof(ThumbSize), typeof(double), typeof(Slider), 24.0,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
-                ((Slider)b).UpdateVisuals();
+                ((Slider)b).Refresh();
             }));
     public double ThumbSize { get => (double)GetValue(ThumbSizeProperty); set => SetValue(ThumbSizeProperty, value); }
 
@@ -104,7 +104,7 @@ public partial class Slider
         nameof(ShowTooltip), typeof(bool), typeof(Slider), true,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
-                ((Slider)b).UpdateVisuals();
+                ((Slider)b).Refresh();
             }));
     public bool ShowTooltip { get => (bool)GetValue(ShowTooltipProperty); set => SetValue(ShowTooltipProperty, value); }
 
@@ -133,7 +133,7 @@ public partial class Slider
         nameof(TooltipFontSize), typeof(double), typeof(Slider), 12.0,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
-                ((Slider)b).UpdateVisuals();
+                ((Slider)b).Refresh();
             }));
     public double TooltipFontSize { get => (double)GetValue(TooltipFontSizeProperty); set => SetValue(TooltipFontSizeProperty, value); }
 
@@ -150,6 +150,109 @@ public partial class Slider
                 ((Slider)b).UpdateVisuals();
             }));
     public DataTemplate? TooltipTemplate { get => (DataTemplate?)GetValue(TooltipTemplateProperty); set => SetValue(TooltipTemplateProperty, value); }
+
+    // ---------------------------------------------------------------------------------------------
+    // Orientation
+    // ---------------------------------------------------------------------------------------------
+
+    // Orientation
+    public static readonly BindableProperty OrientationProperty = BindableProperty.Create(
+        nameof(Orientation), typeof(SliderOrientation), typeof(Slider), SliderOrientation.Horizontal,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                // A tick is drawn across the track, so it swaps its axes with the slider.
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>Which way the slider runs. Vertical puts <see cref="Minimum"/> at the bottom.</summary>
+    public SliderOrientation Orientation { get => (SliderOrientation)GetValue(OrientationProperty); set => SetValue(OrientationProperty, value); }
+
+    // VerticalLength
+    public static readonly BindableProperty VerticalLengthProperty = BindableProperty.Create(
+        nameof(VerticalLength), typeof(double), typeof(Slider), 220.0,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).Refresh();
+            }));
+    /// <summary>
+    /// How long the track is when <see cref="Orientation"/> is vertical. A vertical slider has no width
+    /// to stretch into, so it has to be told how tall to be.
+    /// </summary>
+    public double VerticalLength { get => (double)GetValue(VerticalLengthProperty); set => SetValue(VerticalLengthProperty, value); }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Marks
+    // ---------------------------------------------------------------------------------------------
+
+    // SnapToMarks
+    public static readonly BindableProperty SnapToMarksProperty = BindableProperty.Create(
+        nameof(SnapToMarks), typeof(bool), typeof(Slider), true);
+    /// <summary>
+    /// Whether the thumb comes to rest on the nearest <see cref="Marks">mark</see> — what makes a mark a
+    /// stop point rather than a label. Set it false to keep the marks purely as reference points and let
+    /// <see cref="Step"/> govern the value. Has no effect while there are no marks.
+    /// </summary>
+    public bool SnapToMarks { get => (bool)GetValue(SnapToMarksProperty); set => SetValue(SnapToMarksProperty, value); }
+
+    // MarkShape
+    public static readonly BindableProperty MarkShapeProperty = BindableProperty.Create(
+        nameof(MarkShape), typeof(SliderMarkShape), typeof(Slider), SliderMarkShape.Dot,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>The shape every mark uses unless it sets <see cref="SliderMark.Shape"/> itself.</summary>
+    public SliderMarkShape MarkShape { get => (SliderMarkShape)GetValue(MarkShapeProperty); set => SetValue(MarkShapeProperty, value); }
+
+    // MarkSize
+    public static readonly BindableProperty MarkSizeProperty = BindableProperty.Create(
+        nameof(MarkSize), typeof(double), typeof(Slider), 10.0,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>Dot diameter, or tick thickness, for marks that do not set <see cref="SliderMark.Size"/>.</summary>
+    public double MarkSize { get => (double)GetValue(MarkSizeProperty); set => SetValue(MarkSizeProperty, value); }
+
+    // MarkColor
+    public static readonly BindableProperty MarkColorProperty = BindableProperty.Create(
+        nameof(MarkColor), typeof(Color), typeof(Slider), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>Fill for marks that do not set <see cref="SliderMark.Color"/>. Null uses the theme surface tokens.</summary>
+    public Color? MarkColor { get => (Color?)GetValue(MarkColorProperty); set => SetValue(MarkColorProperty, value); }
+
+    // MarkTextColor
+    public static readonly BindableProperty MarkTextColorProperty = BindableProperty.Create(
+        nameof(MarkTextColor), typeof(Color), typeof(Slider), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>Text colour for marks that do not set <see cref="SliderMark.TextColor"/>. Null uses the theme OnSurfaceVariant token.</summary>
+    public Color? MarkTextColor { get => (Color?)GetValue(MarkTextColorProperty); set => SetValue(MarkTextColorProperty, value); }
+
+    // MarkFontSize
+    public static readonly BindableProperty MarkFontSizeProperty = BindableProperty.Create(
+        nameof(MarkFontSize), typeof(double), typeof(Slider), 11.0,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    public double MarkFontSize { get => (double)GetValue(MarkFontSizeProperty); set => SetValue(MarkFontSizeProperty, value); }
+
+    // ShowMarkLabels
+    public static readonly BindableProperty ShowMarkLabelsProperty = BindableProperty.Create(
+        nameof(ShowMarkLabels), typeof(bool), typeof(Slider), true,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(Slider), () =>
+            {
+                ((Slider)b).RebuildMarks();
+            }));
+    /// <summary>Whether dot and tick marks show their <see cref="SliderMark.Text"/> as a caption. A bubble always shows its text.</summary>
+    public bool ShowMarkLabels { get => (bool)GetValue(ShowMarkLabelsProperty); set => SetValue(ShowMarkLabelsProperty, value); }
+
 
     // ValueChangedCommand
     public static readonly BindableProperty ValueChangedCommandProperty = BindableProperty.Create(

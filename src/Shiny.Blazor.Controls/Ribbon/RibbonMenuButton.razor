@@ -1,0 +1,42 @@
+@namespace Shiny.Blazor.Controls
+@inherits RibbonItemBase
+
+@*
+    A button whose whole face opens a dropdown — no default action of its own. The panel itself is
+    rendered by the Ribbon, so only one is ever open and there is one backdrop to dismiss it with.
+*@
+<button type="button"
+        class="@this.RootClass("shiny-ribbon-button")"
+        data-ribbon-anchor="@this.Id"
+        disabled="@this.IsDisabled"
+        title="@this.TitleText"
+        aria-label="@this.EffectiveTooltip"
+        aria-haspopup="true"
+        aria-expanded="@(this.IsOpen ? "true" : "false")"
+        @onclick="this.Toggle"
+        @attributes="this.AdditionalAttributes">
+    <RibbonItemFace Icon="@this.Icon" Text="@this.Text" ShowLabel="true" Caret="true" />
+</button>
+
+@code {
+    /// <summary>The dropdown's lines.</summary>
+    [Parameter] public List<RibbonMenuEntry>? Menu { get; set; }
+
+    /// <summary>Identifies this button to the placement pass, which anchors the panel against it.</summary>
+    internal string Id { get; } = $"rm-{Guid.NewGuid():N}";
+
+    bool IsOpen => this.Ribbon?.IsMenuOpen == true;
+
+
+    void Toggle()
+    {
+        if (this.IsDisabled || this.Ribbon is not { } ribbon)
+            return;
+
+        var entries = this.Menu?.Where(x => x is not null).ToList();
+        if (entries is not { Count: > 0 })
+            return;
+
+        ribbon.OpenMenu(this.Id, entries);
+    }
+}

@@ -47,8 +47,23 @@ sealed class WordNumbering
     readonly Dictionary<int, int> numToAbstract = new();
     readonly Dictionary<int, Dictionary<int, Level>> overrides = new();
 
-    public WordNumbering(MainDocumentPart main)
+    public WordNumbering(MainDocumentPart main) => this.Reload(main);
+
+    /// <summary>
+    /// Re-reads the definitions from the package.
+    /// </summary>
+    /// <remarks>
+    /// Needed because the editor writes to <c>numbering.xml</c>: turning a paragraph into a list item
+    /// creates the definition it points at, and a resolver still holding the state it was constructed
+    /// with would report that brand new list as one the document does not have — so the paragraph
+    /// would carry a <c>numId</c> and render with no bullet at all.
+    /// </remarks>
+    public void Reload(MainDocumentPart main)
     {
+        this.abstractNumbering.Clear();
+        this.numToAbstract.Clear();
+        this.overrides.Clear();
+
         var numbering = main.NumberingDefinitionsPart?.Numbering;
         if (numbering is null)
             return;

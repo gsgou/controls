@@ -36,3 +36,21 @@ translucent rather than as a slightly different flat one.
 
 `SelectedColor` is a hex string on Blazor rather than a `Color`: `#RRGGBB`, or `#AARRGGBB` when
 `ShowOpacity` is on — alpha first, so it drops straight into `ArgbColor.FromUInt32`.
+
+## Panel width
+
+The picker is a fixed **320px** panel on both hosts, and both hosts now say so explicitly.
+
+Nothing inside it has a width of its own — the spectrum, the hue bar and the opacity track are all
+told to fill, and each one is a canvas (Blazor) or a `GraphicsView` (MAUI) with no content to measure.
+That is right in a container that stretches, and wrong in one that shrink-wraps its content, which is
+exactly what `ColorPickerButton` puts it in: an absolutely positioned popover on Blazor, a
+centre-aligned `Border` on MAUI. In that position the only child that measured was the bottom row, so
+the whole picker came out about the width of the hex box with the spectrum squeezed to a sliver —
+visible anywhere the button is used, the Document Editor, Spreadsheet and Slide Editor toolbars
+included.
+
+Blazor pins the popover at `width: 320px`, capped at `calc(100vw - 16px)` so a narrow viewport still
+fits. The cap is deliberately viewport-relative: a percentage would resolve against the 30px trigger.
+MAUI gives the picker a `MinimumWidthRequest` of 320 rather than a `WidthRequest`, so it still fills a
+host that is wider.

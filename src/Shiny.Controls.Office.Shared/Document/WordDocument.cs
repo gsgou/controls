@@ -166,6 +166,13 @@ public sealed class WordDocument : OfficeDocument
             return;
 
         this.document.MainDocumentPart?.Document?.Save();
+
+        // The numbering part has to be saved by name. AutoSave is off, so nothing re-serialises a
+        // part on its own — and the first list a user creates in a document that had none writes a
+        // brand new numbering.xml that would otherwise never reach the package, leaving every
+        // paragraph pointing at a definition the saved file does not contain.
+        this.document.MainDocumentPart?.NumberingDefinitionsPart?.Numbering?.Save();
+
         this.document.Save();
         this.contentChanged = false;
     }
@@ -194,6 +201,26 @@ public sealed class WordDocument : OfficeDocument
         part.FeedData(stream);
 
         return main.GetIdOfPart(part);
+    }
+
+    /// <summary>
+    /// The <c>numId</c> of a list of the given style, creating the definitions if the document has none.
+    /// </summary>
+    /// <remarks>
+    /// The resolver is reloaded straight afterwards. It caches <c>numbering.xml</c> at open, so a
+    /// paragraph pointed at a definition created a moment ago would be read back as belonging to a
+    /// list the document does not have — a <c>numId</c> with nothing drawn in front of it.
+    /// </remarks>
+    internal int EnsureListNumbering(ListStyle style)
+    {
+        if (this.Main is not { } main)
+            return 0;
+
+        var numId = WordListDefinitions.Ensure(main, style);
+        if (numId > 0)
+            this.numbering.Reload(main);
+
+        return numId;
     }
 
     /// <summary>

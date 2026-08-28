@@ -142,7 +142,7 @@ sealed class NumberingSequencer(WordNumbering numbering)
 
         this.Advance(reference.NumId, reference.Level, level);
 
-        return this.Substitute(level.Template, reference.NumId, reference.Level, level.Format);
+        return this.Substitute(level.Template, reference.NumId);
     }
 
     void Advance(int numId, int levelIndex, ListLevel level)
@@ -163,7 +163,16 @@ sealed class NumberingSequencer(WordNumbering numbering)
             this.counters.Remove(deeper);
     }
 
-    string Substitute(string template, int numId, int levelIndex, NumberFormatValues format)
+    /// <summary>
+    /// Fills a level's <c>lvlText</c> template with the running counters it names.
+    /// </summary>
+    /// <remarks>
+    /// Every placeholder renders in the format of the level it <em>refers to</em>, not the format of
+    /// the paragraph being labelled. That is what makes a compounding template like <c>%1%2.</c> come
+    /// out as <c>1a.</c> — level 0 is decimal and level 1 is a letter — instead of running both
+    /// counters through whichever format the deeper level happens to carry.
+    /// </remarks>
+    string Substitute(string template, int numId)
     {
         var builder = new System.Text.StringBuilder();
 
@@ -183,10 +192,8 @@ sealed class NumberingSequencer(WordNumbering numbering)
             if (value == 0)
                 continue;
 
-            // Only the paragraph's own level uses its own format; outer levels contribute their
-            // running number, which Word always renders as decimal inside a compound label.
-            var levelFormat = referenced == levelIndex ? format : NumberFormatValues.Decimal;
-            builder.Append(WordNumbering.Render(value, levelFormat));
+            var format = numbering.Level(numId, referenced)?.Format ?? NumberFormatValues.Decimal;
+            builder.Append(WordNumbering.Render(value, format));
         }
 
         return builder.ToString();

@@ -46,6 +46,17 @@ public sealed record ListLabel(string Text, TextStyle Style, double Indent, doub
 {
     /// <summary>The list this label belongs to, or null for one the editor synthesised.</summary>
     public ListNumbering? Numbering { get; init; }
+
+    /// <summary>
+    /// True for a bullet, false for a number.
+    /// </summary>
+    /// <remarks>
+    /// Recorded here rather than being inferred from <see cref="Text"/>, which cannot tell the two
+    /// apart: a level whose <c>lvlText</c> is a literal <c>-</c> produces exactly the same string a
+    /// bullet does, and a toolbar deciding which of its two buttons to light up needs the answer to
+    /// come from the definition rather than from the label it rendered.
+    /// </remarks>
+    public bool IsBullet { get; init; }
 }
 
 public sealed record DocumentParagraph(IReadOnlyList<StyledRun> Runs, ParagraphFormat Format) : DocumentBlock

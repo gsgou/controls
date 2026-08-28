@@ -488,4 +488,107 @@ static class ShapeTextEditor
     /// <summary>Outline level, 0-8. This is what makes a bullet nest.</summary>
     public static Action<D.ParagraphProperties> SetLevel(int level) => properties =>
         properties.Level = Math.Clamp(level, 0, 8);
+
+    /// <summary>
+    /// Moves a paragraph in or out one outline level.
+    /// </summary>
+    /// <remarks>
+    /// Reads the level off the properties rather than taking it as an argument, so a Tab over a
+    /// selection spanning two levels moves both relative to where they were instead of flattening
+    /// them onto the first one's level.
+    /// </remarks>
+    public static Action<D.ParagraphProperties> ShiftLevel(int delta) => properties =>
+        properties.Level = Math.Clamp((properties.Level?.Value ?? 0) + delta, 0, 8);
+
+    /// <summary>
+    /// Sets the mark in front of a paragraph — a bullet glyph, an auto number, or nothing.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// All three are written explicitly, <see cref="ListStyle.None"/> included. A paragraph in a body
+    /// placeholder inherits a bullet from the master's list style, so removing the element would put
+    /// the inherited bullet back rather than take the bullet away; <c>a:buNone</c> is the only way to
+    /// say no.
+    /// </para>
+    /// <para>
+    /// The bullet font goes with the glyph. <c>a:buChar</c> is a code point in whatever face
+    /// <c>a:buFont</c> names, so an Arial bullet written without one renders in the run's font — which
+    /// for the Symbol code points PowerPoint normally uses is a wrong character or a blank.
+    /// </para>
+    /// </remarks>
+    public static Action<D.ParagraphProperties> SetBullet(ListStyle style) => properties =>
+    {
+        foreach (var existing in properties.ChildElements.Where(IsBulletChoice).ToList())
+            existing.Remove();
+
+        foreach (var font in properties.Elements<D.BulletFont>().ToList())
+            font.Remove();
+
+        switch (style)
+        {
+            case ListStyle.Bullet:
+                InsertOrdered(properties, new D.BulletFont { Typeface = "Arial" });
+                InsertOrdered(properties, new D.CharacterBullet { Char = "\u2022" });
+                break;
+
+            case ListStyle.Numbered:
+                InsertOrdered(properties, new D.AutoNumberedBullet
+                {
+                    Type = D.TextAutoNumberSchemeValues.ArabicPeriod,
+                    StartAt = 1
+                });
+                break;
+
+            default:
+                InsertOrdered(properties, new D.NoBullet());
+                break;
+        }
+    };
+
+    /// <summary>The three mutually exclusive bullet elements — only one may be present.</summary>
+    static bool IsBulletChoice(OpenXmlElement element)
+        => element is D.NoBullet or D.CharacterBullet or D.AutoNumberedBullet or D.PictureBullet;
+
+    /// <summary>
+    /// Inserts a child into <c>a:pPr</c> at its schema position.
+    /// </summary>
+    /// <remarks>
+    /// The same rule as <c>a:rPr</c>, and the same consequence for breaking it: <c>a:pPr</c>'s
+    /// children are a sequence, so a <c>a:buChar</c> appended after the <c>a:defRPr</c> that was
+    /// already there produces a file PowerPoint reports as corrupt rather than repairing.
+    /// </remarks>
+    static void InsertOrdered(D.ParagraphProperties properties, OpenXmlElement child)
+    {
+        var rank = ParagraphOrderOf(child);
+        OpenXmlElement? previous = null;
+
+        foreach (var existing in properties.ChildElements)
+        {
+            if (ParagraphOrderOf(existing) > rank)
+                break;
+
+            previous = existing;
+        }
+
+        if (previous is null)
+            properties.InsertAt(child, 0);
+        else
+            properties.InsertAfter(child, previous);
+    }
+
+    /// <summary>Where a child sits in <c>a:pPr</c>'s schema sequence, by XML local name.</summary>
+    static int ParagraphOrderOf(OpenXmlElement element) => element.LocalName switch
+    {
+        "lnSpc" => 0,
+        "spcBef" => 1,
+        "spcAft" => 2,
+        "buClrTx" or "buClr" => 3,
+        "buSzTx" or "buSzPct" or "buSzPts" => 4,
+        "buFontTx" or "buFont" => 5,
+        "buNone" or "buAutoNum" or "buChar" or "buBlip" => 6,
+        "tabLst" => 7,
+        "defRPr" => 8,
+        "extLst" => 9,
+        _ => 10
+    };
 }

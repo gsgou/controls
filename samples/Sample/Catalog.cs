@@ -31,7 +31,8 @@ public static class Catalog
             new("parallaxcollectionview", "Parallax Collection", "▰", "Collection with a hero that scrolls at half speed"),
             new("treeview", "Tree View", "⎇", "Lazy-loaded hierarchy with drag-reorder"),
             new("datagrid", "Data Grid", "▩", "Sortable, templated columns over tabular data"),
-            new("docking", "Docking", "▨", "Visual-Studio-style tear-off tool windows")
+            new("docking", "Docking", "▨", "Visual-Studio-style tear-off tool windows"),
+            new("ribbon", "Ribbon", "☷", "Office-style tabbed command bar for desktop windows")
         ]),
 
         new("Table View", "#818CF8",

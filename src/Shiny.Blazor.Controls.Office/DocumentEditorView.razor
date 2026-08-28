@@ -4,6 +4,7 @@
 @using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Shapes
 @using Shiny.Controls.Office.Spreadsheet
+@using Shiny.Controls.Office.Text
 
 @*
     DocumentEditor with formatting chrome on top.
@@ -110,6 +111,29 @@
 
             <span class="doc-sep"></span>
 
+            <OfficeToolbarButton Icon="OfficeIcon.BulletList" Hint="Bulleted list" Toggle
+                                 Active="Format.List == ListStyle.Bullet" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleBulletList())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.NumberedList" Hint="Numbered list" Toggle
+                                 Active="Format.List == ListStyle.Numbered" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleNumberedList())" />
+
+            @*
+                Only enabled inside a list, because that is the only thing they move. Word greys them
+                out the same way rather than repurposing them as paragraph indent, which would make
+                one button mean two things depending on where the caret happens to be.
+            *@
+            <OfficeToolbarButton Icon="OfficeIcon.Outdent" Hint="Outdent (Shift+Tab)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || Format.List == ListStyle.None || Format.ListLevel == 0)"
+                                 Clicked="() => Run(c => c.ChangeListLevel(-1))" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Indent" Hint="Indent (Tab)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || Format.List == ListStyle.None)"
+                                 Clicked="() => Run(c => c.ChangeListLevel(1))" />
+
+            <span class="doc-sep"></span>
+
             <OfficePageMarginsMenu Disabled="Disabled"
                                    ShowTooltips="ShowToolbarTooltips"
                                    Current="@Margins"
@@ -141,6 +165,7 @@
                         SpellCheckEnabled="SpellCheckEnabled"
                         AllowFileDrop="AllowFileDrop"
                         DropRejected="DropRejected"
+                        SelectionChanged="StateHasChanged"
                         DocumentChanged="OnDocumentChanged" />
     </div>
 </div>

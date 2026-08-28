@@ -25,6 +25,7 @@
        xmlns:diagrams="clr-namespace:Sample.Features.Diagrams;assembly=Sample.MacOS"
        xmlns:dialogs="clr-namespace:Sample.Features.Dialogs;assembly=Sample.MacOS"
        xmlns:docking="clr-namespace:Sample.Features.Docking;assembly=Sample.MacOS"
+       xmlns:ribbon="clr-namespace:Sample.Features.Ribbon;assembly=Sample.MacOS"
        xmlns:fab="clr-namespace:Sample.Features.Fab;assembly=Sample.MacOS"
        xmlns:feedback="clr-namespace:Sample.Features.Feedback;assembly=Sample.MacOS"
        xmlns:fp="clr-namespace:Sample.Features.FloatingPanel;assembly=Sample.MacOS"
@@ -105,6 +106,10 @@
     </FlyoutItem>
     <FlyoutItem Title="Docking">
         <ShellContent ContentTemplate="{DataTemplate docking:DockingPage}" Route="docking" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Ribbon">
+        <ShellContent ContentTemplate="{DataTemplate ribbon:RibbonPage}" Route="ribbon" />
     </FlyoutItem>
 
     <MenuItem Text="TABLE VIEW" IsEnabled="False" />

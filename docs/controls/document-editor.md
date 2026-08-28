@@ -71,6 +71,50 @@ formatted, and is abandoned if the caret moves off the spot where it was made �
 thought better of cannot resurface in something typed later. Slides do the same thing through
 PowerPoint's own mechanism, the paragraph end mark.
 
+**Bulleted and numbered lists, from the toolbar or by typing.** Two toggle buttons turn every
+paragraph the selection touches into a bulleted or numbered item, and pressing the lit one again takes
+them back out. A Word paragraph does not carry its own bullet — it points at a definition in
+`numbering.xml` — so the first list in a document that has never had one creates the part, a
+nine-level definition and the instance behind it; press the button again elsewhere and the same
+definition is reused rather than a near-identical one being added each time.
+
+**Tab nests, Shift+Tab un-nests.** With the caret in a list item, <kbd>Tab</kbd> moves it in one level
+and <kbd>Shift</kbd>+<kbd>Tab</kbd> moves it out; a selection spanning several items moves each one
+relative to its own level rather than flattening them. The numbered levels **compound**, so the second
+level reads `1a`, `1b` under item 1 and restarts at `1a` under item 2 — the label says which item it
+belongs to, which a bare `a` does not. Bullets change glyph per level (`•`, `◦`, `▪`, repeating), and
+each level carries its own hanging indent so the label sits beside the text rather than on top of it.
+Outside a list <kbd>Tab</kbd> is still a tab character; the toolbar's indent and outdent buttons are
+enabled only inside one, because that is the only thing they move.
+
+**Typing `- ` or `1. ` starts a list.** Autoformat fires on the space after the marker, removes both
+the marker and the space, and does it in a single undo step so one <kbd>Ctrl</kbd>+<kbd>Z</kbd> puts
+the typed characters back. `-`, `*`, `+` and `•` give a bulleted list; a run of digits closed by `.`
+or `)` gives a numbered one. It is deliberately narrow — the marker has to be everything before the
+caret, so a hyphen mid-sentence is a hyphen, and a lone letter never numbers a list. Set
+`IsAutoFormatListEnabled = false` on the controller to turn it off.
+
+**Enter on an empty list item ends the list**, rather than making another empty one: a nested item
+comes out one level first, so repeated <kbd>Enter</kbd> walks back up the nesting and then leaves.
+
+```csharp
+var controller = editor.Controller!;
+
+controller.ToggleBulletList();      // or ToggleNumberedList()
+controller.SetListStyle(ListStyle.Numbered);
+controller.ChangeListLevel(1);      // nest; -1 to un-nest
+controller.HandleTab(shift: false); // what the Tab key does, wherever the caret is
+
+controller.CaretFormat.List;        // ListStyle.None / Bullet / Numbered
+controller.CaretFormat.ListLevel;   // 0-8
+```
+
+Lists in a document that already had them keep whatever `numbering.xml` says — glyphs, formats,
+`lvlText` templates and start values included, with each placeholder in a compound template rendered
+in the format of the level it refers to. The numbers themselves are a function of position, so
+inserting or deleting an item renumbers the rest of its list, and undo puts the numbers back rather
+than advancing them.
+
 **Page margins are settable from both toolbars.** A page-margins button opens Word's own four presets
 — Normal, Narrow, Moderate and Wide — as an action sheet on MAUI and a popover on Blazor, with the
 preset the document already matches marked. `DocumentEditorController.SetPageMargins` takes a preset,

@@ -1,0 +1,43 @@
+@namespace Shiny.Blazor.Controls
+
+@*
+    Icon, label and caret — the inside of every ribbon button, in one place so a plain button, a toggle
+    and a split button cannot end up drawing their contents differently.
+*@
+@if (!string.IsNullOrEmpty(this.Icon))
+{
+    <span class="shiny-ribbon-item__icon">
+        @if (RibbonItemBase.IsImageUrl(this.Icon!))
+        {
+            <img src="@this.Icon" alt="" />
+        }
+        else
+        {
+            @((MarkupString)this.Icon!)
+        }
+    </span>
+}
+
+@if (this.ShowLabel && !string.IsNullOrWhiteSpace(this.Text))
+{
+    <span class="shiny-ribbon-item__label">@this.Text</span>
+}
+
+@if (this.Caret)
+{
+    <svg class="shiny-ribbon-item__caret" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+         stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6l4 4 4-4" />
+    </svg>
+}
+
+@code {
+    [Parameter] public string? Icon { get; set; }
+
+    [Parameter] public string? Text { get; set; }
+
+    [Parameter] public bool ShowLabel { get; set; } = true;
+
+    /// <summary>Draws the dropdown caret. A split button puts one on its own chevron cell instead.</summary>
+    [Parameter] public bool Caret { get; set; }
+}

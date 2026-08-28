@@ -27,6 +27,12 @@ public sealed record CaretFormat
 
     public TextAlignment Alignment { get; init; } = TextAlignment.Left;
     public string? StyleName { get; init; }
+
+    /// <summary>Which list the caret's paragraph is in, so a toolbar can light the right button.</summary>
+    public ListStyle List { get; init; } = ListStyle.None;
+
+    /// <summary>How deeply nested that list item is, zero-based. Zero when it is not in a list.</summary>
+    public int ListLevel { get; init; }
 }
 
 public enum CaretMove
@@ -361,6 +367,12 @@ public sealed class DocumentEditorController : DocumentController
         if (string.IsNullOrEmpty(text))
             return;
 
+        // A space is the trigger Word uses for list autoformat, and it is checked before the space is
+        // inserted so the marker and the space both disappear into the list rather than surviving as
+        // the first characters of the item.
+        if (text == " " && this.TryAutoFormatList())
+            return;
+
         var at = this.DeleteSelectionIfAny();
         var end = at with { Offset = at.Offset + text.Length };
 
@@ -393,14 +405,40 @@ public sealed class DocumentEditorController : DocumentController
         this.AfterEdit();
     }
 
-    /// <summary>Enter: splits the paragraph at the caret.</summary>
+    /// <summary>
+    /// Enter: splits the paragraph at the caret.
+    /// </summary>
+    /// <remarks>
+    /// With one exception, which every editor has and which people rely on without noticing: Enter on
+    /// an <em>empty</em> list item ends the list rather than making another empty one. A nested item
+    /// comes out one level first, so repeated Enter walks back up the nesting and then leaves.
+    /// </remarks>
     public void InsertParagraph()
     {
+        if (this.Selection.IsEmpty && this.EmptyListItemAt(this.Selection.Focus.Block) is { } level)
+        {
+            var range = new DocumentRange(this.Selection.Focus, this.Selection.Focus);
+
+            this.document.Execute(level > 0
+                ? new ShiftListLevelCommand(range, -1)
+                : new SetListCommand(range, ListStyle.None));
+
+            this.AfterEdit();
+            return;
+        }
+
         var at = this.DeleteSelectionIfAny();
         this.document.Execute(new SplitParagraphCommand(at));
         this.Selection.MoveTo(new DocumentPosition(at.Block + 1, 0));
         this.AfterEdit();
     }
+
+    /// <summary>The level of the list item at a block, when that item has no text. Null otherwise.</summary>
+    int? EmptyListItemAt(int block)
+        => this.Document.Blocks.ElementAtOrDefault(block) is DocumentParagraph { List: { } label } paragraph
+            && paragraph.PlainText.Length == 0
+            ? label.Numbering?.Level ?? 0
+            : null;
 
     /// <summary>Backspace.</summary>
     public void DeleteBackward()
@@ -503,6 +541,154 @@ public sealed class DocumentEditorController : DocumentController
 
     public void SetParagraphStyle(string? styleId)
         => this.ApplyParagraphFormat(ParagraphFormatChange.Style(styleId));
+
+    // ---- lists ----
+
+    /// <summary>Turns the selected paragraphs into a bulleted list, or out of one when they already are.</summary>
+    public void ToggleBulletList()
+        => this.SetListStyle(this.CaretFormat.List == ListStyle.Bullet ? ListStyle.None : ListStyle.Bullet);
+
+    /// <summary>Turns the selected paragraphs into a numbered list, or out of one when they already are.</summary>
+    public void ToggleNumberedList()
+        => this.SetListStyle(this.CaretFormat.List == ListStyle.Numbered ? ListStyle.None : ListStyle.Numbered);
+
+    /// <summary>
+    /// Puts every paragraph the selection touches into a list of this style, or takes them out of one.
+    /// </summary>
+    /// <remarks>
+    /// The definitions are created on demand, so this works on a document that has never had a list in
+    /// it and has no <c>numbering.xml</c> at all.
+    /// </remarks>
+    public void SetListStyle(ListStyle style)
+    {
+        if (this.IsReadOnlyDocument)
+            return;
+
+        this.document.Execute(new SetListCommand(this.Selection.Range, style));
+        this.AfterEdit();
+    }
+
+    /// <summary>
+    /// Nests or un-nests the list items the selection touches.
+    /// </summary>
+    /// <remarks>
+    /// Only list items move. Indenting ordinary paragraphs is a different operation on a different
+    /// property, and doing both from one call would make Tab mean two things at once.
+    /// </remarks>
+    public void ChangeListLevel(int delta)
+    {
+        if (this.IsReadOnlyDocument || delta == 0)
+            return;
+
+        this.document.Execute(new ShiftListLevelCommand(this.Selection.Range, delta));
+        this.AfterEdit();
+    }
+
+    /// <summary>
+    /// What the Tab key does, which depends on where the caret is.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Inside a list it nests: Tab moves the item in a level, Shift+Tab moves it out. That is how the
+    /// second level of a list gets created at all — there is no other gesture for it, and it is what
+    /// every word processor does.
+    /// </para>
+    /// <para>
+    /// Anywhere else Tab is still a tab character, so the key is not silently swallowed outside a
+    /// list. Shift+Tab outside a list does nothing, matching Word: there is no character to remove.
+    /// </para>
+    /// </remarks>
+    /// <returns>True when the key was consumed.</returns>
+    public bool HandleTab(bool shift = false)
+    {
+        if (this.IsReadOnlyDocument)
+            return false;
+
+        if (this.SelectionTouchesAList())
+        {
+            this.ChangeListLevel(shift ? -1 : 1);
+            return true;
+        }
+
+        if (shift)
+            return false;
+
+        var at = this.DeleteSelectionIfAny();
+        this.document.Execute(new InsertTabCommand(at));
+        this.Selection.MoveTo(at with { Offset = at.Offset + InsertTabCommand.Width });
+        this.AfterEdit();
+        return true;
+    }
+
+    /// <summary>True when any paragraph the selection touches is a list item.</summary>
+    bool SelectionTouchesAList()
+    {
+        var range = this.Selection.Range;
+
+        for (var block = range.Start.Block; block <= range.End.Block; block++)
+        {
+            if (this.Document.Blocks.ElementAtOrDefault(block) is DocumentParagraph { List: not null })
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Turns a marker the user typed by hand into a real list, if that is what they typed.
+    /// </summary>
+    /// <remarks>
+    /// Runs on the space that follows the marker, and only when the marker is the whole paragraph so
+    /// far — a hyphen part-way through a sentence is a hyphen. The marker and the space that triggered
+    /// it are both removed, and the two edits share one undo step so a single Ctrl+Z puts the typed
+    /// characters back rather than leaving a bulleted empty paragraph behind.
+    /// </remarks>
+    /// <returns>True when a list was created and the space should not be inserted.</returns>
+    bool TryAutoFormatList()
+    {
+        if (!this.Selection.IsEmpty || !this.IsAutoFormatListEnabled)
+            return false;
+
+        var at = this.Selection.Focus;
+        if (at.Offset == 0)
+            return false;
+
+        // Already a list item: the marker is just text the user meant to type.
+        if (this.Document.Blocks.ElementAtOrDefault(at.Block) is not DocumentParagraph { List: null } paragraph)
+            return false;
+
+        var text = paragraph.PlainText;
+        if (at.Offset > text.Length)
+            return false;
+
+        // Everything before the caret, which has to be the marker and nothing else. Text after the
+        // caret is left alone — it becomes the item's text, which is what happens when someone
+        // marks up a paragraph they have already written.
+        var style = ListAutoFormat.Detect(text[..at.Offset]);
+        if (style == ListStyle.None)
+            return false;
+
+        var start = at with { Offset = 0 };
+
+        using (this.document.Undo.BeginTransaction(style == ListStyle.Bullet ? "Bulleted List" : "Numbered List"))
+        {
+            this.document.Execute(new DeleteRangeCommand(new DocumentRange(start, at)));
+            this.document.Execute(new SetListCommand(new DocumentRange(start, start), style));
+        }
+
+        this.Selection.MoveTo(start);
+        this.AfterEdit();
+        return true;
+    }
+
+    /// <summary>
+    /// Whether typing <c>-</c>, <c>*</c> or <c>1.</c> followed by a space starts a list. On by default.
+    /// </summary>
+    /// <remarks>
+    /// Offered as a switch because autoformat is the one editing behaviour that acts without being
+    /// asked, and a document of shell transcripts is a real reason to want it off.
+    /// </remarks>
+    public bool IsAutoFormatListEnabled { get; set; } = true;
 
     /// <summary>
     /// Applies run formatting to the selection, or holds it for the next thing typed.
@@ -1531,7 +1717,16 @@ public sealed class DocumentEditorController : DocumentController
             Color = style.Color,
             Highlight = style.Highlight,
             Alignment = paragraph.Format.Alignment,
-            StyleName = paragraph.StyleName
+            StyleName = paragraph.StyleName,
+
+            List = paragraph.List switch
+            {
+                null => ListStyle.None,
+                { IsBullet: true } => ListStyle.Bullet,
+                _ => ListStyle.Numbered
+            },
+
+            ListLevel = paragraph.List?.Numbering?.Level ?? 0
         };
 
         // Layered over what the document says, in the order they were chosen. Without this the toolbar

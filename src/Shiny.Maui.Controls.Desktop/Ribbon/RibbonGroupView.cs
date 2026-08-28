@@ -1,0 +1,392 @@
+using Microsoft.Maui.Controls.Shapes;
+using Shiny.Maui.Controls.Themes;
+
+namespace Shiny.Maui.Controls.Desktop.Ribbons;
+
+/// <summary>
+/// The box drawn for one <see cref="RibbonGroup"/> — its items, its caption, and the single button it
+/// collapses to when the ribbon runs out of room.
+/// </summary>
+/// <remarks>
+/// Both forms are built up front and swapped with <c>IsVisible</c> rather than added and removed. That
+/// is partly speed — a width change during a window drag would otherwise rebuild every group on every
+/// frame — and partly the macOS AppKit head, where a child added after the page has been laid out
+/// never gets a native view and paints nothing.
+/// </remarks>
+class RibbonGroupView : Grid
+{
+    readonly Ribbon owner;
+    readonly RibbonTab tab;
+    readonly RibbonGroup group;
+    readonly bool simplified;
+    readonly List<RibbonItemView> itemViews = new();
+    readonly List<View> hostedContent = new();
+
+    readonly View openView;
+    readonly View collapsedView;
+
+    bool collapsed;
+
+
+    public RibbonGroupView(Ribbon owner, RibbonTab tab, RibbonGroup group, bool simplified)
+    {
+        this.owner = owner;
+        this.tab = tab;
+        this.group = group;
+        this.simplified = simplified;
+
+        this.openView = this.BuildOpen();
+        this.collapsedView = this.BuildCollapsed();
+        this.collapsedView.IsVisible = false;
+
+        this.Add(this.openView);
+        this.Add(this.collapsedView);
+
+        if (!string.IsNullOrWhiteSpace(group.AutomationId))
+            this.AutomationId = group.AutomationId;
+
+        this.Refresh();
+    }
+
+
+    public RibbonGroup Group => this.group;
+
+    /// <summary>Whether the group is currently showing as a single button.</summary>
+    public bool IsCollapsed
+    {
+        get => this.collapsed;
+        set
+        {
+            if (this.collapsed == value)
+                return;
+
+            this.collapsed = value;
+            this.openView.IsVisible = !value;
+            this.collapsedView.IsVisible = value;
+        }
+    }
+
+    /// <summary>Whether the ribbon is allowed to collapse this one when space runs short.</summary>
+    public bool CanCollapse => this.group.CanCollapse && this.owner.AllowGroupCollapse && !this.simplified;
+
+    /// <summary>
+    /// How wide the open form wants to be. Zero when it cannot be measured yet — before a handler
+    /// exists, or in a headless host — which the ribbon reads as "do not collapse anything".
+    /// </summary>
+    public double DesiredOpenWidth
+    {
+        get
+        {
+            var measured = ((IView)this.openView).Measure(double.PositiveInfinity, double.PositiveInfinity);
+            return double.IsFinite(measured.Width) ? measured.Width : 0d;
+        }
+    }
+
+
+    /// <summary>Repaints every item's hover / checked / enabled state without rebuilding.</summary>
+    public void Refresh()
+    {
+        foreach (var view in this.itemViews)
+            view.Refresh();
+
+        this.Opacity = this.group.IsEnabled ? 1d : 0.38d;
+    }
+
+
+    /// <summary>
+    /// Unparents the views a <see cref="RibbonContentItem"/> lent the group, so the next rebuild can
+    /// re-place them. MAUI throws when a view that still has a parent is added somewhere else, and the
+    /// whole point of hosted content is that it survives a rebuild with its state intact.
+    /// </summary>
+    public void Release()
+    {
+        foreach (var content in this.hostedContent)
+        {
+            if (content.Parent is Layout layout)
+                layout.Children.Remove(content);
+            else if (content.Parent is ContentView holder)
+                holder.Content = null;
+            else if (content.Parent is Border border)
+                border.Content = null;
+        }
+
+        this.hostedContent.Clear();
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // The open form
+    // ---------------------------------------------------------------------------------------------
+
+    View BuildOpen()
+    {
+        var items = this.BuildItemsHost();
+
+        if (this.simplified)
+            return items;
+
+        var stack = new VerticalStackLayout { Spacing = 2 };
+        stack.Children.Add(items);
+
+        if (this.owner.ShowGroupTitles)
+            stack.Children.Add(this.BuildFooter());
+
+        return stack;
+    }
+
+
+    /// <summary>
+    /// The columns.
+    /// </summary>
+    /// <remarks>
+    /// Nothing in the model declares a column. A large item takes one to itself, small items fill the
+    /// current one up to <see cref="Ribbon.SmallItemRows"/> deep, and a separator or a large item ends
+    /// it — which is the whole of a ribbon's layout language, and why reordering a group's items
+    /// re-flows it without anything else being touched.
+    /// </remarks>
+    View BuildItemsHost()
+    {
+        var host = new HorizontalStackLayout
+        {
+            Spacing = 2,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var rows = this.simplified ? 1 : Math.Max(1, this.owner.SmallItemRows);
+        VerticalStackLayout? column = null;
+
+        void Flush() => column = null;
+
+        VerticalStackLayout Column()
+        {
+            if (column is { } existing && existing.Children.Count < rows)
+                return existing;
+
+            var created = new VerticalStackLayout { Spacing = 1, VerticalOptions = LayoutOptions.Center };
+            host.Children.Add(created);
+            column = created;
+            return created;
+        }
+
+        foreach (var item in this.group.VisibleItems)
+        {
+            var size = this.simplified ? RibbonItemSize.Small : item.Size;
+
+            switch (item)
+            {
+                case RibbonSeparator:
+                    Flush();
+                    host.Children.Add(this.BuildRule());
+                    continue;
+
+                case RibbonContentItem { Content: { } content }:
+                    if (content.Parent is Layout parent)
+                        parent.Children.Remove(content);
+
+                    this.hostedContent.Add(content);
+
+                    if (size == RibbonItemSize.Small)
+                    {
+                        Column().Children.Add(content);
+                    }
+                    else
+                    {
+                        Flush();
+                        host.Children.Add(content);
+                    }
+                    continue;
+
+                case RibbonContentItem:
+                    // Declared but empty. Nothing to draw and nothing to warn about at runtime.
+                    continue;
+            }
+
+            var view = new RibbonItemView(
+                this.owner,
+                this.tab,
+                this.group,
+                item,
+                size,
+                showLabel: !this.simplified || item.Size == RibbonItemSize.Small
+            );
+            this.itemViews.Add(view);
+
+            if (size == RibbonItemSize.Large)
+            {
+                Flush();
+                host.Children.Add(view);
+                Flush();
+            }
+            else
+            {
+                Column().Children.Add(view);
+            }
+        }
+
+        return host;
+    }
+
+
+    View BuildRule()
+    {
+        var rule = new BoxView
+        {
+            WidthRequest = 1,
+            VerticalOptions = LayoutOptions.Fill,
+            Margin = new Thickness(4, 4)
+        };
+
+        // Color, not BackgroundColor: on the macOS AppKit head a BoxView paints from Color alone and a
+        // background-only rule comes out invisible.
+        rule.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+        return rule;
+    }
+
+
+    View BuildFooter()
+    {
+        var title = new Label
+        {
+            Text = this.group.Title,
+            HorizontalTextAlignment = TextAlignment.Center,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            VerticalOptions = LayoutOptions.Center
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
+        title.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+
+        if (!this.group.ShowDialogLauncher)
+            return title;
+
+        var launcher = this.BuildDialogLauncher();
+
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            }
+        };
+        grid.Add(title, 0);
+        grid.Add(launcher, 1);
+        return grid;
+    }
+
+
+    /// <summary>
+    /// The small corner arrow — the convention for "there is more of this than fits here".
+    /// </summary>
+    View BuildDialogLauncher()
+    {
+        var glyph = new Polyline
+        {
+            // An arrow into the corner: down the left, along the bottom, then the diagonal back out.
+            Points = new PointCollection { new(0, 0), new(0, 7), new(7, 7), new(0, 0) },
+            Stroke = this.owner.ForegroundBrush,
+            StrokeThickness = 1.2,
+            StrokeLineJoin = PenLineJoin.Round,
+            WidthRequest = 8,
+            HeightRequest = 8,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        var border = new Border
+        {
+            Content = glyph,
+            Padding = new Thickness(4, 2),
+            StrokeThickness = 0,
+            Stroke = null,
+            BackgroundColor = Colors.Transparent,
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
+            GestureRecognizers =
+            {
+                new TapGestureRecognizer { Command = new Command(this.group.InvokeDialogLauncher) }
+            }
+        };
+
+        var hint = this.group.DialogLauncherTooltip ?? $"{this.group.Title} settings";
+        SemanticProperties.SetDescription(border, hint);
+
+        if (this.owner.ShowTooltips)
+        {
+            TooltipProperties.SetText(border, hint);
+            TooltipProperties.SetTrigger(border, TooltipTrigger.Hover);
+            TooltipProperties.SetPlacement(border, TooltipPlacement.Top);
+        }
+
+        return border;
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // The collapsed form
+    // ---------------------------------------------------------------------------------------------
+
+    View BuildCollapsed()
+    {
+        var stack = new VerticalStackLayout
+        {
+            Spacing = 2,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        // Falls back to the first item's icon, so a group only needs CollapsedIcon when the first
+        // command is a poor stand-in for the whole set.
+        var icon = this.group.CollapsedIcon
+            ?? this.group.VisibleItems.Select(x => x.Icon).FirstOrDefault(x => x is not null);
+
+        if (icon is not null)
+        {
+            stack.Children.Add(new Image
+            {
+                Source = icon,
+                WidthRequest = RibbonItemView.LargeIconSize,
+                HeightRequest = RibbonItemView.LargeIconSize,
+                Aspect = Aspect.AspectFit,
+                InputTransparent = true
+            });
+        }
+
+        var label = new Label
+        {
+            Text = this.group.Title,
+            HorizontalTextAlignment = TextAlignment.Center,
+            LineBreakMode = LineBreakMode.TailTruncation,
+            MaximumWidthRequest = 76
+        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
+        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+        stack.Children.Add(label);
+
+        stack.Children.Add(new Polyline
+        {
+            Points = new PointCollection { new(0, 0), new(4, 4), new(8, 0) },
+            Stroke = this.owner.ForegroundBrush,
+            StrokeThickness = 1.4,
+            StrokeLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+            WidthRequest = 8,
+            HeightRequest = 5,
+            HorizontalOptions = LayoutOptions.Center
+        });
+
+        var border = new Border
+        {
+            Content = stack,
+            Padding = new Thickness(8, 4),
+            StrokeThickness = 0,
+            Stroke = null,
+            BackgroundColor = Colors.Transparent,
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius)
+        };
+
+        border.GestureRecognizers.Add(new TapGestureRecognizer
+        {
+            Command = new Command(() => this.owner.OpenGroupPopup(this.tab, this.group, border))
+        });
+
+        SemanticProperties.SetDescription(border, this.group.Title);
+        return border;
+    }
+}

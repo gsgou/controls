@@ -1,14 +1,23 @@
 const instances = new Map();
 
-export function init(trackEl, dotNetRef) {
-    const state = { trackEl, dotNetRef, dragging: false };
+function percentFrom(trackEl, clientX, clientY, vertical) {
+    const rect = trackEl.getBoundingClientRect();
+
+    // Vertical runs bottom-to-top: the minimum is at the largest client Y.
+    const raw = vertical
+        ? (rect.bottom - clientY) / rect.height
+        : (clientX - rect.left) / rect.width;
+
+    return Math.max(0, Math.min(1, raw));
+}
+
+export function init(trackEl, dotNetRef, vertical) {
+    const state = { trackEl, dotNetRef, vertical: !!vertical, dragging: false };
 
     const onPointerMove = (e) => {
         if (!state.dragging) return;
         e.preventDefault();
-        const rect = trackEl.getBoundingClientRect();
-        const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        dotNetRef.invokeMethodAsync('OnDragUpdate', percent);
+        dotNetRef.invokeMethodAsync('OnDragUpdate', percentFrom(trackEl, e.clientX, e.clientY, state.vertical));
     };
 
     const onPointerUp = () => {
@@ -31,9 +40,16 @@ export function init(trackEl, dotNetRef) {
     instances.set(trackEl, state);
 }
 
-export function getClickPercent(trackEl, clientX) {
-    const rect = trackEl.getBoundingClientRect();
-    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+/** The drag maths depends on the axis, so a slider that flips orientation has to say so. */
+export function setOrientation(trackEl, vertical) {
+    const state = instances.get(trackEl);
+    if (state) {
+        state.vertical = !!vertical;
+    }
+}
+
+export function getClickPercent(trackEl, clientX, clientY, vertical) {
+    return percentFrom(trackEl, clientX, clientY, vertical);
 }
 
 export function dispose(trackEl) {

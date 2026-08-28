@@ -90,6 +90,13 @@ static class PageOverlay
         /// <summary>The nav bar's overflow menu, above the tab bar's and below anything annotating the page.</summary>
         public const int NavMenu = 8_600;
 
+        /// <summary>
+        /// A ribbon's dropdowns and the popup a collapsed group opens. Above the other bars' menus
+        /// because a ribbon is the topmost chrome on a desktop window, and still below a tooltip —
+        /// which can be raised over a menu line the pointer is resting on.
+        /// </summary>
+        public const int RibbonMenu = 8_700;
+
         public const int Tooltip = 9_000;
         public const int Walkthrough = 9_500;
         public const int Dialog = 10_000;

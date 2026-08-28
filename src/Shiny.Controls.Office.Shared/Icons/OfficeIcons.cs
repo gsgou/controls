@@ -19,6 +19,12 @@ public enum OfficeIcon
     Delete,
     Indent,
     Outdent,
+
+    /// <summary>Three dots with a rule beside each — a bulleted list.</summary>
+    BulletList,
+
+    /// <summary>The same three rules, numbered 1-2-3 instead of dotted.</summary>
+    NumberedList,
     Undo,
     Redo,
     Previous,
@@ -203,6 +209,45 @@ public static class OfficeIcons
             OfficeIconShape.Line(13.6f, 10f, 13.6f, 17f)
         ],
 
+        // Three markers down the left with a rule beside each. The rules start at the same x as the
+        // indent icons' short ones, so the list and indent buttons read as one family on the bar.
+        OfficeIcon.BulletList =>
+        [
+            .. ListRules(),
+            // Stroked at a radius under the stroke width so they paint as dots, the same trick the
+            // decimal buttons use. Filling them would read better and would also make them the only
+            // marks on the bar a host cannot tint.
+            OfficeIconShape.Circle(4.7f, 6f, 0.75f),
+            OfficeIconShape.Circle(4.7f, 12f, 0.75f),
+            OfficeIconShape.Circle(4.7f, 18f, 0.75f)
+        ],
+
+        // The numerals are drawn as strokes rather than typeset, for the same reason the bold B is:
+        // a glyph would arrive in the platform's own face at the platform's own weight.
+        OfficeIcon.NumberedList =>
+        [
+            .. ListRules(),
+
+            // 1 — a stem with a flag, no foot: a serif at 24px is a smudge.
+            OfficeIconShape.Polyline(3.6f, 4.6f, 4.9f, 3.6f, 4.9f, 8.2f),
+
+            // 2 — over the top, down the diagonal, along the base.
+            OfficeIconShape.Path(
+                OfficeIconVertex.MoveTo(3.4f, 10.4f),
+                OfficeIconVertex.CurveTo(3.4f, 9.3f, 4.3f, 9.1f, 4.9f, 9.4f),
+                OfficeIconVertex.CurveTo(5.7f, 9.8f, 5.6f, 10.8f, 5f, 11.4f),
+                OfficeIconVertex.LineTo(3.4f, 13.3f),
+                OfficeIconVertex.LineTo(5.8f, 13.3f)),
+
+            // 3 — two bowls sharing a waist.
+            OfficeIconShape.Path(
+                OfficeIconVertex.MoveTo(3.5f, 15.6f),
+                OfficeIconVertex.CurveTo(4.2f, 14.9f, 5.7f, 15.2f, 5.7f, 16.3f),
+                OfficeIconVertex.CurveTo(5.7f, 17.1f, 4.9f, 17.4f, 4.4f, 17.4f),
+                OfficeIconVertex.CurveTo(5.1f, 17.4f, 5.9f, 17.7f, 5.9f, 18.6f),
+                OfficeIconVertex.CurveTo(5.9f, 19.8f, 4.2f, 20.1f, 3.4f, 19.3f))
+        ],
+
         OfficeIcon.Indent =>
         [
             .. Rules(10f, 20f),
@@ -335,6 +380,21 @@ public static class OfficeIcons
         OfficeIconShape.Line(shortLeft, 9.6f, shortRight, 9.6f),
         OfficeIconShape.Line(4f, 14.4f, 20f, 14.4f),
         OfficeIconShape.Line(shortLeft, 19f, shortRight, 19f)
+    ];
+
+
+    /// <summary>
+    /// The three text rules a list icon puts its markers beside.
+    /// </summary>
+    /// <remarks>
+    /// Three rather than the alignment set's four: a list icon needs an odd number so the middle
+    /// marker sits on the icon's centre line, which is what keeps it from looking a pixel low.
+    /// </remarks>
+    static OfficeIconShape[] ListRules() =>
+    [
+        OfficeIconShape.Line(9f, 6f, 20.5f, 6f),
+        OfficeIconShape.Line(9f, 12f, 20.5f, 12f),
+        OfficeIconShape.Line(9f, 18f, 20.5f, 18f)
     ];
 
 

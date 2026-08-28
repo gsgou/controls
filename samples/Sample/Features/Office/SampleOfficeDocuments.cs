@@ -64,7 +64,16 @@ public static class SampleOfficeDocuments
                         new NumberingFormat { Val = NumberFormatValues.Decimal },
                         new LevelText { Val = "%1." },
                         new PreviousParagraphProperties(new Indentation { Left = "720", Hanging = "360" }))
-                    { LevelIndex = 0 })
+                    { LevelIndex = 0 },
+
+                    // A second level whose template names the level above it, so a nested item reads
+                    // as 1a rather than as a bare "a" that says nothing about which item it is under.
+                    new Level(
+                        new StartNumberingValue { Val = 1 },
+                        new NumberingFormat { Val = NumberFormatValues.LowerLetter },
+                        new LevelText { Val = "%1%2." },
+                        new PreviousParagraphProperties(new Indentation { Left = "1440", Hanging = "360" }))
+                    { LevelIndex = 1 })
                 { AbstractNumberId = 1 },
                 new NumberingInstance(new AbstractNumId { Val = 1 }) { NumberID = 1 });
 
@@ -92,7 +101,14 @@ public static class SampleOfficeDocuments
             body.AppendChild(Styled("Heading2", "A numbered list"));
             body.AppendChild(ListItem("Numbering is resolved from numbering.xml, counters and all."));
             body.AppendChild(ListItem("Labels sit in the hanging indent, like Word draws them."));
+            body.AppendChild(ListItem("Press Tab at the start of an item to nest it.", level: 1));
+            body.AppendChild(ListItem("Shift+Tab brings it back out again.", level: 1));
             body.AppendChild(ListItem("Restarting a level resets everything nested inside it."));
+
+            body.AppendChild(Text(
+                "The toolbar's two list buttons turn any paragraph into a bulleted or numbered item, " +
+                "and typing \"- \" or \"1. \" at the start of a line does the same thing without " +
+                "reaching for them."));
 
             body.AppendChild(Styled("Heading2", "Spelling"));
             body.AppendChild(Text(
@@ -124,9 +140,9 @@ public static class SampleOfficeDocuments
         new ParagraphProperties(new ParagraphStyleId { Val = styleId }),
         new Run(new W.Text(text)));
 
-    static Paragraph ListItem(string text) => new(
+    static Paragraph ListItem(string text, int level = 0) => new(
         new ParagraphProperties(new NumberingProperties(
-            new NumberingLevelReference { Val = 0 },
+            new NumberingLevelReference { Val = level },
             new NumberingId { Val = 1 })),
         new Run(new W.Text(text)));
 

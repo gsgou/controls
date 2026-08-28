@@ -117,7 +117,16 @@ public partial class ColorPicker : ContentView
                 new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Auto)
             },
-            Padding = new Thickness(12)
+            Padding = new Thickness(12),
+
+            // The spectrum, the hue bar and the opacity track are all Fill with a HeightRequest and no
+            // width of their own - a GraphicsView has no content to measure, so each one asks for zero.
+            // In a container that stretches (a page, a Fill cell) that is exactly right. In one that
+            // shrink-wraps its content - ColorPickerButton's popup Border is HorizontalOptions.Center -
+            // the only child that measures is the bottom row, and the whole picker came out the width of
+            // a hex Entry with the spectrum squeezed to nothing. A minimum, not a WidthRequest, so the
+            // picker still fills a wider host. 320 is the same panel width the Blazor picker uses.
+            MinimumWidthRequest = 320
         };
         rootGrid.Add(spectrumView, 0, 0);
         rootGrid.Add(hueBar, 0, 1);

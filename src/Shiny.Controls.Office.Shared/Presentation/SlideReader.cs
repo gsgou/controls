@@ -243,8 +243,13 @@ sealed class SlideReader
         var paragraphs = new List<ShapeParagraph>();
         OpenXmlCompositeElement? listStyle = this.ResolveListStyle(placeholder, inherited);
 
+        // One counter set per text body. A numbered list is a property of the shape it is in — two
+        // bulleted placeholders on the same slide each start at one, and a counter shared across the
+        // slide would have the second one carry on from the first.
+        var numbering = new ShapeNumbering();
+
         foreach (var paragraph in body.Elements<D.Paragraph>())
-            paragraphs.Add(this.ReadParagraph(paragraph, listStyle) with { Element = paragraph });
+            paragraphs.Add(this.ReadParagraph(paragraph, listStyle, numbering) with { Element = paragraph });
 
         if (paragraphs.Count == 0)
             return null;
@@ -299,7 +304,7 @@ sealed class SlideReader
         return master.TextStyles?.OtherStyle;
     }
 
-    ShapeParagraph ReadParagraph(D.Paragraph paragraph, OpenXmlCompositeElement? listStyle)
+    ShapeParagraph ReadParagraph(D.Paragraph paragraph, OpenXmlCompositeElement? listStyle, ShapeNumbering numbering)
     {
         var properties = paragraph.ParagraphProperties;
         var level = properties?.Level?.Value ?? 0;
@@ -336,11 +341,14 @@ sealed class SlideReader
             _ => TextAlignment.Left
         };
 
+        var (listStyle_, bullet) = ReadBullet(properties, levelDefaults, level, numbering);
+
         return new ShapeParagraph(runs)
         {
             Level = level,
             Alignment = alignment,
-            Bullet = ReadBullet(properties, levelDefaults),
+            List = listStyle_,
+            Bullet = bullet,
             SpaceBefore = SpacingOf(properties?.SpaceBefore ?? levelDefaults?.SpaceBefore),
             SpaceAfter = SpacingOf(properties?.SpaceAfter ?? levelDefaults?.SpaceAfter),
             LineSpacing = LineSpacingOf(properties?.LineSpacing ?? levelDefaults?.LineSpacing)
@@ -420,26 +428,48 @@ sealed class SlideReader
         return style;
     }
 
-    static string? ReadBullet(D.ParagraphProperties? properties, D.TextParagraphPropertiesType? defaults)
+    /// <summary>
+    /// Resolves the mark in front of a paragraph, and what kind of list that makes it.
+    /// </summary>
+    /// <remarks>
+    /// The paragraph's own properties win outright: <c>a:buNone</c> on the paragraph turns off a
+    /// bullet the layout supplies, and neither one falls through to the other. An auto-numbered
+    /// paragraph is the only case that needs more than the element in front of it — its number comes
+    /// from <paramref name="numbering"/>, which has been walking the body's paragraphs in order.
+    /// </remarks>
+    static (ListStyle Style, string? Bullet) ReadBullet(
+        D.ParagraphProperties? properties,
+        D.TextParagraphPropertiesType? defaults,
+        int level,
+        ShapeNumbering numbering)
     {
         OpenXmlElement? source = properties;
         if (source?.GetFirstChild<D.NoBullet>() is not null)
-            return null;
+            return (ListStyle.None, null);
 
         if (source?.GetFirstChild<D.CharacterBullet>() is { } character)
-            return MapBullet(character.Char?.Value);
+            return (ListStyle.Bullet, MapBullet(character.Char?.Value));
 
-        if (source?.GetFirstChild<D.AutoNumberedBullet>() is not null)
-            return "•";
+        if (source?.GetFirstChild<D.AutoNumberedBullet>() is { } auto)
+            return (ListStyle.Numbered, AutoNumber(auto, level, numbering));
 
         if (defaults?.GetFirstChild<D.NoBullet>() is not null)
-            return null;
+            return (ListStyle.None, null);
 
         if (defaults?.GetFirstChild<D.CharacterBullet>() is { } inherited)
-            return MapBullet(inherited.Char?.Value);
+            return (ListStyle.Bullet, MapBullet(inherited.Char?.Value));
 
-        return null;
+        if (defaults?.GetFirstChild<D.AutoNumberedBullet>() is { } inheritedAuto)
+            return (ListStyle.Numbered, AutoNumber(inheritedAuto, level, numbering));
+
+        return (ListStyle.None, null);
     }
+
+    /// <summary>Advances the counter for a level and renders it in the paragraph's own scheme.</summary>
+    static string AutoNumber(D.AutoNumberedBullet bullet, int level, ShapeNumbering numbering)
+        => ShapeNumbering.Render(
+            numbering.Next(level, bullet.StartAt?.Value ?? 1),
+            bullet.Type?.Value ?? D.TextAutoNumberSchemeValues.ArabicPeriod);
 
     /// <summary>Symbol-font bullet code points mapped onto glyphs a text font can actually draw.</summary>
     static string MapBullet(string? glyph) => glyph switch

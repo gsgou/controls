@@ -18,7 +18,9 @@
             style="@(this.SelectedFont is { Length: > 0 } current ? $"font-family:{Quote(current)}" : null)"
             @onclick="Toggle">
         <span class="shiny-fontpickerbutton-label">@(this.SelectedFont is { Length: > 0 } name ? name : this.Placeholder)</span>
-        <span class="shiny-fontpickerbutton-caret" aria-hidden="true">▾</span>
+        <span class="shiny-fontpickerbutton-caret" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+        </span>
     </button>
 
     @if (open)

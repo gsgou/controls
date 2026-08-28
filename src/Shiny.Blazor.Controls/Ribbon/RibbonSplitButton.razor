@@ -1,0 +1,70 @@
+@namespace Shiny.Blazor.Controls
+@inherits RibbonItemBase
+
+@*
+    Two hit targets in one item: the face runs the default action, the chevron opens the dropdown.
+
+    The shape to reach for when one choice out of a set is overwhelmingly the common one — AutoSum over
+    the other aggregates, paste over paste-special. Making that choice a menu pick puts a click in front
+    of it every time; making the others invisible loses them.
+*@
+<div class="@this.RootClass("shiny-ribbon-split")" @attributes="this.AdditionalAttributes">
+
+    <button type="button"
+            class="shiny-ribbon-split__face"
+            disabled="@this.IsDisabled"
+            title="@this.TitleText"
+            aria-label="@this.EffectiveTooltip"
+            @onclick="this.OnClickAsync">
+        <RibbonItemFace Icon="@this.Icon" Text="@this.Text" ShowLabel="true" />
+    </button>
+
+    <button type="button"
+            class="shiny-ribbon-split__caret"
+            data-ribbon-anchor="@this.Id"
+            disabled="@this.IsDisabled"
+            title="@($"{this.Text} options")"
+            aria-label="@($"{this.Text} options")"
+            aria-haspopup="true"
+            @onclick="this.Toggle">
+        <svg class="shiny-ribbon-item__caret" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6l4 4 4-4" />
+        </svg>
+    </button>
+</div>
+
+@code {
+    /// <summary>The dropdown's lines.</summary>
+    [Parameter] public List<RibbonMenuEntry>? Menu { get; set; }
+
+    /// <summary>Raised when the face — not the chevron — is pressed.</summary>
+    [Parameter] public EventCallback Clicked { get; set; }
+
+    /// <summary>Identifies the chevron to the placement pass, which anchors the panel against it.</summary>
+    internal string Id { get; } = $"rs-{Guid.NewGuid():N}";
+
+
+    async Task OnClickAsync()
+    {
+        if (this.IsDisabled)
+            return;
+
+        this.Ribbon?.CloseMenu();
+        await this.Clicked.InvokeAsync().ConfigureAwait(false);
+        this.Ribbon?.NotifyInvoked();
+    }
+
+
+    void Toggle()
+    {
+        if (this.IsDisabled || this.Ribbon is not { } ribbon)
+            return;
+
+        var entries = this.Menu?.Where(x => x is not null).ToList();
+        if (entries is not { Count: > 0 })
+            return;
+
+        ribbon.OpenMenu(this.Id, entries);
+    }
+}

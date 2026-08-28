@@ -1,0 +1,49 @@
+@namespace Shiny.Blazor.Controls
+@inherits RibbonItemBase
+
+@*
+    A button that stays pressed — bold, italic, show/hide gridlines. `Checked` is two-way, so the common
+    case is `@bind-Checked` with no click handler at all.
+*@
+<button type="button"
+        class="@this.ToggleClass"
+        disabled="@this.IsDisabled"
+        title="@this.TitleText"
+        aria-label="@this.EffectiveTooltip"
+        aria-pressed="@(this.Checked ? "true" : "false")"
+        @onclick="this.OnClickAsync"
+        @attributes="this.AdditionalAttributes">
+    <RibbonItemFace Icon="@this.Icon" Text="@this.Text" ShowLabel="true" />
+</button>
+
+@code {
+    /// <summary>Whether the format this button applies is on. Two-way bindable.</summary>
+    [Parameter] public bool Checked { get; set; }
+
+    [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
+
+    /// <summary>Raised after the toggle flips, with the new state.</summary>
+    [Parameter] public EventCallback<bool> Clicked { get; set; }
+
+
+    string ToggleClass
+        => this.Checked
+            ? this.RootClass("shiny-ribbon-button") + " is-checked"
+            : this.RootClass("shiny-ribbon-button");
+
+
+    async Task OnClickAsync()
+    {
+        if (this.IsDisabled)
+            return;
+
+        this.Ribbon?.CloseMenu();
+
+        var next = !this.Checked;
+        this.Checked = next;
+
+        await this.CheckedChanged.InvokeAsync(next).ConfigureAwait(false);
+        await this.Clicked.InvokeAsync(next).ConfigureAwait(false);
+        this.Ribbon?.NotifyInvoked();
+    }
+}

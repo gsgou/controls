@@ -11,6 +11,12 @@
     A <code>.docx</code> editor. Two controls: <code>DocumentEditor</code> is the bare surface,
     <code>DocumentEditorView</code> wraps it in a <code>ShinyToolbar</code> with the formatting chrome.
 </p>
+<p class="lead">
+    The toolbar's two list buttons make any paragraph a bulleted or numbered item, and typing
+    <code>-&nbsp;</code> or <code>1.&nbsp;</code> at the start of a line does the same. <kbd>Tab</kbd>
+    inside a list nests the item — the second level reads as <code>1a</code> — and
+    <kbd>Shift</kbd>+<kbd>Tab</kbd> brings it back out.
+</p>
 
 <div class="toolbar">
     <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>

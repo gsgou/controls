@@ -37,7 +37,8 @@ public static class Catalog
             new("cells", "Cells", "☰", "The 14 cell types behind TableView"),
             new("tableview", "Table View", "☷", "Settings-style sectioned lists with drag & sort"),
             new("datagrid", "Data Grid", "▦", "Sortable, templated columns over tabular data"),
-            new("docking", "Docking", "▨", "Visual-Studio-style tear-off tool windows")
+            new("docking", "Docking", "▨", "Visual-Studio-style tear-off tool windows"),
+            new("ribbon", "Ribbon", "☷", "Office-style tabbed command bar for desktop windows")
         ]),
 
         new("Office Documents", "#34D399",

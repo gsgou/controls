@@ -15,7 +15,18 @@ public sealed record ShapeParagraph(IReadOnlyList<StyledRun> Runs)
     /// <summary>Nesting level, 0-8, which drives indent and the bullet glyph.</summary>
     public int Level { get; init; }
 
+    /// <summary>The mark drawn in front of the paragraph — a glyph, or a resolved number.</summary>
     public string? Bullet { get; init; }
+
+    /// <summary>
+    /// Which kind of list the paragraph is in.
+    /// </summary>
+    /// <remarks>
+    /// Not inferable from <see cref="Bullet"/>: an auto-numbered paragraph arrives here with its
+    /// number already resolved to text, and "1." is a perfectly good literal bullet glyph. A toolbar
+    /// deciding which of its two buttons is lit needs the answer from the properties.
+    /// </remarks>
+    public ListStyle List { get; init; }
 
     public double SpaceBefore { get; init; }
     public double SpaceAfter { get; init; }

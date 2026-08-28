@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Layouts;
 using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Infrastructure;
 
@@ -6,19 +9,25 @@ namespace Shiny.Maui.Controls;
 
 public partial class Slider : ContentView
 {
+    // Gap between the track and the tooltip, and between the track and the mark captions.
+    const double TooltipGap = 6;
+    const double MarkLabelGap = 4;
+
+    readonly ObservableCollection<SliderMark> marks = new();
+    readonly List<MarkVisual> markVisuals = new();
+
     readonly BoxView trackBackground;
-    readonly BoxView trackFill;
     readonly Border thumb;
     readonly RoundRectangle thumbShape;
     readonly Border tooltipBadge;
     readonly Label tooltipLabel;
     readonly ContentView tooltipContainer;
-    readonly AbsoluteLayout trackLayout;
-    readonly Grid rootGrid;
+    readonly AbsoluteLayout rootLayout;
 
-    double trackWidth;
+    double layoutWidth;
+    double layoutHeight;
     bool isDragging;
-    double dragStartThumbX;
+    double dragStartCenter;
 
     public Slider()
     {
@@ -34,11 +43,10 @@ public partial class Slider : ContentView
 
         tooltipBadge = new Border
         {
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
+            StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerExtraSmallRadius),
             Stroke = Colors.Transparent,
             Padding = new Thickness(10, 4),
-            Content = tooltipLabel,
-            HorizontalOptions = LayoutOptions.Center
+            Content = tooltipLabel
         };
         // Theme default — overridden if the consumer sets TooltipBackgroundColor explicitly.
         tooltipBadge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
@@ -46,27 +54,13 @@ public partial class Slider : ContentView
         tooltipContainer = new ContentView
         {
             Content = tooltipBadge,
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.End,
-            Margin = new Thickness(0, 0, 0, 4),
-            IsVisible = true
+            InputTransparent = true
         };
 
-        // Track background (full gradient)
+        // Track background (solid blended color)
         trackBackground = new BoxView
         {
-            HeightRequest = 8,
-            CornerRadius = 4,
-            VerticalOptions = LayoutOptions.Center
-        };
-
-        // Track fill (partial gradient up to value)
-        trackFill = new BoxView
-        {
-            HeightRequest = 8,
-            CornerRadius = 4,
-            VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.Start
+            CornerRadius = 4
         };
 
         // Thumb
@@ -79,66 +73,60 @@ public partial class Slider : ContentView
             Stroke = ColdColor,
             Shadow = CreateThumbShadow(),
             Padding = 0,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Center
+            InputTransparent = true
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
         // Theme default — overridden if the consumer sets ThumbColor explicitly.
         thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
 
-        // Track layout
-        trackLayout = new AbsoluteLayout
-        {
-            HeightRequest = 32,
-            VerticalOptions = LayoutOptions.Center
-        };
+        // Everything — track, thumb, marks and tooltip — lives in one absolute layout. The orientations
+        // differ only in how the two axes are read, so a single coordinate space keeps them one code path.
+        rootLayout = new AbsoluteLayout();
 
-        AbsoluteLayout.SetLayoutBounds(trackBackground, new Rect(0, 0.5, 1, 8));
-        AbsoluteLayout.SetLayoutFlags(trackBackground, Microsoft.Maui.Layouts.AbsoluteLayoutFlags.PositionProportional | Microsoft.Maui.Layouts.AbsoluteLayoutFlags.WidthProportional);
+        AbsoluteLayout.SetLayoutBounds(trackBackground, new Rect(0, 0, 0, 0));
+        AbsoluteLayout.SetLayoutBounds(thumb, new Rect(0, 0, 24, 24));
+        AbsoluteLayout.SetLayoutBounds(tooltipContainer, new Rect(0, 0, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
 
-        AbsoluteLayout.SetLayoutBounds(trackFill, new Rect(0, 0.5, 0, 8));
-        AbsoluteLayout.SetLayoutFlags(trackFill, Microsoft.Maui.Layouts.AbsoluteLayoutFlags.YProportional);
+        rootLayout.Children.Add(trackBackground);
+        rootLayout.Children.Add(thumb);
+        rootLayout.Children.Add(tooltipContainer);
 
-        AbsoluteLayout.SetLayoutBounds(thumb, new Rect(0, 0.5, 24, 24));
-        AbsoluteLayout.SetLayoutFlags(thumb, Microsoft.Maui.Layouts.AbsoluteLayoutFlags.YProportional);
-
-        trackLayout.Children.Add(trackBackground);
-        trackLayout.Children.Add(trackFill);
-        trackLayout.Children.Add(thumb);
-
-
-        rootGrid = new Grid
-        {
-            RowDefinitions =
-            {
-                new RowDefinition(GridLength.Auto),
-                new RowDefinition(GridLength.Auto)
-            },
-            RowSpacing = 0
-        };
-
-        rootGrid.Add(tooltipContainer, 0, 0);
-        rootGrid.Add(trackLayout, 0, 1);
-
-        Content = rootGrid;
+        Content = rootLayout;
 
         // Set initial tooltip text
         tooltipLabel.Text = FormatValue(Value);
 
+        // The tooltip and the mark badges size themselves, so their true extents only arrive after a
+        // layout pass. Reposition then — this only moves them, so it cannot loop back into a resize.
+        tooltipContainer.SizeChanged += (_, _) => UpdateVisuals();
+
+        rootLayout.SizeChanged += (_, _) => SetLayoutSize(rootLayout.Width, rootLayout.Height);
+
+        marks.CollectionChanged += OnMarksChanged;
+
         // Gesture recognizers
         var panGesture = new PanGestureRecognizer();
         panGesture.PanUpdated += OnPanUpdated;
-        trackLayout.GestureRecognizers.Add(panGesture);
+        rootLayout.GestureRecognizers.Add(panGesture);
 
         var tapGesture = new TapGestureRecognizer();
         tapGesture.Tapped += OnTrackTapped;
-        trackLayout.GestureRecognizers.Add(tapGesture);
+        rootLayout.GestureRecognizers.Add(tapGesture);
 
+        UpdateLayoutRequests();
         UpdateVisuals();
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(Slider));
     }
+
+
+    /// <summary>
+    /// The stop points drawn on the track. Add <see cref="SliderMark"/>s in XAML or code; set
+    /// <see cref="SnapToMarks"/> to make the thumb come to rest on them.
+    /// </summary>
+    public IList<SliderMark> Marks => this.marks;
+
 
     /// <summary>
     /// The subtle drop shadow the thumb used to get from <c>Frame.HasShadow</c>. Border has no
@@ -153,15 +141,51 @@ public partial class Slider : ContentView
         Offset = new Point(0, 1)
     };
 
-    protected override void OnSizeAllocated(double width, double height)
+
+    bool IsVertical => this.Orientation == SliderOrientation.Vertical;
+
+
+    /// <summary>
+    /// Records the size the track was laid out at and redraws. The layout pass calls it; tests call it
+    /// in place of one, since nothing is arranged headlessly.
+    /// </summary>
+    internal void SetLayoutSize(double width, double height)
     {
-        base.OnSizeAllocated(width, height);
-        if (width > 0)
-        {
-            trackWidth = width;
-            UpdateVisuals();
-        }
+        this.layoutWidth = width;
+        this.layoutHeight = height;
+        this.UpdateVisuals();
     }
+
+
+    /// <summary>Where the thumb was placed, for tests to read.</summary>
+    internal Rect ThumbBounds => AbsoluteLayout.GetLayoutBounds(this.thumb);
+
+
+    /// <summary>The paint order of the slider's own layer, for tests to read.</summary>
+    internal int IndexOf(IView view) => this.rootLayout.Children.IndexOf(view);
+
+    internal View ThumbView => this.thumb;
+
+
+    /// <summary>Every drawn mark and the box it was placed in, for tests to read.</summary>
+    internal IReadOnlyList<(SliderMark Mark, View Marker, View? Caption)> DrawnMarks
+        => this.markVisuals.Select(v => (v.Mark, v.Marker, v.Caption)).ToList();
+
+
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+
+        // Marks are BindableObjects rather than elements, so nothing hands them a binding context.
+        // Seeding it is what lets a mark bind its Text or Value to the page's view-model.
+        foreach (var mark in this.marks)
+            SetInheritedBindingContext(mark, this.BindingContext);
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Interaction
+    // ---------------------------------------------------------------------------------------------
 
     void OnPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
@@ -171,15 +195,14 @@ public partial class Slider : ContentView
         {
             case GestureStatus.Started:
                 isDragging = true;
-                dragStartThumbX = AbsoluteLayout.GetLayoutBounds(thumb).X;
+                dragStartCenter = CenterFor(Percent);
                 break;
 
             case GestureStatus.Running:
-                if (isDragging && trackWidth > 0)
+                if (isDragging && Travel > 0)
                 {
-                    var currentX = dragStartThumbX + e.TotalX;
-                    var percent = Math.Clamp(currentX / (trackWidth - ThumbSize), 0, 1);
-                    SetValueFromPercent(percent);
+                    var current = dragStartCenter + (IsVertical ? e.TotalY : e.TotalX);
+                    SetValueFromPercent(PercentForCenter(current));
                 }
                 break;
 
@@ -190,23 +213,32 @@ public partial class Slider : ContentView
         }
     }
 
+
     void OnTrackTapped(object? sender, TappedEventArgs e)
     {
-        if (!IsEnabled || trackWidth <= 0) return;
+        if (!IsEnabled || Travel <= 0) return;
 
-        var point = e.GetPosition(trackLayout);
+        var point = e.GetPosition(rootLayout);
         if (point is null) return;
 
-        var percent = Math.Clamp(point.Value.X / trackWidth, 0, 1);
-        SetValueFromPercent(percent);
+        SetValueFromPercent(PercentForCenter(IsVertical ? point.Value.Y : point.Value.X));
     }
 
-    void SetValueFromPercent(double percent)
+
+    internal void SetValueFromPercent(double percent)
     {
+        percent = Math.Clamp(percent, 0, 1);
         var rawValue = Minimum + (percent * (Maximum - Minimum));
 
-        if (Step > 0)
+        var snapped = SnapToNearestMark(rawValue);
+        if (snapped is double markValue)
+        {
+            rawValue = markValue;
+        }
+        else if (Step > 0)
+        {
             rawValue = Math.Round(rawValue / Step) * Step;
+        }
 
         rawValue = Math.Clamp(rawValue, Minimum, Maximum);
 
@@ -218,51 +250,116 @@ public partial class Slider : ContentView
         }
     }
 
+
+    /// <summary>The mark the value comes to rest on, or null when marks are not snap targets.</summary>
+    double? SnapToNearestMark(double rawValue)
+    {
+        if (!SnapToMarks)
+            return null;
+
+        double? best = null;
+        var bestDistance = double.MaxValue;
+
+        foreach (var mark in this.marks)
+        {
+            if (!mark.IsVisible)
+                continue;
+
+            var distance = Math.Abs(mark.Value - rawValue);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = mark.Value;
+            }
+        }
+        return best;
+    }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Geometry
+    // ---------------------------------------------------------------------------------------------
+
+    internal double Percent => Maximum > Minimum
+        ? Math.Clamp((Value - Minimum) / (Maximum - Minimum), 0, 1)
+        : 0;
+
+    /// <summary>How far the thumb's centre can travel, which is the track less one thumb.</summary>
+    double Travel => Math.Max(0, (IsVertical ? layoutHeight : layoutWidth) - ThumbSize);
+
+    /// <summary>
+    /// Where the thumb's centre sits for a given fraction. Vertical runs bottom-to-top, so the minimum
+    /// is at the largest coordinate.
+    /// </summary>
+    internal double CenterFor(double percent) => IsVertical
+        ? layoutHeight - (ThumbSize / 2) - (percent * Travel)
+        : (ThumbSize / 2) + (percent * Travel);
+
+    internal double PercentForCenter(double center)
+    {
+        if (Travel <= 0)
+            return 0;
+
+        var percent = IsVertical
+            ? (layoutHeight - (ThumbSize / 2) - center) / Travel
+            : (center - (ThumbSize / 2)) / Travel;
+
+        return Math.Clamp(percent, 0, 1);
+    }
+
+
     void UpdateVisuals()
     {
-        if (trackWidth <= 0) return;
+        if (layoutWidth <= 0 || layoutHeight <= 0) return;
 
-        var percent = Maximum > Minimum
-            ? (Value - Minimum) / (Maximum - Minimum)
-            : 0;
-
+        var percent = Percent;
         var blended = BlendColors(ColdColor, HotColor, percent);
+        var tooltipBand = TooltipBand();
+        var trackBand = TrackBand();
 
-        // Update track background - solid blended color.
-        // Color is set alongside Background because the macOS/AppKit BoxView handler paints from
-        // Color only and ignores the Background brush, which left the track invisible there.
+        // Track — solid blended color. Color is set alongside Background because the macOS/AppKit BoxView
+        // handler paints from Color only and ignores the Background brush, which left the track invisible.
         trackBackground.Background = new SolidColorBrush(blended);
         trackBackground.Color = blended;
-        trackBackground.HeightRequest = TrackHeight;
         trackBackground.CornerRadius = new CornerRadius(TrackHeight / 2);
 
-        // Hide track fill - not needed with solid color approach
-        AbsoluteLayout.SetLayoutBounds(trackFill, new Rect(0, 0.5, 0, TrackHeight));
+        var trackAcross = tooltipBand + ((trackBand - TrackHeight) / 2);
+        AbsoluteLayout.SetLayoutBounds(trackBackground, IsVertical
+            ? new Rect(trackAcross, 0, TrackHeight, layoutHeight)
+            : new Rect(0, trackAcross, layoutWidth, TrackHeight));
 
-        // Update thumb position and color
-        var thumbX = percent * (trackWidth - ThumbSize);
-        AbsoluteLayout.SetLayoutBounds(thumb, new Rect(thumbX, 0.5, ThumbSize, ThumbSize));
+        // Thumb
+        var center = CenterFor(percent);
+        var thumbAcross = tooltipBand + ((trackBand - ThumbSize) / 2);
+        AbsoluteLayout.SetLayoutBounds(thumb, IsVertical
+            ? new Rect(thumbAcross, center - (ThumbSize / 2), ThumbSize, ThumbSize)
+            : new Rect(center - (ThumbSize / 2), thumbAcross, ThumbSize, ThumbSize));
+
         thumb.Stroke = blended;
         thumbShape.CornerRadius = ThumbSize / 2;
         thumb.WidthRequest = ThumbSize;
         thumb.HeightRequest = ThumbSize;
 
-        // Update tooltip
-        UpdateTooltip(percent, blended);
+        LayoutMarks(tooltipBand, trackBand);
+        UpdateTooltip(center, tooltipBand);
     }
 
-    void UpdateTooltip(double percent, Color blended)
+
+    void UpdateTooltip(double center, double tooltipBand)
     {
         tooltipContainer.IsVisible = ShowTooltip;
         if (!ShowTooltip) return;
 
-        // Update tooltip content first so we can measure
+        // Update tooltip content first so it can size itself
         if (TooltipTemplate is not null)
         {
             tooltipContainer.Content = CreateTooltipFromTemplate();
         }
         else
         {
+            if (!ReferenceEquals(tooltipContainer.Content, tooltipBadge))
+                tooltipContainer.Content = tooltipBadge;
+
             tooltipLabel.Text = FormatValue(Value);
             if (TooltipTextColor is Color ttText)
                 tooltipLabel.TextColor = ttText;
@@ -275,15 +372,23 @@ public partial class Slider : ContentView
                 tooltipBadge.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceVariant);
         }
 
-        // Position tooltip centered on thumb, clamped to track bounds.
-        // Use TranslationX on the badge to avoid layout squeeze at edges.
-        var tooltipWidth = tooltipBadge.Width > 0 ? tooltipBadge.Width : 50;
-        var thumbCenter = percent * (trackWidth - ThumbSize) + (ThumbSize / 2);
-        var halfTooltip = tooltipWidth / 2;
-        var tooltipX = Math.Clamp(thumbCenter - halfTooltip, 0, Math.Max(0, trackWidth - tooltipWidth));
-        tooltipBadge.TranslationX = tooltipX;
-        tooltipBadge.HorizontalOptions = LayoutOptions.Start;
+        var width = tooltipContainer.Width > 0 ? tooltipContainer.Width : EstimatedTooltipWidth();
+        var height = tooltipContainer.Height > 0 ? tooltipContainer.Height : EstimatedTooltipHeight();
+
+        // AutoSize keeps the badge sized to its own content; only the origin is placed here.
+        if (IsVertical)
+        {
+            var y = Math.Clamp(center - (height / 2), 0, Math.Max(0, layoutHeight - height));
+            var x = Math.Max(0, tooltipBand - TooltipGap - width);
+            AbsoluteLayout.SetLayoutBounds(tooltipContainer, new Rect(x, y, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
+        }
+        else
+        {
+            var x = Math.Clamp(center - (width / 2), 0, Math.Max(0, layoutWidth - width));
+            AbsoluteLayout.SetLayoutBounds(tooltipContainer, new Rect(x, 0, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
+        }
     }
+
 
     View? CreateTooltipFromTemplate()
     {
@@ -297,12 +402,14 @@ public partial class Slider : ContentView
         return null;
     }
 
+
     string FormatValue(double val)
     {
         if (!string.IsNullOrEmpty(ValueFormat))
             return val.ToString(ValueFormat);
         return val % 1 == 0 ? val.ToString("0") : val.ToString("0.#");
     }
+
 
     static Color BlendColors(Color color1, Color color2, double ratio)
     {

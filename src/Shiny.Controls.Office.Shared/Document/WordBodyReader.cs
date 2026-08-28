@@ -139,7 +139,8 @@ sealed class WordBodyReader(
         // once the whole block list exists.
         var label = new ListLabel(string.Empty, runStyle, level.Indent, level.Hanging)
         {
-            Numbering = new ListNumbering(numId.Value, levelIndex)
+            Numbering = new ListNumbering(numId.Value, levelIndex),
+            IsBullet = level.IsBullet
         };
 
         // The level's own indent applies unless the paragraph overrides it directly.

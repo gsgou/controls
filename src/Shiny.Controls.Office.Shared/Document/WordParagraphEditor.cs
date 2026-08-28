@@ -494,6 +494,118 @@ static class WordParagraphEditor
             properties.InsertAt(new ParagraphStyleId { Val = styleId }, 0);
     };
 
+    // ---- lists ----
+
+    /// <summary>The paragraph's outline level within its list, or zero when it is not in one.</summary>
+    public static int ListLevelOf(Paragraph paragraph)
+        => paragraph.ParagraphProperties?.NumberingProperties?.NumberingLevelReference?.Val?.Value ?? 0;
+
+    /// <summary>True when the paragraph points at a list definition.</summary>
+    public static bool IsListItem(Paragraph paragraph)
+        => paragraph.ParagraphProperties?.NumberingProperties?.NumberingId?.Val?.Value is > 0;
+
+    /// <summary>
+    /// Puts a paragraph into a list, at a level.
+    /// </summary>
+    /// <remarks>
+    /// The direct indent goes with it. A level definition carries its own indent and hanging indent,
+    /// and the reader only applies those when the paragraph has none of its own — so a paragraph that
+    /// had been indented by hand would keep that indent and ignore the one its level asks for, which
+    /// looks like the nesting silently not working.
+    /// </remarks>
+    public static Action<ParagraphProperties> SetList(int numId, int level) => properties =>
+    {
+        properties.RemoveAllChildren<NumberingProperties>();
+        properties.RemoveAllChildren<Indentation>();
+
+        InsertOrdered(properties, new NumberingProperties(
+            new NumberingLevelReference { Val = Math.Clamp(level, 0, WordListDefinitions.Levels - 1) },
+            new NumberingId { Val = numId }));
+    };
+
+    /// <summary>Takes a paragraph out of its list, leaving everything else about it alone.</summary>
+    public static Action<ParagraphProperties> ClearList() => properties =>
+    {
+        properties.RemoveAllChildren<NumberingProperties>();
+        properties.RemoveAllChildren<Indentation>();
+    };
+
+    /// <summary>
+    /// Moves a list item in or out one level, doing nothing to a paragraph that is not in a list.
+    /// </summary>
+    /// <remarks>
+    /// Reads the current level from the properties rather than taking it as an argument, so a
+    /// selection spanning several levels shifts each item relative to its own — Tab over a mixed
+    /// selection is meant to move the whole shape of the list, not flatten it.
+    /// </remarks>
+    public static Action<ParagraphProperties> ShiftListLevel(int delta) => properties =>
+    {
+        if (properties.NumberingProperties is not { } numbering)
+            return;
+
+        var current = numbering.NumberingLevelReference?.Val?.Value ?? 0;
+        var target = Math.Clamp(current + delta, 0, WordListDefinitions.Levels - 1);
+
+        numbering.RemoveAllChildren<NumberingLevelReference>();
+
+        // w:ilvl precedes w:numId in w:numPr, and unlike most of pPr this pair really is checked.
+        numbering.InsertAt(new NumberingLevelReference { Val = target }, 0);
+
+        // The level's own indent only reaches a paragraph with no indent of its own, so a leftover
+        // direct indent would pin an outdented item at the depth it used to be.
+        properties.RemoveAllChildren<Indentation>();
+    };
+
+    /// <summary>
+    /// Inserts a child of <c>w:pPr</c> at its schema position.
+    /// </summary>
+    /// <remarks>
+    /// <c>w:pPr</c>'s children are a sequence, not a set. Only the elements this editor writes are
+    /// ranked; anything unranked sorts last, which keeps a paragraph's <c>w:rPr</c> and
+    /// <c>w:sectPr</c> — both of which really do belong at the end — where they were.
+    /// </remarks>
+    static void InsertOrdered(ParagraphProperties properties, OpenXmlElement child)
+    {
+        var rank = OrderOf(child);
+        OpenXmlElement? previous = null;
+
+        foreach (var existing in properties.ChildElements)
+        {
+            if (OrderOf(existing) > rank)
+                break;
+
+            previous = existing;
+        }
+
+        if (previous is null)
+            properties.InsertAt(child, 0);
+        else
+            properties.InsertAfter(child, previous);
+    }
+
+    /// <summary>Where a child sits in <c>w:pPr</c>'s schema sequence, by XML local name.</summary>
+    static int OrderOf(OpenXmlElement element) => element.LocalName switch
+    {
+        "pStyle" => 0,
+        "keepNext" => 1,
+        "keepLines" => 2,
+        "pageBreakBefore" => 3,
+        "framePr" => 4,
+        "widowControl" => 5,
+        "numPr" => 6,
+        "pBdr" => 8,
+        "shd" => 9,
+        "tabs" => 10,
+        "spacing" => 20,
+        "ind" => 21,
+        "contextualSpacing" => 22,
+        "jc" => 30,
+        "outlineLvl" => 40,
+        "rPr" => 90,
+        "sectPr" => 91,
+        _ => 50
+    };
+
     // ---- inline objects ----
 
     /// <summary>How much of the offset space one run occupies.</summary>

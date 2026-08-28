@@ -1,28 +1,59 @@
 @namespace Shiny.Blazor.Controls
+@implements ISliderMarkHost
 
-<div class="shiny-gs @CssClass"
-     style="@RootStyle"
-     @attributes="AdditionalAttributes">
+@*
+    Every element is declared here rather than built with RenderTreeBuilder: CSS isolation only stamps
+    its scope attribute onto elements that appear in markup, and a rule targeting one built in C# — or
+    one built by a child component — silently never matches. That is why the marks are drawn here and
+    SliderMark itself renders nothing.
+*@
+<CascadingValue TValue="ISliderMarkHost" Value="this" IsFixed="true">
+    @ChildContent
+</CascadingValue>
 
-    @if (ShowTooltip)
-    {
-        <div class="shiny-gs-tooltip" style="left: clamp(0%, @(Percentage)% , 100%); @TooltipTransformStyle">
-            @if (TooltipTemplate is not null)
-            {
-                @TooltipTemplate(Value)
-            }
-            else
-            {
-                <div class="shiny-gs-tooltip-badge" style="@TooltipBadgeStyle">
-                    <span class="shiny-gs-tooltip-text">@FormatValue(Value)</span>
-                    <div class="shiny-gs-tooltip-pointer" style="@TooltipPointerStyle"></div>
-                </div>
-            }
-        </div>
-    }
+@* @attributes comes first so a caller's splatted style cannot replace the custom properties the
+   component sets on itself. *@
+<div @attributes="AdditionalAttributes"
+     class="shiny-gs @OrientationClass @CssClass"
+     style="@RootStyle">
 
+    @* Tooltip, marks and thumb are all positioned against the track, which is the one element whose box
+       is the value axis in both orientations. *@
     <div class="shiny-gs-track" style="@TrackStyle" @onclick="OnTrackClick" @ref="trackRef">
-        <div class="shiny-gs-track-fill" style="@TrackFillStyle"></div>
+
+        @if (ShowTooltip)
+        {
+            <div class="shiny-gs-tooltip" style="@TooltipStyle">
+                @if (TooltipTemplate is not null)
+                {
+                    @TooltipTemplate(Value)
+                }
+                else
+                {
+                    <div class="shiny-gs-tooltip-badge" style="@TooltipBadgeStyle">
+                        <span class="shiny-gs-tooltip-text">@FormatValue(Value)</span>
+                        <div class="shiny-gs-tooltip-pointer" style="@TooltipPointerStyle"></div>
+                    </div>
+                }
+            </div>
+        }
+
+        @foreach (var mark in VisibleMarks)
+        {
+            var shape = mark.Shape ?? MarkShape;
+
+            <div class="shiny-gs-mark @(shape == SliderMarkShape.Line ? "shiny-gs-mark-line" : "shiny-gs-mark-dot")"
+                 style="@MarkerStyle(mark, shape)"></div>
+
+            @* The label sits in the band beside the track, never on it: snapping parks the thumb on a
+               mark by definition, so anything centred on the track would spend its life underneath one. *@
+            if (ShowMarkLabels && !string.IsNullOrWhiteSpace(mark.Text))
+            {
+                <div class="shiny-gs-mark-label @(shape == SliderMarkShape.Bubble ? "shiny-gs-mark-bubble" : null)"
+                     style="@MarkLabelStyle(mark, shape)">@mark.Text</div>
+            }
+        }
+
         <div class="shiny-gs-thumb"
              style="@ThumbStyle"
              @onpointerdown="OnThumbPointerDown"

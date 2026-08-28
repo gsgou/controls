@@ -465,6 +465,11 @@ public sealed class SlideEditorController : SlideController
         if (!this.CanEditText() || text.Length == 0)
             return;
 
+        // Checked before the space is inserted, so the marker and the space both disappear into the
+        // list rather than surviving as the first characters of the item.
+        if (text == " " && this.TryAutoFormatList())
+            return;
+
         // No transaction in the common case. A transaction closes as a composite, which ends the
         // coalescing run - so wrapping every keystroke in one makes each character its own undo step.
         if (this.TextSelection.IsEmpty)
@@ -689,17 +694,113 @@ public sealed class SlideEditorController : SlideController
     public void SetAlignment(TextAlignment alignment)
         => this.FormatParagraphs(ShapeTextEditor.SetAlignment(alignment), "Alignment");
 
-    /// <summary>Indents or outdents the paragraphs the selection touches.</summary>
+    /// <summary>
+    /// Indents or outdents the paragraphs the selection touches — what Tab and Shift+Tab do.
+    /// </summary>
+    /// <remarks>
+    /// Each paragraph moves relative to its own level. Reading one level off the first paragraph and
+    /// applying it to all of them flattened a mixed selection onto a single depth, which is only
+    /// invisible while the selection happens to be one line.
+    /// </remarks>
     public void ShiftLevel(int delta)
     {
-        if (this.Selection?.Text is not { } body)
+        if (delta == 0)
             return;
 
-        var range = this.TextSelection.Normalized();
-        var level = body.Paragraphs.ElementAtOrDefault(range.Start.Paragraph)?.Level ?? 0;
-
-        this.FormatParagraphs(ShapeTextEditor.SetLevel(level + delta), delta > 0 ? "Indent" : "Outdent");
+        this.FormatParagraphs(ShapeTextEditor.ShiftLevel(delta), delta > 0 ? "Indent" : "Outdent");
     }
+
+    /// <summary>Turns the selected paragraphs into a bulleted list, or out of one when they already are.</summary>
+    public void ToggleBulletList()
+        => this.SetListStyle(this.CaretFormat.List == ListStyle.Bullet ? ListStyle.None : ListStyle.Bullet);
+
+    /// <summary>Turns the selected paragraphs into a numbered list, or out of one when they already are.</summary>
+    public void ToggleNumberedList()
+        => this.SetListStyle(this.CaretFormat.List == ListStyle.Numbered ? ListStyle.None : ListStyle.Numbered);
+
+    /// <summary>
+    /// Sets the mark in front of every paragraph the selection touches.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="ListStyle.None"/> is written explicitly rather than by removing the bullet element:
+    /// a body placeholder inherits its bullet from the master, so leaving the element out puts the
+    /// inherited bullet back instead of taking it away.
+    /// </remarks>
+    public void SetListStyle(ListStyle style)
+        => this.FormatParagraphs(ShapeTextEditor.SetBullet(style), style switch
+        {
+            ListStyle.Bullet => "Bulleted list",
+            ListStyle.Numbered => "Numbered list",
+            _ => "Remove list"
+        });
+
+    /// <summary>
+    /// What the Tab key does inside a shape's text: nest the item, or un-nest it with Shift.
+    /// </summary>
+    /// <remarks>
+    /// Unconditional, unlike the Word editor's — a shape's paragraphs all carry an outline level
+    /// whether or not they are drawing a bullet, so there is no "not in a list" case to fall through
+    /// to a tab character. A slide has no tab stops to speak of either.
+    /// </remarks>
+    /// <returns>True when the key was consumed.</returns>
+    public bool HandleTab(bool shift = false)
+    {
+        if (!this.CanEditText())
+            return false;
+
+        this.ShiftLevel(shift ? -1 : 1);
+        return true;
+    }
+
+    /// <summary>
+    /// Turns a marker the user typed by hand into a real list, if that is what they typed.
+    /// </summary>
+    /// <remarks>
+    /// The Word editor's behaviour, sharing the same detector so the two cannot drift: type <c>-</c>
+    /// or <c>1.</c> at the start of a paragraph, press space, and the marker becomes the bullet.
+    /// </remarks>
+    /// <returns>True when a list was created and the space should not be inserted.</returns>
+    bool TryAutoFormatList()
+    {
+        if (!this.IsAutoFormatListEnabled || !this.TextSelection.IsEmpty)
+            return false;
+
+        if (this.Selection?.Text?.Paragraphs.ElementAtOrDefault(this.caret.Paragraph) is not { } paragraph)
+            return false;
+
+        // Already carrying a mark: what was typed is text the user meant to keep.
+        if (paragraph.List != ListStyle.None)
+            return false;
+
+        var text = paragraph.PlainText;
+        if (this.caret.Offset == 0 || this.caret.Offset > text.Length)
+            return false;
+
+        // Everything before the caret, and nothing after it: text already in the paragraph becomes
+        // the item's text rather than blocking the conversion.
+        var style = ListAutoFormat.Detect(text[..this.caret.Offset]);
+        if (style == ListStyle.None)
+            return false;
+
+        var start = this.caret with { Offset = 0 };
+
+        using (this.deck.Undo.BeginTransaction(style == ListStyle.Bullet ? "Bulleted list" : "Numbered list"))
+        {
+            this.Execute(new DeleteSlideRangeCommand(new SlideTextRange(start, this.caret)));
+            this.Execute(new FormatSlideParagraphsCommand(
+                new SlideTextRange(start, start),
+                ShapeTextEditor.SetBullet(style),
+                style == ListStyle.Bullet ? "Bulleted list" : "Numbered list"));
+        }
+
+        this.MoveCaret(start);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether typing <c>-</c>, <c>*</c> or <c>1.</c> followed by a space starts a list. On by default.
+    /// </summary>
+    public bool IsAutoFormatListEnabled { get; set; } = true;
 
     void FormatRuns(Action<D.RunProperties> apply, string label)
     {
@@ -945,6 +1046,10 @@ public sealed class SlideEditorController : SlideController
             style.FontFamily,
             style.Color,
             paragraph.Alignment,
-            style.Highlight);
+            style.Highlight)
+        {
+            List = paragraph.List,
+            Level = paragraph.Level
+        };
     }
 }

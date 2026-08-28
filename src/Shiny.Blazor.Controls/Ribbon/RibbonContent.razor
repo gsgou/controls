@@ -1,0 +1,16 @@
+@namespace Shiny.Blazor.Controls
+@inherits RibbonItemBase
+
+@*
+    Hosts arbitrary markup inside a group — a picker, a select, a swatch strip, anything the ribbon has
+    no item kind for. Size="Small" makes it one row of a shared column; the default takes a column.
+*@
+<div class="@this.RootClass("shiny-ribbon-content")"
+     title="@this.TitleText"
+     @attributes="this.AdditionalAttributes">
+    @this.ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

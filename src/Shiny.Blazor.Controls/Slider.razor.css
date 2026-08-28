@@ -1,34 +1,52 @@
 .shiny-gs {
     position: relative;
-    width: 100%;
-    padding-top: calc(36px * var(--shiny-density-scale, 1));
     user-select: none;
     touch-action: none;
 }
 
+/* The bands around the track are padding on the root, sized by custom properties the component writes
+   inline. Declaring the padding here and the measurements there keeps one owner for each. */
+.shiny-gs-horizontal {
+    width: 100%;
+    padding-top: var(--shiny-gs-tooltip-band, calc(36px * var(--shiny-density-scale, 1)));
+    padding-bottom: var(--shiny-gs-label-band, 0px);
+}
+
+.shiny-gs-vertical {
+    display: inline-block;
+    padding-left: var(--shiny-gs-tooltip-band, 0px);
+    padding-right: var(--shiny-gs-label-band, 0px);
+}
+
 .shiny-gs-track {
     position: relative;
-    width: 100%;
     cursor: pointer;
     background: var(--shiny-color-surface-variant, #e5e7eb);
 }
 
-.shiny-gs-track-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
+.shiny-gs-horizontal .shiny-gs-track {
+    width: 100%;
 }
+
+/* ----- Thumb ----- */
 
 .shiny-gs-thumb {
     position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
     border-radius: 50%;
     cursor: grab;
     box-shadow: var(--shiny-elevation-2, 0 2px 4px rgba(0, 0, 0, 0.2));
     transition: box-shadow 0.15s ease;
     z-index: 2;
+}
+
+.shiny-gs-horizontal .shiny-gs-thumb {
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.shiny-gs-vertical .shiny-gs-thumb {
+    left: 50%;
+    transform: translate(-50%, 50%);
 }
 
 .shiny-gs-thumb:hover {
@@ -40,11 +58,23 @@
     box-shadow: var(--shiny-elevation-3, 0 2px 12px rgba(0, 0, 0, 0.4));
 }
 
+/* ----- Tooltip ----- */
+
 .shiny-gs-tooltip {
     position: absolute;
-    top: 0;
     pointer-events: none;
     z-index: 3;
+}
+
+.shiny-gs-horizontal .shiny-gs-tooltip {
+    bottom: 100%;
+    margin-bottom: calc(6px + var(--shiny-gs-thumb-overhang, 0px));
+}
+
+.shiny-gs-vertical .shiny-gs-tooltip {
+    right: 100%;
+    margin-right: calc(6px + var(--shiny-gs-thumb-overhang, 0px));
+    transform: translateY(50%);
 }
 
 .shiny-gs-tooltip-badge {
@@ -62,12 +92,73 @@
 
 .shiny-gs-tooltip-pointer {
     position: absolute;
+    width: 0;
+    height: 0;
+}
+
+.shiny-gs-horizontal .shiny-gs-tooltip-pointer {
     bottom: -6px;
     left: 50%;
     transform: translateX(-50%);
-    width: 0;
-    height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 6px solid;
+}
+
+.shiny-gs-vertical .shiny-gs-tooltip-pointer {
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 6px solid;
+}
+
+/* ----- Marks ----- */
+
+.shiny-gs-mark {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.shiny-gs-horizontal .shiny-gs-mark {
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.shiny-gs-vertical .shiny-gs-mark {
+    left: 50%;
+    transform: translate(-50%, 50%);
+}
+
+.shiny-gs-mark-dot {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.shiny-gs-mark-label {
+    position: absolute;
+    pointer-events: none;
+    white-space: nowrap;
+    line-height: 1.2;
+    z-index: 1;
+}
+
+/* A bubble is the same label with a pill around it. The component supplies the transform inline, so
+   these rules only own the offset from the track and the pill's own paint. */
+.shiny-gs-horizontal .shiny-gs-mark-label {
+    top: 100%;
+    margin-top: calc(4px + var(--shiny-gs-thumb-overhang, 0px));
+}
+
+.shiny-gs-vertical .shiny-gs-mark-label {
+    left: 100%;
+    margin-left: calc(4px + var(--shiny-gs-thumb-overhang, 0px));
+}
+
+.shiny-gs-mark-bubble {
+    padding: 3px 8px;
+    border-radius: var(--shiny-shape-corner-full, 999px);
+    font-weight: 500;
+    box-shadow: var(--shiny-elevation-1, 0 1px 2px rgba(0, 0, 0, 0.18));
 }

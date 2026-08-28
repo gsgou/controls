@@ -524,6 +524,7 @@ public class SlideEditor : ContentView, IDisposable
             case EditorKey.End: this.controller.MoveToLineEnd(shift); break;
             case EditorKey.Backspace: this.controller.Backspace(); break;
             case EditorKey.Enter: this.controller.InsertParagraph(); break;
+            case EditorKey.Tab: this.controller.HandleTab(shift); break;
             case EditorKey.SelectAll: this.controller.SelectAll(); break;
             case EditorKey.Bold: this.controller.ToggleBold(); break;
             case EditorKey.Italic: this.controller.ToggleItalic(); break;

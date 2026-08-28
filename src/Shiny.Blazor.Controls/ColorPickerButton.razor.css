@@ -50,6 +50,18 @@
     z-index: 40;
 }
 
+/*
+    width is not decoration here, it is what stops the panel collapsing.
+
+    An absolutely positioned box is shrink-to-fit, so it sizes to its own content - and this popover's
+    content is a stack of canvases that are all width:100%. A percentage width contributes nothing to
+    an intrinsic width calculation, so the only children that measured were the 44px preview swatch and
+    the hex box, and the whole picker came out ~108px wide with the spectrum squeezed to ~80px. The
+    trigger is 30px, so there is nothing else for the box to size against either.
+
+    The viewport cap is deliberately vw and not a percentage: a percentage would resolve against the
+    30px trigger - the containing block - and put us straight back where we started.
+*/
 .shiny-colorpickerbutton-popover {
     position: absolute;
     top: calc(100% + 4px);
@@ -57,6 +69,9 @@
     z-index: 41;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    width: 320px;
+    max-width: calc(100vw - 16px);
     border: 1px solid var(--shiny-color-outline-variant, #e5e7eb);
     border-radius: var(--shiny-shape-corner-medium, 8px);
     background: var(--shiny-color-surface, #fff);

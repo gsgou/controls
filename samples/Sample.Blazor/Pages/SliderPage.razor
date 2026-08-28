@@ -63,6 +63,84 @@
 </div>
 
 <div class="demo-section">
+    <h2>Stop Points (snap to marks)</h2>
+    <Slider @bind-Value="quality"
+                    Minimum="0"
+                    Maximum="3"
+                    ShowTooltip="false"
+                    ColdColor="#94A3B8"
+                    HotColor="#F59E0B">
+        <SliderMark Value="0" Text="Draft" Color="#94A3B8" />
+        <SliderMark Value="1" Text="Good" Color="#38BDF8" />
+        <SliderMark Value="2" Text="Better" Color="#22C55E" />
+        <SliderMark Value="3" Text="Best" Color="#F59E0B" />
+    </Slider>
+    <div class="state">Quality: <code>@quality.ToString("0")</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Bubbles</h2>
+    <Slider @bind-Value="plan"
+                    Minimum="0"
+                    Maximum="100"
+                    MarkShape="SliderMarkShape.Bubble"
+                    ShowTooltip="false"
+                    ColdColor="#6366F1"
+                    HotColor="#EC4899">
+        <SliderMark Value="0" Text="Free" Color="#E0E7FF" TextColor="#3730A3" />
+        <SliderMark Value="50" Text="Pro" Color="#6366F1" TextColor="#FFFFFF" />
+        <SliderMark Value="100" Text="Team" Color="#EC4899" TextColor="#FFFFFF" />
+    </Slider>
+    <div class="state">Plan: <code>@plan.ToString("0")</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Reference Ticks (no snapping)</h2>
+    <Slider @bind-Value="pressure"
+                    Minimum="0"
+                    Maximum="60"
+                    Step="1"
+                    SnapToMarks="false"
+                    MarkShape="SliderMarkShape.Line"
+                    TrackHeight="10"
+                    ColdColor="#0EA5E9"
+                    HotColor="#DC2626"
+                    ValueFormat="0 psi">
+        <SliderMark Value="15" Text="Low" />
+        <SliderMark Value="32" Text="Target" Color="#22C55E" />
+        <SliderMark Value="50" Text="Max" Color="#DC2626" />
+    </Slider>
+    <div class="state">Pressure: <code>@pressure.ToString("0") psi</code></div>
+</div>
+
+<div class="demo-section">
+    <h2>Vertical</h2>
+    <div style="display: flex; gap: 3rem; align-items: flex-start;">
+        <Slider @bind-Value="bass"
+                        Orientation="SliderOrientation.Vertical"
+                        VerticalLength="180"
+                        Minimum="0"
+                        Maximum="10"
+                        Step="1"
+                        ColdColor="#0EA5E9"
+                        HotColor="#22C55E" />
+        <Slider @bind-Value="treble"
+                        Orientation="SliderOrientation.Vertical"
+                        VerticalLength="180"
+                        Minimum="0"
+                        Maximum="10"
+                        ShowTooltip="false"
+                        ColdColor="#8B5CF6"
+                        HotColor="#F97316">
+            <SliderMark Value="0" Text="Flat" />
+            <SliderMark Value="5" Text="Mid" />
+            <SliderMark Value="10" Text="Bright" />
+        </Slider>
+    </div>
+    <div class="state">Bass: <code>@bass.ToString("0")</code> &middot; Treble: <code>@treble.ToString("0")</code></div>
+</div>
+
+<div class="demo-section">
     <h2>Disabled</h2>
     <Slider Value="65" IsEnabled="false" />
 </div>
@@ -73,6 +151,11 @@
     double volume = 30;
     double opacity = 0.75;
     double rating = 3;
+    double quality = 2;
+    double plan = 50;
+    double pressure = 32;
+    double bass = 6;
+    double treble = 5;
 
     string GetStars(int count) => new string('\u2B50', count);
 }

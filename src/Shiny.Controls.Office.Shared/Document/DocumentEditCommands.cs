@@ -257,6 +257,127 @@ public sealed record ParagraphFormatChange(string Name, Action<ParagraphProperti
 }
 
 /// <summary>
+/// Puts every paragraph a range touches into a bulleted or numbered list, or takes them out of one.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is not a <see cref="FormatParagraphsCommand"/> with a different mutation, because the
+/// mutation cannot be described until the document has been asked for a <c>numId</c> — and asking
+/// may create the definitions, and with them the numbering part itself. A paragraph pointed at a
+/// definition that does not exist carries a list reference and renders as ordinary text.
+/// </para>
+/// <para>
+/// Each paragraph keeps the level it already had, so switching a nested list from bullets to numbers
+/// preserves its shape instead of flattening it.
+/// </para>
+/// </remarks>
+public sealed record SetListCommand(DocumentRange Range, ListStyle Style) : DocumentCommand
+{
+    public override string Name => this.Style switch
+    {
+        ListStyle.Bullet => "Bulleted List",
+        ListStyle.Numbered => "Numbered List",
+        _ => "Remove List"
+    };
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var numId = this.Style == ListStyle.None ? 0 : context.EnsureListNumbering(this.Style);
+
+        // A document with no main part cannot gain a numbering part either. Better to do nothing than
+        // to stamp a numId of zero onto the paragraphs, which reads as "explicitly not a list".
+        if (this.Style != ListStyle.None && numId == 0)
+            return new NoOpCommand();
+
+        var restore = context.CaptureRange(this.Range);
+
+        for (var block = this.Range.Start.Block; block <= this.Range.End.Block; block++)
+        {
+            if (context.ParagraphElementAt(block) is not { } paragraph)
+                continue;
+
+            var level = WordParagraphEditor.ListLevelOf(paragraph);
+
+            WordParagraphEditor.FormatParagraph(
+                paragraph,
+                this.Style == ListStyle.None
+                    ? WordParagraphEditor.ClearList()
+                    : WordParagraphEditor.SetList(numId, level));
+
+            context.Reproject(block);
+        }
+
+        return restore;
+    }
+}
+
+/// <summary>
+/// Moves the list items a range touches in or out one level — what Tab and Shift+Tab do.
+/// </summary>
+/// <remarks>
+/// Paragraphs that are not in a list are skipped rather than indented, so a Tab that catches a
+/// heading along with three list items nests the items and leaves the heading where it was.
+/// </remarks>
+public sealed record ShiftListLevelCommand(DocumentRange Range, int Delta) : DocumentCommand
+{
+    public override string Name => this.Delta > 0 ? "Indent List" : "Outdent List";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        if (this.Delta == 0)
+            return new NoOpCommand();
+
+        var restore = context.CaptureRange(this.Range);
+        var changed = false;
+
+        for (var block = this.Range.Start.Block; block <= this.Range.End.Block; block++)
+        {
+            if (context.ParagraphElementAt(block) is not { } paragraph)
+                continue;
+
+            if (!WordParagraphEditor.IsListItem(paragraph))
+                continue;
+
+            WordParagraphEditor.FormatParagraph(paragraph, WordParagraphEditor.ShiftListLevel(this.Delta));
+            context.Reproject(block);
+            changed = true;
+        }
+
+        return changed ? restore : new NoOpCommand();
+    }
+}
+
+/// <summary>
+/// Inserts a tab at a position.
+/// </summary>
+/// <remarks>
+/// Its own command rather than an <see cref="InsertInlineObjectCommand"/> because a tab is four
+/// characters wide in the offset space and an inline object is one — an inverse that deleted a single
+/// character would leave three spaces behind on undo.
+/// </remarks>
+public sealed record InsertTabCommand(DocumentPosition At) : DocumentCommand
+{
+    /// <summary>How much of the offset space a tab occupies. Must match what the reader projects.</summary>
+    public const int Width = 4;
+
+    public override string Name => "Tab";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var paragraph = context.ParagraphElementAt(this.At.Block);
+        if (paragraph is null)
+            return new NoOpCommand();
+
+        WordParagraphEditor.InsertObject(paragraph, this.At.Offset, new Run(new TabChar()));
+        context.Reproject(this.At.Block);
+
+        return new DeleteRangeCommand(new DocumentRange(
+            this.At,
+            this.At with { Offset = this.At.Offset + Width }));
+    }
+}
+
+/// <summary>
 /// Restores a span of paragraphs to a previously captured state.
 /// </summary>
 /// <remarks>

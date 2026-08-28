@@ -2,15 +2,16 @@
 
 [← All Shiny Controls](../../README.md)
 
-A slider control with a two-color gradient track, blended thumb border, tooltip, and full drag/tap interaction.
+A slider with a two-color gradient track, blended thumb border, tooltip, full drag/tap interaction,
+labelled **stop points**, and a **vertical** orientation.
 
 ```xml
 <shiny:Slider Value="{Binding Temperature}"
-                      Minimum="0"
-                      Maximum="100"
-                      ColdColor="#3B82F6"
-                      HotColor="#EF4444"
-                      ShowTooltip="True" />
+              Minimum="0"
+              Maximum="100"
+              ColdColor="#3B82F6"
+              HotColor="#EF4444"
+              ShowTooltip="True" />
 ```
 
 | Property | Type | Default | Description |
@@ -19,11 +20,61 @@ A slider control with a two-color gradient track, blended thumb border, tooltip,
 | Minimum | double | 0 | Minimum value |
 | Maximum | double | 100 | Maximum value |
 | Step | double | 1 | Snap increment |
-| ColdColor | Color/string | #3B82F6 | Left gradient color |
-| HotColor | Color/string | #EF4444 | Right gradient color |
-| TrackHeight | double | 8 | Track height |
+| Orientation | SliderOrientation | Horizontal | `Vertical` puts the minimum at the bottom |
+| VerticalLength | double | 220 | Track length when vertical (it has no width to stretch into) |
+| ColdColor | Color/string | #3B82F6 | Left/bottom gradient color |
+| HotColor | Color/string | #EF4444 | Right/top gradient color |
+| TrackHeight | double | 8 | Track thickness |
 | ThumbSize | double | 24 | Thumb diameter |
-| ThumbColor | Color/string | White | Thumb fill color |
+| ThumbColor | Color/string | Theme surface | Thumb fill color |
 | ShowTooltip | bool | true | Show value tooltip |
 | TooltipTemplate | DataTemplate/RenderFragment | null | Custom tooltip content |
 | ValueFormat | string? | null | Format string for tooltip value |
+
+## Stop points
+
+`Marks` (MAUI) / `<SliderMark>` children (Blazor) put labelled stops on the track. With
+`SnapToMarks` on — the default — the thumb comes to rest on the nearest one, and `Step` is ignored;
+turn it off to leave the marks as reference points.
+
+```xml
+<shiny:Slider Value="{Binding Quality}" Minimum="0" Maximum="3" ShowTooltip="False">
+    <shiny:Slider.Marks>
+        <shiny:SliderMark Value="0" Text="Draft"  Color="#94A3B8" />
+        <shiny:SliderMark Value="1" Text="Good"   Color="#38BDF8" />
+        <shiny:SliderMark Value="2" Text="Better" Color="#22C55E" />
+        <shiny:SliderMark Value="3" Text="Best"   Color="#F59E0B" />
+    </shiny:Slider.Marks>
+</shiny:Slider>
+```
+
+```razor
+<Slider @bind-Value="quality" Minimum="0" Maximum="3" ShowTooltip="false">
+    <SliderMark Value="0" Text="Draft" Color="#94A3B8" />
+    <SliderMark Value="3" Text="Best" Color="#F59E0B" />
+</Slider>
+```
+
+| Slider property | Type | Default | Description |
+|---|---|---|---|
+| SnapToMarks | bool | true | Thumb comes to rest on the nearest mark |
+| MarkShape | SliderMarkShape | Dot | `Dot`, `Bubble` (pill-shaped label) or `Line` (tick) |
+| MarkSize | double | 10 | Dot diameter / tick thickness |
+| MarkColor | Color/string | Theme surface | Fill for marks that set no color |
+| MarkTextColor | Color/string | Theme on-surface-variant | Label color for marks that set no color |
+| MarkFontSize | double | 11 | Label size |
+| ShowMarkLabels | bool | true | Draw the labels at all |
+
+| SliderMark | Type | Default | Description |
+|---|---|---|---|
+| Value | double | 0 | Position on the track |
+| Text | string? | null | Label — a caption under a dot/tick, the content of a bubble |
+| Color | Color/string? | null | Dot, tick or bubble fill |
+| TextColor | Color/string? | null | Label color |
+| Shape | SliderMarkShape? | null | Overrides the slider's `MarkShape` for this mark |
+| Size | double | -1 | Overrides `MarkSize` for this mark |
+| IsVisible | bool | true | A hidden mark is not drawn and is not a snap target |
+
+The stop point itself is always the dot or tick on the track; the label sits in the band beside it.
+Snapping parks the thumb on a mark by definition, so anything drawn on the track at a mark's value
+would spend its life underneath the thumb.

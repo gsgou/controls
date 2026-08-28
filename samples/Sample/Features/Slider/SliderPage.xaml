@@ -66,6 +66,94 @@
                                   ValueFormat="0.0" />
             <Label Text="{Binding FineValue, StringFormat='Value: {0:0.0}'}" />
 
+            <!-- Stop Points -->
+            <Label Text="Stop Points (snap to marks)" FontSize="18" FontAttributes="Bold" />
+            <shiny:Slider AutomationId="QualitySlider"
+                                  Value="{Binding Quality}"
+                                  Minimum="0"
+                                  Maximum="3"
+                                  ShowTooltip="False"
+                                  ColdColor="#94A3B8"
+                                  HotColor="#F59E0B">
+                <shiny:Slider.Marks>
+                    <shiny:SliderMark Value="0" Text="Draft" Color="#94A3B8" />
+                    <shiny:SliderMark Value="1" Text="Good" Color="#38BDF8" />
+                    <shiny:SliderMark Value="2" Text="Better" Color="#22C55E" />
+                    <shiny:SliderMark Value="3" Text="Best" Color="#F59E0B" />
+                </shiny:Slider.Marks>
+            </shiny:Slider>
+            <Label AutomationId="QualityLabel" Text="{Binding Quality, StringFormat='Quality: {0:0}'}" />
+
+            <!-- Bubble Marks -->
+            <Label Text="Bubbles" FontSize="18" FontAttributes="Bold" />
+            <shiny:Slider AutomationId="PlanSlider"
+                                  Value="{Binding Plan}"
+                                  Minimum="0"
+                                  Maximum="100"
+                                  MarkShape="Bubble"
+                                  ShowTooltip="False"
+                                  ColdColor="#6366F1"
+                                  HotColor="#EC4899">
+                <shiny:Slider.Marks>
+                    <shiny:SliderMark Value="0" Text="Free" Color="#E0E7FF" TextColor="#3730A3" />
+                    <shiny:SliderMark Value="50" Text="Pro" Color="#6366F1" TextColor="White" />
+                    <shiny:SliderMark Value="100" Text="Team" Color="#EC4899" TextColor="White" />
+                </shiny:Slider.Marks>
+            </shiny:Slider>
+            <Label Text="{Binding Plan, StringFormat='Plan: {0:0}'}" />
+
+            <!-- Reference Ticks -->
+            <Label Text="Reference Ticks (no snapping)" FontSize="18" FontAttributes="Bold" />
+            <shiny:Slider AutomationId="PressureSlider"
+                                  Value="{Binding Pressure}"
+                                  Minimum="0"
+                                  Maximum="60"
+                                  Step="1"
+                                  SnapToMarks="False"
+                                  MarkShape="Line"
+                                  TrackHeight="10"
+                                  ColdColor="#0EA5E9"
+                                  HotColor="#DC2626"
+                                  ValueFormat="0 psi">
+                <shiny:Slider.Marks>
+                    <shiny:SliderMark Value="15" Text="Low" />
+                    <shiny:SliderMark Value="32" Text="Target" Color="#22C55E" />
+                    <shiny:SliderMark Value="50" Text="Max" Color="#DC2626" />
+                </shiny:Slider.Marks>
+            </shiny:Slider>
+            <Label Text="{Binding Pressure, StringFormat='Pressure: {0:0} psi'}" />
+
+            <!-- Vertical -->
+            <Label Text="Vertical" FontSize="18" FontAttributes="Bold" />
+            <HorizontalStackLayout Spacing="32" HorizontalOptions="Center">
+                <shiny:Slider AutomationId="BassSlider"
+                                      Orientation="Vertical"
+                                      VerticalLength="180"
+                                      Value="{Binding Bass}"
+                                      Minimum="0"
+                                      Maximum="10"
+                                      Step="1"
+                                      ColdColor="#0EA5E9"
+                                      HotColor="#22C55E" />
+                <shiny:Slider AutomationId="TrebleSlider"
+                                      Orientation="Vertical"
+                                      VerticalLength="180"
+                                      Value="{Binding Treble}"
+                                      Minimum="0"
+                                      Maximum="10"
+                                      ShowTooltip="False"
+                                      ColdColor="#8B5CF6"
+                                      HotColor="#F97316">
+                    <shiny:Slider.Marks>
+                        <shiny:SliderMark Value="0" Text="Flat" />
+                        <shiny:SliderMark Value="5" Text="Mid" />
+                        <shiny:SliderMark Value="10" Text="Bright" />
+                    </shiny:Slider.Marks>
+                </shiny:Slider>
+            </HorizontalStackLayout>
+            <Label Text="{Binding Bass, StringFormat='Bass: {0:0}'}" />
+            <Label Text="{Binding Treble, StringFormat='Treble: {0:0}'}" />
+
         </VerticalStackLayout>
     </ScrollView>
 

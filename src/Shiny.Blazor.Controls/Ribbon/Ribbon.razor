@@ -1,0 +1,176 @@
+@namespace Shiny.Blazor.Controls
+@using Microsoft.AspNetCore.Components.Web
+
+@*
+    The ribbon's own chrome: the contextual band, the tab strip and the frame around the body. The
+    groups themselves are the RibbonTab children rendered into the body, and each group draws itself.
+
+    Every tab is in the tree whether or not it is showing - an unselected one renders nothing but stays
+    registered, which is what keeps the strip stable while a contextual tab comes and goes.
+*@
+<div @ref="rootElement"
+     class="@this.RootCss"
+     style="@this.RootStyle"
+     @attributes="this.AdditionalAttributes">
+@*
+    The cascade wraps the whole bar rather than only the body, so a menu button parked in the quick
+    access row can reach the ribbon to open its panel the same way one inside a group does.
+
+    Deliberately NOT IsFixed. The instance never changes, which is exactly what IsFixed is for — but
+    IsFixed also skips the subscription, and the items read live state off this object (the display
+    mode decides whether they draw large or small). Without the subscription an item is only
+    re-rendered when one of its own parameters changes, and a button whose parameters are all strings
+    is never re-rendered at all: switching to the simplified layout left it drawn large for the rest
+    of its life, while the split and menu buttons beside it — which carry a List parameter, so the
+    diff always considers them changed — updated correctly.
+*@
+<CascadingValue Value="this">
+
+    @if (this.ContextualTab is { } context)
+    {
+        <div class="shiny-ribbon__context" style="@this.ContextStyle">@context.ContextTitle</div>
+    }
+
+    @if (this.ShowTabStrip)
+    {
+        <div class="shiny-ribbon__header">
+
+            @if (!string.IsNullOrWhiteSpace(this.ApplicationButtonText))
+            {
+                <button type="button"
+                        class="shiny-ribbon__app"
+                        @onclick="this.OnApplicationButtonAsync">@this.ApplicationButtonText</button>
+            }
+
+            <div class="shiny-ribbon__tabs" role="tablist">
+                @foreach (var tab in this.VisibleTabs)
+                {
+                    var active = this.IsActive(tab);
+
+                    <button type="button"
+                            role="tab"
+                            class="@(active ? "shiny-ribbon__tab is-active" : "shiny-ribbon__tab")"
+                            style="@this.TabStyle(tab, active)"
+                            aria-selected="@(active ? "true" : "false")"
+                            disabled="@(!tab.Enabled)"
+                            @onclick="() => this.SelectAsync(tab)">@tab.Title</button>
+                }
+            </div>
+
+            @if (this.QuickAccess is not null)
+            {
+                <div class="shiny-ribbon__qat">@this.QuickAccess</div>
+            }
+
+            @if (this.AllowCollapse)
+            {
+                <button type="button"
+                        class="shiny-ribbon__collapse"
+                        aria-expanded="@(this.BodyVisible ? "true" : "false")"
+                        aria-label="@(this.BodyVisible ? "Collapse the ribbon" : "Expand the ribbon")"
+                        title="@(this.BodyVisible ? "Collapse the ribbon" : "Expand the ribbon")"
+                        @onclick="this.ToggleCollapsedAsync">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        @if (this.BodyVisible)
+                        {
+                            <path d="M4 10l4-4 4 4" />
+                        }
+                        else
+                        {
+                            <path d="M4 6l4 4 4-4" />
+                        }
+                    </svg>
+                </button>
+            }
+        </div>
+    }
+
+    @*
+        Hidden with a class rather than dropped from the tree: the tabs live in here, and a body that
+        stopped rendering would unregister every one of them and empty the strip above it.
+    *@
+    <div class="@(this.BodyVisible ? "shiny-ribbon__body" : "shiny-ribbon__body is-hidden")"
+         style="@this.BodyStyle">
+        @this.ChildContent
+    </div>
+
+    @if (this.IsMenuOpen)
+    {
+        <div class="shiny-ribbon-backdrop" @onclick="this.CloseMenu"></div>
+    }
+
+    @if (this.menuEntries is { Count: > 0 } entries)
+    {
+        <div class="shiny-ribbon-menu" popover="manual" data-ribbon-menu="@this.menuOwner" role="menu">
+            @this.Level(entries, 0)
+        </div>
+    }
+
+</CascadingValue>
+</div>
+
+@code {
+    /// <summary>
+    /// One level of a dropdown, and the panel for whichever of its lines is expanded.
+    /// </summary>
+    /// <remarks>
+    /// A submenu is rendered as a sibling of the row that opened it so the placement code can anchor it
+    /// with <c>previousElementSibling</c> — the same shape the toolbar's menus use, and the reason both
+    /// end up in the browser's top layer rather than clipped by whatever the bar is sitting in.
+    /// </remarks>
+    RenderFragment Level(IReadOnlyList<RibbonMenuEntry> entries, int depth) => @<text>
+        @foreach (var entry in entries)
+        {
+            if (entry.IsSeparator)
+            {
+                <div class="shiny-ribbon-menu__sep" role="separator"></div>
+                continue;
+            }
+
+            var expanded = depth < this.menuPath.Count && ReferenceEquals(this.menuPath[depth], entry);
+
+            <button type="button"
+                    role="menuitem"
+                    class="@(expanded ? "shiny-ribbon-menu__item is-open" : "shiny-ribbon-menu__item")"
+                    disabled="@entry.IsDisabled"
+                    aria-haspopup="@(entry.HasChildren ? "true" : null)"
+                    aria-expanded="@(entry.HasChildren ? (expanded ? "true" : "false") : null)"
+                    @onclick="() => this.OnMenuEntryAsync(entry, depth)">
+
+                <span class="shiny-ribbon-menu__tick" aria-hidden="true">@(entry.IsChecked ? "✓" : null)</span>
+
+                @if (!string.IsNullOrEmpty(entry.Icon))
+                {
+                    <span class="shiny-ribbon-menu__icon">
+                        @if (RibbonItemBase.IsImageUrl(entry.Icon!))
+                        {
+                            <img src="@entry.Icon" alt="" />
+                        }
+                        else
+                        {
+                            @((MarkupString)entry.Icon!)
+                        }
+                    </span>
+                }
+
+                <span class="shiny-ribbon-menu__label">@entry.Text</span>
+
+                @if (entry.HasChildren)
+                {
+                    <svg class="shiny-ribbon-menu__caret" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                         stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" />
+                    </svg>
+                }
+            </button>
+
+            @if (expanded && entry.Children is { Count: > 0 })
+            {
+                <div class="shiny-ribbon-menu shiny-ribbon-submenu" popover="manual" role="menu">
+                    @this.Level(entry.Children!, depth + 1)
+                </div>
+            }
+        }
+    </text>;
+}

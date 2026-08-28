@@ -1,0 +1,27 @@
+.ribbon-demo {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.ribbon-demo__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    font-size: 13px;
+}
+
+.ribbon-demo__controls p { margin: 0; color: gray; }
+
+.ribbon-demo__controls .row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ribbon-demo__controls .log {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+}

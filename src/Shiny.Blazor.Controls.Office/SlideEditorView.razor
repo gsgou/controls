@@ -101,8 +101,21 @@
                                  Active="Format.Alignment == TextAlignment.Right" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
                                  Clicked="() => Align(TextAlignment.Right)" />
 
+            <OfficeToolbarButton Icon="OfficeIcon.BulletList" Hint="Bulleted list" Toggle
+                                 Active="Format.List == ListStyle.Bullet" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleBulletList())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.NumberedList" Hint="Numbered list" Toggle
+                                 Active="Format.List == ListStyle.Numbered" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleNumberedList())" />
+
+            @*
+                Always enabled while text is being edited, unlike the document toolbar's pair: every
+                paragraph in a shape carries an outline level whether or not it draws a bullet, so
+                there is no "not in a list" state to grey them out for.
+            *@
             <OfficeToolbarButton Icon="OfficeIcon.Outdent" Hint="Outdent (Shift+Tab)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(-1))" />
+                                 Disabled="@(!HasText || Format.Level == 0)" Clicked="() => Run(c => c.ShiftLevel(-1))" />
 
             <OfficeToolbarButton Icon="OfficeIcon.Indent" Hint="Indent (Tab)" ShowTooltip="ShowToolbarTooltips"
                                  Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(1))" />

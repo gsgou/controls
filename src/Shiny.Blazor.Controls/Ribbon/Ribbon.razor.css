@@ -1,0 +1,511 @@
+/*
+    The whole ribbon lives in this one file, reached through ::deep.
+
+    Scoped CSS rewrites only the *rightmost* selector, so a rule written here for `.shiny-ribbon-group`
+    would never match — the group is a different component and carries a different scope attribute.
+    `::deep` moves the scope onto the ribbon's own root instead, which every part of the bar is a
+    descendant of, groups and items included. That includes the dropdown panels: `showPopover()` paints
+    an element in the browser's top layer but leaves it where it is in the DOM, so it stays in scope.
+*/
+
+.shiny-ribbon {
+    --shiny-ribbon-row-h: 24px;
+    --shiny-ribbon-rows: 3;
+    --shiny-ribbon-accent: var(--shiny-color-primary, #3B82F6);
+    --shiny-ribbon-header-bg: var(--shiny-color-surface-container, #EFEFF2);
+
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-family: var(--shiny-type-font-family, inherit);
+    color: var(--shiny-color-on-surface, #1B1B1F);
+    border-bottom: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+    user-select: none;
+}
+
+
+/* -- contextual band --------------------------------------------------------------------------- */
+
+/* Captions a contextual tab set. Deliberately not the accent the permanent tabs use: a contextual tab
+   is a different kind of thing, not the selected one of the same kind. */
+.shiny-ribbon__context {
+    align-self: flex-start;
+    padding: 2px var(--shiny-spacing-3, 12px);
+    border-radius: var(--shiny-shape-corner-small, 8px) var(--shiny-shape-corner-small, 8px) 0 0;
+    background: var(--shiny-ribbon-context, var(--shiny-color-tertiary-container, #E8DEF8));
+    color: var(--shiny-color-on-tertiary-container, #1D192B);
+    font-size: var(--shiny-type-label-small-size, 11px);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+
+/* -- header ------------------------------------------------------------------------------------ */
+
+.shiny-ribbon__header {
+    display: flex;
+    align-items: stretch;
+    gap: var(--shiny-spacing-2, 8px);
+    padding: 0 var(--shiny-spacing-2, 8px);
+    background: var(--shiny-ribbon-header-bg);
+}
+
+.shiny-ribbon__app {
+    align-self: center;
+    margin: 4px 0;
+    padding: 6px var(--shiny-spacing-4, 14px);
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    background: var(--shiny-ribbon-accent);
+    color: var(--shiny-color-on-primary, #FFFFFF);
+    font: inherit;
+    font-size: var(--shiny-type-label-large-size, 14px);
+    cursor: pointer;
+}
+
+.shiny-ribbon__app:hover { filter: brightness(1.08); }
+
+.shiny-ribbon__tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.shiny-ribbon__tabs::-webkit-scrollbar { display: none; }
+
+.shiny-ribbon__tab {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 8px var(--shiny-spacing-3, 12px) 6px;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 8px) var(--shiny-shape-corner-small, 8px) 0 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--shiny-type-label-large-size, 14px);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.shiny-ribbon__tab::after {
+    content: "";
+    position: absolute;
+    inset: auto var(--shiny-spacing-3, 12px) 0;
+    height: 2px;
+    border-radius: 1px;
+    background: transparent;
+}
+
+.shiny-ribbon__tab:hover:not(:disabled):not(.is-active) {
+    background: var(--shiny-color-surface-container-high, #E4E4E8);
+}
+
+.shiny-ribbon__tab.is-active {
+    background: var(--shiny-color-surface-container-low, #F7F7F8);
+}
+
+.shiny-ribbon__tab.is-active::after { background: var(--shiny-ribbon-accent); }
+
+.shiny-ribbon__tab:disabled { opacity: 0.38; cursor: default; }
+
+.shiny-ribbon__tab:focus-visible {
+    outline: 2px solid var(--shiny-ribbon-accent);
+    outline-offset: -2px;
+}
+
+.shiny-ribbon__qat {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+
+.shiny-ribbon__collapse {
+    align-self: center;
+    display: inline-flex;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 8px);
+    background: transparent;
+    color: var(--shiny-color-on-surface-variant, #46464F);
+    cursor: pointer;
+}
+
+.shiny-ribbon__collapse svg { width: 16px; height: 16px; }
+
+.shiny-ribbon__collapse:hover { background: var(--shiny-color-surface-container-highest, #E4E4E8); }
+
+
+/* -- body -------------------------------------------------------------------------------------- */
+
+.shiny-ribbon__body {
+    display: flex;
+    align-items: stretch;
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-2, 8px);
+    background: var(--shiny-color-surface-container-low, #F7F7F8);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Hidden rather than dropped: the tabs are declared in here, and a body that stopped rendering would
+   unregister every one of them and empty the strip above it. */
+.shiny-ribbon__body.is-hidden { display: none; }
+
+::deep .shiny-ribbon__panel {
+    display: flex;
+    align-items: stretch;
+    gap: var(--shiny-spacing-2, 8px);
+    min-width: 0;
+}
+
+
+/* -- group ------------------------------------------------------------------------------------- */
+
+::deep .shiny-ribbon-group {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px var(--shiny-spacing-2, 8px) 0;
+    border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+}
+
+::deep .shiny-ribbon__panel > .shiny-ribbon-group:last-of-type { border-right: 0; }
+
+::deep .shiny-ribbon-group.is-disabled { opacity: 0.38; pointer-events: none; }
+
+/*
+    The columns.
+
+    Nothing in the markup declares one. `grid-auto-flow: column` fills the rows of a column top to
+    bottom and only then starts the next, and a large item (or a separator) spans every row — so it
+    always lands in a fresh column and pushes whatever follows into the one after. That is the whole of
+    a ribbon's layout language, which is why reordering a group re-flows it with no other change.
+*/
+::deep .shiny-ribbon-group__items {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(var(--shiny-ribbon-rows, 3), minmax(var(--shiny-ribbon-row-h, 24px), auto));
+    grid-auto-columns: min-content;
+    align-content: center;
+    justify-items: stretch;
+    gap: 1px 2px;
+}
+
+::deep .shiny-ribbon-group__footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: center;
+    min-height: 14px;
+}
+
+::deep .shiny-ribbon-group__title {
+    color: var(--shiny-color-on-surface-variant, #46464F);
+    font-size: var(--shiny-type-label-small-size, 11px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+::deep .shiny-ribbon-group__launcher {
+    display: inline-flex;
+    padding: 1px;
+    border: 0;
+    background: transparent;
+    color: var(--shiny-color-on-surface-variant, #46464F);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+::deep .shiny-ribbon-group__launcher svg { width: 9px; height: 9px; }
+
+::deep .shiny-ribbon-group__launcher:hover {
+    background: var(--shiny-color-surface-container-highest, #E4E4E8);
+}
+
+::deep .shiny-ribbon-group__collapsed {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 68px;
+    padding: var(--shiny-spacing-1, 4px) var(--shiny-spacing-2, 8px);
+    border: 0;
+    border-right: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+::deep .shiny-ribbon-group__collapsed:hover {
+    background: var(--shiny-color-surface-container-highest, #E4E4E8);
+}
+
+::deep .shiny-ribbon-group__collapsed-title {
+    font-size: var(--shiny-type-label-small-size, 11px);
+    white-space: nowrap;
+}
+
+/*
+    The collapsed button reuses the item icon wrapper but is not itself an item, so it misses the
+    is-large / is-small rules that give that wrapper a size. Without a box the inline SVG inside falls
+    back to a replaced element's default 300x150 and the button comes out three hundred pixels wide -
+    which then feeds straight back into the overflow arithmetic and folds away the rest of the bar.
+*/
+::deep .shiny-ribbon-group__collapsed .shiny-ribbon-item__icon {
+    width: 24px;
+    height: 24px;
+}
+
+
+/* -- items ------------------------------------------------------------------------------------- */
+
+::deep .shiny-ribbon-item {
+    display: flex;
+    align-items: center;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 6px);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--shiny-type-label-small-size, 11px);
+    cursor: pointer;
+    text-align: center;
+}
+
+::deep .shiny-ribbon-item.is-large {
+    grid-row: span var(--shiny-ribbon-rows, 3);
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 46px;
+    max-width: 96px;
+    padding: var(--shiny-spacing-1, 4px) 6px;
+}
+
+::deep .shiny-ribbon-item.is-small {
+    flex-direction: row;
+    gap: 6px;
+    min-height: var(--shiny-ribbon-row-h, 24px);
+    padding: 1px 6px;
+    text-align: start;
+}
+
+::deep .shiny-ribbon-item:hover:not(.is-disabled):not(:disabled) {
+    background: var(--shiny-color-surface-container-highest, #E4E4E8);
+}
+
+::deep .shiny-ribbon-item:focus-visible {
+    outline: 2px solid var(--shiny-ribbon-accent);
+    outline-offset: -2px;
+}
+
+::deep .shiny-ribbon-item.is-disabled,
+::deep .shiny-ribbon-item:disabled {
+    opacity: 0.38;
+    cursor: default;
+}
+
+::deep .shiny-ribbon-item.is-checked {
+    background: var(--shiny-color-secondary-container, #E2E0F9);
+    color: var(--shiny-color-on-secondary-container, #191A2C);
+}
+
+::deep .shiny-ribbon-item__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+::deep .shiny-ribbon-item__icon svg,
+::deep .shiny-ribbon-item__icon img { display: block; width: 100%; height: 100%; }
+
+::deep .shiny-ribbon-item.is-large .shiny-ribbon-item__icon { width: 26px; height: 26px; }
+
+::deep .shiny-ribbon-item.is-small .shiny-ribbon-item__icon { width: 16px; height: 16px; }
+
+::deep .shiny-ribbon-item.is-large .shiny-ribbon-item__label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.15;
+}
+
+::deep .shiny-ribbon-item.is-small .shiny-ribbon-item__label { white-space: nowrap; }
+
+::deep .shiny-ribbon-item__caret { width: 10px; height: 10px; flex: 0 0 auto; }
+
+/* A rule between two runs of items, and a break in the column flow. */
+::deep .shiny-ribbon-sep {
+    grid-row: span var(--shiny-ribbon-rows, 3);
+    width: 1px;
+    margin: 2px 4px;
+    background: var(--shiny-color-outline-variant, #E5E7EB);
+}
+
+::deep .shiny-ribbon-content { cursor: default; padding: 1px 4px; }
+
+::deep .shiny-ribbon-content.is-large { justify-content: center; }
+
+
+/* -- split button ------------------------------------------------------------------------------ */
+
+::deep .shiny-ribbon-split { padding: 0; gap: 0; }
+
+::deep .shiny-ribbon-split__face,
+::deep .shiny-ribbon-split__caret {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: inherit;
+    cursor: pointer;
+    border-radius: var(--shiny-shape-corner-small, 6px);
+}
+
+::deep .shiny-ribbon-split.is-large { flex-direction: column; }
+
+::deep .shiny-ribbon-split.is-large .shiny-ribbon-split__face {
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--shiny-spacing-1, 4px) 6px 0;
+}
+
+::deep .shiny-ribbon-split.is-large .shiny-ribbon-split__caret { padding: 0 6px 2px; width: 100%; }
+
+::deep .shiny-ribbon-split.is-small .shiny-ribbon-split__face { gap: 6px; padding: 1px 4px 1px 6px; }
+
+::deep .shiny-ribbon-split.is-small .shiny-ribbon-split__caret { padding: 1px 4px; }
+
+::deep .shiny-ribbon-split__face:hover:not(:disabled),
+::deep .shiny-ribbon-split__caret:hover:not(:disabled) {
+    background: var(--shiny-color-surface-container-highest, #E4E4E8);
+}
+
+
+/* -- menus ------------------------------------------------------------------------------------- */
+
+/*
+    Not a scrim: a dropdown that dims the document behind it reads as a modal, which it is not. It is
+    still painted rather than fully transparent, because a fully transparent layer is not hit-tested
+    on every browser and the click-away would stop working.
+*/
+.shiny-ribbon-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: rgba(0, 0, 0, 0.004);
+}
+
+::deep .shiny-ribbon-menu {
+    position: absolute;
+    z-index: 950;
+    min-width: 190px;
+    max-height: min(70vh, 520px);
+    padding: var(--shiny-spacing-1, 4px);
+    margin: 0;
+    border: var(--shiny-border-thin, 1px) solid var(--shiny-color-outline-variant, #E5E7EB);
+    border-radius: var(--shiny-shape-corner-medium, 10px);
+    background: var(--shiny-color-surface-container-high, #FFFFFF);
+    color: var(--shiny-color-on-surface, #1B1B1F);
+    box-shadow: var(--shiny-elevation-2, 0 6px 20px rgba(0, 0, 0, 0.16));
+    overflow: auto;
+    inset: auto;
+}
+
+::deep .shiny-ribbon-group-popup { min-width: 0; }
+
+::deep .shiny-ribbon-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--shiny-spacing-2, 8px);
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-small, 6px);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--shiny-type-body-medium-size, 14px);
+    text-align: start;
+    cursor: pointer;
+}
+
+::deep .shiny-ribbon-menu__item:hover:not(:disabled),
+::deep .shiny-ribbon-menu__item.is-open {
+    background: var(--shiny-color-surface-container-highest, #E4E4E8);
+}
+
+::deep .shiny-ribbon-menu__item:disabled { opacity: 0.38; cursor: default; }
+
+/* A fixed tick column, drawn or not, so labels line up whether or not the menu is a set of choices —
+   a tick that shifts the text as it appears reads as the menu twitching. */
+::deep .shiny-ribbon-menu__tick {
+    flex: 0 0 14px;
+    color: var(--shiny-color-primary, #3B82F6);
+}
+
+::deep .shiny-ribbon-menu__icon {
+    display: inline-flex;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+}
+
+::deep .shiny-ribbon-menu__icon svg,
+::deep .shiny-ribbon-menu__icon img { width: 100%; height: 100%; }
+
+::deep .shiny-ribbon-menu__label { flex: 1 1 auto; }
+
+::deep .shiny-ribbon-menu__caret { flex: 0 0 auto; width: 12px; height: 12px; }
+
+::deep .shiny-ribbon-menu__sep {
+    height: 1px;
+    margin: 4px 8px;
+    background: var(--shiny-color-outline-variant, #E5E7EB);
+}
+
+
+/* -- simplified -------------------------------------------------------------------------------- */
+
+.shiny-ribbon.is-simplified ::deep .shiny-ribbon-group { padding-bottom: 2px; }
+
+.shiny-ribbon.is-simplified ::deep .shiny-ribbon-item.is-large,
+.shiny-ribbon.is-simplified ::deep .shiny-ribbon-sep { grid-row: span 1; }
+
+
+/* -- dark ---------------------------------------------------------------------------------------
+   Only the two literal fallbacks that are wrong in the dark. Everything else resolves through the
+   theme tokens, which already flip. */
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .shiny-ribbon {
+        --shiny-ribbon-header-bg: var(--shiny-color-surface-container, #211F26);
+    }
+
+    :root:not([data-theme="light"]) ::deep .shiny-ribbon-menu {
+        background: var(--shiny-color-surface-container-high, #2B2930);
+    }
+}
+
+:root[data-theme="dark"] .shiny-ribbon {
+    --shiny-ribbon-header-bg: var(--shiny-color-surface-container, #211F26);
+}
+
+:root[data-theme="dark"] ::deep .shiny-ribbon-menu {
+    background: var(--shiny-color-surface-container-high, #2B2930);
+}

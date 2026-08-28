@@ -1,0 +1,28 @@
+@namespace Shiny.Blazor.Controls
+@inherits RibbonItemBase
+
+<button type="button"
+        class="@this.RootClass("shiny-ribbon-button")"
+        disabled="@this.IsDisabled"
+        title="@this.TitleText"
+        aria-label="@this.EffectiveTooltip"
+        @onclick="this.OnClickAsync"
+        @attributes="this.AdditionalAttributes">
+    <RibbonItemFace Icon="@this.Icon" Text="@this.Text" ShowLabel="true" />
+</button>
+
+@code {
+    /// <summary>Raised when the button is pressed.</summary>
+    [Parameter] public EventCallback Clicked { get; set; }
+
+
+    async Task OnClickAsync()
+    {
+        if (this.IsDisabled)
+            return;
+
+        this.Ribbon?.CloseMenu();
+        await this.Clicked.InvokeAsync().ConfigureAwait(false);
+        this.Ribbon?.NotifyInvoked();
+    }
+}

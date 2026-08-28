@@ -1,0 +1,96 @@
+@namespace Shiny.Blazor.Controls
+@implements IDisposable
+
+@*
+    A group is either the open box or the single button it collapses to — never both, because the two
+    have to occupy the same slot on the bar. Which one is drawn is the ribbon's call: it gets the
+    measured widths back from ribbon.js and decides how much has to fold away.
+
+    The collapsed button still carries data-ribbon-group so the measuring pass can find it again; the
+    width it had while open is cached on the JS side, since a collapsed group has no open width to read.
+*@
+@if (this.IsCollapsed)
+{
+    <button type="button"
+            class="shiny-ribbon-group__collapsed"
+            data-ribbon-group="@this.Id"
+            data-ribbon-priority="@this.Priority"
+            data-ribbon-collapsible="true"
+            aria-haspopup="true"
+            aria-expanded="@(this.IsPopupOpen ? "true" : "false")"
+            title="@this.Title"
+            @onclick="this.TogglePopup">
+
+        @if (!string.IsNullOrEmpty(this.CollapsedIcon))
+        {
+            <span class="shiny-ribbon-item__icon">
+                @if (RibbonItemBase.IsImageUrl(this.CollapsedIcon!))
+                {
+                    <img src="@this.CollapsedIcon" alt="" />
+                }
+                else
+                {
+                    @((MarkupString)this.CollapsedIcon!)
+                }
+            </span>
+        }
+
+        <span class="shiny-ribbon-group__collapsed-title">@this.Title</span>
+
+        <svg class="shiny-ribbon-item__caret" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6l4 4 4-4" />
+        </svg>
+    </button>
+
+    @if (this.IsPopupOpen)
+    {
+        <div class="shiny-ribbon-menu shiny-ribbon-group-popup" popover="manual" data-ribbon-menu="@this.Id">
+            @this.Box(inPopup: true)
+        </div>
+    }
+}
+else
+{
+    @this.Box(inPopup: false)
+}
+
+@code {
+    RenderFragment Box(bool inPopup) => @<div class="@this.BoxCss(inPopup)"
+                                              data-ribbon-group="@(inPopup ? null : this.Id)"
+                                              data-ribbon-priority="@this.Priority"
+                                              data-ribbon-collapsible="@(this.CanCollapse ? "true" : "false")"
+                                              role="group"
+                                              aria-label="@this.Title">
+
+        <div class="shiny-ribbon-group__items">
+            @* Not IsFixed, for the reason the ribbon's own cascade is not: items read the group's
+               live Disabled state, and IsFixed would stop them ever hearing that it changed. *@
+            <CascadingValue Value="this">
+                @this.ChildContent
+            </CascadingValue>
+        </div>
+
+        @if (this.ShowTitle)
+        {
+            <div class="shiny-ribbon-group__footer">
+                <span class="shiny-ribbon-group__title">@this.Title</span>
+
+                @if (this.ShowDialogLauncher)
+                {
+                    <button type="button"
+                            class="shiny-ribbon-group__launcher"
+                            aria-label="@this.LauncherHint"
+                            title="@this.LauncherHint"
+                            @onclick="this.OnLauncherAsync">
+                        @* An arrow into the corner: the convention for "there is more of this than fits here". *@
+                        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"
+                             stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1 1 L1 9 L9 9 Z" />
+                        </svg>
+                    </button>
+                }
+            </div>
+        }
+    </div>;
+}

@@ -729,6 +729,13 @@ public class DocumentEditor : ContentView, IDisposable
             case EditorKey.Backspace: this.controller.DeleteBackward(); break;
             case EditorKey.Delete: this.controller.DeleteForward(); break;
             case EditorKey.Enter: this.controller.InsertParagraph(); break;
+
+            case EditorKey.Tab:
+                if (!this.controller.HandleTab(shift))
+                    return false;
+
+                break;
+
             case EditorKey.Bold: this.controller.ToggleBold(); break;
             case EditorKey.Italic: this.controller.ToggleItalic(); break;
             case EditorKey.Underline: this.controller.ToggleUnderline(); break;
@@ -783,6 +790,16 @@ public enum EditorKey
     Backspace,
     Delete,
     Enter,
+
+    /// <summary>
+    /// Tab.
+    /// </summary>
+    /// <remarks>
+    /// Routed in rather than left to the platform because inside a list it nests the item, which is
+    /// the only gesture there is for creating a second level. A host that lets Tab through instead
+    /// moves the focus off the editor.
+    /// </remarks>
+    Tab,
     SelectAll,
     Bold,
     Italic,

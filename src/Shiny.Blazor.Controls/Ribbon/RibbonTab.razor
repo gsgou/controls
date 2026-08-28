@@ -1,0 +1,93 @@
+@namespace Shiny.Blazor.Controls
+@implements IDisposable
+
+@*
+    A tab renders its groups only while it is the one showing; the rest of the time it renders nothing
+    but stays registered, so the strip above keeps its shape.
+*@
+@if (this.Ribbon?.IsActive(this) == true)
+{
+    <div class="shiny-ribbon__panel" role="tabpanel" aria-label="@this.Title">
+        @this.ChildContent
+    </div>
+}
+
+@code {
+    /// <summary>The ribbon this tab is on. Public because a private cascaded parameter is silently skipped.</summary>
+    [CascadingParameter] public Ribbon? Ribbon { get; set; }
+
+    /// <summary>The label on the tab strip.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// A stable name for the tab, for binding <see cref="Ribbon.SelectedKey"/> to without depending on
+    /// its display title. Falls back to <see cref="Title"/>.
+    /// </summary>
+    [Parameter] public string? Key { get; set; }
+
+    /// <summary>
+    /// Whether the tab appears at all. This is how a contextual tab works: bind it to whatever the tab
+    /// is about being selected — a picture, a table, a chart — and the ribbon shows it and moves off it
+    /// again when the selection goes away.
+    /// </summary>
+    [Parameter] public bool Visible { get; set; } = true;
+
+    /// <summary>A disabled tab is drawn dimmed on the strip and cannot be selected.</summary>
+    [Parameter] public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Marks the tab contextual and captions the band drawn above it — "Table Tools", "Picture Tools".
+    /// Setting it is what makes a tab contextual.
+    /// </summary>
+    [Parameter] public string? ContextTitle { get; set; }
+
+    /// <summary>The accent for a contextual tab's band and underline. Any CSS colour.</summary>
+    [Parameter] public string? ContextColor { get; set; }
+
+    /// <summary>The <see cref="RibbonGroup"/> children.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+
+    /// <summary>What the ribbon addresses this tab by.</summary>
+    internal string EffectiveKey => this.Key ?? this.Title ?? string.Empty;
+
+    /// <summary>True when <see cref="ContextTitle"/> is set — the tab is one of a contextual set.</summary>
+    internal bool IsContextual => !string.IsNullOrWhiteSpace(this.ContextTitle);
+
+    /// <summary>Whether the ribbon may move to this tab.</summary>
+    internal bool IsSelectable => this.Visible && this.Enabled;
+
+
+    bool registered;
+
+    // Only the parameters that change the strip, and deliberately not ChildContent: a fragment gets a
+    // fresh delegate identity on every parent render, so including it would notify the ribbon on every
+    // render, whose StateHasChanged would re-render this tab, forever.
+    (string?, string?, bool, bool, string?, string?) snapshot;
+    bool hasSnapshot;
+
+
+    protected override void OnInitialized()
+    {
+        this.Ribbon?.Register(this);
+        this.registered = true;
+    }
+
+
+    protected override void OnParametersSet()
+    {
+        if (!this.registered)
+            return;
+
+        var current = (this.Title, this.Key, this.Visible, this.Enabled, this.ContextTitle, this.ContextColor);
+        if (this.hasSnapshot && current.Equals(this.snapshot))
+            return;
+
+        this.snapshot = current;
+        this.hasSnapshot = true;
+        this.Ribbon?.NotifyTabChanged();
+    }
+
+
+    public void Dispose() => this.Ribbon?.Unregister(this);
+}

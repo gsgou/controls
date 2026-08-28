@@ -1,0 +1,258 @@
+@page "/ribbon"
+
+<PageTitle>Ribbon</PageTitle>
+
+@*
+    Icons here are inline SVG, which is what Icon takes on this host — the same string a ShinyToolbar
+    item takes, so an app has one icon convention rather than two. An image URL works just as well.
+*@
+<div class="ribbon-demo">
+
+    <Ribbon ApplicationButtonText="File"
+            ApplicationButtonClicked="@(() => Say("File"))"
+            @bind-DisplayMode="mode"
+            AllowGroupCollapse="@allowGroupCollapse"
+            @bind-SelectedKey="selectedTab">
+
+        <QuickAccess>
+            <RibbonButton Size="RibbonItemSize.Small" Text="Save" Tooltip="Save" Icon="@Icons.Save"
+                          Clicked="@(() => Say("Save"))" />
+            <RibbonButton Size="RibbonItemSize.Small" Text="Undo" Tooltip="Undo" Icon="@Icons.Undo"
+                          Clicked="@(() => Say("Undo"))" />
+            <RibbonButton Size="RibbonItemSize.Small" Text="Redo" Tooltip="Redo" Icon="@Icons.Redo"
+                          Clicked="@(() => Say("Redo"))" />
+        </QuickAccess>
+
+        <ChildContent>
+
+            <RibbonTab Title="Home" Key="home">
+
+                @* A split button: pasting plain is overwhelmingly the common case, so it keeps the
+                   face and the variants go behind the chevron. *@
+                <RibbonGroup Title="Clipboard" Priority="30">
+                    <RibbonSplitButton Text="Paste" Icon="@Icons.Paste"
+                                       Clicked="@(() => Say("Paste"))"
+                                       Menu="@pasteMenu" />
+
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Cut" Icon="@Icons.Cut" Clicked="@(() => Say("Cut"))" />
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Copy" Icon="@Icons.Copy" Clicked="@(() => Say("Copy"))" />
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Format painter" Icon="@Icons.Brush"
+                                  Clicked="@(() => Say("Format painter"))" />
+                </RibbonGroup>
+
+                @* Three small toggles fill one column, then the size picker takes the next. Nothing
+                   here declares a column — the sizes do. *@
+                <RibbonGroup Title="Font" Priority="40"
+                             ShowDialogLauncher="true"
+                             DialogLauncherClicked="@(() => Say("Font dialog"))">
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Bold" Icon="@Icons.Bold" @bind-Checked="bold" />
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Italic" Icon="@Icons.Italic" @bind-Checked="italic" />
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Underline" Icon="@Icons.Underline" @bind-Checked="underline" />
+
+                    <RibbonSeparator />
+
+                    <RibbonMenuButton Text="Text colour" Icon="@Icons.Swatch" Menu="@colourMenu" />
+
+                    @* Any markup at all can sit in a group. *@
+                    <RibbonContent Size="RibbonItemSize.Small">
+                        <select value="@fontSize" @onchange="OnFontSize" aria-label="Font size">
+                            @foreach (var size in new[] { 9, 10, 11, 12, 14, 18, 24 })
+                            {
+                                <option value="@size">@size</option>
+                            }
+                        </select>
+                    </RibbonContent>
+                </RibbonGroup>
+
+                <RibbonGroup Title="Paragraph" Priority="20">
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Left" Icon="@Icons.AlignLeft"
+                                        Checked="@(align == "left")" Clicked="@(_ => SetAlign("left"))" />
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Centre" Icon="@Icons.AlignCenter"
+                                        Checked="@(align == "center")" Clicked="@(_ => SetAlign("center"))" />
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Right" Icon="@Icons.AlignRight"
+                                        Checked="@(align == "right")" Clicked="@(_ => SetAlign("right"))" />
+                    <RibbonButton Text="Bullets" Icon="@Icons.Bullets" Clicked="@(() => Say("Bullets"))" />
+                </RibbonGroup>
+
+                @* The lowest priority, so this is the first group to fold away when the window narrows. *@
+                <RibbonGroup Title="Editing" Priority="0" CollapsedIcon="@Icons.Search">
+                    <RibbonMenuButton Text="Find" Icon="@Icons.Search" Menu="@findMenu" />
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Select all" Icon="@Icons.Check"
+                                  Clicked="@(() => Say("Select all"))" />
+                </RibbonGroup>
+            </RibbonTab>
+
+            <RibbonTab Title="Insert" Key="insert">
+                <RibbonGroup Title="Tables" Priority="10">
+                    <RibbonButton Text="Table" Icon="@Icons.Table" Clicked="@(() => Say("Insert table"))" />
+                </RibbonGroup>
+
+                <RibbonGroup Title="Illustrations" Priority="10">
+                    <RibbonButton Text="Picture" Icon="@Icons.Picture" Clicked="InsertPicture" />
+                    <RibbonButton Text="Shapes" Icon="@Icons.Shape" Clicked="@(() => Say("Insert shape"))" />
+                    <RibbonButton Text="Chart" Icon="@Icons.Chart" Clicked="@(() => Say("Insert chart"))" />
+                </RibbonGroup>
+
+                <RibbonGroup Title="Links" Priority="0">
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Link" Icon="@Icons.Link" Clicked="@(() => Say("Insert link"))" />
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Bookmark" Icon="@Icons.Bookmark"
+                                  Clicked="@(() => Say("Bookmark"))" />
+                </RibbonGroup>
+            </RibbonTab>
+
+            <RibbonTab Title="View" Key="view">
+                <RibbonGroup Title="Show" Priority="0">
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Ruler" Icon="@Icons.Ruler" @bind-Checked="showRuler" />
+                    <RibbonToggleButton Size="RibbonItemSize.Small" Text="Gridlines" Icon="@Icons.Table" @bind-Checked="showGrid" />
+                </RibbonGroup>
+            </RibbonTab>
+
+            @*
+                A contextual tab. Nothing special declares it: ContextTitle captions the band, and
+                binding Visible to "is a picture selected" is what makes it come and go. The ribbon
+                moves onto it when it appears and off it again when it does not.
+            *@
+            <RibbonTab Title="Format" Key="picture" ContextTitle="Picture Tools" Visible="@pictureSelected">
+                <RibbonGroup Title="Adjust" Priority="0" CanCollapse="false">
+                    <RibbonButton Text="Crop" Icon="@Icons.Cut" Clicked="@(() => Say("Crop"))" />
+                    <RibbonButton Size="RibbonItemSize.Small" Text="Reset" Icon="@Icons.Undo" Clicked="@(() => Say("Reset picture"))" />
+                </RibbonGroup>
+            </RibbonTab>
+
+        </ChildContent>
+    </Ribbon>
+
+    <div class="ribbon-demo__controls">
+        <p>
+            Narrow the window and the lowest-priority groups fold into buttons. Click the showing tab
+            again to collapse the bar; a command run from a collapsed bar puts it away again.
+        </p>
+
+        <div class="row">
+            <button @onclick="@(() => mode = RibbonDisplayMode.Expanded)">Expanded</button>
+            <button @onclick="@(() => mode = RibbonDisplayMode.Simplified)">Simplified</button>
+            <button @onclick="@(() => mode = RibbonDisplayMode.Collapsed)">Collapsed</button>
+        </div>
+
+        <div class="row">
+            <label><input type="checkbox" @bind="pictureSelected" /> Picture selected (contextual tab)</label>
+            <label><input type="checkbox" @bind="allowGroupCollapse" /> Let groups collapse</label>
+        </div>
+
+        <p class="log">@log</p>
+    </div>
+</div>
+
+@code {
+    RibbonDisplayMode mode = RibbonDisplayMode.Expanded;
+    string? selectedTab = "home";
+    bool allowGroupCollapse = true;
+    bool pictureSelected;
+
+    bool bold;
+    bool italic;
+    bool underline;
+    bool showRuler = true;
+    bool showGrid;
+    string align = "left";
+    int fontSize = 11;
+
+    string log = "Nothing yet — press something on the bar.";
+
+    List<RibbonMenuEntry> pasteMenu = default!;
+    List<RibbonMenuEntry> colourMenu = default!;
+    List<RibbonMenuEntry> findMenu = default!;
+
+
+    protected override void OnInitialized()
+    {
+        pasteMenu =
+        [
+            new() { Text = "Keep source formatting", OnClick = Cb(() => Say("Paste (formatted)")) },
+            new() { Text = "Text only", OnClick = Cb(() => Say("Paste (text)")) },
+            new() { IsSeparator = true },
+            new() { Text = "Paste special…", OnClick = Cb(() => Say("Paste special")) }
+        ];
+
+        colourMenu =
+        [
+            new() { Text = "Automatic", IsChecked = true, OnClick = Cb(() => Say("Colour: automatic")) },
+            new()
+            {
+                Text = "Standard colours",
+                Children =
+                [
+                    new() { Text = "Red", OnClick = Cb(() => Say("Colour: red")) },
+                    new() { Text = "Blue", OnClick = Cb(() => Say("Colour: blue")) }
+                ]
+            }
+        ];
+
+        findMenu =
+        [
+            new() { Text = "Find…", OnClick = Cb(() => Say("Find")) },
+            new() { Text = "Replace…", OnClick = Cb(() => Say("Replace")) },
+            new() { IsSeparator = true },
+            new() { Text = "Go to…", OnClick = Cb(() => Say("Go to")) }
+        ];
+    }
+
+
+    EventCallback Cb(Action action) => EventCallback.Factory.Create(this, action);
+
+    void Say(string what) => log = $"{DateTime.Now:HH:mm:ss}  {what}";
+
+    void SetAlign(string which)
+    {
+        align = which;
+        Say($"Align {which}");
+    }
+
+    void OnFontSize(ChangeEventArgs e)
+    {
+        fontSize = int.TryParse(e.Value?.ToString(), out var v) ? v : fontSize;
+        Say($"Font size {fontSize}");
+    }
+
+    /// <summary>Selecting a picture is what brings the contextual tab up; the ribbon then moves to it.</summary>
+    void InsertPicture()
+    {
+        pictureSelected = true;
+        selectedTab = "picture";
+        Say("Insert picture — the Picture Tools tab appeared");
+    }
+
+
+    /// <summary>
+    /// Inline SVG, kept together so the markup above reads as a ribbon rather than as a wall of paths.
+    /// </summary>
+    static class Icons
+    {
+        const string Open = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>";
+
+        public const string Save = Open + "<path d='M5 4h11l3 3v13H5z'/><path d='M8 4v5h7V4'/><rect x='8' y='13' width='8' height='7'/></svg>";
+        public const string Undo = Open + "<path d='M9 8H5V4'/><path d='M5 8a8 8 0 1 1 2 9'/></svg>";
+        public const string Redo = Open + "<path d='M15 8h4V4'/><path d='M19 8a8 8 0 1 0-2 9'/></svg>";
+        public const string Paste = Open + "<rect x='7' y='4' width='10' height='16' rx='2'/><path d='M9 4V3h6v1'/><path d='M10 11h4M10 15h4'/></svg>";
+        public const string Cut = Open + "<circle cx='7' cy='18' r='2.5'/><circle cx='17' cy='18' r='2.5'/><path d='M8.5 16 18 4M15.5 16 6 4'/></svg>";
+        public const string Copy = Open + "<rect x='9' y='9' width='11' height='11' rx='2'/><path d='M5 15V6a2 2 0 0 1 2-2h9'/></svg>";
+        public const string Brush = Open + "<path d='M6 18c0-2 1-3 3-3l7-9 3 3-9 7c0 2-1 3-3 3H4z'/></svg>";
+        public const string Bold = Open + "<path d='M8 5h5a3.5 3.5 0 0 1 0 7H8zM8 12h6a3.5 3.5 0 0 1 0 7H8z'/></svg>";
+        public const string Italic = Open + "<path d='M15 5h-5M14 19H9M13 5l-3 14'/></svg>";
+        public const string Underline = Open + "<path d='M7 4v6a5 5 0 0 0 10 0V4M6 20h12'/></svg>";
+        public const string AlignLeft = Open + "<path d='M4 6h16M4 10h10M4 14h16M4 18h10'/></svg>";
+        public const string AlignCenter = Open + "<path d='M4 6h16M7 10h10M4 14h16M7 18h10'/></svg>";
+        public const string AlignRight = Open + "<path d='M4 6h16M10 10h10M4 14h16M10 18h10'/></svg>";
+        public const string Bullets = Open + "<circle cx='5' cy='7' r='1'/><circle cx='5' cy='12' r='1'/><circle cx='5' cy='17' r='1'/><path d='M9 7h11M9 12h11M9 17h11'/></svg>";
+        public const string Search = Open + "<circle cx='11' cy='11' r='6'/><path d='m20 20-4.5-4.5'/></svg>";
+        public const string Check = Open + "<path d='m5 13 4 4 10-10'/></svg>";
+        public const string Table = Open + "<rect x='4' y='5' width='16' height='14' rx='1'/><path d='M4 10h16M4 15h16M10 5v14M15 5v14'/></svg>";
+        public const string Picture = Open + "<rect x='4' y='5' width='16' height='14' rx='2'/><circle cx='9' cy='10' r='1.6'/><path d='m5 17 5-5 4 4 2-2 3 3'/></svg>";
+        public const string Shape = Open + "<path d='m12 5 8 14H4z'/></svg>";
+        public const string Chart = Open + "<path d='M5 19V5'/><path d='M5 19h14'/><rect x='8' y='11' width='3' height='6'/><rect x='14' y='7' width='3' height='10'/></svg>";
+        public const string Link = Open + "<path d='M10 14a4 4 0 0 0 6 .5l2-2a4 4 0 0 0-5.7-5.7l-1 1'/><path d='M14 10a4 4 0 0 0-6-.5l-2 2A4 4 0 0 0 11.7 17l1-1'/></svg>";
+        public const string Bookmark = Open + "<path d='M7 4h10v16l-5-4-5 4z'/></svg>";
+        public const string Ruler = Open + "<rect x='3' y='8' width='18' height='8' rx='1'/><path d='M7 8v3M11 8v4M15 8v3M19 8v4'/></svg>";
+        public const string Swatch = Open + "<rect x='4' y='5' width='16' height='10' rx='2'/><path d='M4 19h16' stroke='#C2410C' stroke-width='3'/></svg>";
+    }
+}

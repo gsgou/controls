@@ -5,6 +5,7 @@ using Shiny.Controls.Office.Shapes;
 using Shiny.Maui.Controls.ColorPicker;
 using Shiny.Maui.Controls.FontPicker;
 using Shiny.Controls.Office.Spreadsheet;
+using Shiny.Controls.Office.Text;
 using TextAlignment = Shiny.Controls.Office.Text.TextAlignment;
 
 namespace Shiny.Maui.Controls.Office;
@@ -44,6 +45,10 @@ public class DocumentEditorView : ContentView, IDisposable
     readonly OfficeToolbarButton alignRight;
     readonly OfficeToolbarButton alignJustify;
     readonly OfficeToolbarButton highlight;
+    readonly OfficeToolbarButton bulletList;
+    readonly OfficeToolbarButton numberedList;
+    readonly OfficeToolbarButton indent;
+    readonly OfficeToolbarButton outdent;
     readonly OfficeToolbarButton insertShape;
     readonly OfficeToolbarButton insertTable;
     readonly OfficeToolbarButton insertPicture;
@@ -67,6 +72,11 @@ public class DocumentEditorView : ContentView, IDisposable
         this.alignCenter = this.MakeButton(OfficeIcon.AlignCenter, "Centre", () => this.editor.Controller?.SetAlignment(TextAlignment.Center));
         this.alignRight = this.MakeButton(OfficeIcon.AlignRight, "Align right", () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
         this.alignJustify = this.MakeButton(OfficeIcon.AlignJustify, "Justify", () => this.editor.Controller?.SetAlignment(TextAlignment.Justify));
+
+        this.bulletList = this.MakeButton(OfficeIcon.BulletList, "Bulleted list", () => this.editor.Controller?.ToggleBulletList());
+        this.numberedList = this.MakeButton(OfficeIcon.NumberedList, "Numbered list", () => this.editor.Controller?.ToggleNumberedList());
+        this.outdent = this.MakeButton(OfficeIcon.Outdent, "Outdent (Shift+Tab)", () => this.editor.Controller?.ChangeListLevel(-1));
+        this.indent = this.MakeButton(OfficeIcon.Indent, "Indent (Tab)", () => this.editor.Controller?.ChangeListLevel(1));
 
         this.highlight = this.MakeAsyncButton(OfficeIcon.Highlight, "Highlight", this.PickHighlightAsync);
         this.insertShape = this.MakeAsyncButton(OfficeIcon.Shape, "Shapes", this.InsertShapeAsync);
@@ -338,6 +348,11 @@ public class DocumentEditorView : ContentView, IDisposable
         this.bar.Add(this.alignCenter);
         this.bar.Add(this.alignRight);
         this.bar.Add(this.alignJustify);
+        this.bar.Add(Separator());
+        this.bar.Add(this.bulletList);
+        this.bar.Add(this.numberedList);
+        this.bar.Add(this.outdent);
+        this.bar.Add(this.indent);
         this.bar.Add(Separator());
         this.bar.Add(this.pageMargins);
         this.bar.Add(Separator());
@@ -636,11 +651,20 @@ public class DocumentEditorView : ContentView, IDisposable
         SetActive(this.alignRight, format.Alignment == TextAlignment.Right);
         SetActive(this.alignJustify, format.Alignment == TextAlignment.Justify);
 
+        SetActive(this.bulletList, format.List == ListStyle.Bullet);
+        SetActive(this.numberedList, format.List == ListStyle.Numbered);
+
         foreach (var button in this.buttons)
             button.SetEnabled(enabled);
 
         this.undo.SetEnabled(enabled && (this.editor.Controller?.CanUndo ?? false));
         this.redo.SetEnabled(enabled && (this.editor.Controller?.CanRedo ?? false));
+
+        // The nesting buttons only move list items, so they are off everywhere else rather than
+        // quietly doing nothing — and outdent is off at the top level, which is as far out as an item
+        // can come without leaving the list.
+        this.indent.SetEnabled(enabled && format.List != ListStyle.None);
+        this.outdent.SetEnabled(enabled && format.List != ListStyle.None && format.ListLevel > 0);
 
         // Writing the pickers' selection raises their change events, which would immediately re-apply
         // the format that was only being displayed - so the handlers are muted while they are updated.

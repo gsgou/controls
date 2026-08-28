@@ -147,6 +147,18 @@
     /// <summary>Raised after every edit, so a host can track the dirty state.</summary>
     [Parameter] public EventCallback DocumentChanged { get; set; }
 
+    /// <summary>
+    /// Raised whenever the caret or the selection moves.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="DocumentChanged"/> because chrome around the editor has to follow the
+    /// caret as well as the edits: without this a wrapper's toolbar only refreshes once something is
+    /// typed, so clicking into a bulleted paragraph leaves the list buttons unlit and the nesting
+    /// buttons greyed out until the next keystroke. The slide editor carries the same callback for
+    /// the same reason.
+    /// </remarks>
+    [Parameter] public EventCallback SelectionChanged { get; set; }
+
     /// <summary>The live controller — selection, caret format, formatting commands, undo.</summary>
     public DocumentEditorController? Controller => this.controller;
 
@@ -225,10 +237,13 @@
             this.controller.SpellChecker = this.SpellChecker;
     }
 
-    void OnControllerChanged(object? sender, EventArgs e)
+    async void OnControllerChanged(object? sender, EventArgs e)
     {
         this.canvas?.Invalidate();
         this.StateHasChanged();
+
+        if (this.SelectionChanged.HasDelegate)
+            await this.SelectionChanged.InvokeAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -636,6 +651,16 @@
             case "ArrowDown": this.controller.Move(CaretMove.Down, extend); break;
             case "Home": this.controller.Move(e.MetaKey || e.CtrlKey ? CaretMove.DocumentStart : CaretMove.LineStart, extend); break;
             case "End": this.controller.Move(e.MetaKey || e.CtrlKey ? CaretMove.DocumentEnd : CaretMove.LineEnd, extend); break;
+
+            case "Tab":
+                // Inside a list this nests the item; anywhere else it inserts a tab. Either way the
+                // browser must not move focus out of the editor, which is what its default does.
+                if (!this.controller.HandleTab(e.ShiftKey))
+                    this.preventKeyDefault = false;
+                else
+                    await this.RaiseChangedAsync();
+
+                break;
 
             case "a" when e.CtrlKey || e.MetaKey:
                 this.controller.SelectAll();

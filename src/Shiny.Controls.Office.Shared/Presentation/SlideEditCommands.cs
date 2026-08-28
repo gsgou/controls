@@ -484,6 +484,12 @@ public readonly record struct SlideCaretFormat(
     TextAlignment Alignment,
     ArgbColor? Highlight = null)
 {
+    /// <summary>Which list the caret's paragraph is in, so a toolbar can light the right button.</summary>
+    public ListStyle List { get; init; }
+
+    /// <summary>The paragraph's outline level, 0-8. What Tab moves.</summary>
+    public int Level { get; init; }
+
     public static SlideCaretFormat Default => new(
         false, false, false, false, 18, "Calibri", new ArgbColor(255, 0, 0, 0), TextAlignment.Left);
 }
