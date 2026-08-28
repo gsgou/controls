@@ -43,6 +43,7 @@
                   xmlns:motionicons="clr-namespace:Sample.Features.MotionIcons"
                   xmlns:badge="clr-namespace:Sample.Features.Badge"
                   xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon"
+                  xmlns:filedrop="clr-namespace:Sample.Features.FileDrop"
                   xmlns:quickentry="clr-namespace:Sample.Features.QuickEntry"
                   xmlns:osk="clr-namespace:Sample.Features.OnScreenKeyboard"
                   xmlns:progressbar="clr-namespace:Sample.Features.ProgressBar"
@@ -1075,6 +1076,14 @@
                              Color="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="File Drop">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x21E9;" Size="20"
+                             Color="{AppThemeBinding Light=#475569, Dark=#94A3B8}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate filedrop:FileDropPage}" Route="filedrop" />
     </FlyoutItem>
 
     <FlyoutItem Title="Quick Entry">

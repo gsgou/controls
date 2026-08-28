@@ -61,15 +61,13 @@
 }
 
 /*
-    ::deep, and the shared class too, because the highlight and insert buttons are separate components.
-    Blazor scopes a stylesheet to the markup in its own file, so a bare .slide-btn rule here compiles to
-    .slide-btn[this-component] and cannot reach a button rendered by another one. ::deep moves the scope
+    ::deep, because the highlight and insert buttons are separate components.
+    Blazor scopes a stylesheet to the markup in its own file, so a bare .shiny-office-btn rule here compiles to
+    .shiny-office-btn[this-component] and cannot reach a button rendered by another one. ::deep moves the scope
     onto .slide-toolbar, so the rule reaches every descendant of the row whatever component drew it.
 */
-.slide-toolbar ::deep .slide-btn,
 .slide-toolbar ::deep .shiny-office-btn {
-    /* inline-flex + centre is what actually centres the glyph; line-height alone leaves the taller
-       glyphs (the alignment arrows, the undo arcs) sitting low in the box. */
+    /* inline-flex + centre is what centres the icon in the box. */
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -90,17 +88,27 @@
     cursor: pointer;
 }
 
-.slide-toolbar ::deep .slide-btn:hover:not(:disabled),
 .slide-toolbar ::deep .shiny-office-btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
 
-.slide-toolbar ::deep .slide-btn:disabled,
 .slide-toolbar ::deep .shiny-office-btn:disabled { opacity: 0.35; cursor: default; }
 
 /* The active state has to survive the hover background, hence the border as well as the fill. */
-.slide-toolbar ::deep .slide-btn.on,
 .slide-toolbar ::deep .shiny-office-btn.on {
     background: rgba(37, 99, 235, 0.14);
     border-color: rgba(37, 99, 235, 0.35);
+}
+
+/*
+    The icons are inline SVG injected as a MarkupString, so they carry no CSS-isolation scope
+    attribute of their own and are only reachable through ::deep. They stroke in currentColor, which
+    is what makes one icon set follow the toolbar's colour, the theme and the disabled opacity.
+
+    display:block on the svg matters: an inline svg sits on a text baseline and leaves a few pixels of
+    descender space under it, which is enough to push the icon off-centre in a 30px button.
+*/
+.slide-toolbar ::deep .shiny-office-btn svg {
+    display: block;
+    flex: 0 0 auto;
 }
 
 .slide-count {

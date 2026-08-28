@@ -23,12 +23,26 @@
 </div>
 
 <div class="sheet-host">
-    @* The formula bar and sheet tabs are the control's own; ShowFormulaBar / ShowSheetTabs turn them off. *@
+    @*
+        The toolbar, formula bar and sheet tabs are all the control's own - ShowToolbar,
+        ShowFormulaBar and ShowSheetTabs turn each on or off. The toolbar is the one that is off by
+        default, since a viewer should not grow a formatting bar it never asked for.
+    *@
     <SpreadsheetView @ref="view"
                      Workbook="workbook"
+                     ShowToolbar="true"
                      Theme="@(dark ? SpreadsheetTheme.Dark : SpreadsheetTheme.Light)"
                      CellChanged="OnCellChanged" />
 </div>
+
+<p class="hint">
+    The toolbar formats the selection: bold, colour, cell fill, alignment, number formats and decimal
+    places. Click a <em>column header</em> first and the format lands on the whole column - including
+    rows that do not exist yet, which is how a currency column stays currency. &#x03A3; writes SUM
+    over whatever the selection implies, and its chevron offers average, count, min and max. Drag a
+    column header's right edge to resize it, or use the fit button; either way the width is saved
+    with the file. Everything here is one undo step.
+</p>
 
 <p class="hint">
     The bar above the grid shows the formula in the active cell, not its result - click B1 and then D5

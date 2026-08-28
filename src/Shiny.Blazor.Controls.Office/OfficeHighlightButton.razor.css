@@ -37,31 +37,40 @@
 
 .shiny-office-btn-chevron {
     min-width: 14px;
-    padding: 0 2px;
-    font-size: 9px;
+    padding: 0 1px;
 }
 
-/* The letter with its colour bar underneath - the same mark Word and PowerPoint use. */
+.shiny-office-btn-chevron ::deep svg {
+    display: block;
+}
+
+/*
+    The letter with its colour bar underneath - the same mark Word and PowerPoint use, and now the
+    same 24x24 artwork as every other toolbar icon rather than a styled letter next to them.
+*/
 .hl-glyph {
     display: inline-flex;
-    flex-direction: column;
     align-items: center;
-    gap: 1px;
     line-height: 1;
 }
 
-.hl-letter {
-    font-weight: 600;
-    font-size: 12px;
+/*
+    ::deep because the icon arrives as a MarkupString and carries no scope attribute of its own.
+
+    The bar is the one part of the set that is not currentColor: it shows the colour the button would
+    apply, which is the whole reason the highlight control is an exception to the monochrome rule. The
+    stroke is what keeps a white or pale swatch from vanishing into the toolbar, and it is drawn under
+    the fill so it does not eat into a 3px bar.
+*/
+.hl-glyph ::deep svg {
+    display: block;
 }
 
-.hl-bar {
-    width: 13px;
-    height: 3px;
-    border-radius: 1px;
-
-    /* A white or pale swatch needs an edge or it vanishes into the toolbar. */
-    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 22%);
+.hl-glyph ::deep rect {
+    fill: var(--hl-swatch, currentColor);
+    stroke: rgb(0 0 0 / 30%);
+    stroke-width: 0.9;
+    paint-order: stroke fill;
 }
 
 .hl-grid {

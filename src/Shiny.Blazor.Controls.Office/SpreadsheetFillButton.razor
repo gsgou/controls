@@ -1,0 +1,122 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
+@using Shiny.Controls.Office.Spreadsheet
+
+@*
+    Cell fill, as a split button.
+
+    The same shape as the document toolbar's highlight control - press the swatch to apply the colour
+    it is showing, press the chevron to change it or clear it - but the mark is a paint drop rather
+    than a letter over a bar. In a spreadsheet the thing being coloured is the cell, not the text in
+    it, and a highlighter mark next to a text-colour picker reads as a second way to colour text.
+
+    The palette is HighlightPalette, deliberately: a cell fill wants a handful of colours pale enough
+    to read numbers through, which is exactly what that set is. A full spectrum would mostly offer
+    ways to make your own sheet unreadable.
+*@
+<div class="shiny-office-picker">
+    <Tooltip Text="@($"Fill colour ({this.NameOf(this.selected)})")" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="@(this.Current is not null ? "shiny-office-btn on" : "shiny-office-btn")"
+                aria-label="@($"Fill colour ({this.NameOf(this.selected)})")"
+                title="@(this.ShowTooltips ? null : $"Fill colour ({this.NameOf(this.selected)})")"
+                disabled="@this.Disabled"
+                @onclick="this.ApplySelectedAsync">
+            <span class="fill-glyph" style="@($"--fill-swatch:{Css(this.selected)}")">
+                @OfficeToolbarIcons.Get(OfficeIcon.FillColor)
+            </span>
+        </button>
+    </Tooltip>
+
+    <Tooltip Text="Fill colours" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn shiny-office-btn-chevron"
+                aria-label="Fill colours"
+                title="@(this.ShowTooltips ? null : "Fill colours")"
+                aria-haspopup="true"
+                aria-expanded="@this.open"
+                disabled="@this.Disabled"
+                @onclick="() => this.open = !this.open">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 12)</button>
+    </Tooltip>
+
+    @if (this.open)
+    {
+        @*
+            A click anywhere else closes it. The backdrop is what makes that work without a document
+            level listener: it sits under the panel and over everything else, so any click that is
+            not on a swatch lands here.
+        *@
+        <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
+
+        <div class="shiny-office-panel" role="dialog" aria-label="Fill colours">
+            <div class="fill-grid">
+                @foreach (var swatch in HighlightPalette.Swatches)
+                {
+                    <button type="button"
+                            class="@(swatch.Color == this.Current ? "fill-swatch on" : "fill-swatch")"
+                            style="@($"background:{Css(swatch.Color)}")"
+                            title="@swatch.DisplayName"
+                            aria-label="@swatch.DisplayName"
+                            @onclick="() => this.PickAsync(swatch.Color)"></button>
+                }
+            </div>
+
+            <button type="button" class="fill-clear" @onclick="() => this.PickAsync(null)">No fill</button>
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    /// <summary>
+    /// The colour the split button applies, remembered across uses.
+    /// </summary>
+    /// <remarks>
+    /// Yellow to start with, because that is what highlighting a row of numbers means until someone
+    /// says otherwise.
+    /// </remarks>
+    ArgbColor selected = HighlightPalette.Swatches[0].Color;
+
+    /// <summary>The fill on the active cell, so the button can show as active. Null when it has none.</summary>
+    [Parameter] public ArgbColor? Current { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>Raised with the chosen colour, or null to remove the fill.</summary>
+    [Parameter] public EventCallback<ArgbColor?> Picked { get; set; }
+
+    TooltipTrigger TooltipTriggerMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
+
+    async Task PickAsync(ArgbColor? color)
+    {
+        this.open = false;
+
+        // Clearing does not change what the split button would apply next: someone who removes a fill
+        // has not said they no longer want yellow.
+        if (color is { } value)
+            this.selected = value;
+
+        await this.Picked.InvokeAsync(color);
+    }
+
+    /// <summary>Applies the remembered colour, or removes the fill when that colour is already on.</summary>
+    Task ApplySelectedAsync()
+        => this.Picked.InvokeAsync(this.Current == this.selected ? null : this.selected);
+
+    string NameOf(ArgbColor color)
+    {
+        foreach (var swatch in HighlightPalette.Swatches)
+        {
+            if (swatch.Color == color)
+                return swatch.DisplayName;
+        }
+
+        return "Custom";
+    }
+
+    static string Css(ArgbColor color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+}

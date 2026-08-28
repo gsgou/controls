@@ -1,0 +1,30 @@
+@using Shiny.Blazor.Controls.FileDrop
+@implements IAsyncDisposable
+@inject IFileDropService FileDrop
+
+@* Renders nothing. It exists so the service can be started at the one moment JS interop is legal —
+   after the first render — without every app having to write that lifecycle code itself. *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await this.FileDrop.StartAsync();
+    }
+
+    /// <remarks>
+    /// The service is scoped and owns its own teardown, so this only has to stop the listeners the
+    /// host started. Disposing the service here would break an app that keeps using it after the
+    /// layout has gone.
+    /// </remarks>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await this.FileDrop.StopAsync();
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
+        {
+        }
+    }
+}

@@ -1,0 +1,341 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
+@using Shiny.Controls.Office.Spreadsheet
+@using Shiny.Controls.Office.Spreadsheet.Calc
+@using Shiny.Controls.Office.Spreadsheet.View
+@implements IDisposable
+
+@*
+    The formatting bar above a SpreadsheetView.
+
+    Two halves. The left is what any editor has - font, size, bold, colour, alignment - and the right
+    is what only a spreadsheet has: number formats, decimal places, AutoSum and column fitting. The
+    second half is why this is its own control rather than a copy of the document toolbar.
+
+    Everything goes through SpreadsheetController, so a button here raises the same undoable command a
+    keyboard shortcut would - not a second path into the workbook. It also means the bar works on its
+    own: hand it `view.Controller` and put it wherever the app's chrome belongs.
+*@
+<div class="sheet-toolbar @Class" style="@Style">
+
+    <FontPickerButton AvailableFonts="FontFamilies"
+                      SelectedFont="@Format.FontName"
+                      Disabled="Disabled"
+                      SelectedFontChanged="OnFontChanged" />
+
+    <FontSizePickerButton AvailableFontSizes="FontSizes"
+                          SelectedFontSize="Format.FontSize"
+                          Disabled="Disabled"
+                          SelectedFontSizeChanged="OnSizeChanged" />
+
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold" Toggle="true" Active="Format.Bold" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleBold())" />
+    <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic" Toggle="true" Active="Format.Italic" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleItalic())" />
+    <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline" Toggle="true" Active="Format.Underline" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleUnderline())" />
+    <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle="true" Active="Format.Strike" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleStrikethrough())" />
+
+    <span class="sheet-sep"></span>
+
+    <ColorPickerButton Text="Text colour"
+                       SelectedColor="@ColorHex"
+                       ShowOpacity="false"
+                       Disabled="Disabled"
+                       SelectedColorChanged="OnColorChanged" />
+
+    <SpreadsheetFillButton Current="FillOrNull"
+                           Disabled="Disabled"
+                           ShowTooltips="ShowTooltips"
+                           Picked="OnFillPicked" />
+
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Left" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Left))" />
+    <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Center" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Center))" />
+    <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Right" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Right))" />
+
+    @*
+        A separator between the two axes, not decoration: both sets are rules on a grid, and side by
+        side without a break the six of them read as one run of six horizontal alignments.
+    *@
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.AlignTop" Hint="Align top" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Top" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Top))" />
+    <OfficeToolbarButton Icon="OfficeIcon.AlignMiddle" Hint="Align middle" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Center" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Center))" />
+    <OfficeToolbarButton Icon="OfficeIcon.AlignBottom" Hint="Align bottom" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Bottom" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Bottom))" />
+
+    <OfficeToolbarButton Icon="OfficeIcon.WrapText" Hint="Wrap text" Toggle="true" Active="Format.WrapText" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleWrapText())" />
+
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.Currency" Hint="Currency" Toggle="true" Active="Preset == NumberFormatPreset.Currency" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetNumberFormat(NumberFormatPreset.Currency))" />
+    <OfficeToolbarButton Icon="OfficeIcon.Percent" Hint="Percent" Toggle="true" Active="Preset == NumberFormatPreset.Percent" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetNumberFormat(NumberFormatPreset.Percent))" />
+    <OfficeToolbarButton Icon="OfficeIcon.DecimalDecrease" Hint="Fewer decimal places" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AdjustDecimals(-1))" />
+    <OfficeToolbarButton Icon="OfficeIcon.DecimalIncrease" Hint="More decimal places" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AdjustDecimals(1))" />
+
+    <div class="shiny-office-picker">
+        <Tooltip Text="More number formats" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
+            <button type="button"
+                    class="shiny-office-btn shiny-office-btn-chevron"
+                    aria-label="More number formats"
+                    title="@(ShowTooltips ? null : "More number formats")"
+                    aria-haspopup="true"
+                    aria-expanded="@formatsOpen"
+                    disabled="@Disabled"
+                    @onclick="() => formatsOpen = !formatsOpen">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 12)</button>
+        </Tooltip>
+
+        @if (formatsOpen)
+        {
+            @* A click anywhere else closes it, without a document-level listener. *@
+            <div class="shiny-office-backdrop" @onclick="() => formatsOpen = false"></div>
+
+            <div class="shiny-office-panel sheet-menu" role="menu" aria-label="Number formats">
+                @foreach (var preset in Presets)
+                {
+                    <button type="button"
+                            role="menuitem"
+                            class="@(Preset == preset ? "sheet-menu-item on" : "sheet-menu-item")"
+                            @onclick="() => PickFormatAsync(preset)">
+                        <span class="sheet-menu-name">@NumberFormats.DisplayName(preset)</span>
+                        <span class="sheet-menu-sample">@SampleOf(preset)</span>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <span class="sheet-sep"></span>
+
+    @*
+        AutoSum is a split button for the same reason the highlight is: totalling a column is the
+        common case by a wide margin, and making it a menu choice would put a click in front of it
+        every single time.
+    *@
+    <div class="shiny-office-picker">
+        <Tooltip Text="AutoSum" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
+            <button type="button"
+                    class="shiny-office-btn"
+                    aria-label="AutoSum"
+                    title="@(ShowTooltips ? null : "AutoSum")"
+                    disabled="@Disabled"
+                    @onclick="() => Run(c => c.ApplyAutoFunction(AutoFunction.Sum))">@OfficeToolbarIcons.Get(OfficeIcon.Sum)</button>
+        </Tooltip>
+
+        <Tooltip Text="More auto functions" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
+            <button type="button"
+                    class="shiny-office-btn shiny-office-btn-chevron"
+                    aria-label="More auto functions"
+                    title="@(ShowTooltips ? null : "More auto functions")"
+                    aria-haspopup="true"
+                    aria-expanded="@functionsOpen"
+                    disabled="@Disabled"
+                    @onclick="() => functionsOpen = !functionsOpen">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 12)</button>
+        </Tooltip>
+
+        @if (functionsOpen)
+        {
+            <div class="shiny-office-backdrop" @onclick="() => functionsOpen = false"></div>
+
+            <div class="shiny-office-panel sheet-menu" role="menu" aria-label="Auto functions">
+                @foreach (var function in Functions)
+                {
+                    <button type="button"
+                            role="menuitem"
+                            class="sheet-menu-item"
+                            @onclick="() => PickFunctionAsync(function)">
+                        <span class="sheet-menu-name">@AutoFunctions.DisplayName(function)</span>
+                        <span class="sheet-menu-sample">@AutoFunctions.NameOf(function)</span>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.ColumnWidth" Hint="Fit column to contents" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AutoFitColumns())" />
+    <OfficeToolbarButton Icon="OfficeIcon.ClearFormat" Hint="Clear formatting" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ClearFormatting())" />
+
+    <span class="sheet-sep"></span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo" Disabled="@(Disabled || !(Controller?.CanUndo ?? false))" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.Undo())" />
+    <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo" Disabled="@(Disabled || !(Controller?.CanRedo ?? false))" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.Redo())" />
+
+    @ToolbarContent
+</div>
+
+@code {
+    bool formatsOpen;
+    bool functionsOpen;
+    SpreadsheetController? attached;
+
+    /// <summary>The presets on offer, in the order the MAUI toolbar's action sheet lists them.</summary>
+    static readonly NumberFormatPreset[] Presets =
+    [
+        NumberFormatPreset.General,
+        NumberFormatPreset.Number,
+        NumberFormatPreset.Currency,
+        NumberFormatPreset.Percent,
+        NumberFormatPreset.Scientific,
+        NumberFormatPreset.ShortDate,
+        NumberFormatPreset.Time,
+        NumberFormatPreset.Text
+    ];
+
+    static readonly AutoFunction[] Functions =
+    [
+        AutoFunction.Sum,
+        AutoFunction.Average,
+        AutoFunction.Count,
+        AutoFunction.Min,
+        AutoFunction.Max
+    ];
+
+    /// <summary>The grid this bar drives. Set by <see cref="SpreadsheetView"/>, or by a host directly.</summary>
+    [Parameter, EditorRequired] public SpreadsheetController? Controller { get; set; }
+
+    /// <summary>Shows the current formatting but refuses to change it.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Whether the icon-only buttons carry a hover tooltip.
+    /// </summary>
+    /// <remarks>
+    /// On by default, and the tooltip is the only place these commands are named. Turning it off falls
+    /// back to the browser's own <c>title</c>; either way the buttons keep an aria-label.
+    /// </remarks>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    [Parameter] public IReadOnlyList<string> FontFamilies { get; set; } =
+    [
+        "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
+    ];
+
+    [Parameter] public IReadOnlyList<double> FontSizes { get; set; } =
+    [
+        8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72
+    ];
+
+    /// <summary>Extra items appended after the built-in controls.</summary>
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Raised after a command runs, so a host can repaint and track the dirty state.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    bool Disabled => this.ReadOnly || this.Controller is null;
+
+    /// <summary>The active cell's formatting — what every toggle in the bar shows the state of.</summary>
+    ResolvedFormat Format => this.Controller?.ActiveFormat ?? ResolvedFormat.Default;
+
+    NumberFormatPreset? Preset => NumberFormats.PresetOf(this.Format.NumberFormatCode);
+
+    string ColorHex => OfficeColors.ToHex(this.Format.Foreground);
+
+    /// <summary>The fill, as the highlight button takes it: null when the cell has none.</summary>
+    ArgbColor? FillOrNull => this.Format.Background.IsTransparent ? null : this.Format.Background;
+
+    TooltipTrigger TooltipMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(this.attached, this.Controller))
+            return;
+
+        // Subscribed rather than redrawn from the parent's render, because moving the selection with
+        // the arrow keys never re-renders this component - and the bar would then go on showing the
+        // formatting of a cell the user left several keystrokes ago.
+        this.Detach();
+        this.attached = this.Controller;
+
+        if (this.attached is not null)
+            this.attached.Changed += this.OnControllerChanged;
+    }
+
+    void OnControllerChanged(object? sender, EventArgs e) => this.InvokeAsync(this.StateHasChanged);
+
+    async Task Run(Action<SpreadsheetController> action)
+    {
+        if (this.Controller is not { } controller || this.Disabled)
+            return;
+
+        action(controller);
+        await this.RaiseChangedAsync();
+    }
+
+    Task OnFontChanged(string family)
+        => family is { Length: > 0 } ? this.Run(c => c.SetFontFamily(family)) : Task.CompletedTask;
+
+    Task OnSizeChanged(double size)
+        => size > 0 ? this.Run(c => c.SetFontSize(size)) : Task.CompletedTask;
+
+    Task OnColorChanged(string hex)
+        => OfficeColors.TryParse(hex, out var color) ? this.Run(c => c.SetTextColor(color)) : Task.CompletedTask;
+
+    Task OnFillPicked(ArgbColor? color) => this.Run(c => c.SetFillColor(color));
+
+    Task PickFormatAsync(NumberFormatPreset preset)
+    {
+        this.formatsOpen = false;
+        return this.Run(c => c.SetNumberFormat(preset));
+    }
+
+    Task PickFunctionAsync(AutoFunction function)
+    {
+        this.functionsOpen = false;
+        return this.Run(c => c.ApplyAutoFunction(function));
+    }
+
+    /// <summary>
+    /// What a preset does to a number, so the menu shows the format rather than naming it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Formatted through the same resolver the grid paints with, so the sample is the truth rather
+    /// than a hard-coded string that drifts from what the button actually applies.
+    /// </para>
+    /// <para>
+    /// The number differs by preset because one number cannot demonstrate all of them: 1234.5 as a
+    /// percentage is 123450%, and as a date it is a morning in 1903. Each row shows the format doing
+    /// the thing someone would pick it for.
+    /// </para>
+    /// </remarks>
+    string SampleOf(NumberFormatPreset preset)
+    {
+        if (this.Controller?.Workbook.Styles is not { } styles)
+            return string.Empty;
+
+        var value = preset switch
+        {
+            NumberFormatPreset.Percent => 0.256,
+            NumberFormatPreset.ShortDate or NumberFormatPreset.Time => ExcelDate.FromDateTime(DateTime.Now),
+            _ => 1234.5
+        };
+
+        var format = ResolvedFormat.Default with { NumberFormatCode = NumberFormats.CodeOf(preset) };
+        return styles.Format(CellValue.FromNumber(value), format);
+    }
+
+    async Task RaiseChangedAsync()
+    {
+        this.StateHasChanged();
+
+        if (this.Changed.HasDelegate)
+            await this.Changed.InvokeAsync();
+    }
+
+    void Detach()
+    {
+        if (this.attached is not null)
+            this.attached.Changed -= this.OnControllerChanged;
+
+        this.attached = null;
+    }
+
+    public void Dispose() => this.Detach();
+}

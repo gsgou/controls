@@ -101,7 +101,11 @@ public sealed record DocumentTable(IReadOnlyList<DocumentTableRow> Rows) : Docum
 /// <summary>A horizontal rule.</summary>
 public sealed record DocumentRule : DocumentBlock;
 
-/// <summary>Page geometry, used to give the reflowed view a sensible measure.</summary>
+/// <summary>Page geometry, from the section properties.</summary>
+/// <remarks>
+/// Used two ways. In reflow it only supplies a sensible measure; in print layout it is the actual
+/// paper — the page drawn on screen is this size, and content is inset by these margins.
+/// </remarks>
 public sealed record PageSetup
 {
     public static readonly PageSetup Letter = new();
@@ -115,5 +119,37 @@ public sealed record PageSetup
     public double MarginTop { get; init; } = 96;
     public double MarginBottom { get; init; } = 96;
 
+    /// <summary>Distance from the top of the page to the top of the header.</summary>
+    /// <remarks>
+    /// <c>w:pgMar/@w:header</c>, and unrelated to <see cref="MarginTop"/> — the header sits in the
+    /// top margin, above where body text starts, which is why a header can be present without moving
+    /// the body at all.
+    /// </remarks>
+    public double HeaderDistance { get; init; } = 48;   // 0.5in
+
+    /// <summary>Distance from the bottom of the page to the bottom of the footer.</summary>
+    public double FooterDistance { get; init; } = 48;
+
+    /// <summary>True when the section declares a distinct first-page header and footer (<c>w:titlePg</c>).</summary>
+    public bool DifferentFirstPage { get; init; }
+
+    /// <summary>True when the document declares distinct even-page headers and footers.</summary>
+    public bool DifferentOddAndEvenPages { get; init; }
+
     public double ContentWidth => Math.Max(1, this.Width - this.MarginLeft - this.MarginRight);
+
+    /// <summary>Height available to body text on one page.</summary>
+    public double ContentHeight => Math.Max(1, this.Height - this.MarginTop - this.MarginBottom);
+
+    /// <summary>Which header and footer a given one-based page number uses.</summary>
+    public DocumentPageKind KindOf(int pageNumber)
+    {
+        if (this.DifferentFirstPage && pageNumber == 1)
+            return DocumentPageKind.First;
+
+        if (this.DifferentOddAndEvenPages && pageNumber % 2 == 0)
+            return DocumentPageKind.Even;
+
+        return DocumentPageKind.Default;
+    }
 }

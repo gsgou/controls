@@ -20,7 +20,7 @@
         </Border>
 
         <Border Grid.Row="2" StrokeThickness="1">
-            <office:SpreadsheetView x:Name="Sheet" CellChanged="OnCellChanged" />
+            <office:SpreadsheetView x:Name="Sheet" ShowToolbar="True" CellChanged="OnCellChanged" />
         </Border>
 
         <Label Grid.Row="3"

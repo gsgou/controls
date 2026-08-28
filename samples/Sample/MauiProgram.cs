@@ -48,6 +48,7 @@ public static class MauiProgram
             .UseShinyCamera()
             .UseShinyMediaElement()
             .UseTrayIcon()
+            .UseFileDrop()
             .UseDesktopQuickEntry()
             .UseShinyDocking()
             .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")

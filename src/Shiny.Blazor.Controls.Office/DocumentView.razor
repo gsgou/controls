@@ -56,6 +56,16 @@
     /// <summary>Zoom factor, clamped to 0.25–4. Changing it re-lays-out.</summary>
     [Parameter] public double Zoom { get; set; } = 1.0;
 
+    /// <summary>
+    /// Continuous column, or sheets of paper with the document's own headers and footers.
+    /// </summary>
+    /// <remarks>
+    /// Reflow by default, unlike <c>DocumentEditor</c>. This control is for reading, and on a phone a
+    /// fixed page width means pinch-zooming to make the text legible — which is exactly what
+    /// reflowing to the control's width avoids.
+    /// </remarks>
+    [Parameter] public DocumentPageLayout PageLayout { get; set; } = DocumentPageLayout.Reflow;
+
     [Parameter] public string? Class { get; set; }
 
     [Parameter] public string? Style { get; set; }
@@ -96,6 +106,7 @@
         }
 
         this.controller.Zoom = this.Zoom;
+        this.controller.PageLayout = this.PageLayout;
     }
 
     void OnControllerChanged(object? sender, EventArgs e)
@@ -116,7 +127,9 @@
         }
 
         // The surface arrives in device pixels; the layout works in CSS pixels.
-        var scale = (float)this.dpr;
+        // Device scale times the view scale: in print the controller works in the paper's units
+        // and zoom is applied here, so one layout unit is dpr * zoom device pixels.
+        var scale = (float)(this.dpr * this.controller.ViewScale);
         var width = info.Width / this.dpr;
         var height = info.Height / this.dpr;
 
@@ -133,8 +146,12 @@
             Viewport = this.controller.Viewport,
             Theme = theme,
             Scale = scale,
-            PageX = this.controller.PageX + this.controller.PagePadding,
-            PageWidth = this.controller.PageWidth
+            PageX = this.controller.PageX,
+            ContentX = this.controller.ContentX,
+            PageWidth = this.controller.PageWidth,
+            PageHeight = this.controller.PageHeight,
+            Pages = this.controller.VisiblePages(),
+            Setup = this.controller.Document.Page
         });
     }
 
@@ -167,7 +184,7 @@
         }
     }
 
-    void OnWheel(WheelEventArgs e) => this.controller?.Scroll(e.DeltaY);
+    void OnWheel(WheelEventArgs e) => this.controller?.ScrollByControlPixels(e.DeltaY);
 
     void OnKeyDown(KeyboardEventArgs e)
     {

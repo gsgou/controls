@@ -1,6 +1,6 @@
 # Shiny Controls
 
-A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, PasswordStrength (a password field with a live strength meter, a rule checklist and a pluggable scorer), SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar (with an animated, bidirectional fill), ProgressLine (the thin page-edge loading line, docked clear of the nav and tab bars and drivable from code), Overlay/LoadingOverlay, SkeletonView, Expander/Accordion (a disclosure panel whose fade, slide and height reveals combine and are aimed at any of the four edges, and the accordion list that coordinates a stack of them), AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, both editors sharing one gallery of twenty preset shapes plus tables, pictures and text highlighting, and both accepting an image dragged in from the desktop, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, and global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux). On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
+A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. One package per host covers TableView, DataGrid (with detail/breakdown rows and a TreeDataGrid hierarchy mode), TreeView, Scheduler, FloatingPanel/OverlayHost, DurationPicker, FrostedGlassView, Toast, Dialogs (owned, animated alert/confirm/prompt/action-sheet), Fab/FabMenu, ShinyToolbar/ShinyTabBar (Blazor), SplashScreen (Blazor), PillView, BadgeView, SecurityPin, PasswordStrength (a password field with a live strength meter, a rule checklist and a pluggable scorer), SignaturePad, ShinyImage, ImageViewer, ImageEditor, MediaPickerButton, ChatView, ColorPicker, FontPicker, Slider, ProgressBar (with an animated, bidirectional fill), ProgressLine (the thin page-edge loading line, docked clear of the nav and tab bars and drivable from code), Overlay/LoadingOverlay, SkeletonView, Expander/Accordion (a disclosure panel whose fade, slide and height reveals combine and are aimed at any of the four edges, and the accordion list that coordinates a stack of them), AutoCompleteEntry, CountryPicker, AddressEntry, TextEntry, CarouselGallery, ParallaxCollectionView, StaggeredGrid, VirtualizedGrid, and StateView/Wizard (named branches switched by one string, and a multi-step flow built on them with a pointed progress bar, per-step validity gates and conditional steps). Walkthrough and Tooltip round that out: a guided tour that dims the page and cuts an animated spotlight around one control at a time — steps declared together in order, advancing on a command, on a tap of the highlighted control, or on a timer, with a RememberRunKey so onboarding runs once — and the themed tooltip bubble underneath it, which wraps its target or points at one, auto-flips to whichever side has room, and is drawn above the page so nothing can clip it. A **Flyout** — a side panel that slides in from either edge, rests as a narrow icon rail instead of a full panel, and either pushes the content aside or floats over it — replaces MAUI's `FlyoutPage` and, unlike it, works inside Shell. On MAUI there is also a **`ShinyNavigationPage`** — a real `NavigationPage`, with everything that implies, whose drawn bar carries toolbar items on the **left** as well as the right, plus an overflow menu, badges and an iOS-style collapsing large title. Blazor additionally gets layout primitives — `VStack`/`HStack`, a responsive `Grid`/`Row`/`Column`, and an `AppLayout` application shell whose left/right panels collapse to hidden, a toolbar rail or fully shown, drag-resize between a min and max, keep their own scroll regions, and can persist and auto-collapse when the shell gets narrow. Motion Icons — 42 animated icons that run on a timer, on hover, on tap or on command — ship in the core packages on both hosts. Sliders come in single-value (Slider) and two-thumb range (RangeSlider) flavors. Markdown, Mermaid Diagrams, Barcodes (1D + 2D, QR codes), Keyframe animation (declarative XAML timelines with seekable, reversible playback), and a cross-platform CameraView (preview, photo/video capture, a pluggable effects pipeline for colour/comic/sketch/blur looks, face masks and AI stylization, plus a pluggable frame-analysis pipeline for barcode/face/motion/OCR/structured-documents) ship as separate add-on packages per host, Office viewers and editors — a Spreadsheet (`SpreadsheetView`) that opens, renders and edits real `.xlsx` workbooks, with an optional formatting toolbar carrying the usual bold/italic/colour controls plus the spreadsheet-only ones: cell fill, number formats, decimal places, whole-column formatting and AutoSum, a `.docx` editor in two controls — `DocumentEditor` (the lone surface) and `DocumentEditorView` (the same plus formatting chrome), with spell check drawn from the platform's own dictionary on MAUI and replaceable on both hosts — a `.pptx` editor in two more — `SlideEditor` and `SlideEditorView` — where a click selects a shape to move or resize and a double-click puts a caret in its text, both editors sharing one gallery of twenty preset shapes plus tables, pictures and text highlighting, and both accepting an image dragged in from the desktop, plus read-only `DocumentView` (`.docx`, reflowed rather than paginated) and `SlideView` (`.pptx`, fitted artboards or a thumbnail grid, with placeholders resolved through layout and master) — a virtualized SkiaSharp grid shared verbatim by both hosts, over a document kernel with a transactional undo stack and a formula engine, editing the OOXML package surgically so an untouched workbook saves byte-identical — and a cross-platform MediaElement (local + remote audio/video with a themed, per-element-toggleable transport bar, background audio with OS lock-screen controls, and Picture-in-Picture) ship as separate add-on packages per host. Quick Entry — an assistant-style prompt popup (`PromptView`) summoned over whatever the user is looking at, with an optional Siri-style screen-edge glow — ships in the **core** packages on both hosts and works everywhere as an in-app overlay; on desktop it can instead open as a borderless always-on-top OS window over *other applications*, which is what the `Shiny.Maui.Controls.Desktop` add-on adds. That add-on also carries the **desktop-only** system tray / status-bar icon, Visual-Studio-style docking, global hotkeys (Windows, macOS AppKit, MacCatalyst, and Linux), and **window-level file drop** — files dragged from Finder / Explorer onto anywhere in the app window, including on top of a `BlazorWebView`, which MAUI's own `DropGestureRecognizer` cannot see; Blazor has the same service over the whole browser window in its core package. On the web there is no separate add-on: Blazor docking and the touch / kiosk on-screen keyboard both ship in the main `Shiny.Blazor.Controls` package.
 
 [![MAUI NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.svg?label=Shiny.Maui.Controls)](https://www.nuget.org/packages/Shiny.Maui.Controls)
 [![Blazor NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.svg?label=Shiny.Blazor.Controls)](https://www.nuget.org/packages/Shiny.Blazor.Controls)
@@ -1165,6 +1165,40 @@ it. Editing there is the same undoable command as typing into the cell; Enter co
 Escape reverts, and clicking away commits into the cell that was being edited rather than the one
 clicked. Typing an address into the name box goes there.
 
+**Formatting toolbar.** `ShowToolbar="true"` puts a `SpreadsheetToolbar` above the formula bar. It has
+the usual half — font, size, bold, italic, underline, strikethrough, text colour, alignment on both
+axes, wrap text — and the half only a spreadsheet needs: **cell fill** for highlighting, number
+formats (general, number, currency in the reader's own culture, percent, scientific, date, time,
+text), increase and decrease decimal places, **auto functions** (Σ writes SUM, and its split button
+also offers average, count numbers, min and max), fit-column-to-contents, and clear formatting. Every
+button is one undoable command through the same `SpreadsheetController` a keyboard shortcut would
+reach, so a toolbar action and a typed edit share one undo stack. The toolbar is off by default — the
+formula bar and tab strip are how a workbook is *read*, and a viewer should not grow a formatting bar
+it never asked for.
+
+Formatting is applied as a **delta**, not as a format assigned wholesale: bolding a range that mixes a
+red heading with black body text leaves both colours where they are. Styles are interned, so bolding a
+thousand cells adds exactly one entry to the styles part rather than a thousand identical ones.
+
+**Formatting columns.** Select a column from its header and the format is written as a *column* style —
+one attribute on one `<col>` element, the way Excel does it — so it applies to every row including the
+ones that do not exist yet. That is what makes a column formatted as currency still show currency for a
+value typed into it tomorrow. Formatting one cell inside a formatted column still overrides it, and
+clearing that cell's formatting does not let the column's come back. Row-header selections work the
+same way. Column widths and row heights are now recorded in the file, so a column dragged wider — or
+fitted to its contents from the toolbar — survives a save and reopen.
+
+```csharp
+var controller = view.Controller;                    // MAUI: Sheet.Controller, Blazor: view.Controller
+controller.ToggleBold();
+controller.SetFillColor(new ArgbColor(255, 0xFF, 0xEB, 0x3B));
+controller.SetNumberFormat(NumberFormatPreset.Currency);
+controller.AdjustDecimals(+1);
+controller.ApplyAutoFunction(AutoFunction.Sum);      // false when there is nothing to total
+controller.AutoFitColumns();
+controller.ActiveFormat;                             // ResolvedFormat — what a toolbar shows the state of
+```
+
 **Worksheets.** A workbook is a book, not a sheet, and the control shows it as one: a tab strip under
 the grid switches between the visible sheets and adds, renames, duplicates, reorders, hides and deletes
 them. Every one of those is an undoable command like any cell edit, and each sheet keeps its own
@@ -1191,6 +1225,10 @@ workbook.Execute(new DeleteSheetCommand("Forecast"));            // undo restore
 | Rendering | Virtualized over all 1,048,576 rows; frozen panes, merged cells, number formats, fonts, fills, alignment, theme colours with tint |
 | Editing | Cell values and formulas, range clear, column/row resize, range selection, in-cell editing through a native `Entry` / `<input>` |
 | Formula bar | Name box and formula field on both hosts, `ShowFormulaBar` to hide; shows the formula, not the result |
+| Formatting | `ShowToolbar` on both hosts: font, bold/italic/underline/strike, text colour, cell fill, alignment on both axes, wrap; applied as a delta so a mixed selection keeps what each cell had |
+| Number formats | Currency (culture-aware), percent, scientific, date, time, text, plus increase/decrease decimals |
+| Auto functions | Σ writes SUM, AVERAGE, COUNT, MIN or MAX over the range the selection implies — the run above, the run to the left, or one total per column of a block |
+| Columns | Header selections format the whole column via a `<col>` style; widths, row heights, auto-fit and hide/show are recorded in the file |
 | Worksheets | Tab strip on both hosts: switch, add, rename, duplicate, reorder, hide/unhide, delete — all undoable, with per-sheet selection and scroll |
 | Undo | Transactional, with typing-run coalescing; a range clear is one step |
 | Formulas | ~80 functions, dependency-ordered incremental recalculation, circular-reference detection |
@@ -1234,6 +1272,28 @@ formatting change. An unedited document still saves byte-identical.
 the family list previews each face in its own typeface, and the colour swatch opens the full spectrum
 rather than the operating system's own dialog. What still differs is only the bar around them: Blazor
 composes `ShinyToolbar`, MAUI has no such control and lays out a scrolling row itself.
+
+**One icon set across both toolbars and both hosts.** Every plain button on the Word and PowerPoint
+bars draws from a single monochrome stroked set defined once in `Shiny.Controls.Office.Shared`, on a
+24x24 grid at one weight: MAUI paints it onto a `GraphicsView`, Blazor writes it out as inline SVG
+stroked in `currentColor`. That replaced a mixture of styled letters, geometric unicode and emoji —
+and the emoji were the reason it had to go rather than a matter of taste, since a font paints those in
+its own colour, size and weight, so the picture and delete buttons could not be tinted, did not dim
+with a disabled button and looked different on every platform. The geometry is stored as drawing
+commands rather than an SVG path string, because MAUI's `PathBuilder` drops implicit line-tos and
+truncates run-together decimals silently — artwork that looks perfect in a browser can draw a stump on
+a device. The **pickers are the deliberate exception**: font, size, text colour and the highlight
+swatch have to show what they are currently set to, which is the one thing a monochrome icon cannot
+do, so the highlight split button keeps the shared `A`-over-a-bar mark and tints only the bar.
+
+**Icon-only buttons carry a tooltip on desktop and web.** Each one is wrapped in Shiny's own `Tooltip`
+naming what it does, rather than the browser's `title` — which is slow to appear, cannot be themed and
+is unreachable from a keyboard. On Blazor that is on by default; on MAUI it is on for Windows, Mac
+Catalyst, macOS and the GTK head and **off on iOS and Android**, because the tooltip opens on hover
+and there is no hover on a touch screen — and a long-press tooltip would compete with the tap the
+button exists for. `ShowToolbarTooltips` on `DocumentEditorView` and `SlideEditorView` overrides either
+way; turning it off on Blazor falls back to the native `title`. The accessible name is set on the
+button regardless, since a tooltip is not what a screen reader reads.
 
 | | Blazor | MAUI |
 |---|---|---|
@@ -1339,6 +1399,9 @@ Edits are surgical on the DrawingML runs, the same way the document editor treat
 split only where an edit needs a boundary and never re-created, so the language, hyperlinks and
 theme-derived fills it carries survive a formatting change. A whole drag is **one** undo step, not one
 per pointer sample.
+
+The toolbar draws from the **same icon set** as the document editor — see above — adding `Previous`,
+`Next`, `Indent`, `Outdent`, `TextBox` and `Delete`, and takes the same `ShowToolbarTooltips`.
 
 | | Blazor | MAUI |
 |---|---|---|
@@ -4844,3 +4907,104 @@ Drive visibility from code via DI:
 `⇧` is momentary, `⇪` is sticky and only raises the letters (the number row keeps its digits), and holding a character, `⌫`, space or an arrow auto-repeats. Arrows are caret-aware: `▲` / `▼` walk to the same column on the adjacent line of a `<textarea>`. Enter dispatches real key events and submits the form on a single-line input; set `EnterInsertsNewLine` to type a newline in a `<textarea>` instead. Theming is entirely `--shiny-osk-*` custom properties.
 
 Limitations: DOM inputs only — no injection into another window, process or cross-origin frame. No Shadow DOM (`focusin` does not pierce shadow roots). No IME / dead-key composition, English US-QWERTY only. No Ctrl / Alt chords — and no inert keys on the board pretending otherwise. Keys are `tabindex="-1"` by design, since taking focus is the one thing the control exists to avoid; the ARIA tree is there so the board is describable, not tab-navigable.
+
+### File Drop
+
+Files dragged from Finder / Explorer / Files onto the **application window** — anywhere in it, including on top of a `BlazorWebView` or any other hosted web content.
+
+This is deliberately not `DropGestureRecognizer`. That one is per-view, is unimplemented on the AppKit and GTK4 heads and [broken on Mac Catalyst](https://github.com/dotnet/maui/issues/23627), and — the reason this exists — it sits *behind* hosted web content, so an app whose UI is a `BlazorWebView` never sees the drop at all. `IFileDropService` attaches to the **native window** and, by default, stops the web view claiming the drag first, so a drop anywhere in the window reaches your code.
+
+| Host | Platforms | Payload |
+| --- | --- | --- |
+| MAUI (`Shiny.Maui.Controls.Desktop`) | Windows (WinUI), macOS (AppKit + Mac Catalyst), Linux (GTK4) | Real file paths |
+| Blazor (`Shiny.Blazor.Controls`) | WebAssembly, Server, Hybrid | Bytes — the browser gives no path |
+
+On iOS, Android, and anywhere else the `net10.0` asset lands, the service still resolves, `IsSupported` is `false` and nothing fires — so shared code needs no `#if`.
+
+#### MAUI
+
+```csharp
+using Shiny;
+
+builder
+    .UseMauiApp<App>()
+    .UseShinyControls()
+    .UseFileDrop(o =>
+    {
+        o.AllowedExtensions.Add(".pdf");   // empty = accept everything
+        o.MaxFileSize = 50 * 1024 * 1024;
+        o.MaxFiles = 10;
+    });
+```
+
+```csharp
+using Shiny.Maui.Controls.Desktop.FileDrop;
+
+public MyViewModel(IFileDropService drop)
+{
+    drop.DragEnter += (_, e) => this.IsDragging = e.HasAcceptableFiles;
+    drop.DragLeave += (_, e) => this.IsDragging = false;
+    drop.Dropped   += (_, e) =>
+    {
+        this.IsDragging = false;
+        foreach (var file in e.Files)
+            this.Import(file.FullPath!);       // or await file.OpenReadAsync()
+    };
+}
+```
+
+Windows are attached automatically as they open. Turn that off with `AutoAttachWindows = false` and call `AttachTo(window)` yourself.
+
+#### Blazor
+
+`AddShinyControls()` covers the registration; `ConfigureFileDrop` is the umbrella's equivalent of the options delegate. Place one `<FileDropHost />` in your root layout — it starts the listeners at the one moment JS interop is legal, after the first render.
+
+```csharp
+builder.Services.AddShinyFileDrop(o => o.AllowedExtensions.Add(".png"));
+```
+
+```razor
+@using Shiny.Blazor.Controls.FileDrop
+@inject IFileDropService FileDrop
+
+@* once, in MainLayout.razor *@
+<FileDropHost />
+```
+
+```csharp
+this.FileDrop.Dropped += async (_, e) =>
+{
+    foreach (var file in e.Files)
+    {
+        await using var stream = await file.OpenReadAsync();
+        await this.Upload(file.FileName, stream);
+    }
+};
+```
+
+The listeners go on `window` in the **capture** phase — the browser equivalent of "over top of any web view". A drop is caught wherever it lands, before any component can consume it, and the browser never gets to do its default thing with a dropped file, which is to navigate away to it and unload the app.
+
+#### App-wide handling: `IFileDropDelegate`
+
+The events belong to a page or component. When a drop should be handled the same way whatever is on screen — with constructor-injected services rather than whatever the current page captured — register a delegate instead. It runs first, and can consume the drop.
+
+```csharp
+builder.UseFileDrop<ImportFileDropDelegate>();      // MAUI
+services.AddShinyFileDrop<ImportFileDropDelegate>(); // Blazor
+
+public class ImportFileDropDelegate(IImportService imports) : IFileDropDelegate
+{
+    public async Task OnFilesDropped(FileDropContext context)
+    {
+        await imports.QueueAsync(context.Files);
+        context.Handled = true;   // suppresses the Dropped event for this drop
+    }
+}
+```
+
+#### Things worth knowing
+
+- **A wholly refused drop raises `DragLeave`, not `Dropped`.** No platform sends a "leave" after a drop, so an overlay bound to the drag state would otherwise stay up for good. `RejectedCount` tells you how many were filtered out.
+- **A drag in progress reveals less than the drop does.** Browsers hide file names and sizes until the drop lands, and Mac Catalyst has only a suggested name, so `DragEnter` / `DragOver` may report placeholder entries. The count is always real; on MAUI desktop everything else is too.
+- **`SuppressWebViewDrop` is what makes this work over web content**, and it is the first switch to turn off if hosted web content starts behaving oddly. It sets `AllowDrop = false` and revokes the OLE registration on WebView2, unregisters `WKWebView`'s dragged types on AppKit, strips the drop interactions inside `WKWebView` on Catalyst, and puts the GTK drop target in the capture phase.
+- **Blazor releases a drop's files once your handler returns.** They live in JS memory until then. Set `ReleaseFilesAfterHandling = false` if you need to read one later, and call `ReleaseAsync` yourself when you are done.

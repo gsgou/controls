@@ -1,0 +1,193 @@
+@page "/filedrop"
+@implements IDisposable
+@inject IFileDropService FileDrop
+
+<PageTitle>File Drop</PageTitle>
+
+<h1>Window-level file drop</h1>
+
+<p>
+    Drag files from your desktop onto <em>anywhere</em> in this page. The listeners are attached to
+    <code>window</code> in the capture phase, so the drop is caught before any component can consume
+    it — and the browser never gets to navigate away to the file.
+</p>
+
+<section class="demo-section">
+    <h2>Status</h2>
+    <p class="status-message">@status</p>
+    @if (lastPosition is not null)
+    {
+        <p><small>Last drag position: @lastPosition</small></p>
+    }
+
+    <label>
+        <input type="checkbox" checked="@FileDrop.IsEnabled" @onchange="ToggleEnabled" />
+        Accept drops
+    </label>
+
+    <label>
+        <input type="checkbox" checked="@imagesOnly" @onchange="ToggleImagesOnly" />
+        Images only (changes the live filter)
+    </label>
+
+    <button @onclick="Clear">Clear</button>
+</section>
+
+<section class="demo-section">
+    <h2>Dropped files</h2>
+    @if (files.Count == 0)
+    {
+        <p><small>Nothing yet.</small></p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var file in files)
+            {
+                <li>
+                    <strong>@file.FileName</strong>
+                    <br />
+                    <small>@file.ContentType · @file.Length.ToString("N0") bytes · @file.LastModified.ToLocalTime().ToString("g")</small>
+                    @if (previews.TryGetValue(file, out var preview))
+                    {
+                        <br />
+                        <code>@preview</code>
+                    }
+                    else
+                    {
+                        <br />
+                        <button @onclick="() => PreviewAsync(file)">Read first 32 bytes</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<section class="demo-section">
+    <h2>Events</h2>
+    <ul>
+        @foreach (var entry in log)
+        {
+            <li><code>@entry</code></li>
+        }
+    </ul>
+</section>
+
+@* The drop affordance. Nothing draws it for you: the service reports the drag, the app decides
+   what that looks like. *@
+@if (isDragging)
+{
+    <div class="drop-overlay">@status</div>
+}
+
+@code {
+    readonly List<DroppedFile> files = new();
+    readonly Dictionary<DroppedFile, string> previews = new();
+    readonly List<string> log = new();
+
+    string status = "Drag files anywhere over this page.";
+    string? lastPosition;
+    bool isDragging;
+    bool imagesOnly;
+
+    protected override void OnInitialized()
+    {
+        this.FileDrop.DragEnter += this.OnDragEnter;
+        this.FileDrop.DragOver += this.OnDragOver;
+        this.FileDrop.DragLeave += this.OnDragLeave;
+        this.FileDrop.Dropped += this.OnDropped;
+
+        // Files stay readable until this page has finished with them, which is what the preview
+        // button needs - the default is to release them the moment the event handler returns.
+        this.FileDrop.Options.ReleaseFilesAfterHandling = false;
+    }
+
+    void OnDragEnter(object? sender, FileDragEventArgs e)
+    {
+        this.isDragging = true;
+        this.status = e.HasAcceptableFiles
+            ? $"Drop to accept {e.Files.Count} file(s)."
+            : "Nothing in this drag is accepted.";
+        this.Log($"enter — {e.Files.Count} accepted, {e.RejectedCount} filtered out");
+        this.StateHasChanged();
+    }
+
+    void OnDragOver(object? sender, FileDragEventArgs e)
+    {
+        // No StateHasChanged: dragover fires on every mouse move and re-rendering the page on each
+        // one is what makes a drop target feel sluggish. The position is picked up by the next
+        // render the other handlers cause.
+        this.lastPosition = $"{e.X:0}, {e.Y:0}";
+    }
+
+    void OnDragLeave(object? sender, FileDragEventArgs e)
+    {
+        this.isDragging = false;
+        this.status = "Drag files anywhere over this page.";
+        this.Log("leave");
+        this.StateHasChanged();
+    }
+
+    void OnDropped(object? sender, FileDropEventArgs e)
+    {
+        this.isDragging = false;
+        this.status = $"Dropped {e.Files.Count} file(s).";
+        this.files.InsertRange(0, e.Files);
+        this.Log($"drop — {e.Files.Count} file(s) at {e.X:0},{e.Y:0}");
+        this.StateHasChanged();
+    }
+
+    async Task PreviewAsync(DroppedFile file)
+    {
+        try
+        {
+            await using var stream = await file.OpenReadAsync();
+            var buffer = new byte[32];
+            var read = await stream.ReadAsync(buffer);
+            this.previews[file] = Convert.ToHexString(buffer, 0, read);
+        }
+        catch (Exception ex)
+        {
+            this.previews[file] = ex.Message;
+        }
+    }
+
+    void ToggleEnabled(ChangeEventArgs e) => this.FileDrop.IsEnabled = (bool?)e.Value ?? false;
+
+    void ToggleImagesOnly(ChangeEventArgs e)
+    {
+        this.imagesOnly = (bool?)e.Value ?? false;
+        this.FileDrop.Options.AllowedExtensions.Clear();
+
+        if (this.imagesOnly)
+        {
+            foreach (var extension in new[] { ".png", ".jpg", ".jpeg", ".gif", ".webp" })
+                this.FileDrop.Options.AllowedExtensions.Add(extension);
+        }
+
+        this.Log(this.imagesOnly ? "filter — images only" : "filter — all files");
+    }
+
+    void Clear()
+    {
+        this.files.Clear();
+        this.previews.Clear();
+        this.log.Clear();
+    }
+
+    void Log(string message)
+    {
+        this.log.Insert(0, $"{DateTime.Now:HH:mm:ss.fff}  {message}");
+        while (this.log.Count > 20)
+            this.log.RemoveAt(this.log.Count - 1);
+    }
+
+    public void Dispose()
+    {
+        this.FileDrop.DragEnter -= this.OnDragEnter;
+        this.FileDrop.DragOver -= this.OnDragOver;
+        this.FileDrop.DragLeave -= this.OnDragLeave;
+        this.FileDrop.Dropped -= this.OnDropped;
+    }
+}

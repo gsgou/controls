@@ -25,6 +25,7 @@ public class SpreadsheetView : ContentView, IDisposable
     readonly AbsoluteLayout root;
     readonly SheetTabStrip sheetTabs;
     readonly FormulaBar formulaBar;
+    readonly SpreadsheetToolbar toolbar;
     readonly Grid layout;
     readonly SpreadsheetPainter painter = new();
 
@@ -61,19 +62,24 @@ public class SpreadsheetView : ContentView, IDisposable
         this.formulaBar = new FormulaBar();
         this.formulaBar.Changed += this.OnSheetTabsChanged;
 
+        this.toolbar = new SpreadsheetToolbar();
+        this.toolbar.Changed += this.OnSheetTabsChanged;
+
         this.layout = new Grid
         {
             RowDefinitions =
             [
+                new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Auto),
                 new RowDefinition(GridLength.Star),
                 new RowDefinition(GridLength.Auto)
             ]
         };
 
-        this.layout.Add(this.formulaBar);
-        this.layout.Add(this.root, 0, 1);
-        this.layout.Add(this.sheetTabs, 0, 2);
+        this.layout.Add(this.toolbar);
+        this.layout.Add(this.formulaBar, 0, 1);
+        this.layout.Add(this.root, 0, 2);
+        this.layout.Add(this.sheetTabs, 0, 3);
 
         // The canvas no longer fills this view - the strip takes a slice off the bottom - so the grid
         // has to be sized from the canvas rather than from the control, or every pointer coordinate
@@ -105,6 +111,7 @@ public class SpreadsheetView : ContentView, IDisposable
             var view = (SpreadsheetView)b;
             view.sheetTabs.Theme = (SpreadsheetTheme)value;
             view.formulaBar.Theme = (SpreadsheetTheme)value;
+            view.toolbar.Theme = (SpreadsheetTheme)value;
             view.Invalidate();
         });
 
@@ -113,6 +120,20 @@ public class SpreadsheetView : ContentView, IDisposable
         typeof(bool),
         typeof(SpreadsheetView),
         true,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
+
+    public static readonly BindableProperty ShowToolbarProperty = BindableProperty.Create(
+        nameof(ShowToolbar),
+        typeof(bool),
+        typeof(SpreadsheetView),
+        false,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
+
+    public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
+        nameof(IsReadOnly),
+        typeof(bool),
+        typeof(SpreadsheetView),
+        false,
         propertyChanged: (b, _, _) => ((SpreadsheetView)b).UpdateChrome());
 
     public static readonly BindableProperty ShowSheetTabsProperty = BindableProperty.Create(
@@ -190,8 +211,36 @@ public class SpreadsheetView : ContentView, IDisposable
         set => this.SetValue(ShowFormulaBarProperty, value);
     }
 
+    /// <summary>
+    /// Whether to show the formatting toolbar above the formula bar.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, unlike the formula bar and the tab strip. Those two are how a workbook is read;
+    /// the toolbar is how one is authored, it is the tallest piece of chrome here, and a viewer that
+    /// gained a formatting bar it never asked for would be a breaking change to every existing use.
+    /// </remarks>
+    public bool ShowToolbar
+    {
+        get => (bool)this.GetValue(ShowToolbarProperty);
+        set => this.SetValue(ShowToolbarProperty, value);
+    }
+
+    /// <summary>Shows the workbook but refuses formatting and sheet edits.</summary>
+    /// <remarks>
+    /// Cell editing is deliberately not covered: the grid's own read-only story is a separate piece of
+    /// work, and a property that half-locked the sheet would be worse than one that says what it does.
+    /// </remarks>
+    public bool IsReadOnly
+    {
+        get => (bool)this.GetValue(IsReadOnlyProperty);
+        set => this.SetValue(IsReadOnlyProperty, value);
+    }
+
     /// <summary>The tab strip, exposed so a host can hide or restyle it beyond the two properties above.</summary>
     public SheetTabStrip SheetTabs => this.sheetTabs;
+
+    /// <summary>The formatting toolbar, exposed so a host can add its own items to it.</summary>
+    public SpreadsheetToolbar Toolbar => this.toolbar;
 
     /// <summary>The formula bar, exposed so a host can make it read-only or restyle it.</summary>
     public FormulaBar FormulaBar => this.formulaBar;
@@ -255,7 +304,10 @@ public class SpreadsheetView : ContentView, IDisposable
 
     void UpdateChrome()
     {
-        this.sheetTabs.AllowEditing = this.AllowSheetEditing;
+        this.toolbar.IsReadOnly = this.IsReadOnly;
+        this.toolbar.Controller = this.ShowToolbar ? this.controller : null;
+
+        this.sheetTabs.AllowEditing = this.AllowSheetEditing && !this.IsReadOnly;
         this.sheetTabs.Controller = this.ShowSheetTabs ? this.controller : null;
         this.sheetTabs.Rebuild();
 
@@ -445,6 +497,8 @@ public class SpreadsheetView : ContentView, IDisposable
         this.sheetTabs.Controller = null;
         this.formulaBar.Changed -= this.OnSheetTabsChanged;
         this.formulaBar.Detach();
+        this.toolbar.Changed -= this.OnSheetTabsChanged;
+        this.toolbar.Detach();
         this.canvas.SizeChanged -= this.OnCanvasSizeChanged;
         this.canvas.PaintSurface -= this.OnPaintSurface;
         this.canvas.Touch -= this.OnTouch;

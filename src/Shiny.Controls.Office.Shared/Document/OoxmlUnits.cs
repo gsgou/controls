@@ -42,16 +42,31 @@ public static class OoxmlUnits
     /// The XML value of an enum-typed attribute, e.g. <c>"roundRect"</c> for a preset geometry.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// OpenXml 3.x models these as record structs whose <c>ToString()</c> returns
     /// <c>"ShapeTypeValues { }"</c> — a compiling, non-throwing, entirely useless string that silently
     /// matches nothing. The only reliable source of the spec's own token is the serialised attribute.
+    /// </para>
+    /// <para>
+    /// Matched on local name across every namespace, and deliberately not through
+    /// <c>GetAttribute(localName, "")</c>. That overload <b>throws</b> <see cref="KeyNotFoundException"/>
+    /// when the element does not allow the attribute in the namespace asked for — and half of these
+    /// are namespaced. DrawingML writes <c>prst</c> unqualified, WordprocessingML writes
+    /// <c>w:type</c>, so the same call works for a shape's geometry and takes the whole view down for
+    /// a page break or a header reference.
+    /// </para>
     /// </remarks>
     public static string? EnumAttribute(DocumentFormat.OpenXml.OpenXmlElement? element, string localName)
     {
         if (element is null)
             return null;
 
-        var value = element.GetAttribute(localName, string.Empty).Value;
-        return string.IsNullOrEmpty(value) ? null : value;
+        foreach (var attribute in element.GetAttributes())
+        {
+            if (String.Equals(attribute.LocalName, localName, StringComparison.Ordinal))
+                return String.IsNullOrEmpty(attribute.Value) ? null : attribute.Value;
+        }
+
+        return null;
     }
 }

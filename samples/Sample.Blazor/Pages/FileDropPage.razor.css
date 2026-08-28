@@ -1,0 +1,19 @@
+.drop-overlay {
+    position: fixed;
+    inset: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Nothing under this should stop reacting to the drag - the overlay is feedback, not a target.
+       The window-level listeners do the catching. */
+    pointer-events: none;
+
+    border: 2px dashed var(--shiny-color-primary, #2563eb);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--shiny-color-primary, #2563eb) 20%, transparent);
+    color: var(--shiny-color-on-primary, #fff);
+    font-size: 1.25rem;
+    font-weight: 600;
+    z-index: 2000;
+}

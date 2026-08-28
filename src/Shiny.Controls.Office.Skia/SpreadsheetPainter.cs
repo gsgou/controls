@@ -1,5 +1,6 @@
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Spreadsheet.View;
+using Shiny.Controls.Office.Text;
 using SkiaSharp;
 
 namespace Shiny.Controls.Office.Skia;
@@ -32,11 +33,31 @@ public sealed record SpreadsheetPaintRequest
 /// </remarks>
 public sealed class SpreadsheetPainter : IDisposable
 {
-    readonly Dictionary<FontKey, SKFont> fonts = new();
+    readonly SkiaTextMeasurer measurer;
+    readonly bool ownsMeasurer;
     readonly SKPaint fill = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
     readonly SKPaint stroke = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
 
-    readonly record struct FontKey(string Family, float Size, bool Bold, bool Italic);
+    public SpreadsheetPainter()
+        : this(null)
+    {
+    }
+
+    /// <summary>
+    /// Shares a measurer with the rest of the app, rather than resolving fonts on its own.
+    /// </summary>
+    /// <param name="measurer">
+    /// The measurer to take fonts from, or null to own one over
+    /// <see cref="OfficeFontRegistry.Default"/>.
+    /// </param>
+    public SpreadsheetPainter(SkiaTextMeasurer? measurer)
+    {
+        this.ownsMeasurer = measurer is null;
+        this.measurer = measurer ?? new SkiaTextMeasurer();
+    }
+
+    /// <summary>The application-supplied faces this painter resolves against.</summary>
+    public OfficeFontRegistry Fonts => this.measurer.Registry;
 
     public void Paint(SKCanvas canvas, SpreadsheetPaintRequest request)
     {
@@ -141,7 +162,7 @@ public sealed class SpreadsheetPainter : IDisposable
 
     void PaintCell(SKCanvas canvas, SpreadsheetPaintRequest request, CellRef cell, GridRect bounds, StyleResolver styles)
     {
-        var format = styles.Resolve(request.Sheet.GetStyleIndex(cell));
+        var format = styles.Resolve(request.Sheet.GetEffectiveStyleIndex(cell));
         var rect = ToSk(bounds);
 
         if (!format.Background.IsTransparent)
@@ -355,25 +376,25 @@ public sealed class SpreadsheetPainter : IDisposable
         canvas.DrawText(text, rect.MidX - width / 2, rect.MidY - (metrics.Ascent + metrics.Descent) / 2, SKTextAlign.Left, font, paint);
     }
 
+    /// <summary>
+    /// The font for a cell, resolved and cached by the shared measurer.
+    /// </summary>
+    /// <remarks>
+    /// Through the measurer rather than straight to <c>SKTypeface.FromFamilyName</c>, because that
+    /// call returns the same embedded fallback for every family and every weight on WebAssembly,
+    /// where there are no system fonts at all. A grid that asked the platform directly rendered a
+    /// bold cell in regular and gave no sign of it — the request succeeded, it just meant nothing.
+    /// The measurer consults the application's registered faces first, and carries the substitution
+    /// table that turns a Calibri request into the bundled Carlito.
+    /// </remarks>
     SKFont GetFont(string family, float size, bool bold, bool italic)
-    {
-        var key = new FontKey(family, size, bold, italic);
-        if (this.fonts.TryGetValue(key, out var cached))
-            return cached;
-
-        // Typeface lookup hits the system font manager, so it is cached per (family, size, style)
-        // rather than resolved per cell — a sheet paints thousands of cells per frame.
-        var style = new SKFontStyle(
-            bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-            SKFontStyleWidth.Normal,
-            italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
-
-        var typeface = SKTypeface.FromFamilyName(family, style) ?? SKTypeface.Default;
-        var font = new SKFont(typeface, size) { Subpixel = true, Edging = SKFontEdging.SubpixelAntialias };
-
-        this.fonts[key] = font;
-        return font;
-    }
+        => this.measurer.GetFont(TextStyle.Default with
+        {
+            FontFamily = family,
+            FontSize = size,
+            Bold = bold,
+            Italic = italic
+        });
 
     static SKColor ToSk(ArgbColor color) => new(color.R, color.G, color.B, color.A);
 
@@ -381,10 +402,11 @@ public sealed class SpreadsheetPainter : IDisposable
 
     public void Dispose()
     {
-        foreach (var font in this.fonts.Values)
-            font.Dispose();
+        // Only the measurer this painter made. One passed in is the caller's, and disposing it would
+        // take the fonts out from under whatever else is drawing with it.
+        if (this.ownsMeasurer)
+            this.measurer.Dispose();
 
-        this.fonts.Clear();
         this.fill.Dispose();
         this.stroke.Dispose();
     }

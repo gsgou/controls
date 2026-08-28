@@ -58,6 +58,42 @@ Scoped CSS bites here too: a rule written in one component's `.razor.css` cannot
 rendered by a **different** component, so shared toolbar buttons are styled from the row that owns them
 with `::deep`.
 
+## One icon set, no colour
+
+Every plain button on the Word and PowerPoint toolbars — both hosts — draws from **one shared icon
+set**: `OfficeIcons` in `Shiny.Controls.Office.Shared`, monochrome stroked artwork on a 24x24 grid at
+one weight. MAUI paints it onto a `GraphicsView`; Blazor writes it out as inline SVG stroked in
+`currentColor`. There is one definition of each mark, so the two hosts cannot drift.
+
+**Do not put a glyph, a letter or an emoji on a toolbar button.** Emoji are painted in colour by the
+font, at its own size and weight — they cannot be tinted, do not dim with a disabled button and look
+different on every platform. Geometric unicode has the milder form of the same problem, plus tofu on
+Android fonts that lack the character. If a new toolbar button needs a mark, add it to `OfficeIcon`
+and `OfficeIcons.Shapes`.
+
+The geometry is **commands, not an SVG path string**, on purpose. MAUI's `PathBuilder` has real gaps
+parsing `d` attributes — implicit line-tos become move-tos, run-together decimals truncate — so
+artwork authored as a path string can look perfect in a browser and draw a stump on a device with
+nothing thrown. Neither host parses anything here.
+
+The pickers are the **deliberate exception**: font, font size, text colour and the highlight swatch
+have to show what they are currently set to, which is the one thing a monochrome icon cannot do. The
+highlight split button keeps the shared `A`-over-a-bar artwork and tints only the bar.
+
+## Icon-only buttons get a tooltip on desktop and web
+
+Every button on these bars is icon only, so each is wrapped in Shiny's own `Tooltip` naming what it
+does — the browser's `title` is slow to appear, cannot be themed and is unreachable from a keyboard.
+
+- **Blazor**: on by default. `ShowToolbarTooltips="false"` falls back to the native `title`.
+- **MAUI**: on for **desktop only** — Windows, Mac Catalyst, macOS and the GTK/plain-.NET head. Off on
+  iOS and Android, because the tooltip opens on hover and there is no hover on a touch screen; a
+  long-press tooltip would compete with the tap the button exists for. Override either way with
+  `ShowToolbarTooltips`.
+
+Both hosts always set an accessible name on the button (`aria-label` / `SemanticProperties.Description`)
+whatever the tooltip setting is — a tooltip is not what a screen reader reads.
+
 ## Selecting what to format
 
 Drag to select, **double-click for a word**, **triple-click for a paragraph**. On the controller these

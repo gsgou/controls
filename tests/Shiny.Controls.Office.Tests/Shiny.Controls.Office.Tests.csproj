@@ -24,6 +24,10 @@
 
     <ItemGroup>
         <!-- The real shipped font, so registry tests run against something Skia actually parses. -->
+        <None Include="..\..\src\Shiny.Blazor.Controls.Office\wwwroot\fonts\Carlito-Bold.ttf"
+              Link="Carlito-Bold.ttf"
+              CopyToOutputDirectory="PreserveNewest"/>
+
         <None Include="..\..\src\Shiny.Blazor.Controls.Office\wwwroot\fonts\Carlito-Regular.ttf"
               Link="Carlito-Regular.ttf"
               CopyToOutputDirectory="PreserveNewest"/>

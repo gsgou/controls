@@ -11,6 +11,15 @@
 
 <div class="shiny-spreadsheet-host @Class" style="@Style">
 
+    @if (this.ShowToolbar && this.controller is not null)
+    {
+        <SpreadsheetToolbar Controller="this.controller"
+                            ReadOnly="this.ReadOnly"
+                            ShowTooltips="this.ShowTooltips"
+                            ToolbarContent="this.ToolbarContent"
+                            Changed="this.OnSheetsChanged" />
+    }
+
     @if (this.ShowFormulaBar && this.controller is not null)
     {
         <FormulaBar Controller="this.controller"
@@ -119,12 +128,28 @@
     [Parameter] public bool ShowFormulaBar { get; set; } = true;
 
     /// <summary>
+    /// Whether to show the formatting toolbar above the formula bar.
+    /// </summary>
+    /// <remarks>
+    /// Off by default, unlike the formula bar and the tab strip. Those two are how a workbook is read;
+    /// the toolbar is how one is authored, it is the tallest piece of chrome here, and a viewer that
+    /// gained a formatting bar it never asked for would be a breaking change to every existing use.
+    /// </remarks>
+    [Parameter] public bool ShowToolbar { get; set; }
+
+    /// <summary>Whether the toolbar's icon-only buttons carry a hover tooltip.</summary>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>Extra items appended to the toolbar, after the built-in controls.</summary>
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+
+    /// <summary>
     /// Whether the tab strip can add, rename, reorder, hide and delete sheets, as opposed to only
     /// switching between them.
     /// </summary>
     [Parameter] public bool AllowSheetEditing { get; set; } = true;
 
-    /// <summary>Blocks structural sheet edits. Cell editing is unaffected.</summary>
+    /// <summary>Blocks formatting and structural sheet edits. Cell editing is unaffected.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
     [Parameter] public SpreadsheetTheme Theme { get; set; } = SpreadsheetTheme.Light;

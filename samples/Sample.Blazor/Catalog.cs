@@ -70,7 +70,8 @@ public static class Catalog
             new("captcha", "Captcha", "🛡", "Human check — local challenge, reCAPTCHA, hCaptcha or Turnstile"),
             new("signaturepad", "Signature Pad", "✍", "Draw, clear and export a signature"),
             new("onscreenkeyboard", "On-Screen Keyboard", "⌨", "Touch / kiosk QWERTY that never steals the caret"),
-            new("quickentry", "Quick Entry", "✧", "Assistant-style prompt popup with a Siri-style screen glow")
+            new("quickentry", "Quick Entry", "✧", "Assistant-style prompt popup with a Siri-style screen glow"),
+            new("filedrop", "File Drop", "⇩", "Files dropped anywhere on the page, caught before the browser navigates")
         ]),
 
         new("Actions & Navigation", "#2DD4BF",

@@ -56,18 +56,16 @@
 .doc-toolbar { --shiny-picker-height: 30px; }
 
 /*
-    ::deep, and both class names, because the highlight and insert buttons are separate components.
-    Blazor scopes a stylesheet to the markup in its own file, so a rule written as a bare .doc-btn here
-    compiles to .doc-btn[this-component] and cannot reach a button rendered by another one - which is
+    ::deep, because the highlight and insert buttons are separate components.
+    Blazor scopes a stylesheet to the markup in its own file, so a rule written as a bare .shiny-office-btn here
+    compiles to .shiny-office-btn[this-component] and cannot reach a button rendered by another one - which is
     why those two triggers were coming out as unstyled browser default buttons, a different size and
     on a different baseline from everything beside them. ::deep moves the scope onto .doc-toolbar, so
     the rule reaches every descendant of the row whatever component drew it, host toolbar content
     included.
 */
-.doc-toolbar ::deep .doc-btn,
 .doc-toolbar ::deep .shiny-office-btn {
-    /* inline-flex + centre is what actually centres the glyph; line-height alone leaves the taller
-       glyphs (the alignment arrows, the undo arcs) sitting low in the box. */
+    /* inline-flex + centre is what centres the icon in the box. */
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -88,17 +86,27 @@
     cursor: pointer;
 }
 
-.doc-toolbar ::deep .doc-btn:hover:not(:disabled),
 .doc-toolbar ::deep .shiny-office-btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
 
-.doc-toolbar ::deep .doc-btn:disabled,
 .doc-toolbar ::deep .shiny-office-btn:disabled { opacity: 0.35; cursor: default; }
 
 /* The active state has to survive the hover background, hence the border as well as the fill. */
-.doc-toolbar ::deep .doc-btn.on,
 .doc-toolbar ::deep .shiny-office-btn.on {
     background: rgba(37, 99, 235, 0.14);
     border-color: rgba(37, 99, 235, 0.35);
+}
+
+/*
+    The icons are inline SVG injected as a MarkupString, so they carry no CSS-isolation scope
+    attribute of their own and are only reachable through ::deep. They stroke in currentColor, which
+    is what makes one icon set follow the toolbar's colour, the theme and the disabled opacity.
+
+    display:block on the svg matters: an inline svg sits on a text baseline and leaves a few pixels of
+    descender space under it, which is enough to push the icon off-centre in a 30px button.
+*/
+.doc-toolbar ::deep .shiny-office-btn svg {
+    display: block;
+    flex: 0 0 auto;
 }
 
 /*

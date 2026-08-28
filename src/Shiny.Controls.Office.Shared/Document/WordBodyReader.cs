@@ -49,13 +49,16 @@ sealed class WordBodyReader(
         _ => new DocumentParagraph([], ParagraphFormat.Default)
     };
 
-    public IReadOnlyList<DocumentBlock> ReadBody(Body? body)
+    public IReadOnlyList<DocumentBlock> ReadBody(Body? body) => this.ReadContainer(body);
+
+    /// <summary>Reads any block container — a body, or a header or footer part's root.</summary>
+    public IReadOnlyList<DocumentBlock> ReadContainer(OpenXmlElement? container)
     {
         var blocks = new List<DocumentBlock>();
-        if (body is null)
+        if (container is null)
             return blocks;
 
-        foreach (var block in this.ReadBlocks(body))
+        foreach (var block in this.ReadBlocks(container))
             blocks.Add(block);
 
         return blocks;
@@ -140,11 +143,65 @@ sealed class WordBodyReader(
 
     IEnumerable<StyledRun> ReadInlines(OpenXmlElement container, TextStyle inherited)
     {
+        // A complex field is spread across sibling runs — begin, the instruction, separate, the
+        // cached result, end — so reading one means carrying state across the loop rather than
+        // looking at any run on its own.
+        var phase = FieldPhase.None;
+        var instruction = new System.Text.StringBuilder();
+        var emittedField = false;
+
         foreach (var child in container.ChildElements)
         {
             switch (child)
             {
                 case Run run:
+                    switch (FieldCharOf(run))
+                    {
+                        case "begin":
+                            phase = FieldPhase.Instruction;
+                            instruction.Clear();
+                            emittedField = false;
+                            continue;
+
+                        case "separate":
+                            phase = FieldPhase.Result;
+                            continue;
+
+                        case "end":
+                            phase = FieldPhase.None;
+                            continue;
+                    }
+
+                    if (phase == FieldPhase.Instruction)
+                    {
+                        foreach (var code in run.Elements<FieldCode>())
+                            instruction.Append(code.Text);
+
+                        continue;
+                    }
+
+                    if (phase == FieldPhase.Result)
+                    {
+                        var kind = FieldKindOf(instruction.ToString());
+                        if (kind != DocumentFieldKind.None)
+                        {
+                            // One run stands for the whole field; the rest of the cached result is
+                            // dropped, because what replaces it is computed per page.
+                            if (!emittedField)
+                            {
+                                emittedField = true;
+                                var cached = String.Concat(run.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>().Select(x => x.Text));
+                                var style = this.ReadRun(run, inherited, null).FirstOrDefault()?.Style ?? inherited;
+                                yield return new StyledRun(cached, style) { Field = kind };
+                            }
+
+                            continue;
+                        }
+
+                        // An instruction this does not resolve keeps the result Word last wrote,
+                        // which is what a reader would have seen anyway.
+                    }
+
                     foreach (var piece in this.ReadRun(run, inherited, null))
                         yield return piece;
 
@@ -180,6 +237,20 @@ sealed class WordBodyReader(
                     break;
 
                 case SimpleField field:
+                    var simpleKind = FieldKindOf(field.Instruction?.Value);
+                    if (simpleKind != DocumentFieldKind.None)
+                    {
+                        // The cached result is kept as the run's text: it is what the document last
+                        // showed, so a field nothing resolves still measures and draws sensibly.
+                        var cached = String.Concat(field.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>().Select(x => x.Text));
+                        var fieldStyle = field.Descendants<Run>().FirstOrDefault() is { } styled
+                            ? this.ReadRun(styled, inherited, null).FirstOrDefault()?.Style ?? inherited
+                            : inherited;
+
+                        yield return new StyledRun(cached, fieldStyle) { Field = simpleKind };
+                        break;
+                    }
+
                     foreach (var run in field.Descendants<Run>())
                     {
                         foreach (var piece in this.ReadRun(run, inherited, null))
@@ -189,6 +260,42 @@ sealed class WordBodyReader(
                     break;
             }
         }
+    }
+
+    enum FieldPhase
+    {
+        None,
+        Instruction,
+        Result
+    }
+
+    /// <summary>The <c>w:fldCharType</c> of a run that is a field marker, or null for an ordinary run.</summary>
+    static string? FieldCharOf(Run run)
+        => run.Elements<FieldChar>().FirstOrDefault() is { } marker
+            ? OoxmlUnits.EnumAttribute(marker, "fldCharType")
+            : null;
+
+    /// <summary>
+    /// Which computed field an instruction is, or <see cref="DocumentFieldKind.None"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only the field name is looked at. Switches like <c>\* MERGEFORMAT</c> and
+    /// <c>\* ARABIC</c> follow it and change formatting rather than the value, and honouring them
+    /// would mean implementing Word's numeric picture grammar for a gain of almost nothing.
+    /// </remarks>
+    static DocumentFieldKind FieldKindOf(string? instruction)
+    {
+        if (String.IsNullOrWhiteSpace(instruction))
+            return DocumentFieldKind.None;
+
+        var name = instruction.TrimStart().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+
+        return name?.ToUpperInvariant() switch
+        {
+            "PAGE" => DocumentFieldKind.Page,
+            "NUMPAGES" => DocumentFieldKind.PageCount,
+            _ => DocumentFieldKind.None
+        };
     }
 
     IEnumerable<StyledRun> ReadRun(Run run, TextStyle inherited, string? link)
@@ -219,8 +326,15 @@ sealed class WordBodyReader(
                     break;
 
                 case Break br:
-                    yield return new StyledRun(string.Empty, style) { IsBreak = true };
-                    _ = br;
+                    // The type attribute is read as a string rather than compared against
+                    // BreakValues: OpenXml 3.x models these as record structs, and getting that
+                    // comparison subtly wrong fails silently as a page break that only breaks a line.
+                    yield return new StyledRun(string.Empty, style)
+                    {
+                        IsBreak = true,
+                        IsPageBreak = OoxmlUnits.EnumAttribute(br, "type") == "page"
+                    };
+
                     break;
 
                 case DocumentFormat.OpenXml.Wordprocessing.Drawing drawing:

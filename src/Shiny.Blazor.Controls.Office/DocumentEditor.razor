@@ -110,6 +110,15 @@
 
     [Parameter] public double Zoom { get; set; } = 1.0;
 
+    /// <summary>
+    /// Continuous column, or sheets of paper with the document's own headers and footers.
+    /// </summary>
+    /// <remarks>
+    /// Print by default here, unlike <c>DocumentView</c>: an editor is where a page break, a header
+    /// and a page number are authored, and none of them can be seen in a reflowed column.
+    /// </remarks>
+    [Parameter] public DocumentPageLayout PageLayout { get; set; } = DocumentPageLayout.Print;
+
     [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Whether dragging an image file onto the editor inserts it. On by default.</summary>
@@ -209,6 +218,7 @@
         }
 
         this.controller.Zoom = this.Zoom;
+        this.controller.PageLayout = this.PageLayout;
         this.controller.IsSpellCheckEnabled = this.SpellCheckEnabled;
 
         if (this.SpellChecker is not null)
@@ -267,7 +277,9 @@
             return;
         }
 
-        var scale = (float)this.dpr;
+        // Device scale times the view scale: in print the controller works in the paper's units
+        // and zoom is applied here, so one layout unit is dpr * zoom device pixels.
+        var scale = (float)(this.dpr * this.controller.ViewScale);
         var width = info.Width / this.dpr;
         var height = info.Height / this.dpr;
 
@@ -284,8 +296,12 @@
             Viewport = this.controller.Viewport,
             Theme = theme,
             Scale = scale,
-            PageX = this.controller.PageX + this.controller.PagePadding,
+            PageX = this.controller.PageX,
+            ContentX = this.controller.ContentX,
             PageWidth = this.controller.PageWidth,
+            PageHeight = this.controller.PageHeight,
+            Pages = this.controller.VisiblePages(),
+            Setup = this.controller.Document.Page,
             Selection = this.controller.SelectionRects().ToList(),
             Spelling = this.controller.SpellingRects().ToList(),
 
@@ -537,7 +553,7 @@
         await this.FocusAsync();
     }
 
-    void OnWheel(WheelEventArgs e) => this.controller?.Scroll(e.DeltaY);
+    void OnWheel(WheelEventArgs e) => this.controller?.ScrollByControlPixels(e.DeltaY);
 
     void OnFocus()
     {

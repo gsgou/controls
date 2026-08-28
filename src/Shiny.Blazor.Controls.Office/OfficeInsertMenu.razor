@@ -1,4 +1,6 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
 @using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Shapes
 
@@ -15,26 +17,40 @@
     keyboard and a screen reader as well as from a mouse.
 *@
 <div class="shiny-office-picker">
-    <button type="button"
-            class="shiny-office-btn"
-            title="Shapes"
-            aria-haspopup="true"
-            aria-expanded="@(this.panel == Panel.Shapes)"
-            disabled="@this.Disabled"
-            @onclick="() => this.Toggle(Panel.Shapes)">◇</button>
+    <Tooltip Text="Shapes" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn"
+                aria-label="Shapes"
+                title="@(this.ShowTooltips ? null : "Shapes")"
+                aria-haspopup="true"
+                aria-expanded="@(this.panel == Panel.Shapes)"
+                disabled="@this.Disabled"
+                @onclick="() => this.Toggle(Panel.Shapes)">@OfficeToolbarIcons.Get(OfficeIcon.Shape)</button>
+    </Tooltip>
 
-    <button type="button"
-            class="shiny-office-btn"
-            title="Table"
-            aria-haspopup="true"
-            aria-expanded="@(this.panel == Panel.Table)"
-            disabled="@this.Disabled"
-            @onclick="() => this.Toggle(Panel.Table)">▦</button>
+    <Tooltip Text="Table" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn"
+                aria-label="Table"
+                title="@(this.ShowTooltips ? null : "Table")"
+                aria-haspopup="true"
+                aria-expanded="@(this.panel == Panel.Table)"
+                disabled="@this.Disabled"
+                @onclick="() => this.Toggle(Panel.Table)">@OfficeToolbarIcons.Get(OfficeIcon.Table)</button>
+    </Tooltip>
 
-    <label class="shiny-office-btn shiny-office-btn-file" title="Picture">
-        🖼
-        <InputFile OnChange="this.OnFileAsync" accept="@Accept" disabled="@this.Disabled" />
-    </label>
+    @*
+        A label rather than a button, because the file input has to be inside the thing that is
+        clicked — which also means the icon cannot come from OfficeToolbarButton like the other two.
+    *@
+    <Tooltip Text="Picture" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <label class="shiny-office-btn shiny-office-btn-file"
+               aria-label="Picture"
+               title="@(this.ShowTooltips ? null : "Picture")">
+            @OfficeToolbarIcons.Get(OfficeIcon.Picture)
+            <InputFile OnChange="this.OnFileAsync" accept="@Accept" disabled="@this.Disabled" />
+        </label>
+    </Tooltip>
 
     @if (this.panel != Panel.None)
     {
@@ -142,6 +158,16 @@
     ];
 
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Whether the three icon-only triggers carry a tooltip. See the editor views.</summary>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>
+    /// Muting the tooltip rather than leaving it out, because the alternative is writing each of
+    /// these buttons twice — and a manual-trigger tooltip nothing ever opens costs a bubble that is
+    /// never rendered.
+    /// </summary>
+    TooltipTrigger TooltipTriggerMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
 
     [Parameter] public EventCallback<ShapeGeometry> ShapePicked { get; set; }
 

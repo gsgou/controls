@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shiny.Blazor.Controls.Captchas;
 using Shiny.Blazor.Controls.Dialogs;
 using Shiny.Blazor.Controls.Docking;
+using Shiny.Blazor.Controls.FileDrop;
 using Shiny.Blazor.Controls.Images;
 using Shiny.Blazor.Controls.OnScreenKeyboard;
 using Shiny.Blazor.Controls.QuickEntry;
@@ -17,7 +18,7 @@ public static class ShinyControlsServiceCollectionExtensions
 {
     /// <summary>
     /// Registers everything the host components need — Toast, the progress line, Dialogs, the splash
-    /// screen, the walkthrough store, docking and the on-screen keyboard — in one call, mirroring
+    /// screen, the walkthrough store, docking, file drop and the on-screen keyboard — in one call, mirroring
     /// MAUI's <c>UseShinyControls</c>.
     /// </summary>
     /// <remarks>
@@ -54,6 +55,7 @@ public static class ShinyControlsServiceCollectionExtensions
         services.AddShinyDocking();
         services.AddShinyOnScreenKeyboard(cfg.KeyboardConfigure);
         services.AddShinyQuickEntry(cfg.QuickEntryConfigure);
+        services.AddShinyFileDrop(cfg.FileDropConfigure);
 
         return services;
     }
@@ -69,6 +71,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
     internal Action<DialogOptions>? DialogConfigure { get; private set; }
     internal Action<OnScreenKeyboardOptions>? KeyboardConfigure { get; private set; }
     internal Action<QuickEntryOptions>? QuickEntryConfigure { get; private set; }
+    internal Action<FileDropOptions>? FileDropConfigure { get; private set; }
 
     /// <summary>
     /// App-wide dialog defaults — the default animation, and a <see cref="DialogOptions.ConfigureDefaults"/>
@@ -88,6 +91,16 @@ public class ShinyControlConfiguration(IServiceCollection services)
     public ShinyControlConfiguration ConfigureQuickEntry(Action<QuickEntryOptions> configure)
     {
         this.QuickEntryConfigure = configure;
+        return this;
+    }
+
+    /// <summary>
+    /// File drop filters — which extensions to accept, size and count ceilings. The service is
+    /// registered whether or not this is called; this only changes its settings.
+    /// </summary>
+    public ShinyControlConfiguration ConfigureFileDrop(Action<FileDropOptions> configure)
+    {
+        this.FileDropConfigure = configure;
         return this;
     }
 

@@ -1,0 +1,60 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
+
+@*
+    One icon-only button on the document or slide toolbar.
+
+    Both toolbars go through here so they cannot disagree about what a toolbar button is: the same
+    monochrome icon from the shared set, the same active and disabled states, and the same tooltip
+    treatment. Before this each view wrote its own <button> with a glyph inside it, which is how the
+    two ended up with different marks for the same command.
+
+    The tooltip is the Shiny Tooltip control rather than the browser's `title`, and only because these
+    buttons carry no label: a native title takes about a second to appear, cannot be themed, and is
+    unreachable from a keyboard. Turning tooltips off falls back to `title`, which is still better
+    than nothing. Either way the button keeps an aria-label, since neither is read by a screen reader.
+*@
+
+@if (this.ShowTooltip && !string.IsNullOrWhiteSpace(this.Hint))
+{
+    <Tooltip Text="@this.Hint"
+             Placement="TooltipPlacement.Bottom"
+             Trigger="TooltipTrigger.HoverOrFocus">
+        @this.Control
+    </Tooltip>
+}
+else
+{
+    @this.Control
+}
+
+@code {
+    /// <summary>Which icon from the shared Office set to draw.</summary>
+    [Parameter, EditorRequired] public OfficeIcon Icon { get; set; }
+
+    /// <summary>What the button does, in a few words. Becomes the tooltip and the accessible name.</summary>
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>Whether the format this button applies is already on under the caret.</summary>
+    [Parameter] public bool Active { get; set; }
+
+    /// <summary>Marks the button as a toggle, so its pressed state is exposed to assistive tech.</summary>
+    [Parameter] public bool Toggle { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public bool ShowTooltip { get; set; } = true;
+
+    [Parameter] public EventCallback Clicked { get; set; }
+
+    RenderFragment Control => @<button type="button"
+                                       class="@(this.Active ? "shiny-office-btn on" : "shiny-office-btn")"
+                                       aria-label="@this.Hint"
+                                       aria-pressed="@this.AriaPressed"
+                                       title="@(this.ShowTooltip ? null : this.Hint)"
+                                       disabled="@this.Disabled"
+                                       @onclick="this.Clicked">@OfficeToolbarIcons.Get(this.Icon)</button>;
+
+    string? AriaPressed => this.Toggle ? (this.Active ? "true" : "false") : null;
+}

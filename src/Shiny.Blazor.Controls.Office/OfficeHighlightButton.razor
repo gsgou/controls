@@ -1,3 +1,5 @@
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
 @using Shiny.Controls.Office.Spreadsheet
 
 @*
@@ -12,24 +14,35 @@
     of document it is over.
 *@
 <div class="shiny-office-picker">
-    <button type="button"
-            class="@(this.Current is not null ? "shiny-office-btn on" : "shiny-office-btn")"
-            title="@($"Highlight ({this.NameOf(this.selected)})")"
-            disabled="@this.Disabled"
-            @onclick="this.ApplySelectedAsync">
-        <span class="hl-glyph">
-            <span class="hl-letter">A</span>
-            <span class="hl-bar" style="@($"background:{Css(this.selected)}")"></span>
-        </span>
-    </button>
+    @*
+        The apply half keeps its own mark rather than taking the plain Highlight icon: the bar under
+        the letter is the colour it would apply, and that is the one thing a monochrome icon set
+        cannot carry. It is drawn from the same 24x24 artwork as every other button, with the bar
+        given the swatch colour — the same exception the font, size and text-colour pickers get.
+    *@
+    <Tooltip Text="@($"Highlight ({this.NameOf(this.selected)})")" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="@(this.Current is not null ? "shiny-office-btn on" : "shiny-office-btn")"
+                aria-label="@($"Highlight ({this.NameOf(this.selected)})")"
+                title="@(this.ShowTooltips ? null : $"Highlight ({this.NameOf(this.selected)})")"
+                disabled="@this.Disabled"
+                @onclick="this.ApplySelectedAsync">
+            <span class="hl-glyph" style="@($"--hl-swatch:{Css(this.selected)}")">
+                @OfficeToolbarIcons.Get(OfficeIcon.Highlight)
+            </span>
+        </button>
+    </Tooltip>
 
-    <button type="button"
-            class="shiny-office-btn shiny-office-btn-chevron"
-            title="Highlight colours"
-            aria-haspopup="true"
-            aria-expanded="@this.open"
-            disabled="@this.Disabled"
-            @onclick="() => this.open = !this.open">▾</button>
+    <Tooltip Text="Highlight colours" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn shiny-office-btn-chevron"
+                aria-label="Highlight colours"
+                title="@(this.ShowTooltips ? null : "Highlight colours")"
+                aria-haspopup="true"
+                aria-expanded="@this.open"
+                disabled="@this.Disabled"
+                @onclick="() => this.open = !this.open">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 12)</button>
+    </Tooltip>
 
     @if (this.open)
     {
@@ -73,6 +86,11 @@
     [Parameter] public ArgbColor? Current { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Whether the two halves of the split button carry a tooltip. See the editor views.</summary>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    TooltipTrigger TooltipTriggerMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
 
     /// <summary>Raised with the chosen colour, or null to clear the highlight.</summary>
     [Parameter] public EventCallback<ArgbColor?> Picked { get; set; }

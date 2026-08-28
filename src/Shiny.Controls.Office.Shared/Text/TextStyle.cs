@@ -76,4 +76,22 @@ public interface ITextMeasurer
 
     /// <summary>Ascent and descent of the font itself, independent of any particular text.</summary>
     TextMetrics LineMetrics(TextStyle style);
+
+    /// <summary>
+    /// Changes whenever the fonts behind this measurer do, so cached layout can be thrown away.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Fonts are not necessarily there when the first measurement is taken. On WebAssembly the
+    /// bundled faces are fetched over HTTP after the first render, so anything measured before they
+    /// arrive was measured against a fallback with entirely different advances.
+    /// </para>
+    /// <para>
+    /// A cache keyed only on width silently keeps that first, wrong layout — and in a paginated view
+    /// the width never changes, so nothing ever dislodges it. What that looks like is text positioned
+    /// on one font's metrics and drawn in another's: correct glyphs, ragged gaps that grow with word
+    /// length. Defaulted so an implementation with fixed metrics need not care.
+    /// </para>
+    /// </remarks>
+    int FontGeneration => 0;
 }

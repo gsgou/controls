@@ -56,6 +56,7 @@
        xmlns:staggeredgrid="clr-namespace:Sample.Features.StaggeredGrid;assembly=Sample.MacOS"
        xmlns:textentry="clr-namespace:Sample.Features.TextEntry;assembly=Sample.MacOS"
        xmlns:toast="clr-namespace:Sample.Features.Toast;assembly=Sample.MacOS"
+       xmlns:filedrop="clr-namespace:Sample.Features.FileDrop;assembly=Sample.MacOS"
        xmlns:trayicon="clr-namespace:Sample.Features.TrayIcon;assembly=Sample.MacOS"
        xmlns:treeview="clr-namespace:Sample.Features.TreeView;assembly=Sample.MacOS"
        xmlns:tv="clr-namespace:Sample.Features.TableView;assembly=Sample.MacOS"
@@ -338,6 +339,9 @@
 
     <FlyoutItem Title="System Tray">
         <ShellContent ContentTemplate="{DataTemplate trayicon:TrayIconPage}" Route="trayicon" />
+    </FlyoutItem>
+    <FlyoutItem Title="File Drop">
+        <ShellContent ContentTemplate="{DataTemplate filedrop:FileDropPage}" Route="filedrop" />
     </FlyoutItem>
     <FlyoutItem Title="Quick Entry">
         <ShellContent ContentTemplate="{DataTemplate quickentry:QuickEntryPage}" Route="quickentry" />

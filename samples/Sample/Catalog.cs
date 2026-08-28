@@ -148,7 +148,8 @@ public static class Catalog
 
         new("Desktop", "#94A3B8",
         [
-            new("trayicon", "System Tray", "◭", "Tray icon with menu and balloon tips")
+            new("trayicon", "System Tray", "◭", "Tray icon with menu and balloon tips"),
+            new("filedrop", "File Drop", "⇩", "Window-level file drop, over top of any web view")
         ])
     ];
 

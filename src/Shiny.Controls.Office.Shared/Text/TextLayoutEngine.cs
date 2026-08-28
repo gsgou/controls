@@ -6,8 +6,45 @@ public sealed record StyledRun(string Text, TextStyle Style)
     /// <summary>A run that forces a line break rather than carrying text.</summary>
     public bool IsBreak { get; init; }
 
+    /// <summary>
+    /// True for a break that starts a new page rather than a new line.
+    /// </summary>
+    /// <remarks>
+    /// Always set together with <see cref="IsBreak"/>: in a reflow view a page break has to fall back
+    /// to a line break, which is the closest thing a continuous column has to one. In print layout the
+    /// paginator reads this and starts a page instead.
+    /// </remarks>
+    public bool IsPageBreak { get; init; }
+
+    /// <summary>
+    /// Non-null when this run's text is computed rather than authored — a page number, say.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="StyledRun.Text"/> still carries the document's last-saved result, so a field that
+    /// nothing resolves still measures and draws as something sensible.
+    /// </remarks>
+    public DocumentFieldKind Field { get; init; }
+
     /// <summary>Non-null when this run is an inline object — a picture or a shape — rather than text.</summary>
     public InlineObject? Inline { get; init; }
+}
+
+
+/// <summary>The computed fields the document layer can resolve.</summary>
+/// <remarks>
+/// Deliberately two. A general field engine means parsing the whole instruction grammar — merge
+/// fields, cross-references, formulas, date formats — and the ones that matter for a page are these.
+/// Everything else keeps the result Word last wrote, which is what a reader would have seen anyway.
+/// </remarks>
+public enum DocumentFieldKind
+{
+    None = 0,
+
+    /// <summary>The one-based number of the page this run is drawn on.</summary>
+    Page,
+
+    /// <summary>How many pages the document has.</summary>
+    PageCount
 }
 
 /// <summary>A run positioned on a line.</summary>
@@ -29,6 +66,10 @@ public sealed record LaidOutRun(string Text, TextStyle Style, double X, double W
 /// <summary>One line of a laid-out paragraph.</summary>
 public sealed record LaidOutLine(IReadOnlyList<LaidOutRun> Runs, double Y, double Width, double Ascent, double Descent)
 {
+    /// <summary>True when a page break immediately precedes this line, so it must open a page.</summary>
+    /// <remarks>Ignored in reflow, where the break has already been honoured as a line break.</remarks>
+    public bool StartsPage { get; init; }
+
     public double Height => this.Ascent + this.Descent;
 
     /// <summary>Character index of the line's first character within the paragraph.</summary>
@@ -58,6 +99,15 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
     public ITextMeasurer Measurer { get; } = measurer;
 
     /// <summary>
+    /// True when the paragraph just laid out ended with a page break that no line consumed.
+    /// </summary>
+    /// <remarks>
+    /// Valid only until the next <see cref="Layout"/> call. A field rather than an out parameter
+    /// because every caller but the paginating one ignores it, and reflow is the common path.
+    /// </remarks>
+    public bool TrailingPageBreak { get; private set; }
+
+    /// <summary>
     /// Lays out a paragraph's runs into lines no wider than <paramref name="width"/>.
     /// </summary>
     /// <param name="lineSpacing">Multiplier applied to each line's natural height.</param>
@@ -78,12 +128,23 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
         // Running character index into the paragraph's concatenated text.
         var sourceOffset = 0;
 
+        // Set when a page break has been seen; consumed by the next line committed, which is the
+        // first line of the new page. Carried rather than applied immediately because the break
+        // itself has no line of its own.
+        var startsPage = false;
+
         void Flush(bool lastLineOfParagraph)
         {
             if (current.Count == 0 && !lastLineOfParagraph)
                 return;
 
             var line = Commit(current, y, width - indent, indent, alignment, lastLineOfParagraph, this.Measurer);
+            if (startsPage)
+            {
+                line = line with { StartsPage = true };
+                startsPage = false;
+            }
+
             lines.Add(line);
             y += line.Height * lineSpacing;
             current.Clear();
@@ -95,6 +156,10 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
             if (run.IsBreak)
             {
                 Flush(lastLineOfParagraph: true);
+
+                if (run.IsPageBreak)
+                    startsPage = true;
+
                 continue;
             }
 
@@ -158,6 +223,10 @@ public sealed class TextLayoutEngine(ITextMeasurer measurer)
         }
 
         Flush(lastLineOfParagraph: true);
+
+        // A page break as the very last thing in a paragraph belongs to whatever comes next, and
+        // there is no line here to hang it on. TrailingPageBreak is how the caller learns of it.
+        this.TrailingPageBreak = startsPage;
 
         // A paragraph with no content at all still occupies one empty line.
         if (lines.Count == 0)

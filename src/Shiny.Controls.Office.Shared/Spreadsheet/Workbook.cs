@@ -37,6 +37,7 @@ public sealed class Workbook : OfficeDocument
 
         this.SharedStrings = new SharedStrings(workbookPart);
         this.Styles = new StyleResolver(workbookPart, unsupported);
+        this.StyleWriter = new StyleWriter(workbookPart, this.Styles, this.OnContentChanged);
 
         foreach (var sheet in workbookElement.Sheets?.Elements<Sheet>() ?? Enumerable.Empty<Sheet>())
         {
@@ -73,7 +74,17 @@ public sealed class Workbook : OfficeDocument
 
     internal SharedStrings SharedStrings { get; }
 
+    /// <summary>Reads a cell's style index into a flattened <see cref="ResolvedFormat"/>.</summary>
     public StyleResolver Styles { get; }
+
+    /// <summary>
+    /// The other direction: turns a <see cref="ResolvedFormat"/> into a style index cells can carry.
+    /// </summary>
+    /// <remarks>
+    /// Public because a caller building a workbook from scratch has a real use for it, but note that
+    /// interning a style is not itself an edit — pair it with a command so the change can be undone.
+    /// </remarks>
+    public StyleWriter StyleWriter { get; }
 
     /// <summary>The calculation engine. Formulas are indexed lazily on first use — see <see cref="EnsureFormulasLoaded"/>.</summary>
     public CalcEngine Calc { get; } = new();

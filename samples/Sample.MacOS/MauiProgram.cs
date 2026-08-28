@@ -36,6 +36,7 @@ public static class MauiProgram
                 }))
             .UseShinyShell(x => x.AddGeneratedMaps())
             .UseTrayIcon()
+            .UseFileDrop()
             .UseDesktopQuickEntry()
             .UseShinyMediaElement()
             .UseShinyDocking()

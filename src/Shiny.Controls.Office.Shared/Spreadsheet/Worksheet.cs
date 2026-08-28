@@ -194,12 +194,175 @@ public sealed class Worksheet
         this.workbook.OnCellChanged(this, reference);
     }
 
+    /// <summary>
+    /// The style a cell actually renders with, following Excel's fallback: the cell's own style, then
+    /// its row's, then its column's.
+    /// </summary>
+    /// <remarks>
+    /// This is what a renderer wants, and <see cref="GetStyleIndex"/> is not. Formatting a whole column
+    /// writes one style onto the column element and touches no cells at all, so a painter reading only
+    /// the cell's own index shows an unformatted column and the operation appears to have done nothing.
+    /// </remarks>
+    public uint? GetEffectiveStyleIndex(CellRef reference)
+        => this.GetStyleIndex(reference)
+           ?? this.GetRowStyleIndex(reference.Row)
+           ?? this.GetColumnStyleIndex(reference.Column);
+
+    /// <summary>The style applied to a whole row, or null when the row carries none.</summary>
+    /// <remarks>
+    /// <c>customFormat</c> is the gate here, unlike on a cell: a row element routinely carries a style
+    /// index it does not mean, left behind by a format that was applied and then removed.
+    /// </remarks>
+    public uint? GetRowStyleIndex(int row)
+    {
+        var element = this.editor.FindRow(row);
+        return element?.CustomFormat?.Value == true ? element.StyleIndex?.Value : null;
+    }
+
+    /// <summary>The style applied to a whole column, or null when the column carries none.</summary>
+    public uint? GetColumnStyleIndex(int column)
+        => ColumnSpans.Find(this.SheetElement(), column)?.Style;
+
+    /// <summary>The width a column is stored with, in characters, or null when it uses the sheet default.</summary>
+    public double? GetColumnWidth(int column)
+    {
+        var span = ColumnSpans.Find(this.SheetElement(), column);
+        return span?.CustomWidth == true ? span.Width : null;
+    }
+
     internal void WriteStyleIndex(CellRef reference, uint? styleIndex)
     {
         var cell = this.editor.GetOrCreateCell(reference);
         cell.StyleIndex = styleIndex is null ? null : UInt32Value.FromUInt32(styleIndex.Value);
         this.workbook.OnContentChanged();
     }
+
+    internal void WriteRowStyle(int row, uint? styleIndex)
+    {
+        var element = this.editor.GetOrCreateRow(row);
+
+        if (styleIndex is { } style)
+        {
+            element.StyleIndex = style;
+            element.CustomFormat = true;
+        }
+        else
+        {
+            element.StyleIndex = null;
+            element.CustomFormat = null;
+        }
+
+        this.workbook.OnContentChanged();
+    }
+
+    /// <summary>
+    /// Walks a column range as maximal runs that share a style, so a caller can act on each run once.
+    /// </summary>
+    /// <remarks>
+    /// The alternative is asking column by column, and a selection made from a column header is 16,384
+    /// columns wide. Each of those questions has to search the span list, so the per-column loop is
+    /// quadratic in a case that happens on a single click.
+    /// </remarks>
+    internal IEnumerable<(int First, int Last, uint? Style)> ColumnStyleRuns(int first, int last)
+        => this.ColumnRuns(first, last, span => span?.Style);
+
+    /// <summary>The same, for the width a column is stored with. Null means the sheet default.</summary>
+    internal IEnumerable<(int First, int Last, double? Width)> ColumnWidthRuns(int first, int last)
+        => this.ColumnRuns(first, last, span => span?.CustomWidth == true ? span.Width : null);
+
+    IEnumerable<(int First, int Last, T Value)> ColumnRuns<T>(int first, int last, Func<ColumnSpans.Span?, T> select)
+    {
+        first = Math.Clamp(first, 0, CellRef.MaxColumn);
+        last = Math.Clamp(last, first, CellRef.MaxColumn);
+
+        var spans = ColumnSpans.Read(this.SheetElement());
+        var comparer = EqualityComparer<T>.Default;
+
+        var runStart = first;
+        var runValue = select(SpanAt(spans, first));
+
+        for (var column = first + 1; column <= last; column++)
+        {
+            var value = select(SpanAt(spans, column));
+            if (comparer.Equals(value, runValue))
+                continue;
+
+            yield return (runStart, column - 1, runValue);
+            runStart = column;
+            runValue = value;
+        }
+
+        yield return (runStart, last, runValue);
+    }
+
+    static ColumnSpans.Span? SpanAt(IReadOnlyList<ColumnSpans.Span> spans, int column)
+    {
+        foreach (var span in spans)
+        {
+            if (column >= span.First && column <= span.Last)
+                return span;
+        }
+
+        return null;
+    }
+
+    internal void WriteColumnStyle(int first, int last, uint? styleIndex)
+    {
+        if (ColumnSpans.Apply(this.SheetElement(), first, last, span => span with { Style = styleIndex }))
+            this.workbook.OnContentChanged();
+    }
+
+    /// <summary>Sets a column's width in characters, or clears it back to the sheet default with null.</summary>
+    internal void WriteColumnWidth(int first, int last, double? characters)
+    {
+        var changed = ColumnSpans.Apply(this.SheetElement(), first, last, span => span with
+        {
+            Width = characters,
+            CustomWidth = characters is not null,
+
+            // bestFit means "Excel chose this width by auto-fitting"; a width the user dragged out or
+            // typed is not that, and leaving the flag set makes Excel re-fit it on the next edit.
+            BestFit = false
+        });
+
+        if (changed)
+            this.workbook.OnContentChanged();
+    }
+
+    /// <summary>The height a row is stored with, in points, or null when it uses the sheet default.</summary>
+    public double? GetRowHeight(int row)
+    {
+        var element = this.editor.FindRow(row);
+        return element?.CustomHeight?.Value == true ? element.Height?.Value : null;
+    }
+
+    internal void WriteRowHeight(int row, double? points)
+    {
+        var element = this.editor.GetOrCreateRow(row);
+
+        if (points is { } height)
+        {
+            element.Height = height;
+            element.CustomHeight = true;
+        }
+        else
+        {
+            element.Height = null;
+            element.CustomHeight = null;
+        }
+
+        this.workbook.OnContentChanged();
+    }
+
+    internal void WriteColumnHidden(int first, int last, bool hidden)
+    {
+        if (ColumnSpans.Apply(this.SheetElement(), first, last, span => span with { Hidden = hidden }))
+            this.workbook.OnContentChanged();
+    }
+
+    /// <summary>The worksheet's root element. Present for every sheet the model loaded.</summary>
+    SheetElement SheetElement()
+        => this.part.Worksheet ?? throw new InvalidOperationException($"Sheet '{this.Name}' has no content.");
 
 
     /// <summary>Every cell on the sheet that holds a formula, with the formula text.</summary>

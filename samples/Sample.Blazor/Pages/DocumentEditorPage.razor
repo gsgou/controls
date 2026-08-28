@@ -19,19 +19,42 @@
     <span class="status">@Status</span>
 </div>
 
+<div class="toolbar">
+    <label class="chk">
+        <input type="checkbox" checked="@(pageLayout == DocumentPageLayout.Print)" @onchange="TogglePageLayout" />
+        Print layout
+    </label>
+    <button class="btn" @onclick="InsertPageBreak">Insert page break</button>
+    <input class="txt" placeholder="Header text" @bind="headerText" @bind:event="oninput" />
+    <button class="btn" @onclick="ApplyHeader">Set header</button>
+    <button class="btn" @onclick="ClearHeader">Clear</button>
+    <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.Plain)">Page number</button>
+    <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.PageOfCount)">Page X of Y</button>
+    <button class="btn" @onclick="() => Nudge(-0.25)">&minus;</button>
+    <span class="status">@($"{this.zoom * 100:0}%")</span>
+    <button class="btn" @onclick="() => Nudge(0.25)">+</button>
+    <span class="status">@PageStatus</span>
+</div>
+
 <div class="editor-host">
     @if (withToolbar)
     {
-        <DocumentEditorView Document="document"
+        <DocumentEditorView @ref="view"
+                            Document="document"
                             Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                            PageLayout="pageLayout"
+                            Zoom="zoom"
                             SpellChecker="checker"
                             SpellCheckEnabled="spellCheck"
                             DocumentChanged="OnChanged" />
     }
     else
     {
-        <DocumentEditor Document="document"
+        <DocumentEditor @ref="editor"
+                        Document="document"
                         Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                        PageLayout="pageLayout"
+                        Zoom="zoom"
                         SpellChecker="checker"
                         SpellCheckEnabled="spellCheck"
                         DocumentChanged="OnChanged" />
@@ -56,10 +79,37 @@
     /// </remarks>
     readonly SampleSpellChecker checker = new();
 
+    DocumentEditorView? view;
+    DocumentEditor? editor;
+
     bool spellCheck = true;
     bool withToolbar = true;
     bool dark;
     int edits;
+
+    DocumentPageLayout pageLayout = DocumentPageLayout.Print;
+    double zoom = 1.0;
+    string headerText = "Quarterly Report";
+
+    DocumentEditorController? Controller => this.withToolbar ? this.view?.Controller : this.editor?.Controller;
+
+    string PageStatus => this.Controller is { IsPaginated: true } controller
+        ? $"{controller.Pagination.Count} page(s)"
+        : "reflowed";
+
+    void TogglePageLayout(ChangeEventArgs e)
+        => this.pageLayout = (bool?)e.Value == true ? DocumentPageLayout.Print : DocumentPageLayout.Reflow;
+
+    void Nudge(double delta) => this.zoom = Math.Clamp(this.zoom + delta, 0.25, 4.0);
+
+    void InsertPageBreak() => this.Controller?.InsertPageBreak();
+
+    void ApplyHeader() => this.Controller?.SetHeaderText(this.headerText, PageNumberPosition.Center);
+
+    void ClearHeader() => this.Controller?.SetHeaderText(null);
+
+    void AddPageNumber(PageNumberFormat format)
+        => this.Controller?.InsertPageNumber(PageNumberPlacement.Footer, PageNumberPosition.Center, format);
 
     string Status => this.document is null
         ? "loading"
@@ -69,6 +119,16 @@
     {
         var bytes = SampleOfficeDocuments.BuildDocument();
         this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), editable: true);
+    }
+
+    /// <remarks>
+    /// The page count comes from the editor's controller, and an <c>@ref</c> is not assigned until
+    /// after the first render — so the status line needs one more render to say anything true.
+    /// </remarks>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            this.StateHasChanged();
     }
 
     void ToggleTheme() => this.dark = !this.dark;

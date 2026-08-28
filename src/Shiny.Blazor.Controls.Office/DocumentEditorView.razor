@@ -1,5 +1,6 @@
 @using Shiny.Blazor.Controls
 @using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Icons
 @using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Shapes
 @using Shiny.Controls.Office.Spreadsheet
@@ -15,6 +16,11 @@
     left to itself every control here would be an inline-level box on a text line, aligned to the text
     baseline — and a button's baseline, a select's baseline and a swatch's baseline are all in
     different places, which is exactly what "the toolbar buttons look slightly off" is.
+
+    Every plain button is an OfficeToolbarButton drawing from the shared icon set, so the mark for
+    "align centre" is one definition rendered twice rather than two that drift. The pickers stay as
+    they are: a font, a size and a colour have to show what they are currently set to, which is the
+    one thing a monochrome icon cannot do.
 *@
 <div class="shiny-doc-editor-view @Class" style="@Style">
 
@@ -46,10 +52,21 @@
 
             <span class="doc-sep"></span>
 
-            <button class="doc-btn @(Format.Bold ? "on" : null)" title="Bold (Ctrl+B)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleBold())"><b>B</b></button>
-            <button class="doc-btn @(Format.Italic ? "on" : null)" title="Italic (Ctrl+I)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleItalic())"><i>I</i></button>
-            <button class="doc-btn @(Format.Underline ? "on" : null)" title="Underline (Ctrl+U)" disabled="@Disabled" @onclick="() => Run(c => c.ToggleUnderline())"><u>U</u></button>
-            <button class="doc-btn @(Format.Strike ? "on" : null)" title="Strikethrough" disabled="@Disabled" @onclick="() => Run(c => c.ToggleStrikethrough())"><s>S</s></button>
+            <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold (Ctrl+B)" Toggle
+                                 Active="Format.Bold" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleBold())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic (Ctrl+I)" Toggle
+                                 Active="Format.Italic" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleItalic())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline (Ctrl+U)" Toggle
+                                 Active="Format.Underline" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleUnderline())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle
+                                 Active="Format.Strike" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleStrikethrough())" />
 
             <span class="doc-sep"></span>
 
@@ -61,11 +78,13 @@
 
             <OfficeHighlightButton Current="Format.Highlight"
                                    Disabled="Disabled"
+                                   ShowTooltips="ShowToolbarTooltips"
                                    Picked="OnHighlightPicked" />
 
             <span class="doc-sep"></span>
 
             <OfficeInsertMenu Disabled="Disabled"
+                              ShowTooltips="ShowToolbarTooltips"
                               ShapePicked="OnShapePicked"
                               TablePicked="OnTablePicked"
                               ImagePicked="OnImagePicked"
@@ -73,15 +92,31 @@
 
             <span class="doc-sep"></span>
 
-            <button class="doc-btn @(Format.Alignment == TextAlignment.Left ? "on" : null)" title="Align left" disabled="@Disabled" @onclick="() => Align(TextAlignment.Left)">⯇</button>
-            <button class="doc-btn @(Format.Alignment == TextAlignment.Center ? "on" : null)" title="Centre" disabled="@Disabled" @onclick="() => Align(TextAlignment.Center)">≡</button>
-            <button class="doc-btn @(Format.Alignment == TextAlignment.Right ? "on" : null)" title="Align right" disabled="@Disabled" @onclick="() => Align(TextAlignment.Right)">⯈</button>
-            <button class="doc-btn @(Format.Alignment == TextAlignment.Justify ? "on" : null)" title="Justify" disabled="@Disabled" @onclick="() => Align(TextAlignment.Justify)">▤</button>
+            <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle
+                                 Active="Format.Alignment == TextAlignment.Left" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Left)" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle
+                                 Active="Format.Alignment == TextAlignment.Center" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Center)" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle
+                                 Active="Format.Alignment == TextAlignment.Right" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Right)" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.AlignJustify" Hint="Justify" Toggle
+                                 Active="Format.Alignment == TextAlignment.Justify" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Justify)" />
 
             <span class="doc-sep"></span>
 
-            <button class="doc-btn" title="Undo (Ctrl+Z)" disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))" @onclick="() => Run(c => c.Undo())">↶</button>
-            <button class="doc-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
+            <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo (Ctrl+Z)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))"
+                                 Clicked="() => Run(c => c.Undo())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo (Ctrl+Shift+Z)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))"
+                                 Clicked="() => Run(c => c.Redo())" />
 
             @ToolbarContent
         </div>
@@ -93,6 +128,7 @@
                         Document="Document"
                         Theme="Theme"
                         Zoom="Zoom"
+                        PageLayout="PageLayout"
                         ReadOnly="ReadOnly"
                         SpellChecker="SpellChecker"
                         SpellCheckEnabled="SpellCheckEnabled"
@@ -111,6 +147,12 @@
 
     [Parameter] public double Zoom { get; set; } = 1.0;
 
+    /// <summary>
+    /// Continuous column, or sheets of paper with the document's own headers and footers. Print by
+    /// default, matching the editor it wraps.
+    /// </summary>
+    [Parameter] public DocumentPageLayout PageLayout { get; set; } = DocumentPageLayout.Print;
+
     [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Passed straight through to the inner <see cref="DocumentEditor"/>.</summary>
@@ -119,6 +161,16 @@
     [Parameter] public bool SpellCheckEnabled { get; set; } = true;
 
     [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    /// <summary>
+    /// Whether the icon-only toolbar buttons carry a tooltip naming what they do.
+    /// </summary>
+    /// <remarks>
+    /// On, because every button on this bar is icon only and an icon with no label is a guess until
+    /// something names it. Turning it off falls back to the browser's own <c>title</c>, which is
+    /// slower to appear and cannot be themed but still says what the button is.
+    /// </remarks>
+    [Parameter] public bool ShowToolbarTooltips { get; set; } = true;
 
     /// <summary>Whether dragging an image file onto the document inserts it. On by default.</summary>
     [Parameter] public bool AllowFileDrop { get; set; } = true;

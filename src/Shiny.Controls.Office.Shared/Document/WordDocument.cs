@@ -13,10 +13,14 @@ namespace Shiny.Controls.Office.Document;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is a **viewer**. The document is presented as a continuous flow rather than paginated: page
-/// breaks, headers, footers and footnote placement all depend on a full pagination engine, and
-/// pretending to have one produces page boundaries in the wrong places, which is worse than honestly
-/// not having pages at all.
+/// Read into one continuous flow, which either view can present. <see cref="DocumentPageLayout.Print"/>
+/// slices that flow into pages and draws the headers, footers and page numbers this type exposes;
+/// <see cref="DocumentPageLayout.Reflow"/> shows it as one column and ignores them. Slicing rather
+/// than laying out per page is what keeps a single model honest for both.
+/// </para>
+/// <para>
+/// Footnotes and endnotes are still not placed — they need their own reference area at the foot of
+/// the page they are cited on, which is a different problem from breaking a flow into pages.
 /// </para>
 /// <para>
 /// The package is still held open and untouched, so the same document can later gain an editor without
@@ -28,6 +32,7 @@ public sealed class WordDocument : OfficeDocument
     readonly WordprocessingDocument document;
     readonly List<DocumentBlock> blocks = new();
     readonly WordBodyReader reader;
+    readonly WordBodyReader chromeReader;
     readonly Body? body;
     bool contentChanged;
 
@@ -47,6 +52,12 @@ public sealed class WordDocument : OfficeDocument
         this.DefaultStyle = styles.DefaultRunStyle;
         this.Page = ReadPageSetup(main);
         this.blocks.AddRange(this.reader.ReadBody(this.body));
+
+        // A second reader with its own numbering state: list counters are consumed as the body is
+        // walked, and a numbered list in a header would otherwise continue the body's sequence.
+        this.chromeReader = new WordBodyReader(main, styles, new WordNumbering(main), unsupported);
+        this.RereadHeadersFooters();
+
         this.Undo = new UndoStack<WordDocument>(this);
 
         this.ReportUnsupported(main);
@@ -72,7 +83,16 @@ public sealed class WordDocument : OfficeDocument
         this.Undo.Execute(command);
     }
 
-    public PageSetup Page { get; }
+    public PageSetup Page { get; private set; }
+
+    /// <summary>
+    /// The document's headers and footers, already read into the same block model the body uses.
+    /// </summary>
+    /// <remarks>
+    /// Only drawn in <see cref="DocumentPageLayout.Print"/>: a reflowed column has no page edges to
+    /// put them against.
+    /// </remarks>
+    public DocumentHeaderFooterSet HeadersFooters { get; private set; } = DocumentHeaderFooterSet.Empty;
 
     public TextStyle DefaultStyle { get; }
 
@@ -335,11 +355,151 @@ public sealed class WordDocument : OfficeDocument
                 MarginLeft = margin.Left?.Value is { } left ? OoxmlUnits.TwipsToPixels(left) : setup.MarginLeft,
                 MarginRight = margin.Right?.Value is { } right ? OoxmlUnits.TwipsToPixels(right) : setup.MarginRight,
                 MarginTop = margin.Top?.Value is { } top ? OoxmlUnits.TwipsToPixels(top) : setup.MarginTop,
-                MarginBottom = margin.Bottom?.Value is { } bottom ? OoxmlUnits.TwipsToPixels(bottom) : setup.MarginBottom
+                MarginBottom = margin.Bottom?.Value is { } bottom ? OoxmlUnits.TwipsToPixels(bottom) : setup.MarginBottom,
+                HeaderDistance = margin.Header?.Value is { } header ? OoxmlUnits.TwipsToPixels(header) : setup.HeaderDistance,
+                FooterDistance = margin.Footer?.Value is { } footer ? OoxmlUnits.TwipsToPixels(footer) : setup.FooterDistance
             };
         }
 
+        // w:titlePg and w:evenAndOddHeaders are both "present unless explicitly false" — an on/off
+        // element whose absence means off, and whose w:val="0" also means off.
+        setup = setup with
+        {
+            DifferentFirstPage = IsOn(section?.GetFirstChild<TitlePage>()),
+            DifferentOddAndEvenPages = IsOn(main.DocumentSettingsPart?.Settings?.GetFirstChild<EvenAndOddHeaders>())
+        };
+
         return setup;
+    }
+
+    /// <summary>
+    /// Reads an OOXML on/off element, which has three states and not two.
+    /// </summary>
+    /// <remarks>
+    /// Absent means off; present with no <c>w:val</c> means on; present with <c>w:val="0"</c> means
+    /// off again. Testing only the value treats every document without a <c>w:titlePg</c> as having
+    /// a distinct first page, which shows up as a missing header on page one.
+    /// </remarks>
+    static bool IsOn(OnOffType? element) => element is not null && (element.Val is null || element.Val.Value);
+
+    /// <summary>The last section's properties, created if the body has none.</summary>
+    internal SectionProperties? SectionProperties(bool create)
+    {
+        if (this.body is null)
+            return null;
+
+        var existing = this.body.Elements<SectionProperties>().LastOrDefault();
+        if (existing is not null || !create)
+            return existing;
+
+        // sectPr has to be the body's last child; anywhere else and Word rejects the document.
+        var created = new SectionProperties();
+        this.body.AppendChild(created);
+        return created;
+    }
+
+    /// <summary>Re-reads the header and footer parts after one of them has been edited.</summary>
+    internal void RereadHeadersFooters()
+    {
+        var set = new DocumentHeaderFooterSet();
+        var main = this.Main;
+        var section = main?.Document?.Body?.Elements<SectionProperties>().LastOrDefault();
+
+        if (main is null || section is null)
+        {
+            this.HeadersFooters = set;
+            return;
+        }
+
+        foreach (var reference in section.Elements<HeaderReference>())
+        {
+            if (PartFor(main, reference.Id?.Value) is HeaderPart part)
+                set.SetHeader(KindOf(reference), new DocumentHeaderFooter(this.chromeReader.ReadContainer(part.Header)));
+        }
+
+        foreach (var reference in section.Elements<FooterReference>())
+        {
+            if (PartFor(main, reference.Id?.Value) is FooterPart part)
+                set.SetFooter(KindOf(reference), new DocumentHeaderFooter(this.chromeReader.ReadContainer(part.Footer)));
+        }
+
+        this.HeadersFooters = set;
+        this.Page = ReadPageSetup(main);
+    }
+
+    static DocumentPageKind KindOf(OpenXmlElement reference) => OoxmlUnits.EnumAttribute(reference, "type") switch
+    {
+        "first" => DocumentPageKind.First,
+        "even" => DocumentPageKind.Even,
+        _ => DocumentPageKind.Default
+    };
+
+    /// <summary>
+    /// The part a header or footer reference points at, or null when the relationship is dangling.
+    /// </summary>
+    /// <remarks>
+    /// A reference to a missing relationship throws rather than returning null, and a document with
+    /// one is not otherwise broken — so it is caught and the header simply does not draw.
+    /// </remarks>
+    static OpenXmlPart? PartFor(MainDocumentPart main, string? id)
+    {
+        if (String.IsNullOrEmpty(id))
+            return null;
+
+        try
+        {
+            return main.GetPartById(id);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The live OOXML a header or footer is currently made of, for a command that means to add to it.
+    /// </summary>
+    /// <remarks>
+    /// Cloned on the way out. The caller hands these back to a command that replaces the part's
+    /// contents, and passing the live elements would have it re-parenting the very children it is
+    /// about to remove.
+    /// </remarks>
+    internal IReadOnlyList<OpenXmlElement> ChromeElements(bool header, DocumentPageKind kind)
+    {
+        var main = this.Main;
+        var section = main?.Document?.Body?.Elements<SectionProperties>().LastOrDefault();
+        if (main is null || section is null)
+            return [];
+
+        var wanted = kind switch
+        {
+            DocumentPageKind.First => "first",
+            DocumentPageKind.Even => "even",
+            _ => "default"
+        };
+
+        var references = header
+            ? section.Elements<HeaderReference>().Cast<OpenXmlElement>()
+            : section.Elements<FooterReference>().Cast<OpenXmlElement>();
+
+        var reference = references.FirstOrDefault(x => (OoxmlUnits.EnumAttribute(x, "type") ?? "default") == wanted);
+        var id = header ? (reference as HeaderReference)?.Id?.Value : (reference as FooterReference)?.Id?.Value;
+
+        var root = PartFor(main, id) switch
+        {
+            HeaderPart part => part.Header as OpenXmlElement,
+            FooterPart part => part.Footer,
+            _ => null
+        };
+
+        return root?.ChildElements.Select(x => x.CloneNode(true)).ToList() ?? [];
+    }
+
+    /// <summary>Marks the document changed after an edit that did not go through a block.</summary>
+    internal void MarkChromeChanged()
+    {
+        this.RereadHeadersFooters();
+        this.MarkChanged();
     }
 
     void ReportUnsupported(MainDocumentPart main)
@@ -352,11 +512,11 @@ public sealed class WordDocument : OfficeDocument
         if (main.FootnotesPart is not null || main.EndnotesPart is not null)
             this.Unsupported.Report(new UnsupportedFeature("document", "Footnotes and endnotes", UnsupportedSeverity.NotRendered));
 
-        if (main.HeaderParts.Any() || main.FooterParts.Any())
+        if ((main.HeaderParts.Any() || main.FooterParts.Any()) && !this.HeadersFooters.HasAny)
         {
             this.Unsupported.Report(new UnsupportedFeature(
                 "document", "Headers and footers", UnsupportedSeverity.NotRendered,
-                "The viewer reflows content and has no pages to attach them to."));
+                "The parts are in the package but no section references them."));
         }
 
         if (main.Document?.Body?.Descendants<InsertedRun>().Any() == true ||

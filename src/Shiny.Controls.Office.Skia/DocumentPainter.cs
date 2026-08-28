@@ -13,6 +13,8 @@ public sealed record DocumentTheme
     {
         PageBackground = new ArgbColor(255, 0x25, 0x25, 0x25),
         SurroundBackground = new ArgbColor(255, 0x18, 0x18, 0x18),
+        PageBorder = new ArgbColor(255, 0x3A, 0x3A, 0x3A),
+        PageShadow = new ArgbColor(90, 0, 0, 0),
         Text = new ArgbColor(255, 0xE4, 0xE4, 0xE4),
         Rule = new ArgbColor(255, 0x55, 0x55, 0x55),
         TableBorder = new ArgbColor(255, 0x55, 0x55, 0x55),
@@ -23,6 +25,12 @@ public sealed record DocumentTheme
 
     public ArgbColor PageBackground { get; init; } = new(255, 255, 255, 255);
     public ArgbColor SurroundBackground { get; init; } = new(255, 0xF0, 0xF0, 0xF2);
+
+    /// <summary>Hairline around a sheet of paper. Only drawn in print layout.</summary>
+    public ArgbColor PageBorder { get; init; } = new(255, 0xD4, 0xD4, 0xD8);
+
+    /// <summary>The sheet's drop shadow — what makes a page read as paper and not as a white box.</summary>
+    public ArgbColor PageShadow { get; init; } = new(40, 0, 0, 0);
     public ArgbColor Text { get; init; } = new(255, 0x1A, 0x1A, 0x1A);
     public ArgbColor Rule { get; init; } = new(255, 0xC8, 0xC8, 0xC8);
     public ArgbColor TableBorder { get; init; } = new(255, 0xBB, 0xBB, 0xBB);
@@ -65,10 +73,23 @@ public sealed record DocumentPaintRequest
     public DocumentTheme Theme { get; init; } = DocumentTheme.Light;
     public float Scale { get; init; } = 1f;
 
-    /// <summary>Horizontal offset of the page within the viewport, for centring a fixed-width page.</summary>
+    /// <summary>Left edge of the page panel within the viewport, for centring a fixed-width page.</summary>
     public double PageX { get; init; }
 
     public double PageWidth { get; init; }
+
+    /// <summary>
+    /// Left edge of the content inside the page — <see cref="PageX"/> plus the page's own padding.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="PageX"/> because they are two different things and folding them
+    /// together is silently wrong in both directions: the page panel ends up offset from centre by
+    /// the padding, and the content sits flush against its left edge with double the padding on the
+    /// right. Defaults to <see cref="PageX"/>, which is the unpadded case.
+    /// </remarks>
+    public double ContentX { get; init; } = double.NaN;
+
+    internal double ResolvedContentX => Double.IsNaN(this.ContentX) ? this.PageX : this.ContentX;
 
     /// <summary>Selection rectangles in document coordinates, painted under the text.</summary>
     public IReadOnlyList<GridRectLike> Selection { get; init; } = [];
@@ -81,7 +102,24 @@ public sealed record DocumentPaintRequest
 
     /// <summary>The frame and handles around a selected inline object, or null when none is selected.</summary>
     public DocumentObjectChrome? ObjectChrome { get; init; }
+
+    /// <summary>
+    /// The pages to draw, already narrowed to the visible ones.
+    /// </summary>
+    /// <remarks>
+    /// Empty means reflow: one panel filling the viewport, no paper edges, no header or footer. The
+    /// two modes share every line of the content painting below and differ only in what they wrap it
+    /// in, which is the whole reason pagination was built as slicing rather than as a second layout.
+    /// </remarks>
+    public IReadOnlyList<DocumentPageView> Pages { get; init; } = [];
+
+    /// <summary>Paper geometry. Only read when <see cref="Pages"/> is non-empty.</summary>
+    public PageSetup Setup { get; init; } = PageSetup.Letter;
+
+    /// <summary>Height of one sheet, in the same units as the layout.</summary>
+    public double PageHeight { get; init; }
 }
+
 
 /// <summary>
 /// The selection frame and resize handles around an inline object.
@@ -120,37 +158,179 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
         canvas.Scale(request.Scale);
         canvas.Clear(ToSk(theme.SurroundBackground));
 
-        // The page itself is a lighter panel inside the surround, so a narrow measure still reads as
-        // a document rather than as text floating on a background.
+        if (request.Pages.Count == 0)
+            this.PaintReflowed(canvas, request, theme);
+        else
+            this.PaintPaginated(canvas, request, theme);
+
+        canvas.Restore();
+    }
+
+    /// <summary>One panel filling the viewport, with the whole flow drawn into it.</summary>
+    void PaintReflowed(SKCanvas canvas, DocumentPaintRequest request, DocumentTheme theme)
+    {
+        // The page is a lighter panel inside the surround, so a narrow measure still reads as a
+        // document rather than as text floating on a background.
         this.fill.Color = ToSk(theme.PageBackground);
         canvas.DrawRect(
             new SKRect(
-                (float)request.PageX,
+                Snap(request.PageX, request.Scale),
                 0,
-                (float)(request.PageX + request.PageWidth),
+                Snap(request.PageX + request.PageWidth, request.Scale),
                 (float)request.Viewport.Height),
             this.fill);
 
-        canvas.Translate((float)request.PageX, (float)-request.Viewport.ScrollY);
+        canvas.Save();
+        canvas.Translate((float)request.ResolvedContentX, (float)-request.Viewport.ScrollY);
+        this.PaintFlow(canvas, request, theme, Double.NegativeInfinity, Double.PositiveInfinity);
+        canvas.Restore();
+    }
 
+    /// <summary>Sheets of paper, each showing its own slice of the flow plus its header and footer.</summary>
+    void PaintPaginated(SKCanvas canvas, DocumentPaintRequest request, DocumentTheme theme)
+    {
+        var setup = request.Setup;
+        var scrollY = request.Viewport.ScrollY;
+
+        foreach (var entry in request.Pages)
+        {
+            var top = entry.Page.ViewTop - scrollY;
+            var paper = new SKRect(
+                Snap(request.PageX, request.Scale),
+                Snap(top, request.Scale),
+                Snap(request.PageX + request.PageWidth, request.Scale),
+                Snap(top + request.PageHeight, request.Scale));
+
+            this.PaintPaper(canvas, paper, theme);
+
+            // Clipped to the sheet: a paragraph whose last line straddles the boundary is drawn on
+            // both pages, and without the clip the overhang would spill into the gap below.
+            canvas.Save();
+            canvas.ClipRect(paper);
+            canvas.Translate(
+                (float)request.ResolvedContentX,
+                (float)(top + setup.MarginTop - entry.Page.FlowTop));
+
+            this.PaintFlow(canvas, request, theme, entry.Page.FlowTop, entry.Page.FlowBottom);
+            canvas.Restore();
+
+            if (entry.Header is { } header)
+            {
+                canvas.Save();
+                canvas.ClipRect(paper);
+                canvas.Translate((float)request.ResolvedContentX, (float)(top + setup.HeaderDistance));
+
+                foreach (var block in header.Blocks)
+                    this.PaintBlock(canvas, block, theme);
+
+                canvas.Restore();
+            }
+
+            if (entry.Footer is { } footer)
+            {
+                canvas.Save();
+                canvas.ClipRect(paper);
+
+                // Measured up from the bottom edge, which is what w:pgMar/@w:footer means — so a
+                // two-line footer grows upwards and its last line stays the same distance from the
+                // paper's edge.
+                canvas.Translate(
+                    (float)request.ResolvedContentX,
+                    (float)(top + request.PageHeight - setup.FooterDistance - footer.Height));
+
+                foreach (var block in footer.Blocks)
+                    this.PaintBlock(canvas, block, theme);
+
+                canvas.Restore();
+            }
+        }
+    }
+
+    /// <summary>A sheet of paper: a soft drop shadow, the page itself, and a hairline edge.</summary>
+    /// <remarks>
+    /// The shadow is blurred and horizontally centred, with only a slight downward bias. An offset
+    /// hard-edged rectangle was the first attempt and it reads as a defect rather than as depth:
+    /// the side it is offset towards gains a second, darker line against the surround, so the page
+    /// looks like it has a 2px border on one side and a 1px border on the other.
+    /// </remarks>
+    void PaintPaper(SKCanvas canvas, SKRect paper, DocumentTheme theme)
+    {
+        using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 3f))
+        {
+            this.fill.Color = ToSk(theme.PageShadow);
+            this.fill.MaskFilter = blur;
+            canvas.DrawRect(paper with { Top = paper.Top + 1, Bottom = paper.Bottom + 3 }, this.fill);
+            this.fill.MaskFilter = null;
+        }
+
+        this.fill.Color = ToSk(theme.PageBackground);
+        canvas.DrawRect(paper, this.fill);
+
+        // Inset by half the stroke so the hairline lands inside the paper rather than straddling its
+        // edge — a centred stroke on a snapped edge still spills half a pixel into the surround.
+        this.stroke.Color = ToSk(theme.PageBorder);
+        this.stroke.StrokeWidth = 1;
+        canvas.DrawRect(paper with { Left = paper.Left + 0.5f, Top = paper.Top + 0.5f, Right = paper.Right - 0.5f, Bottom = paper.Bottom - 0.5f }, this.stroke);
+    }
+
+    /// <summary>
+    /// Rounds a layout coordinate to a whole device pixel.
+    /// </summary>
+    /// <remarks>
+    /// The page is centred by halving whatever is left over, which lands on a half unit whenever the
+    /// viewport and the page differ by an odd amount. Drawn unsnapped, one edge of the sheet
+    /// antialiases across two device pixels and the other does not — which looks exactly like a
+    /// gutter that is a pixel wider on one side.
+    /// </remarks>
+    static float Snap(double value, float scale)
+        => scale > 0 ? (float)(Math.Round(value * scale) / scale) : (float)value;
+
+    /// <summary>
+    /// Draws the flow between two Y positions, in flow coordinates.
+    /// </summary>
+    /// <remarks>
+    /// The one path both modes share. Selection, spelling and the caret arrive in flow coordinates
+    /// too, so they need no page arithmetic of their own — they are simply filtered to the slice and
+    /// drawn under the same translation as the text they belong to.
+    /// </remarks>
+    void PaintFlow(SKCanvas canvas, DocumentPaintRequest request, DocumentTheme theme, double flowTop, double flowBottom)
+    {
         // Selection goes under the text: painting it over would wash out the glyphs it is meant to
         // highlight.
         if (request.Selection.Count > 0)
         {
             this.fill.Color = ToSk(theme.SelectionFill);
             foreach (var rect in request.Selection)
+            {
+                if (rect.Bottom < flowTop || rect.Y > flowBottom)
+                    continue;
+
                 canvas.DrawRect(new SKRect((float)rect.X, (float)rect.Y, (float)rect.Right, (float)rect.Bottom), this.fill);
+            }
         }
 
-        foreach (var block in request.Viewport.Visible(request.Blocks))
+        foreach (var block in request.Blocks)
+        {
+            if (block.Y + block.Height < flowTop)
+                continue;
+
+            if (block.Y > flowBottom)
+                break;
+
             this.PaintBlock(canvas, block, theme);
+        }
 
         // Squiggles go over the text: they mark it rather than sit behind it, and a wash underneath
         // would be invisible against a descender.
         foreach (var rect in request.Spelling)
-            this.PaintSquiggle(canvas, rect, theme);
+        {
+            if (rect.Bottom < flowTop || rect.Y > flowBottom)
+                continue;
 
-        if (request.Caret is { } caret)
+            this.PaintSquiggle(canvas, rect, theme);
+        }
+
+        if (request.Caret is { } caret && caret.Bottom >= flowTop && caret.Y <= flowBottom)
         {
             this.fill.Color = ToSk(theme.Caret);
             canvas.DrawRect(
@@ -160,10 +340,8 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
 
         // Last, over everything: the frame surrounds an object drawn a moment ago, and drawing it
         // any earlier would let the object paint over its own selection.
-        if (request.ObjectChrome is { } objectChrome)
+        if (request.ObjectChrome is { } objectChrome && objectChrome.Frame.Bottom >= flowTop && objectChrome.Frame.Y <= flowBottom)
             this.PaintObjectChrome(canvas, objectChrome);
-
-        canvas.Restore();
     }
 
     /// <summary>

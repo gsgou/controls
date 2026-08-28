@@ -5,7 +5,18 @@ using Shiny.Controls.Office.Text;
 namespace Shiny.Controls.Office.Document;
 
 /// <summary>A block positioned in the flow, ready to paint.</summary>
-public abstract record LaidOutBlock(double Y, double Height);
+public abstract record LaidOutBlock(double Y, double Height)
+{
+    /// <summary>
+    /// True when a page break lands immediately before this block, so it must open a page.
+    /// </summary>
+    /// <remarks>
+    /// A page break at the very end of a paragraph has no line of its own to carry it, so it is
+    /// handed to whatever comes next. Ignored in reflow, where it has already been honoured as a
+    /// line break.
+    /// </remarks>
+    public bool StartsPage { get; init; }
+}
 
 public sealed record LaidOutParagraph(
     double Y,
@@ -64,6 +75,9 @@ public sealed class DocumentLayoutEngine(ITextMeasurer measurer)
 {
     readonly TextLayoutEngine text = new(measurer);
 
+    /// <summary>Set when a paragraph ended on a page break, and consumed by the next block.</summary>
+    bool pendingPageBreak;
+
     /// <summary>Padding inside a table cell.</summary>
     public double CellPadding { get; init; } = 5;
 
@@ -75,6 +89,7 @@ public sealed class DocumentLayoutEngine(ITextMeasurer measurer)
         ArgumentNullException.ThrowIfNull(blocks);
 
         var laidOut = new List<LaidOutBlock>();
+        this.pendingPageBreak = false;
         var y = this.LayoutInto(blocks, laidOut, 0, 0, Math.Max(1, width));
         return new DocumentLayoutResult(laidOut, width, y);
     }
@@ -85,6 +100,8 @@ public sealed class DocumentLayoutEngine(ITextMeasurer measurer)
 
         foreach (var block in blocks)
         {
+            var first = output.Count;
+
             switch (block)
             {
                 case DocumentParagraph paragraph:
@@ -99,6 +116,15 @@ public sealed class DocumentLayoutEngine(ITextMeasurer measurer)
                     output.Add(new LaidOutRule(y + 4, 1, originX, width));
                     y += 12;
                     break;
+            }
+
+            // A page break the previous block ended on belongs to this one — it had no line of its
+            // own to sit on. Applied after the fact rather than passed in, because the block that
+            // consumes it does not know it is coming until it has already been laid out.
+            if (this.pendingPageBreak && output.Count > first)
+            {
+                output[first] = output[first] with { StartsPage = true };
+                this.pendingPageBreak = false;
             }
         }
 
@@ -137,6 +163,9 @@ public sealed class DocumentLayoutEngine(ITextMeasurer measurer)
 
         var lines = this.text.Layout(paragraph.Runs, contentWidth, format.Alignment, format.LineSpacing, firstLineIndent);
         var height = TextLayoutEngine.HeightOf(lines, format.LineSpacing);
+
+        if (this.text.TrailingPageBreak)
+            this.pendingPageBreak = true;
 
         output.Add(new LaidOutParagraph(y, height, lines, format, originX + indentLeft, contentWidth)
         {

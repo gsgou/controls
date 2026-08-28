@@ -1,4 +1,5 @@
 @using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
 @using Shiny.Controls.Office.Packaging
 @using Shiny.Controls.Office.Presentation
 @using Shiny.Controls.Office.Shapes
@@ -14,6 +15,10 @@
     The row inside is its own flex container. ShinyToolbar renders ChildContent into a plain block, so
     left to itself every control here would be an inline-level box aligned to the text baseline — and a
     button's baseline, a select's baseline and a swatch's baseline are all in different places.
+
+    Every plain button is an OfficeToolbarButton drawing from the shared icon set — the same artwork,
+    at the same weight, as the document toolbar and as both MAUI toolbars. The pickers stay as they
+    are: a font, a size and a colour have to show what they are currently set to.
 *@
 <div class="shiny-slide-editor-view @Class" style="@Style">
 
@@ -33,9 +38,13 @@
 
         <div class="slide-toolbar">
 
-            <button class="slide-btn" title="Previous slide" disabled="@(!CanPrevious)" @onclick="() => Run(c => c.Previous())">‹</button>
+            <OfficeToolbarButton Icon="OfficeIcon.Previous" Hint="Previous slide" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(!CanPrevious)" Clicked="() => Run(c => c.Previous())" />
+
             <span class="slide-count">@(Controller is null ? "—" : $"{Controller.Index + 1}/{Controller.Count}")</span>
-            <button class="slide-btn" title="Next slide" disabled="@(!CanNext)" @onclick="() => Run(c => c.Next())">›</button>
+
+            <OfficeToolbarButton Icon="OfficeIcon.Next" Hint="Next slide" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(!CanNext)" Clicked="() => Run(c => c.Next())" />
 
             <span class="slide-sep"></span>
 
@@ -51,10 +60,21 @@
 
             <span class="slide-sep"></span>
 
-            <button class="slide-btn @(Format.Bold ? "on" : null)" title="Bold (Ctrl+B)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleBold())"><b>B</b></button>
-            <button class="slide-btn @(Format.Italic ? "on" : null)" title="Italic (Ctrl+I)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleItalic())"><i>I</i></button>
-            <button class="slide-btn @(Format.Underline ? "on" : null)" title="Underline (Ctrl+U)" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleUnderline())"><u>U</u></button>
-            <button class="slide-btn @(Format.Strike ? "on" : null)" title="Strikethrough" disabled="@(!HasText)" @onclick="() => Run(c => c.ToggleStrikethrough())"><s>S</s></button>
+            <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold (Ctrl+B)" Toggle
+                                 Active="Format.Bold" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleBold())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic (Ctrl+I)" Toggle
+                                 Active="Format.Italic" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleItalic())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline (Ctrl+U)" Toggle
+                                 Active="Format.Underline" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleUnderline())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle
+                                 Active="Format.Strike" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Run(c => c.ToggleStrikethrough())" />
 
             <ColorPickerButton Text="Text colour"
                                SelectedColor="@ColorHex"
@@ -64,33 +84,53 @@
 
             <OfficeHighlightButton Current="Format.Highlight"
                                    Disabled="@(!HasText)"
+                                   ShowTooltips="ShowToolbarTooltips"
                                    Picked="OnHighlightPicked" />
 
             <span class="slide-sep"></span>
 
-            <button class="slide-btn @(Format.Alignment == TextAlignment.Left ? "on" : null)" title="Align left" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Left)">⯇</button>
-            <button class="slide-btn @(Format.Alignment == TextAlignment.Center ? "on" : null)" title="Centre" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Center)">≡</button>
-            <button class="slide-btn @(Format.Alignment == TextAlignment.Right ? "on" : null)" title="Align right" disabled="@(!HasText)" @onclick="() => Align(TextAlignment.Right)">⯈</button>
+            <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle
+                                 Active="Format.Alignment == TextAlignment.Left" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Left)" />
 
-            <button class="slide-btn" title="Outdent (Shift+Tab)" disabled="@(!HasText)" @onclick="() => Run(c => c.ShiftLevel(-1))">⇤</button>
-            <button class="slide-btn" title="Indent (Tab)" disabled="@(!HasText)" @onclick="() => Run(c => c.ShiftLevel(1))">⇥</button>
+            <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle
+                                 Active="Format.Alignment == TextAlignment.Center" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Center)" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle
+                                 Active="Format.Alignment == TextAlignment.Right" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
+                                 Clicked="() => Align(TextAlignment.Right)" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Outdent" Hint="Outdent (Shift+Tab)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(-1))" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Indent" Hint="Indent (Tab)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(1))" />
 
             <span class="slide-sep"></span>
 
-            <button class="slide-btn" title="Add a text box" disabled="@Disabled" @onclick="AddTextBox">＋T</button>
+            <OfficeToolbarButton Icon="OfficeIcon.TextBox" Hint="Add a text box" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="Disabled" Clicked="AddTextBox" />
 
             <OfficeInsertMenu Disabled="Disabled"
+                              ShowTooltips="ShowToolbarTooltips"
                               ShapePicked="OnShapePicked"
                               TablePicked="OnTablePicked"
                               ImagePicked="OnImagePicked"
                               ImageRejected="DropRejected" />
 
-            <button class="slide-btn" title="Delete the selected shape" disabled="@(!HasSelection)" @onclick="() => Run(c => c.DeleteSelectedShape())">🗑</button>
+            <OfficeToolbarButton Icon="OfficeIcon.Delete" Hint="Delete the selected shape" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(!HasSelection)" Clicked="() => Run(c => c.DeleteSelectedShape())" />
 
             <span class="slide-sep"></span>
 
-            <button class="slide-btn" title="Undo (Ctrl+Z)" disabled="@(Disabled || !(Controller?.CanUndo ?? false))" @onclick="() => Run(c => c.Undo())">↶</button>
-            <button class="slide-btn" title="Redo (Ctrl+Shift+Z)" disabled="@(Disabled || !(Controller?.CanRedo ?? false))" @onclick="() => Run(c => c.Redo())">↷</button>
+            <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo (Ctrl+Z)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || !(Controller?.CanUndo ?? false))"
+                                 Clicked="() => Run(c => c.Undo())" />
+
+            <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo (Ctrl+Shift+Z)" ShowTooltip="ShowToolbarTooltips"
+                                 Disabled="@(Disabled || !(Controller?.CanRedo ?? false))"
+                                 Clicked="() => Run(c => c.Redo())" />
 
             @ToolbarContent
         </div>
@@ -140,6 +180,16 @@
     [Parameter] public bool ReadOnly { get; set; }
 
     [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    /// <summary>
+    /// Whether the icon-only toolbar buttons carry a tooltip naming what they do.
+    /// </summary>
+    /// <remarks>
+    /// On, because every button on this bar is icon only and an icon with no label is a guess until
+    /// something names it. Turning it off falls back to the browser's own <c>title</c>, which is
+    /// slower to appear and cannot be themed but still says what the button is.
+    /// </remarks>
+    [Parameter] public bool ShowToolbarTooltips { get; set; } = true;
 
     /// <summary>A one-line hint under the canvas saying what the current gesture will do.</summary>
     [Parameter] public bool ShowStatus { get; set; } = true;

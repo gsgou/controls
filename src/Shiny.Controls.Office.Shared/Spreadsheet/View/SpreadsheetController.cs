@@ -1,3 +1,4 @@
+using Shiny.Controls.Office.Editing;
 using Shiny.Controls.Office.Spreadsheet.Commands;
 
 namespace Shiny.Controls.Office.Spreadsheet.View;
@@ -306,6 +307,24 @@ public sealed class SpreadsheetController
 
     public void PointerUp()
     {
+        // A resize drag only moved the in-memory metrics. Recording it here is what makes a column the
+        // user widened still be that width after a save and reopen.
+        if (this.resizeIndex >= 0)
+        {
+            var index = this.resizeIndex;
+            var mode = this.drag;
+
+            this.drag = DragMode.None;
+            this.resizeIndex = -1;
+
+            if (mode == DragMode.ResizingColumn)
+                this.CommitColumnWidth(index, index, this.Metrics.Columns.SizeOf(index));
+            else if (mode == DragMode.ResizingRow)
+                this.CommitRowHeight(index, this.Metrics.Rows.SizeOf(index));
+
+            return;
+        }
+
         this.drag = DragMode.None;
         this.resizeIndex = -1;
     }
@@ -352,6 +371,260 @@ public sealed class SpreadsheetController
     public void ClearSelection()
     {
         this.Workbook.Execute(new ClearRangeCommand(this.sheet.Name, this.Selection.Range));
+        this.RaiseChanged();
+    }
+
+    // ---- formatting ----
+    //
+    // Everything a toolbar needs, and nothing a host has to reimplement. Each of these is one undoable
+    // command over the current selection, and each reads the active cell's own format first - so
+    // "bold" is a toggle rather than a set, and pressing it on a bold selection unbolds it.
+
+    /// <summary>
+    /// The formatting the active cell renders with — what a toolbar shows as its current state.
+    /// </summary>
+    /// <remarks>
+    /// The active cell's, not the selection's. A range can hold twenty different formats and has no
+    /// single answer; Excel resolves the same way, by reporting the one cell that receives typing.
+    /// </remarks>
+    public ResolvedFormat ActiveFormat
+        => this.Workbook.Styles.Resolve(this.sheet.GetEffectiveStyleIndex(this.Selection.Active));
+
+    public bool CanUndo => this.Workbook.Undo.CanUndo;
+
+    public bool CanRedo => this.Workbook.Undo.CanRedo;
+
+    /// <summary>Applies a formatting change to the selection as one undo step.</summary>
+    public void ApplyFormat(CellFormatChange change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+
+        if (change.IsEmpty)
+            return;
+
+        this.Begin();
+        this.Workbook.Execute(new FormatRangeCommand(this.sheet.Name, this.Selection.Range, change));
+        this.RaiseChanged();
+    }
+
+    public void ToggleBold() => this.ApplyFormat(new CellFormatChange { Bold = !this.ActiveFormat.Bold });
+
+    public void ToggleItalic() => this.ApplyFormat(new CellFormatChange { Italic = !this.ActiveFormat.Italic });
+
+    public void ToggleUnderline() => this.ApplyFormat(new CellFormatChange { Underline = !this.ActiveFormat.Underline });
+
+    public void ToggleStrikethrough() => this.ApplyFormat(new CellFormatChange { Strike = !this.ActiveFormat.Strike });
+
+    /// <summary>
+    /// Wraps or unwraps text in the selection.
+    /// </summary>
+    /// <remarks>
+    /// Stored and saved, and Excel honours it on open. The grid itself still paints one line per cell —
+    /// wrapped text needs row auto-height, which the layout does not do yet.
+    /// </remarks>
+    public void ToggleWrapText() => this.ApplyFormat(new CellFormatChange { WrapText = !this.ActiveFormat.WrapText });
+
+    /// <summary>
+    /// Sets the horizontal alignment, or clears it back to General by passing the current one again.
+    /// </summary>
+    /// <remarks>
+    /// Pressing "align left" twice returning to General is deliberate: General is not a fourth option
+    /// nobody would pick, it is the setting that lets numbers stay right-aligned and text left-aligned,
+    /// and there is otherwise no way back to it from a toolbar.
+    /// </remarks>
+    public void SetAlignment(CellHorizontalAlignment alignment)
+        => this.ApplyFormat(new CellFormatChange
+        {
+            HorizontalAlignment = this.ActiveFormat.HorizontalAlignment == alignment
+                ? CellHorizontalAlignment.General
+                : alignment
+        });
+
+    public void SetVerticalAlignment(CellVerticalAlignment alignment)
+        => this.ApplyFormat(new CellFormatChange { VerticalAlignment = alignment });
+
+    public void SetFontFamily(string family)
+    {
+        if (!string.IsNullOrWhiteSpace(family))
+            this.ApplyFormat(new CellFormatChange { FontName = family });
+    }
+
+    public void SetFontSize(double size)
+    {
+        if (size > 0)
+            this.ApplyFormat(new CellFormatChange { FontSize = size });
+    }
+
+    public void SetTextColor(ArgbColor color) => this.ApplyFormat(new CellFormatChange { Foreground = color });
+
+    /// <summary>Highlights the selection, or removes the highlight when <paramref name="color"/> is null.</summary>
+    public void SetFillColor(ArgbColor? color)
+        => this.ApplyFormat(new CellFormatChange { Background = color ?? ArgbColor.Transparent });
+
+    /// <summary>Moves the selection's indent by <paramref name="delta"/> levels, never below zero.</summary>
+    public void AdjustIndent(int delta)
+    {
+        var indent = Math.Max(0, this.ActiveFormat.Indent + delta);
+        if (indent != this.ActiveFormat.Indent)
+            this.ApplyFormat(new CellFormatChange { Indent = indent });
+    }
+
+    public void SetNumberFormat(NumberFormatPreset preset)
+        => this.ApplyFormat(new CellFormatChange { NumberFormatCode = NumberFormats.CodeOf(preset) });
+
+    /// <summary>Applies a raw Excel number format code, e.g. <c>#,##0.00_);[Red](#,##0.00)</c>.</summary>
+    public void SetNumberFormatCode(string code)
+        => this.ApplyFormat(new CellFormatChange { NumberFormatCode = code ?? string.Empty });
+
+    /// <summary>Adds or removes decimal places on the selection's number format.</summary>
+    public void AdjustDecimals(int delta)
+    {
+        var code = NumberFormats.AdjustDecimals(this.ActiveFormat.NumberFormatCode, delta);
+        if (!string.Equals(code, this.ActiveFormat.NumberFormatCode, StringComparison.Ordinal))
+            this.ApplyFormat(new CellFormatChange { NumberFormatCode = code });
+    }
+
+    /// <summary>Strips the selection back to the default format, leaving its contents alone.</summary>
+    public void ClearFormatting() => this.ApplyFormat(CellFormatChange.Clear);
+
+    // ---- auto functions ----
+
+    /// <summary>
+    /// Writes SUM, AVERAGE, COUNT, MIN or MAX over whatever the selection implies, as one undo step.
+    /// </summary>
+    /// <remarks>
+    /// See <see cref="AutoFunctions"/> for how the range and destination are chosen. The selection
+    /// moves to the last formula written, which is where Excel leaves it and what makes a second press
+    /// of the button total the totals rather than repeating the first one.
+    /// </remarks>
+    /// <returns>False when there was nothing to total, in which case nothing was written.</returns>
+    public bool ApplyAutoFunction(AutoFunction function)
+    {
+        var plan = AutoFunctions.Plan(this.sheet, this.Selection.Range);
+        if (plan.Count == 0)
+            return false;
+
+        this.Begin();
+
+        var commands = new List<IEditCommand<Workbook>>(plan.Count);
+        foreach (var entry in plan)
+            commands.Add(new SetCellFormulaCommand(this.sheet.Name, entry.Target, AutoFunctions.Formula(function, entry.Source)));
+
+        this.Workbook.Execute(new CompositeCommand<Workbook>(AutoFunctions.DisplayName(function), commands));
+
+        this.Selection.MoveTo(plan[^1].Target);
+        this.Viewport.ScrollIntoView(this.Selection.Active);
+        this.RaiseChanged();
+        return true;
+    }
+
+    // ---- columns and rows ----
+
+    /// <summary>The columns the selection spans, as an inclusive zero-based pair.</summary>
+    public (int First, int Last) SelectedColumns => (this.Selection.Range.Left, this.Selection.Range.Right);
+
+    /// <summary>The rows the selection spans, as an inclusive zero-based pair.</summary>
+    public (int First, int Last) SelectedRows => (this.Selection.Range.Top, this.Selection.Range.Bottom);
+
+    /// <summary>Sets the width of every column in the selection, in pixels, and records it in the file.</summary>
+    public void SetColumnWidth(double pixels)
+    {
+        var (first, last) = this.SelectedColumns;
+        this.CommitColumnWidth(first, last, Math.Max(2, pixels));
+    }
+
+    /// <summary>
+    /// Sizes the selection's columns to their contents.
+    /// </summary>
+    /// <remarks>
+    /// Measured in characters rather than pixels, from the formatted text of every populated cell in
+    /// the column. That is an approximation — it takes no account of the font each cell uses — but the
+    /// alternative is a text measurer, which lives in the paint layer and would put a rendering
+    /// dependency into a class that deliberately has none.
+    /// </remarks>
+    public void AutoFitColumns()
+    {
+        var (first, last) = this.SelectedColumns;
+
+        // A header click selects every column; fitting all 16,384 of them is not what was meant.
+        if (this.sheet.UsedRange is not { } used)
+            return;
+
+        last = Math.Min(last, used.Right);
+        if (first > last)
+            return;
+
+        this.Begin();
+
+        var commands = new List<IEditCommand<Workbook>>();
+        for (var column = first; column <= last; column++)
+        {
+            var characters = this.FitWidth(column, used);
+            commands.Add(new SetColumnWidthCommand(this.sheet.Name, column, column, characters));
+            this.Metrics.Columns.SetSize(column, GridMetrics.WidthToPixels(characters));
+        }
+
+        this.Workbook.Execute(new CompositeCommand<Workbook>("Auto Fit", commands));
+        this.RaiseChanged();
+    }
+
+    double FitWidth(int column, CellRange used)
+    {
+        var widest = 0;
+        var styles = this.Workbook.Styles;
+
+        for (var row = used.Top; row <= used.Bottom; row++)
+        {
+            var cell = new CellRef(column, row);
+            var value = this.sheet.GetDisplayValue(cell);
+            if (value.IsBlank)
+                continue;
+
+            var text = styles.Format(value, styles.Resolve(this.sheet.GetEffectiveStyleIndex(cell)));
+            widest = Math.Max(widest, text.Length);
+        }
+
+        // One character of padding, and never narrower than a column header's own label.
+        return Math.Clamp(widest + 1, 3, 255);
+    }
+
+    /// <summary>Hides or shows the selection's columns.</summary>
+    public void SetColumnsHidden(bool hidden)
+    {
+        var (first, last) = this.SelectedColumns;
+
+        // Hiding every column would leave a sheet with nothing on it and no header to unhide from.
+        if (hidden && first == 0 && last >= CellRef.MaxColumn)
+            return;
+
+        this.Begin();
+        this.Workbook.Execute(new SetColumnHiddenCommand(this.sheet.Name, first, last, hidden));
+
+        for (var column = first; column <= last; column++)
+            this.Metrics.Columns.SetHidden(column, hidden);
+
+        this.RaiseChanged();
+    }
+
+    /// <summary>Records a column's dragged-out width in the file, so it survives a save.</summary>
+    void CommitColumnWidth(int first, int last, double pixels)
+    {
+        var characters = GridMetrics.PixelsToWidth(pixels);
+
+        this.Begin();
+        this.Workbook.Execute(new SetColumnWidthCommand(this.sheet.Name, first, last, characters));
+
+        for (var column = first; column <= last; column++)
+            this.Metrics.Columns.SetSize(column, pixels);
+
+        this.RaiseChanged();
+    }
+
+    void CommitRowHeight(int row, double pixels)
+    {
+        this.Begin();
+        this.Workbook.Execute(new SetRowHeightCommand(this.sheet.Name, row, GridMetrics.PixelsToPoints(pixels)));
+        this.Metrics.Rows.SetSize(row, pixels);
         this.RaiseChanged();
     }
 

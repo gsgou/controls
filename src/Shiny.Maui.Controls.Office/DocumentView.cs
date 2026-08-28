@@ -47,6 +47,25 @@ public class DocumentView : ContentView, IDisposable
         DocumentTheme.Light,
         propertyChanged: (b, _, _) => ((DocumentView)b).Invalidate());
 
+    /// <summary>
+    /// Continuous column, or sheets of paper with the document's own headers and footers.
+    /// </summary>
+    /// <remarks>
+    /// Reflow by default, unlike <see cref="DocumentEditor"/>. This control is for reading, and on a
+    /// phone a fixed page width means pinch-zooming to make the text legible — which is exactly what
+    /// reflowing to the control's width avoids.
+    /// </remarks>
+    public static readonly BindableProperty PageLayoutProperty = BindableProperty.Create(
+        nameof(PageLayout),
+        typeof(DocumentPageLayout),
+        typeof(DocumentView),
+        DocumentPageLayout.Reflow,
+        propertyChanged: (b, _, value) =>
+        {
+            if (((DocumentView)b).controller is { } controller)
+                controller.PageLayout = (DocumentPageLayout)value;
+        });
+
     public static readonly BindableProperty ZoomProperty = BindableProperty.Create(
         nameof(Zoom),
         typeof(double),
@@ -76,6 +95,13 @@ public class DocumentView : ContentView, IDisposable
         set => this.SetValue(ZoomProperty, value);
     }
 
+    /// <inheritdoc cref="PageLayoutProperty"/>
+    public DocumentPageLayout PageLayout
+    {
+        get => (DocumentPageLayout)this.GetValue(PageLayoutProperty);
+        set => this.SetValue(PageLayoutProperty, value);
+    }
+
     /// <summary>The live controller, so a toolbar or outline pane can drive the same state.</summary>
     public DocumentController? Controller => this.controller;
 
@@ -91,7 +117,11 @@ public class DocumentView : ContentView, IDisposable
             return;
         }
 
-        this.controller = new DocumentController(this.Document, this.measurer) { Zoom = this.Zoom };
+        this.controller = new DocumentController(this.Document, this.measurer)
+        {
+            Zoom = this.Zoom,
+            PageLayout = this.PageLayout
+        };
         this.controller.Changed += this.OnControllerChanged;
 
         if (this.Width > 0 && this.Height > 0)
@@ -120,7 +150,11 @@ public class DocumentView : ContentView, IDisposable
             return;
         }
 
-        var scale = this.Width > 0 ? (float)(e.Info.Width / this.Width) : 1f;
+        // Device scale times the view scale: in print the controller works in the paper's units and
+        // zoom is applied here, so one layout unit is dpr * zoom device pixels.
+        var scale = this.Width > 0
+            ? (float)(e.Info.Width / this.Width * this.controller.ViewScale)
+            : (float)this.controller.ViewScale;
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
@@ -128,8 +162,12 @@ public class DocumentView : ContentView, IDisposable
             Viewport = this.controller.Viewport,
             Theme = theme,
             Scale = scale,
-            PageX = this.controller.PageX + this.controller.PagePadding,
-            PageWidth = this.controller.PageWidth
+            PageX = this.controller.PageX,
+            ContentX = this.controller.ContentX,
+            PageWidth = this.controller.PageWidth,
+            PageHeight = this.controller.PageHeight,
+            Pages = this.controller.VisiblePages(),
+            Setup = this.controller.Document.Page
         });
     }
 
@@ -152,12 +190,12 @@ public class DocumentView : ContentView, IDisposable
 
             case SKTouchAction.Moved when e.InContact:
                 // Drag scrolls the document; content follows the finger, so the delta is inverted.
-                this.controller.Scroll(this.lastPanY - y);
+                this.controller.ScrollByControlPixels(this.lastPanY - y);
                 this.lastPanY = y;
                 break;
 
             case SKTouchAction.WheelChanged:
-                this.controller.Scroll(-e.WheelDelta);
+                this.controller.ScrollByControlPixels(-e.WheelDelta);
                 break;
         }
 

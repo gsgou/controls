@@ -15,7 +15,7 @@ namespace Shiny.Controls.Office.Spreadsheet;
 /// </remarks>
 public sealed class StyleResolver
 {
-    readonly Stylesheet? stylesheet;
+    readonly WorkbookPart workbookPart;
     readonly IUnsupportedFeatureSink unsupported;
     readonly Dictionary<uint, ResolvedFormat> cache = new();
     readonly Dictionary<uint, string> customNumberFormats = new();
@@ -25,15 +25,55 @@ public sealed class StyleResolver
     internal StyleResolver(WorkbookPart workbookPart, IUnsupportedFeatureSink unsupported)
     {
         this.unsupported = unsupported;
-        this.stylesheet = workbookPart.WorkbookStylesPart?.Stylesheet;
+        this.workbookPart = workbookPart;
 
-        foreach (var format in this.stylesheet?.NumberingFormats?.Elements<NumberingFormat>() ?? Enumerable.Empty<NumberingFormat>())
+        foreach (var format in this.Stylesheet?.NumberingFormats?.Elements<NumberingFormat>() ?? Enumerable.Empty<NumberingFormat>())
         {
             if (format.NumberFormatId?.Value is { } id && format.FormatCode?.Value is { } code)
                 this.customNumberFormats[id] = code;
         }
 
         this.LoadThemeColors(workbookPart);
+    }
+
+    /// <summary>
+    /// The styles part's root, read through the part rather than captured.
+    /// </summary>
+    /// <remarks>
+    /// A workbook can arrive with no styles part at all, and <see cref="StyleWriter"/> adds one the
+    /// first time anything is formatted. Holding the element from construction would leave this
+    /// resolver looking at null forever, so every index the writer then hands out would resolve to
+    /// the default format and the formatting would simply not appear.
+    /// </remarks>
+    Stylesheet? Stylesheet => this.workbookPart.WorkbookStylesPart?.Stylesheet;
+
+    /// <summary>
+    /// Teaches the resolver a number format the <see cref="StyleWriter"/> has just added to the file.
+    /// </summary>
+    /// <remarks>
+    /// The custom formats are read once, when the workbook is opened. A cell given a brand-new
+    /// numFmtId after that resolves against a table that has never heard of it and falls back to
+    /// General - so applying a currency format would appear to do nothing until the file was closed
+    /// and reopened.
+    /// </remarks>
+    internal void RegisterNumberFormat(uint id, string code) => this.customNumberFormats[id] = code;
+
+    /// <summary>
+    /// The id Excel already reserves for a format code, or null when the code needs a custom entry.
+    /// </summary>
+    /// <remarks>
+    /// Reusing a built-in id keeps the file closer to what Excel itself writes, and avoids adding a
+    /// numFmts entry for something like <c>0.00%</c> that every reader already knows.
+    /// </remarks>
+    internal static uint? BuiltInNumberFormatId(string code)
+    {
+        foreach (var (id, builtIn) in BuiltInNumberFormats)
+        {
+            if (string.Equals(builtIn, code, StringComparison.Ordinal))
+                return id;
+        }
+
+        return null;
     }
 
     public ResolvedFormat Resolve(uint? styleIndex)
@@ -115,7 +155,7 @@ public sealed class StyleResolver
 
     ResolvedFormat Build(uint styleIndex)
     {
-        var cellFormats = this.stylesheet?.CellFormats;
+        var cellFormats = this.Stylesheet?.CellFormats;
         if (cellFormats is null || styleIndex >= cellFormats.Count())
             return ResolvedFormat.Default;
 
@@ -151,7 +191,7 @@ public sealed class StyleResolver
 
     ResolvedFormat ApplyFont(ResolvedFormat format, uint fontId)
     {
-        var fonts = this.stylesheet?.Fonts;
+        var fonts = this.Stylesheet?.Fonts;
         if (fonts is null || fontId >= fonts.Count() || fonts.ElementAt((int)fontId) is not Font font)
             return format;
 
@@ -169,7 +209,7 @@ public sealed class StyleResolver
 
     ResolvedFormat ApplyFill(ResolvedFormat format, uint fillId)
     {
-        var fills = this.stylesheet?.Fills;
+        var fills = this.Stylesheet?.Fills;
         if (fills is null || fillId >= fills.Count() || fills.ElementAt((int)fillId) is not Fill fill)
             return format;
 

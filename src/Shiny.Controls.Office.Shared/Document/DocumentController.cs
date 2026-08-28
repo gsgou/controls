@@ -12,9 +12,13 @@ namespace Shiny.Controls.Office.Document;
 public class DocumentController
 {
     readonly DocumentLayoutEngine engine;
+    readonly Dictionary<(bool Header, int Page), DocumentChromeLayout?> chrome = new();
     DocumentLayoutResult? layout;
+    DocumentPagination? pagination;
     double laidOutWidth = -1;
+    int laidOutFontGeneration = -1;
     double zoom = 1.0;
+    DocumentPageLayout pageLayout = DocumentPageLayout.Reflow;
 
     public DocumentController(WordDocument document, ITextMeasurer measurer)
     {
@@ -31,7 +35,15 @@ public class DocumentController
 
     public DocumentViewport Viewport { get; }
 
-    /// <summary>Zoom factor. Changing it re-lays-out, because the measure changes with it.</summary>
+    /// <summary>
+    /// Zoom factor, and it means two different things by design.
+    /// </summary>
+    /// <remarks>
+    /// In <see cref="DocumentPageLayout.Reflow"/> it changes the measure, so zooming in re-wraps the
+    /// text wider — which is what you want when the page is notional. In
+    /// <see cref="DocumentPageLayout.Print"/> it is a straight scale, because the page is a real sheet
+    /// of paper and re-wrapping it at a different width would move every page break as you zoomed.
+    /// </remarks>
     public double Zoom
     {
         get => this.zoom;
@@ -43,9 +55,42 @@ public class DocumentController
 
             this.zoom = clamped;
             this.laidOutWidth = -1;
+            this.ApplyViewport();
             this.Changed?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    /// <summary>Continuous column, or discrete pages with the document's own headers and footers.</summary>
+    public DocumentPageLayout PageLayout
+    {
+        get => this.pageLayout;
+        set
+        {
+            if (this.pageLayout == value)
+                return;
+
+            this.pageLayout = value;
+            this.laidOutWidth = -1;
+            this.ApplyViewport();
+            this.Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>True when pages, headers, footers and page numbers are being drawn.</summary>
+    public bool IsPaginated => this.pageLayout == DocumentPageLayout.Print;
+
+    /// <summary>Vertical space drawn between one sheet of paper and the next.</summary>
+    public double PageGap { get; set; } = 24;
+
+    /// <summary>
+    /// The scale the painter applies on top of the device scale, so that layout units and control
+    /// units are not the same thing.
+    /// </summary>
+    /// <remarks>
+    /// 1 in reflow, where zoom has already been spent on the measure. The zoom factor in print, where
+    /// it has not.
+    /// </remarks>
+    public double ViewScale => this.IsPaginated ? this.zoom : 1.0;
 
     /// <summary>
     /// Maximum page width in pixels. The page is centred and never stretched past this, so a document
@@ -68,22 +113,89 @@ public class DocumentController
 
     public IReadOnlyList<LaidOutBlock> Blocks => this.EnsureLayout().Blocks;
 
-    /// <summary>The page panel's width in viewport coordinates.</summary>
-    public double PageWidth => Math.Min(this.MaxPageWidth * this.zoom, Math.Max(100, this.Viewport.Width));
+    /// <summary>The flow sliced into pages. A single unbroken page in reflow.</summary>
+    public DocumentPagination Pagination
+    {
+        get
+        {
+            this.EnsureLayout();
+            return this.pagination!;
+        }
+    }
+
+    /// <summary>The page panel's width, in layout units.</summary>
+    public double PageWidth => this.IsPaginated
+        ? this.Document.Page.Width
+        : Math.Min(this.MaxPageWidth * this.zoom, Math.Max(100, this.Viewport.Width));
+
+    /// <summary>The page panel's height, or the whole viewport in reflow where there is no paper.</summary>
+    public double PageHeight => this.IsPaginated ? this.Document.Page.Height : this.Viewport.Height;
 
     /// <summary>The page panel's left edge, centring it in the viewport.</summary>
     public double PageX => Math.Max(0, (this.Viewport.Width - this.PageWidth) / 2);
 
-    /// <summary>Width available to content inside the page.</summary>
-    public double ContentWidth => Math.Max(50, this.PageWidth - this.PagePadding * 2);
+    /// <summary>How far content is inset from the page's left edge.</summary>
+    /// <remarks>The document's own left margin in print; a cosmetic gutter in reflow.</remarks>
+    public double ContentInset => this.IsPaginated ? this.Document.Page.MarginLeft : this.PagePadding;
 
+    /// <summary>The left edge of content, in layout units. Not the same as <see cref="PageX"/>.</summary>
+    public double ContentX => this.PageX + this.ContentInset;
+
+    /// <summary>Width available to content inside the page.</summary>
+    public double ContentWidth => this.IsPaginated
+        ? this.Document.Page.ContentWidth
+        : Math.Max(50, this.PageWidth - this.PagePadding * 2);
+
+    double controlWidth = 800;
+    double controlHeight = 600;
+
+    /// <summary>
+    /// Resizes to a control measured in device-independent pixels.
+    /// </summary>
+    /// <remarks>
+    /// The viewport is kept in <em>layout</em> units, which in print are the paper's, so everything
+    /// downstream — centring, hit-testing, scrolling — works in one coordinate space and only the
+    /// painter and the pointer entry points convert.
+    /// </remarks>
     public void Resize(double width, double height)
     {
-        this.Viewport.Width = width;
-        this.Viewport.Height = height;
+        this.controlWidth = width;
+        this.controlHeight = height;
+        this.ApplyViewport();
         this.EnsureLayout();
         this.OnViewportChanged();
         this.Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Re-derives the viewport from the control's size at the current scale.
+    /// </summary>
+    /// <remarks>
+    /// Zooming changes how many layout units fit in the same control, but the control itself has not
+    /// resized — so nothing calls <see cref="Resize"/> and the viewport would keep the previous
+    /// scale's units. What that looks like is a page that drifts off-centre as you zoom, because the
+    /// width it is being centred in is the wrong one.
+    /// </remarks>
+    void ApplyViewport()
+    {
+        var scale = this.ViewScale;
+        this.Viewport.Width = this.controlWidth / scale;
+        this.Viewport.Height = this.controlHeight / scale;
+    }
+
+    /// <summary>Scrolls by a delta given in control pixels.</summary>
+    /// <remarks>
+    /// A wheel notch is the same physical distance whatever the zoom, so the delta is converted
+    /// rather than passed through — otherwise scrolling covers half the document per notch at 50%.
+    /// </remarks>
+    public void ScrollByControlPixels(double delta) => this.Scroll(delta / this.ViewScale);
+
+    /// <summary>Turns a point in control coordinates into one in the continuous flow.</summary>
+    public (double X, double Y) ToFlow(double x, double y)
+    {
+        var scale = this.ViewScale;
+        var viewY = (y / scale) + this.Viewport.ScrollY;
+        return ((x / scale) - this.ContentX, this.Pagination.ViewToFlow(viewY));
     }
 
     public void Scroll(double delta)
@@ -125,23 +237,104 @@ public class DocumentController
         if (outlineIndex < 0 || outlineIndex >= headings.Count)
             return;
 
-        this.Viewport.ScrollTo(headings[outlineIndex].Y - 8);
+        // Headings are in flow coordinates; scrolling happens in the paginated view's.
+        this.Viewport.ScrollTo(this.Pagination.FlowToView(headings[outlineIndex].Y) - 8);
         this.Changed?.Invoke(this, EventArgs.Empty);
     }
 
     DocumentLayoutResult EnsureLayout()
     {
         var width = this.ContentWidth;
+        var generation = this.Measurer.FontGeneration;
 
-        if (this.layout is not null && Math.Abs(width - this.laidOutWidth) < 0.5)
+        // Width alone is not enough of a key. Fonts can arrive after the first layout — they are
+        // fetched over the network on WebAssembly — and in print the width never changes, so a
+        // layout measured against the fallback face would otherwise be kept for the life of the view.
+        if (this.layout is not null
+            && this.pagination is not null
+            && generation == this.laidOutFontGeneration
+            && Math.Abs(width - this.laidOutWidth) < 0.5)
+        {
             return this.layout;
+        }
 
         this.layout = this.engine.Layout(this.Document.Blocks, width);
         this.laidOutWidth = width;
-        this.Viewport.ContentHeight = this.layout.Height;
+        this.laidOutFontGeneration = generation;
+        this.chrome.Clear();
+
+        this.pagination = this.IsPaginated
+            ? DocumentPagination.Paginate(this.layout.Blocks, this.layout.Height, this.Document.Page, this.PageGap)
+            : DocumentPagination.Reflowed(this.layout.Height, this.Viewport.Height);
+
+        this.Viewport.ContentHeight = this.pagination.ViewHeight;
 
         // A width change can leave the scroll offset past the new end of the document.
         this.Viewport.ScrollTo(this.Viewport.ScrollY);
         return this.layout;
     }
+
+    /// <summary>
+    /// The pages currently on screen, each with its header and footer laid out.
+    /// </summary>
+    /// <remarks>
+    /// Empty in reflow, which is also how the painter is told to draw one continuous panel instead of
+    /// sheets — the two modes are told apart by whether there are pages, not by a flag that could
+    /// disagree with them.
+    /// </remarks>
+    public IReadOnlyList<DocumentPageView> VisiblePages()
+    {
+        if (!this.IsPaginated)
+            return [];
+
+        var pagination = this.Pagination;
+        var views = new List<DocumentPageView>();
+
+        foreach (var page in pagination.Visible(this.Viewport.ScrollY, this.Viewport.Height))
+            views.Add(new DocumentPageView(page, this.HeaderFor(page), this.FooterFor(page)));
+
+        return views;
+    }
+
+    /// <summary>The laid-out header for a page, or null when there is none to draw.</summary>
+    public DocumentChromeLayout? HeaderFor(DocumentPage page) => this.ChromeFor(page, header: true);
+
+    /// <summary>The laid-out footer for a page, or null when there is none to draw.</summary>
+    public DocumentChromeLayout? FooterFor(DocumentPage page) => this.ChromeFor(page, header: false);
+
+    DocumentChromeLayout? ChromeFor(DocumentPage page, bool header)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        if (!this.IsPaginated)
+            return null;
+
+        var key = (header, page.Index);
+        if (this.chrome.TryGetValue(key, out var cached))
+            return cached;
+
+        var setup = this.Document.Page;
+        var kind = setup.KindOf(page.Number);
+        var source = header
+            ? this.Document.HeadersFooters.Header(kind)
+            : this.Document.HeadersFooters.Footer(kind);
+
+        DocumentChromeLayout? result = null;
+
+        if (source is { IsEmpty: false })
+        {
+            // Laid out per page rather than once, because a PAGE field's text differs on every one
+            // and a number that grew a digit would otherwise be measured at the old width.
+            var resolved = DocumentFields.Resolve(source.Blocks, page.Number, this.Pagination.Count);
+            var laidOut = this.engine.Layout(resolved, setup.ContentWidth);
+            result = new DocumentChromeLayout(laidOut.Blocks, laidOut.Height);
+        }
+
+        this.chrome[key] = result;
+        return result;
+    }
 }
+
+
+/// <summary>A header or footer, laid out for one page.</summary>
+public sealed record DocumentChromeLayout(IReadOnlyList<LaidOutBlock> Blocks, double Height);

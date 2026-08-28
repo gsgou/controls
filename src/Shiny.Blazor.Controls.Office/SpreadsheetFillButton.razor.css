@@ -1,0 +1,101 @@
+/*
+    The split fill button and its gallery.
+
+    Shared shell classes (.shiny-office-picker, .shiny-office-backdrop, .shiny-office-panel) are
+    repeated here rather than factored out, for the reason OfficeHighlightButton gives: Blazor's
+    scoped CSS is per component, so a shared file would have to be unscoped and would then leak these
+    names into every consuming app.
+*/
+.shiny-office-picker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+
+    /* The toolbar row is a flex container, and a flex item shrinks by default — so without this the
+       button squashes below its own width as soon as the bar runs out of room. */
+    flex: 0 0 auto;
+}
+
+.shiny-office-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.shiny-office-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 41;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--shiny-color-surface, #fff);
+    border: 1px solid var(--shiny-color-outline-variant, #e4e4e7);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.shiny-office-btn-chevron {
+    min-width: 14px;
+    padding: 0 1px;
+}
+
+.shiny-office-btn-chevron ::deep svg {
+    display: block;
+}
+
+.fill-glyph {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+/*
+    ::deep because the icon arrives as a MarkupString and carries no scope attribute of its own.
+
+    The drop is the one part of the set that is not currentColor: it is filled with the colour the
+    button would apply, which is the whole reason this control is an exception to the monochrome rule.
+    The outline stays currentColor so a pale swatch — or none at all — is still a visible shape.
+*/
+.fill-glyph ::deep svg {
+    display: block;
+}
+
+.fill-glyph ::deep path {
+    fill: var(--fill-swatch, transparent);
+}
+
+.fill-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 20px);
+    gap: 4px;
+}
+
+.fill-swatch {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 3px;
+    border: 1px solid rgb(0 0 0 / 22%);
+}
+
+.fill-swatch.on {
+    outline: 2px solid var(--shiny-color-primary, #2f6fed);
+    outline-offset: 1px;
+}
+
+.fill-clear {
+    width: 100%;
+    margin-top: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--shiny-color-outline-variant, #e4e4e7);
+    background: transparent;
+    color: inherit;
+}
+
+.fill-clear:hover {
+    background: var(--shiny-color-surface-variant, #f4f4f5);
+}

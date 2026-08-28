@@ -32,6 +32,9 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     /// <summary>Application-supplied faces, consulted before the platform's fonts.</summary>
     public OfficeFontRegistry Registry { get; }
 
+    /// <inheritdoc />
+    public int FontGeneration => this.Registry.Count;
+
     readonly record struct FontKey(string Family, float Size, bool Bold, bool Italic);
 
     /// <summary>Substitutions tried in order before falling back to the platform default.</summary>

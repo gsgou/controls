@@ -228,8 +228,13 @@ public sealed class DocumentEditorController : DocumentController
     (int First, int Last) VisibleBlockRange()
     {
         var blocks = this.Blocks;
-        var top = this.Viewport.ScrollY;
-        var bottom = top + this.Viewport.Height;
+
+        // Blocks are in flow coordinates and the scroll offset is in the paginated view's, so the
+        // band has to be converted. Skipping this would spell-check the wrong paragraphs — off by
+        // one page's worth of margins and gaps, and growing with every page scrolled past.
+        var pagination = this.Pagination;
+        var top = pagination.ViewToFlow(this.Viewport.ScrollY);
+        var bottom = pagination.ViewToFlow(this.Viewport.ScrollY + this.Viewport.Height);
 
         var first = -1;
         var last = -1;
@@ -634,6 +639,98 @@ public sealed class DocumentEditorController : DocumentController
     }
 
     /// <summary>
+    /// Inserts a page break at the caret.
+    /// </summary>
+    /// <remarks>
+    /// Visible only in <see cref="DocumentPageLayout.Print"/>. In reflow it is still written to the
+    /// document — and still saved — but a continuous column has nowhere to show it, so it falls back
+    /// to a line break.
+    /// </remarks>
+    public void InsertPageBreak()
+    {
+        if (this.IsReadOnlyDocument)
+            return;
+
+        var at = this.DeleteSelectionIfAny();
+        this.document.Execute(new InsertPageBreakCommand(at));
+        this.AfterEdit();
+    }
+
+    /// <summary>
+    /// Replaces the document's header with a single line of text, or clears it when passed null.
+    /// </summary>
+    /// <param name="text">The header text, or null to remove the header entirely.</param>
+    /// <param name="alignment">Where the text sits across the page.</param>
+    /// <param name="kind">Which header — the default one, the first page's, or the even pages'.</param>
+    public void SetHeaderText(string? text, PageNumberPosition alignment = PageNumberPosition.Left, DocumentPageKind kind = DocumentPageKind.Default)
+        => this.SetChrome(header: true, text, alignment, kind);
+
+    /// <summary>
+    /// Replaces the document's footer with a single line of text, or clears it when passed null.
+    /// </summary>
+    public void SetFooterText(string? text, PageNumberPosition alignment = PageNumberPosition.Left, DocumentPageKind kind = DocumentPageKind.Default)
+        => this.SetChrome(header: false, text, alignment, kind);
+
+    void SetChrome(bool header, string? text, PageNumberPosition alignment, DocumentPageKind kind)
+    {
+        if (this.IsReadOnlyDocument)
+            return;
+
+        var content = String.IsNullOrEmpty(text)
+            ? null
+            : new[] { WordPageChrome.TextParagraph(text, alignment) };
+
+        this.document.Execute(new SetHeaderFooterCommand(header, kind, content));
+        this.AfterChromeEdit();
+    }
+
+    /// <summary>
+    /// Adds a page number to the header or footer, creating it if the document has none.
+    /// </summary>
+    /// <remarks>
+    /// Appended rather than replacing, so a footer that already says something keeps saying it with
+    /// the number underneath. Replacing was the other option and it silently discards a footer the
+    /// document already had.
+    /// </remarks>
+    public void InsertPageNumber(
+        PageNumberPlacement placement = PageNumberPlacement.Footer,
+        PageNumberPosition position = PageNumberPosition.Center,
+        PageNumberFormat format = PageNumberFormat.Plain,
+        DocumentPageKind kind = DocumentPageKind.Default)
+    {
+        if (this.IsReadOnlyDocument)
+            return;
+
+        var header = placement == PageNumberPlacement.Header;
+        var existing = header
+            ? this.Document.HeadersFooters.Header(kind)
+            : this.Document.HeadersFooters.Footer(kind);
+
+        var content = new List<DocumentFormat.OpenXml.OpenXmlElement>();
+
+        if (existing is { IsEmpty: false })
+            content.AddRange(this.Document.ChromeElements(header, kind));
+
+        content.Add(WordPageChrome.PageNumberParagraph(position, format));
+        this.document.Execute(new SetHeaderFooterCommand(header, kind, content));
+        this.AfterChromeEdit();
+    }
+
+    /// <summary>
+    /// Settles the view after a header or footer change.
+    /// </summary>
+    /// <remarks>
+    /// Lighter than <c>AfterEdit</c>, which re-checks spelling and scrolls the caret into view — the
+    /// body did not change and the caret has not moved. The layout still has to go, because the
+    /// per-page header and footer layouts are cached alongside it.
+    /// </remarks>
+    void AfterChromeEdit()
+    {
+        this.InvalidateLayout();
+        this.RaiseChanged();
+    }
+
+    /// <summary>
     /// Inserts an empty table after the block the caret is in.
     /// </summary>
     /// <remarks>
@@ -745,8 +842,7 @@ public sealed class DocumentEditorController : DocumentController
     /// <summary>The inline object under a point in viewport coordinates, or null.</summary>
     public DocumentPosition? ObjectAt(double x, double y)
     {
-        var documentX = x - this.PageX - this.PagePadding;
-        var documentY = y + this.Viewport.ScrollY;
+        var (documentX, documentY) = this.ToFlow(x, y);
         var blocks = this.Blocks;
 
         for (var i = 0; i < blocks.Count; i++)
@@ -825,8 +921,7 @@ public sealed class DocumentEditorController : DocumentController
     /// <summary>The handle under a point in viewport coordinates.</summary>
     public ShapeHandle HandleAt(double x, double y)
     {
-        var documentX = x - this.PageX - this.PagePadding;
-        var documentY = y + this.Viewport.ScrollY;
+        var (documentX, documentY) = this.ToFlow(x, y);
 
         foreach (var (handle, rect) in this.SelectedObjectHandles())
         {
@@ -1145,8 +1240,7 @@ public sealed class DocumentEditorController : DocumentController
     /// <summary>The document position under a point in viewport coordinates, or null when there is none.</summary>
     public DocumentPosition? PositionAt(double x, double y)
     {
-        var documentX = x - this.PageX - this.PagePadding;
-        var documentY = y + this.Viewport.ScrollY;
+        var (documentX, documentY) = this.ToFlow(x, y);
 
         LaidOutParagraph? best = null;
         var index = -1;
@@ -1299,13 +1393,19 @@ public sealed class DocumentEditorController : DocumentController
     void ScrollCaretIntoView()
     {
         var caret = this.CaretRect(this.Selection.Focus);
+        var pagination = this.Pagination;
+
+        // The caret is in flow coordinates; scrolling happens in the view's.
+        var caretTop = pagination.FlowToView(caret.Y);
+        var caretBottom = pagination.FlowToView(caret.Y + caret.Height);
+
         var top = this.Viewport.ScrollY;
         var bottom = top + this.Viewport.Height;
 
-        if (caret.Y < top)
-            this.ScrollTo(caret.Y - 8);
-        else if (caret.Y + caret.Height > bottom)
-            this.ScrollTo(caret.Y + caret.Height - this.Viewport.Height + 8);
+        if (caretTop < top)
+            this.ScrollTo(caretTop - 8);
+        else if (caretBottom > bottom)
+            this.ScrollTo(caretBottom - this.Viewport.Height + 8);
     }
 
     // ---- state ----

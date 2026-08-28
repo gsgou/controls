@@ -1,3 +1,4 @@
+using Shiny.Controls.Office.Icons;
 using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Presentation;
 using Shiny.Controls.Office.Shapes;
@@ -11,10 +12,18 @@ namespace Shiny.Maui.Controls.Office;
 /// <see cref="SlideEditor"/> with an editing toolbar above it.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Built from MAUI primitives plus the core package's <c>FontPickerButton</c> and
 /// <c>FontSizePickerButton</c>. MAUI has no <c>ShinyToolbar</c> — that control is Blazor-only — so the
 /// bar is a scrolling row here, while the Blazor <c>SlideEditorView</c> composes ShinyToolbar for the
 /// same slots. The API and behaviour match; only the internals differ.
+/// </para>
+/// <para>
+/// Every plain button on it is an <see cref="OfficeToolbarButton"/> drawing from the shared
+/// <see cref="OfficeIcons"/> set — the same artwork, at the same weight, as the document toolbar and
+/// as both Blazor toolbars. The pickers are the exception: a font, a size and a colour have to show
+/// what they are currently set to.
+/// </para>
 /// </remarks>
 public class SlideEditorView : ContentView, IDisposable
 {
@@ -25,26 +34,27 @@ public class SlideEditorView : ContentView, IDisposable
     readonly Label status;
     readonly Label counter;
 
-    readonly Button previous;
-    readonly Button next;
-    readonly Button bold;
-    readonly Button italic;
-    readonly Button underline;
-    readonly Button strike;
-    readonly Button alignLeft;
-    readonly Button alignCenter;
-    readonly Button alignRight;
-    readonly Button outdent;
-    readonly Button indent;
-    readonly Button addTextBox;
-    readonly Button highlight;
-    readonly Button insertShape;
-    readonly Button insertTable;
-    readonly Button insertPicture;
-    readonly Button deleteShape;
-    readonly Button undo;
-    readonly Button redo;
+    readonly OfficeToolbarButton previous;
+    readonly OfficeToolbarButton next;
+    readonly OfficeToolbarButton bold;
+    readonly OfficeToolbarButton italic;
+    readonly OfficeToolbarButton underline;
+    readonly OfficeToolbarButton strike;
+    readonly OfficeToolbarButton alignLeft;
+    readonly OfficeToolbarButton alignCenter;
+    readonly OfficeToolbarButton alignRight;
+    readonly OfficeToolbarButton outdent;
+    readonly OfficeToolbarButton indent;
+    readonly OfficeToolbarButton addTextBox;
+    readonly OfficeToolbarButton highlight;
+    readonly OfficeToolbarButton insertShape;
+    readonly OfficeToolbarButton insertTable;
+    readonly OfficeToolbarButton insertPicture;
+    readonly OfficeToolbarButton deleteShape;
+    readonly OfficeToolbarButton undo;
+    readonly OfficeToolbarButton redo;
     readonly ColorPickerButton textColor;
+    readonly List<OfficeToolbarButton> buttons = [];
 
     View? fontPicker;
     View? sizePicker;
@@ -53,38 +63,31 @@ public class SlideEditorView : ContentView, IDisposable
 
     public SlideEditorView()
     {
-        this.previous = this.MakeToggle("‹", FontAttributes.None, () => this.editor.Previous());
-        this.next = this.MakeToggle("›", FontAttributes.None, () => this.editor.Next());
+        this.previous = this.MakeButton(OfficeIcon.Previous, "Previous slide", () => this.editor.Previous());
+        this.next = this.MakeButton(OfficeIcon.Next, "Next slide", () => this.editor.Next());
 
-        this.bold = this.MakeToggle("B", FontAttributes.Bold, () => this.editor.Controller?.ToggleBold());
-        this.italic = this.MakeToggle("I", FontAttributes.Italic, () => this.editor.Controller?.ToggleItalic());
-        this.underline = this.MakeToggle("U", FontAttributes.None, () => this.editor.Controller?.ToggleUnderline());
-        this.strike = this.MakeToggle("S", FontAttributes.None, () => this.editor.Controller?.ToggleStrikethrough());
+        this.bold = this.MakeButton(OfficeIcon.Bold, "Bold (Ctrl+B)", () => this.editor.Controller?.ToggleBold());
+        this.italic = this.MakeButton(OfficeIcon.Italic, "Italic (Ctrl+I)", () => this.editor.Controller?.ToggleItalic());
+        this.underline = this.MakeButton(OfficeIcon.Underline, "Underline (Ctrl+U)", () => this.editor.Controller?.ToggleUnderline());
+        this.strike = this.MakeButton(OfficeIcon.Strikethrough, "Strikethrough", () => this.editor.Controller?.ToggleStrikethrough());
 
-        this.alignLeft = this.MakeToggle("⯇", FontAttributes.None, () => this.editor.Controller?.SetAlignment(TextAlignment.Left));
-        this.alignCenter = this.MakeToggle("≡", FontAttributes.None, () => this.editor.Controller?.SetAlignment(TextAlignment.Center));
-        this.alignRight = this.MakeToggle("⯈", FontAttributes.None, () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
+        this.alignLeft = this.MakeButton(OfficeIcon.AlignLeft, "Align left", () => this.editor.Controller?.SetAlignment(TextAlignment.Left));
+        this.alignCenter = this.MakeButton(OfficeIcon.AlignCenter, "Centre", () => this.editor.Controller?.SetAlignment(TextAlignment.Center));
+        this.alignRight = this.MakeButton(OfficeIcon.AlignRight, "Align right", () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
 
-        this.outdent = this.MakeToggle("⇤", FontAttributes.None, () => this.editor.Controller?.ShiftLevel(-1));
-        this.indent = this.MakeToggle("⇥", FontAttributes.None, () => this.editor.Controller?.ShiftLevel(1));
+        this.outdent = this.MakeButton(OfficeIcon.Outdent, "Outdent (Shift+Tab)", () => this.editor.Controller?.ShiftLevel(-1));
+        this.indent = this.MakeButton(OfficeIcon.Indent, "Indent (Tab)", () => this.editor.Controller?.ShiftLevel(1));
 
-        this.addTextBox = this.MakeToggle("＋T", FontAttributes.None, this.AddTextBox);
+        this.addTextBox = this.MakeButton(OfficeIcon.TextBox, "Add a text box", this.AddTextBox);
+        this.deleteShape = this.MakeButton(OfficeIcon.Delete, "Delete the selected shape", () => this.editor.Controller?.DeleteSelectedShape());
 
-        this.highlight = this.MakeToggle("A\u0332", FontAttributes.None, () => { });
-        this.highlight.Clicked += async (_, _) => await this.PickHighlightAsync();
+        this.highlight = this.MakeAsyncButton(OfficeIcon.Highlight, "Highlight", this.PickHighlightAsync);
+        this.insertShape = this.MakeAsyncButton(OfficeIcon.Shape, "Shapes", this.InsertShapeAsync);
+        this.insertTable = this.MakeAsyncButton(OfficeIcon.Table, "Table", this.InsertTableAsync);
+        this.insertPicture = this.MakeAsyncButton(OfficeIcon.Picture, "Picture", this.InsertPictureAsync);
 
-        this.insertShape = this.MakeToggle("◇", FontAttributes.None, () => { });
-        this.insertShape.Clicked += async (_, _) => await this.InsertShapeAsync();
-
-        this.insertTable = this.MakeToggle("▦", FontAttributes.None, () => { });
-        this.insertTable.Clicked += async (_, _) => await this.InsertTableAsync();
-
-        this.insertPicture = this.MakeToggle("🖼", FontAttributes.None, () => { });
-        this.insertPicture.Clicked += async (_, _) => await this.InsertPictureAsync();
-        this.deleteShape = this.MakeToggle("🗑", FontAttributes.None, () => this.editor.Controller?.DeleteSelectedShape());
-
-        this.undo = this.MakeToggle("↶", FontAttributes.None, () => this.editor.Controller?.Undo());
-        this.redo = this.MakeToggle("↷", FontAttributes.None, () => this.editor.Controller?.Redo());
+        this.undo = this.MakeButton(OfficeIcon.Undo, "Undo (Ctrl+Z)", () => this.editor.Controller?.Undo());
+        this.redo = this.MakeButton(OfficeIcon.Redo, "Redo (Ctrl+Shift+Z)", () => this.editor.Controller?.Redo());
 
         this.counter = new Label
         {
@@ -189,6 +192,27 @@ public class SlideEditorView : ContentView, IDisposable
         true,
         propertyChanged: (b, _, value) => ((SlideEditorView)b).status.IsVisible = (bool)value);
 
+    /// <summary>
+    /// Whether the icon-only toolbar buttons carry a hover tooltip naming what they do.
+    /// </summary>
+    /// <remarks>
+    /// On for desktop, off for phones and tablets. Every button on this bar is icon only, and an icon
+    /// with no label is a guess until something names it — but the tooltip that names it opens on
+    /// hover, and there is no hover on a touch screen. A long-press tooltip is not the answer either:
+    /// it would compete with the tap the button exists for. Touch hosts get the semantic description
+    /// instead, which is what a screen reader reads on any platform.
+    /// </remarks>
+    public static readonly BindableProperty ShowToolbarTooltipsProperty = BindableProperty.Create(
+        nameof(ShowToolbarTooltips),
+        typeof(bool),
+        typeof(SlideEditorView),
+        OfficeToolbarButton.TooltipsByDefault,
+        propertyChanged: (b, _, value) =>
+        {
+            foreach (var button in ((SlideEditorView)b).buttons)
+                button.SetTooltipEnabled((bool)value);
+        });
+
     public static readonly BindableProperty FontFamiliesProperty = BindableProperty.Create(
         nameof(FontFamilies),
         typeof(IList<string>),
@@ -236,6 +260,13 @@ public class SlideEditorView : ContentView, IDisposable
     {
         get => (bool)this.GetValue(ShowStatusProperty);
         set => this.SetValue(ShowStatusProperty, value);
+    }
+
+    /// <summary>Hover tooltips on the icon-only toolbar buttons. Desktop only by default.</summary>
+    public bool ShowToolbarTooltips
+    {
+        get => (bool)this.GetValue(ShowToolbarTooltipsProperty);
+        set => this.SetValue(ShowToolbarTooltipsProperty, value);
     }
 
     public IList<string>? FontFamilies
@@ -577,16 +608,8 @@ public class SlideEditorView : ContentView, IDisposable
     static readonly IList<double> DefaultFontSizes =
         [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 44, 54, 66, 88];
 
-    /// <summary>
-    /// One height for every control in the bar.
-    /// </summary>
-    /// <remarks>
-    /// 36 rather than a rounder number because that is the minimum height the core package's
-    /// FontPickerButton and ColorPickerButton ask for. Anything shorter leaves the plain buttons a
-    /// couple of pixels above the pickers, which is small enough to look like a rendering bug and
-    /// large enough to see.
-    /// </remarks>
-    const double ToolbarItemHeight = 36;
+    /// <summary>One height for every control in the bar. See <see cref="OfficeToolbarButton.ItemHeight"/>.</summary>
+    const double ToolbarItemHeight = OfficeToolbarButton.ItemHeight;
 
     static BoxView Separator() => new()
     {
@@ -598,30 +621,40 @@ public class SlideEditorView : ContentView, IDisposable
         Margin = new Thickness(3, 0)
     };
 
-    Button MakeToggle(string text, FontAttributes attributes, Action action)
+    OfficeToolbarButton MakeButton(OfficeIcon icon, string hint, Action action)
     {
-        var button = new Button
-        {
-            Text = text,
-            FontAttributes = attributes,
-            WidthRequest = 38,
-            HeightRequest = ToolbarItemHeight,
-            Padding = 0,
-            CornerRadius = 5,
-            BackgroundColor = Colors.Transparent,
+        var button = this.NewButton(icon, hint);
 
-            // Centre, not the default Fill. A view with an explicit HeightRequest cannot fill, so MAUI
-            // falls back to placing it at the start of the row - which pinned every button to the top
-            // of a row whose height came from the taller pickers, two pixels above where it belonged.
-            VerticalOptions = LayoutOptions.Center
-        };
-
-        // A TapGestureRecognizer never fires on a Button, so Clicked is the only option here.
         button.Clicked += (_, _) =>
         {
             action();
             this.AfterCommand();
         };
+
+        return button;
+    }
+
+    /// <summary>
+    /// A button whose work opens a menu or a file picker first.
+    /// </summary>
+    /// <remarks>
+    /// It does not call <c>AfterCommand</c> itself: each of these has to wait for the user to choose
+    /// something, and refreshing the bar and stealing focus back before then would happen while the
+    /// menu is still up.
+    /// </remarks>
+    OfficeToolbarButton MakeAsyncButton(OfficeIcon icon, string hint, Func<Task> action)
+    {
+        var button = this.NewButton(icon, hint);
+        button.Clicked += async (_, _) => await action();
+
+        return button;
+    }
+
+    OfficeToolbarButton NewButton(OfficeIcon icon, string hint)
+    {
+        var button = new OfficeToolbarButton(icon, hint);
+        button.SetTooltipEnabled(this.ShowToolbarTooltips);
+        this.buttons.Add(button);
 
         return button;
     }
@@ -685,20 +718,20 @@ public class SlideEditorView : ContentView, IDisposable
                                        this.alignLeft, this.alignCenter, this.alignRight,
                                        this.outdent, this.indent })
         {
-            button.IsEnabled = hasText;
+            button.SetEnabled(hasText);
         }
 
-        this.addTextBox.IsEnabled = enabled;
-        this.insertShape.IsEnabled = enabled;
-        this.insertTable.IsEnabled = enabled;
-        this.insertPicture.IsEnabled = enabled;
-        this.deleteShape.IsEnabled = hasSelection;
+        this.addTextBox.SetEnabled(enabled);
+        this.insertShape.SetEnabled(enabled);
+        this.insertTable.SetEnabled(enabled);
+        this.insertPicture.SetEnabled(enabled);
+        this.deleteShape.SetEnabled(hasSelection);
 
-        this.previous.IsEnabled = controller?.CanGoPrevious ?? false;
-        this.next.IsEnabled = controller?.CanGoNext ?? false;
+        this.previous.SetEnabled(controller?.CanGoPrevious ?? false);
+        this.next.SetEnabled(controller?.CanGoNext ?? false);
 
-        this.undo.IsEnabled = enabled && (controller?.CanUndo ?? false);
-        this.redo.IsEnabled = enabled && (controller?.CanRedo ?? false);
+        this.undo.SetEnabled(enabled && (controller?.CanUndo ?? false));
+        this.redo.SetEnabled(enabled && (controller?.CanRedo ?? false));
 
         this.counter.Text = controller is null ? "—" : $"{controller.Index + 1}/{controller.Count}";
 
@@ -729,8 +762,7 @@ public class SlideEditorView : ContentView, IDisposable
         this.suppressPickerEvents = false;
     }
 
-    static void SetActive(Button button, bool active)
-        => button.BackgroundColor = active ? Colors.SteelBlue.WithAlpha(0.25f) : Colors.Transparent;
+    static void SetActive(OfficeToolbarButton button, bool active) => button.IsActive = active;
 
     public void Dispose()
     {

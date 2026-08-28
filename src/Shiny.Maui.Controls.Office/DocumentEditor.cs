@@ -94,6 +94,24 @@ public class DocumentEditor : ContentView, IDisposable
                 controller.Zoom = (double)value;
         });
 
+    /// <summary>
+    /// Continuous column, or sheets of paper with the document's own headers and footers.
+    /// </summary>
+    /// <remarks>
+    /// Print by default here, unlike <see cref="DocumentView"/>: an editor is where a page break,
+    /// a header and a page number are authored, and none of them can be seen in a reflowed column.
+    /// </remarks>
+    public static readonly BindableProperty PageLayoutProperty = BindableProperty.Create(
+        nameof(PageLayout),
+        typeof(DocumentPageLayout),
+        typeof(DocumentEditor),
+        DocumentPageLayout.Print,
+        propertyChanged: (b, _, value) =>
+        {
+            if (((DocumentEditor)b).controller is { } controller)
+                controller.PageLayout = (DocumentPageLayout)value;
+        });
+
     public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
         nameof(IsReadOnly),
         typeof(bool),
@@ -148,6 +166,13 @@ public class DocumentEditor : ContentView, IDisposable
         set => this.SetValue(ZoomProperty, value);
     }
 
+    /// <inheritdoc cref="PageLayoutProperty"/>
+    public DocumentPageLayout PageLayout
+    {
+        get => (DocumentPageLayout)this.GetValue(PageLayoutProperty);
+        set => this.SetValue(PageLayoutProperty, value);
+    }
+
     public bool IsReadOnly
     {
         get => (bool)this.GetValue(IsReadOnlyProperty);
@@ -189,6 +214,7 @@ public class DocumentEditor : ContentView, IDisposable
         this.controller = new DocumentEditorController(this.Document, this.measurer, this.SpellChecker)
         {
             Zoom = this.Zoom,
+            PageLayout = this.PageLayout,
             IsSpellCheckEnabled = this.IsSpellCheckEnabled
         };
         this.controller.Changed += this.OnControllerChanged;
@@ -227,7 +253,11 @@ public class DocumentEditor : ContentView, IDisposable
             return;
         }
 
-        var scale = this.Width > 0 ? (float)(e.Info.Width / this.Width) : 1f;
+        // Device scale times the view scale: in print the controller works in the paper's units and
+        // zoom is applied here, so one layout unit is dpr * zoom device pixels.
+        var scale = this.Width > 0
+            ? (float)(e.Info.Width / this.Width * this.controller.ViewScale)
+            : (float)this.controller.ViewScale;
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
@@ -235,8 +265,12 @@ public class DocumentEditor : ContentView, IDisposable
             Viewport = this.controller.Viewport,
             Theme = theme,
             Scale = scale,
-            PageX = this.controller.PageX + this.controller.PagePadding,
+            PageX = this.controller.PageX,
+            ContentX = this.controller.ContentX,
             PageWidth = this.controller.PageWidth,
+            PageHeight = this.controller.PageHeight,
+            Pages = this.controller.VisiblePages(),
+            Setup = this.controller.Document.Page,
             Selection = this.controller.SelectionRects().ToList(),
             Spelling = this.controller.SpellingRects().ToList(),
             Caret = this.focused && !this.IsReadOnly && this.controller.SelectedObject is null
@@ -369,7 +403,7 @@ public class DocumentEditor : ContentView, IDisposable
                 break;
 
             case SKTouchAction.WheelChanged:
-                this.controller.Scroll(-e.WheelDelta);
+                this.controller.ScrollByControlPixels(-e.WheelDelta);
                 break;
         }
 
