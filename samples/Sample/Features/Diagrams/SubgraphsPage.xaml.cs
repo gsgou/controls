@@ -5,5 +5,6 @@ public partial class SubgraphsPage : ContentPage
     public SubgraphsPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

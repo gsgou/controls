@@ -7,6 +7,7 @@ public partial class DockingPage : ContentPage
     public DockingPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         Dock.InitialLayout = BuildLayout();
         Dock.Events.PanelActivated += (_, e) => Status.Text = $"Activated: {e.PanelTypeId}";

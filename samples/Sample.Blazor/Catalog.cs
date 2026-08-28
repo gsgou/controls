@@ -51,6 +51,7 @@ public static class Catalog
 
         new("Panels & Overlays", "#22D3EE",
         [
+            new("modal", "Modal", "▢", "Modal window with header, footer buttons, drag and resize"),
             new("sheet", "Sheet", "▣", "Bottom sheet with detents and header peek"),
             new("overlay", "Overlay", "▦", "Loading and blocking overlays over any content"),
             new("frostedglass", "Frosted Glass", "◇", "Native blur / glass effect behind content")

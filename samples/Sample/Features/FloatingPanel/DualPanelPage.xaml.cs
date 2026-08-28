@@ -5,5 +5,6 @@ public partial class DualPanelPage : Shiny.Maui.Controls.ShinyContentPage
     public DualPanelPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

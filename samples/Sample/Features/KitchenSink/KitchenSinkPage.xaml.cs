@@ -5,5 +5,6 @@ public partial class KitchenSinkPage : Shiny.Maui.Controls.ShinyContentPage
     public KitchenSinkPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

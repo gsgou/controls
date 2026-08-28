@@ -5,5 +5,6 @@ public partial class WizardPage : ContentPage
     public WizardPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

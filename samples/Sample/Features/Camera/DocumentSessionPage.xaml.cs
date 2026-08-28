@@ -14,6 +14,7 @@ public partial class DocumentSessionPage : ContentPage
     {
         this.session = IPlatformApplication.Current!.Services.GetRequiredService<DocumentSessionStore>();
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.BindingContext = this;
     }
 

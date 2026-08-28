@@ -5,5 +5,6 @@ public partial class CountryAddressPage : ContentPage
     public CountryAddressPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

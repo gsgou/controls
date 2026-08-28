@@ -5,6 +5,7 @@ public partial class AgendaPage : ContentPage
     public AgendaPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         var localOffset = TimeZoneInfo.Local.BaseUtcOffset;
         var targetOffset = localOffset + TimeSpan.FromHours(3);

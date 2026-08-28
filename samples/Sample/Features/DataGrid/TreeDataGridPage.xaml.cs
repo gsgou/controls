@@ -5,5 +5,6 @@ public partial class TreeDataGridPage : ContentPage
     public TreeDataGridPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

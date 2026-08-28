@@ -9,6 +9,7 @@ public partial class NavInboxPage : ContentPage
     public NavInboxPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         for (var i = 1; i <= 25; i++)
             this.Filler.Children.Add(new Label { Text = $"Message {i}", FontSize = 14 });

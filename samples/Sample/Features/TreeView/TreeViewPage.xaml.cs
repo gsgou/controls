@@ -11,6 +11,7 @@ public partial class TreeViewPage : ContentPage
     public TreeViewPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         data = FileNode.SampleData().ToList();
 
         Tree.ItemsSource = data;

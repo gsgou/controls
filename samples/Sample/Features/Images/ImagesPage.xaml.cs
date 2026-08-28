@@ -7,6 +7,7 @@ public partial class ImagesPage : ContentPage
     public ImagesPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 
 

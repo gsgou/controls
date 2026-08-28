@@ -5,5 +5,6 @@ public partial class MinimizedSheetStandalonePage : Shiny.Maui.Controls.ShinyCon
     public MinimizedSheetStandalonePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

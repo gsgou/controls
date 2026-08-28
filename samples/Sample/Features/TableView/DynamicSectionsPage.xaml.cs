@@ -10,6 +10,7 @@ public partial class DynamicSectionsPage : ContentPage
     public DynamicSectionsPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

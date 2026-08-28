@@ -28,6 +28,7 @@ public partial class SlideEditorPage : ContentPage
     public SlideEditorPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.UpdateStatus();
     }
 

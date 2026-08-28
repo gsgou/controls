@@ -5,5 +5,6 @@ public partial class FrostedGlassPage : ContentPage
     public FrostedGlassPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

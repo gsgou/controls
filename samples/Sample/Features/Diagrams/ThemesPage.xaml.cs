@@ -7,6 +7,7 @@ public partial class ThemesPage : ContentPage
     public ThemesPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         ThemePicker.SelectedIndex = 0;
     }
 

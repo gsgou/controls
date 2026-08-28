@@ -9,6 +9,7 @@ public partial class TabsDemoPage : ShinyTabbedPage
     public TabsDemoPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.BindingContext = this.viewModel;
 
         this.SelectionChanged += (_, e) =>

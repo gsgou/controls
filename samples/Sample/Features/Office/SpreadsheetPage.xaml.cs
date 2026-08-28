@@ -13,6 +13,7 @@ public partial class SpreadsheetPage : ContentPage
     public SpreadsheetPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         // Built in memory rather than shipped as a binary fixture, so the demo also exercises the
         // "create a new workbook from nothing" path.

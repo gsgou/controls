@@ -9,6 +9,7 @@ public partial class KeyframePage : ContentPage
     public KeyframePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         SceneView.Scene = BuildScene();
 
         // The scene is deliberately finite so the scrubber has an end to scrub toward; replay it

@@ -5,5 +5,6 @@ public partial class DialogsPage : ContentPage
     public DialogsPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

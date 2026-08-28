@@ -10,6 +10,7 @@ public partial class ChatTemplatePage : ContentPage
     public ChatTemplatePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

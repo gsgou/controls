@@ -8,6 +8,7 @@ public partial class FlyoutDrawerPage : ContentPage
     public FlyoutDrawerPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 
     // Driven through the service rather than a named panel: with the declare-once install there is

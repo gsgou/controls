@@ -5,5 +5,6 @@ public partial class MusicBrowsePage : ContentPage
     public MusicBrowsePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

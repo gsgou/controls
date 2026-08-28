@@ -299,6 +299,7 @@ public partial class CameraPage : ShinyContentPage
         this.Detectors = ["None", .. this.analyzers.Keys];
 
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.BindingContext = this;
 
         // re-apply ShowBoundingBox / ScanWindow on the active analyzer when their switches toggle

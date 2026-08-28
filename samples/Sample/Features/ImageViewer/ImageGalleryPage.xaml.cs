@@ -5,5 +5,6 @@ public partial class ImageGalleryPage : Shiny.Maui.Controls.ShinyContentPage
     public ImageGalleryPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

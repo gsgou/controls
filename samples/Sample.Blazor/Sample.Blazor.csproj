@@ -30,4 +30,14 @@
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Terminal\Shiny.Blazor.Controls.Themes.Terminal.csproj"/>
         <ProjectReference Include="..\..\src\Shiny.Blazor.Controls.Themes.Aurora\Shiny.Blazor.Controls.Themes.Aurora.csproj"/>
     </ItemGroup>
+    <!--
+        Ships the gallery's own page sources inside the app so each demo can show the code that makes
+        it (see SampleSourceFiles.cs). The logical name keeps the folder for readability; look-up is by
+        file name, which is unique across Pages\.
+    -->
+    <ItemGroup>
+        <EmbeddedResource Include="Pages\**\*.razor;Pages\**\*.razor.css;Pages\**\*.cs"
+                          LogicalName="SampleSource/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
 </Project>

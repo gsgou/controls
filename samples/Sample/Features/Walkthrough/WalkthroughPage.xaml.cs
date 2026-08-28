@@ -5,5 +5,6 @@ public partial class WalkthroughPage : ContentPage
     public WalkthroughPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

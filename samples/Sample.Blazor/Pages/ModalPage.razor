@@ -1,0 +1,333 @@
+@page "/modal"
+
+<PageTitle>Modal</PageTitle>
+
+<h1>Modal</h1>
+
+<section class="demo-section">
+    <h2>Title, content, buttons</h2>
+    <p>
+        The everyday shape: a <code>Title</code>, whatever you put inside, and a list of
+        <code>Buttons</code> in the footer. Escape, the backdrop and the close button all dismiss it.
+    </p>
+    <div class="row">
+        <button class="btn" @onclick="() => basicOpen = true">Open modal</button>
+    </div>
+    <p class="state">@basicState</p>
+
+    <ModalView @bind-IsOpen="basicOpen"
+               Title="Delete project"
+               Subtitle="This cannot be undone"
+               Buttons="@basicButtons"
+               Opened="@(() => Log("opened"))"
+               Closed="@(r => { basicState = $"closed — {r}"; Log($"closed ({r})"); })">
+        <p>
+            Deleting <strong>Apollo</strong> removes its documents, members and history. Anyone with a
+            link to it will get a 404.
+        </p>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Sizes and placement</h2>
+    <p>
+        Five sizes from <code>Small</code> to <code>Full</code>, three placements, and six entry
+        animations. Sizes are caps, so a narrow window still gets a full-width panel.
+    </p>
+    <div class="row">
+        <label>Size</label>
+        <select @bind="size">
+            @foreach (var value in Enum.GetValues<ModalSize>())
+            {
+                <option value="@value">@value</option>
+            }
+        </select>
+
+        <label>Placement</label>
+        <select @bind="placement">
+            @foreach (var value in Enum.GetValues<ModalPlacement>())
+            {
+                <option value="@value">@value</option>
+            }
+        </select>
+
+        <label>Animation</label>
+        <select @bind="animation">
+            @foreach (var value in Enum.GetValues<ModalAnimation>())
+            {
+                <option value="@value">@value</option>
+            }
+        </select>
+
+        <label><input type="checkbox" @bind="blur" /> Blur backdrop</label>
+        <button class="btn" @onclick="() => sizeOpen = true">Open</button>
+    </div>
+
+    <ModalView @bind-IsOpen="sizeOpen"
+               Title="@($"{size} · {placement}")"
+               Size="size"
+               Placement="placement"
+               Animation="animation"
+               BlurBackdrop="blur"
+               Buttons="@closeOnly">
+        <p>Resize the window to see the panel give its edges back before it runs out of room.</p>
+        <p>
+            <code>Full</code> goes edge to edge with no corner rounding, which is the right shape for a
+            phone-height form.
+        </p>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Your own header and footer</h2>
+    <p>
+        <code>HeaderTemplate</code> replaces the title block but keeps the header bar — so the close
+        button (or your own, through <code>CloseButtonTemplate</code>) still has somewhere to live.
+        <code>FooterTemplate</code> replaces the button row outright.
+    </p>
+    <div class="row">
+        <button class="btn" @onclick="() => templateOpen = true">Open templated</button>
+    </div>
+
+    <ModalView @bind-IsOpen="templateOpen" Size="ModalSize.Large" AriaLabel="Invite teammates">
+        <HeaderTemplate>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#7C3AED,#22D3EE);"></span>
+                <div>
+                    <div style="font-weight:600;">Invite teammates</div>
+                    <div style="font-size:12px; color:#6B7280;">They will get an email with a join link</div>
+                </div>
+            </div>
+        </HeaderTemplate>
+        <CloseButtonTemplate>
+            <span style="font-size:13px; color:#6B7280; padding:6px 10px;">Dismiss</span>
+        </CloseButtonTemplate>
+        <ChildContent>
+            <label style="display:block; font-size:13px; margin-bottom:6px;">Email addresses</label>
+            @* Focus lands here on open: the modal focuses whatever carries data-shiny-autofocus. *@
+            <input type="text" data-shiny-autofocus placeholder="ada@example.com, alan@example.com"
+                   style="width:100%; padding:8px 10px; border:1px solid #E5E7EB; border-radius:8px;" />
+        </ChildContent>
+        <FooterTemplate>
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                <a href="#" @onclick:preventDefault>Copy invite link</a>
+                <button class="btn" @onclick="() => templateOpen = false">Send invites</button>
+            </div>
+        </FooterTemplate>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Bare and undismissable</h2>
+    <p>
+        No header at all, no close button, no backdrop or Escape dismissal — the only way out is the
+        button you provide. A refused backdrop click nudges the panel rather than doing nothing.
+    </p>
+    <div class="row">
+        <button class="btn" @onclick="() => bareOpen = true">Open bare</button>
+    </div>
+
+    <ModalView @bind-IsOpen="bareOpen"
+               ShowHeader="false"
+               CloseOnBackdropClick="false"
+               CloseOnEscape="false"
+               Size="ModalSize.Small"
+               AriaLabel="Finish setup"
+               Buttons="@bareButtons">
+        <div style="text-align:center;">
+            <div style="font-size:32px;">🎉</div>
+            <h3 style="margin:8px 0;">You are all set</h3>
+            <p style="color:#6B7280;">Your workspace is ready. Try clicking the backdrop.</p>
+        </div>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>A window, not a card</h2>
+    <p>
+        <code>Draggable</code> moves it by the header, <code>Resizable</code> gives it a corner grip
+        and <code>ShowMaximizeButton</code> puts it full-screen and back. Maximising drops the drag
+        offset and the resized size, so restoring lands where the stylesheet says.
+    </p>
+    <div class="row">
+        <label><input type="checkbox" @bind="draggable" /> Draggable</label>
+        <label><input type="checkbox" @bind="resizable" /> Resizable</label>
+        <label><input type="checkbox" @bind="maximizeButton" /> Maximize button</label>
+        <label><input type="checkbox" @bind="maximizeOnDoubleClick" /> Maximize on header double-click</label>
+        <button class="btn" @onclick="() => windowOpen = true">Open window</button>
+    </div>
+
+    <ModalView @bind-IsOpen="windowOpen"
+               Title="Query editor"
+               Icon="@IconTerminal"
+               Size="ModalSize.Large"
+               Draggable="draggable"
+               Resizable="resizable"
+               ShowMaximizeButton="maximizeButton"
+               MaximizeOnHeaderDoubleClick="maximizeOnDoubleClick"
+               AllowMaximize="maximizeOnDoubleClick"
+               CloseOnBackdropClick="false"
+               Buttons="@closeOnly">
+        <p>Drag the header. Pull the bottom-right corner. Maximise from the header button, or by double-clicking the header.</p>
+        <pre style="background:#0F172A; color:#E2E8F0; padding:12px; border-radius:8px; overflow:auto;">
+select p.name, count(*) as members
+from projects p
+join memberships m on m.project_id = p.id
+group by p.name
+order by members desc;</pre>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Refusing to close</h2>
+    <p>
+        <code>Closing</code> is raised before anything unwinds and can cancel it. Here the modal only
+        lets go once the field is empty — every dismissal route goes through the same veto.
+    </p>
+    <div class="row">
+        <button class="btn" @onclick="() => guardOpen = true">Open guarded</button>
+    </div>
+    <p class="state">@guardState</p>
+
+    <ModalView @bind-IsOpen="guardOpen"
+               Title="Unsaved note"
+               Closing="OnGuardClosing"
+               Closed="@(r => guardState = $"closed — {r}")"
+               Buttons="@guardButtons">
+        <label style="display:block; font-size:13px; margin-bottom:6px;">Note</label>
+        <textarea @bind="note" @bind:event="oninput" rows="3"
+                  style="width:100%; padding:8px 10px; border:1px solid #E5E7EB; border-radius:8px;"></textarea>
+        <p class="state">@(String.IsNullOrWhiteSpace(note) ? "Empty — dismissal allowed." : "Dirty — dismissal refused until you discard.")</p>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Stacking</h2>
+    <p>
+        A modal can open another. The newest sits above, Escape only reaches the top one, and the page
+        behind stays locked until the last one leaves.
+    </p>
+    <div class="row">
+        <button class="btn" @onclick="() => firstOpen = true">Open first</button>
+    </div>
+
+    <ModalView @bind-IsOpen="firstOpen" Title="Settings" Size="ModalSize.Large" Buttons="@closeOnly">
+        <p>Something in here needs confirming.</p>
+        <button class="btn" @onclick="() => secondOpen = true">Reset everything…</button>
+    </ModalView>
+
+    <ModalView @bind-IsOpen="secondOpen"
+               Title="Are you sure?"
+               Size="ModalSize.Small"
+               Animation="ModalAnimation.Zoom"
+               Buttons="@confirmButtons">
+        <p>This resets every setting on the page behind. Press Escape — only this one hears it.</p>
+    </ModalView>
+</section>
+
+<section class="demo-section">
+    <h2>Event log</h2>
+    <p><code>Opened</code> fires once focus is inside; <code>Closed</code> carries what dismissed it.</p>
+    <ul class="state">
+        @foreach (var line in log)
+        {
+            <li>@line</li>
+        }
+    </ul>
+</section>
+
+@code {
+    const string IconTerminal = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 17l6-5-6-5'/><path d='M12 19h8'/></svg>";
+
+    bool basicOpen, sizeOpen, templateOpen, bareOpen, windowOpen, guardOpen, firstOpen, secondOpen, blur;
+    bool draggable = true, resizable = true, maximizeButton = true, maximizeOnDoubleClick = true;
+    string basicState = "not opened yet";
+    string guardState = "not opened yet";
+    string note = "";
+
+    ModalSize size = ModalSize.Medium;
+    ModalPlacement placement = ModalPlacement.Center;
+    ModalAnimation animation = ModalAnimation.Pop;
+
+    readonly List<string> log = new();
+
+    // The lists are fields rather than expressions so the buttons keep their identity across renders -
+    // a ModalButton carries state (Busy, Disabled) that a rebuilt list would throw away.
+    IReadOnlyList<ModalButton> basicButtons = default!;
+    IReadOnlyList<ModalButton> bareButtons = default!;
+    IReadOnlyList<ModalButton> guardButtons = default!;
+    IReadOnlyList<ModalButton> confirmButtons = default!;
+    readonly IReadOnlyList<ModalButton> closeOnly =
+    [
+        new("Close") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Tonal }
+    ];
+
+    protected override void OnInitialized()
+    {
+        this.basicButtons =
+        [
+            new("Cancel") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Text },
+            new("Delete project")
+            {
+                Type = ButtonType.Critical,
+                // Stays up while the "request" runs, then closes itself.
+                ClosesModal = false,
+                OnClick = this.DeleteAsync
+            }
+        ];
+
+        this.bareButtons = [new("Get started") { Type = ButtonType.Primary }];
+
+        this.guardButtons =
+        [
+            new("Discard") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Text, OnClick = this.DiscardAsync },
+            new("Save") { OnClick = this.SaveNoteAsync }
+        ];
+
+        this.confirmButtons =
+        [
+            new("Cancel") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Text },
+            new("Reset") { Type = ButtonType.Critical }
+        ];
+    }
+
+    async Task DeleteAsync()
+    {
+        var button = this.basicButtons[1];
+        button.State = ButtonState.Busy;
+        this.StateHasChanged();
+
+        await Task.Delay(900);
+
+        button.State = ButtonState.Normal;
+        this.basicOpen = false;
+    }
+
+    Task DiscardAsync()
+    {
+        this.note = "";
+        return Task.CompletedTask;
+    }
+
+    Task SaveNoteAsync()
+    {
+        this.log.Insert(0, $"saved \"{this.note}\"");
+        this.note = "";
+        return Task.CompletedTask;
+    }
+
+    void OnGuardClosing(ModalClosingEventArgs e)
+    {
+        // The footer's own Discard/Save empty the note first, so only the stray routes get refused.
+        e.Cancel = !String.IsNullOrWhiteSpace(this.note);
+        if (e.Cancel)
+            this.guardState = $"refused a {e.Reason} dismissal — the note is dirty";
+    }
+
+    void Log(string message)
+    {
+        this.log.Insert(0, $"{DateTime.Now:HH:mm:ss}  {message}");
+        if (this.log.Count > 8)
+            this.log.RemoveAt(this.log.Count - 1);
+    }
+}

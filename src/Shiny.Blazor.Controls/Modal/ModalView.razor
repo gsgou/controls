@@ -1,0 +1,119 @@
+@namespace Shiny.Blazor.Controls
+
+@* Rendered only while open, plus the exit transition: a closed modal should cost the page nothing,
+   and its content should not be alive behind the scenes holding timers or subscriptions. *@
+@if (isRendered)
+{
+    <div class="@RootClasses" style="@RootStyle" @ref="rootEl">
+
+        @* Always present, even with ShowBackdrop off - it is the surface an outside click lands on,
+           and the thing that stops the page behind being clickable while a modal owns the screen. *@
+        <div class="shiny-modal-backdrop @(ShowBackdrop ? null : "is-transparent") @(BlurBackdrop ? "is-blurred" : null)"
+             @onclick="OnBackdropClick"></div>
+
+        <div class="@PanelClasses"
+             style="@PanelStyle"
+             @ref="panelEl"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="@LabelledBy"
+             aria-label="@(LabelledBy is null ? EffectiveAriaLabel : null)"
+             aria-describedby="@AriaDescribedBy"
+             @attributes="ExtraAttributes">
+
+            @if (HasHeader)
+            {
+                <div class="shiny-modal-header" @ondblclick="OnHeaderDoubleClick">
+                    <div class="shiny-modal-header-body">
+                        @if (HeaderTemplate is not null)
+                        {
+                            @HeaderTemplate
+                        }
+                        else
+                        {
+                            @if (!String.IsNullOrWhiteSpace(Icon))
+                            {
+                                <span class="shiny-modal-icon" aria-hidden="true">@((MarkupString)Icon)</span>
+                            }
+                            <div class="shiny-modal-titles">
+                                @if (!String.IsNullOrWhiteSpace(Title))
+                                {
+                                    <div class="shiny-modal-title" id="@titleId">@Title</div>
+                                }
+                                @if (!String.IsNullOrWhiteSpace(Subtitle))
+                                {
+                                    <div class="shiny-modal-subtitle">@Subtitle</div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    @* Kept out of the drag surface below, so grabbing the header near a button does
+                       not start a drag instead of pressing it. *@
+                    <div class="shiny-modal-header-actions" data-shiny-modal-nodrag>
+                        @if (ShowMaximizeButton)
+                        {
+                            <button type="button"
+                                    class="shiny-modal-header-button"
+                                    aria-label="@(IsMaximized ? RestoreButtonLabel : MaximizeButtonLabel)"
+                                    title="@(IsMaximized ? RestoreButtonLabel : MaximizeButtonLabel)"
+                                    @onclick="OnMaximizeClick">
+                                @((MarkupString)(IsMaximized ? IconRestore : IconMaximize))
+                            </button>
+                        }
+                        @if (CloseButtonTemplate is not null)
+                        {
+                            <span class="shiny-modal-close-custom" @onclick="OnCloseButtonClick">
+                                @CloseButtonTemplate
+                            </span>
+                        }
+                        else if (ShowCloseButton)
+                        {
+                            <button type="button"
+                                    class="shiny-modal-header-button shiny-modal-close"
+                                    aria-label="@CloseButtonLabel"
+                                    title="@CloseButtonLabel"
+                                    @onclick="OnCloseButtonClick">
+                                @((MarkupString)IconClose)
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="shiny-modal-body">
+                @ChildContent
+            </div>
+
+            @if (HasFooter)
+            {
+                <div class="shiny-modal-footer">
+                    @if (FooterTemplate is not null)
+                    {
+                        @FooterTemplate
+                    }
+                    else
+                    {
+                        @foreach (var button in Buttons!)
+                        {
+                            var item = button;
+                            <ShinyButton Text="@item.Text"
+                                         Type="item.Type"
+                                         Appearance="item.Appearance"
+                                         LeftIcon="@item.Icon"
+                                         Disabled="item.Disabled"
+                                         State="item.State"
+                                         CssClass="@item.CssClass"
+                                         Clicked="@(_ => OnFooterButtonClick(item))" />
+                        }
+                    }
+                </div>
+            }
+
+            @if (Resizable && !IsMaximized)
+            {
+                <div class="shiny-modal-resize-grip" data-shiny-modal-resize aria-hidden="true"></div>
+            }
+        </div>
+    </div>
+}

@@ -5,5 +5,6 @@ public partial class DataGridFormattingPage : ContentPage
     public DataGridFormattingPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

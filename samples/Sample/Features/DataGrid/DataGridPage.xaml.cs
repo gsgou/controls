@@ -5,5 +5,6 @@ public partial class DataGridPage : ContentPage
     public DataGridPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

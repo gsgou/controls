@@ -5,5 +5,6 @@ public partial class ProgressLinePage : ContentPage
     public ProgressLinePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

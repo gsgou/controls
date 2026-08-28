@@ -11,6 +11,7 @@ public partial class TreeView<TItem> : IAsyncDisposable
     ElementReference rootElement;
     IJSObjectReference? dragModule;
     DotNetObjectReference<TreeView<TItem>>? selfRef;
+    bool disposed;
     IEnumerable<TItem>? lastItemsSource;
     BlazorTreeSelectionMode? selectionMode;
     bool isLoadingRoot;
@@ -512,20 +513,35 @@ public partial class TreeView<TItem> : IAsyncDisposable
     // start a drag at all) and report the finished drop back here.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (EnableDragDrop && dragModule == null)
+        if (EnableDragDrop && dragModule == null && !disposed)
         {
-            selfRef = DotNetObjectReference.Create(this);
-            dragModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import",
-                "./_content/Shiny.Blazor.Controls/tree-view.js");
-            await dragModule.InvokeVoidAsync("init", rootElement, selfRef);
+            try
+            {
+                var localRef = DotNetObjectReference.Create(this);
+                selfRef = localRef;
+                var module = await JS.InvokeAsync<IJSObjectReference>(
+                    "import",
+                    "./_content/Shiny.Blazor.Controls/tree-view.js");
+                if (disposed)
+                {
+                    try { await module.DisposeAsync(); } catch { }
+                    localRef.Dispose();
+                    return;
+                }
+                dragModule = module;
+                await dragModule.InvokeVoidAsync("init", rootElement, localRef);
+            }
+            catch (ObjectDisposedException) { }
+            catch (JSDisconnectedException) { }
+            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) { }
         }
     }
 
     [JSInvokable]
     public async Task OnJsDrop(string sourceId, string targetId, string zone)
     {
-        if (!EnableDragDrop) return;
+        if (!EnableDragDrop || disposed) return;
 
         var all = EnumerateAll(rootNodes).ToList();
         var source = all.FirstOrDefault(n => n.Id == sourceId);
@@ -552,6 +568,7 @@ public partial class TreeView<TItem> : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        disposed = true;
         try
         {
             if (dragModule != null)
@@ -561,6 +578,10 @@ public partial class TreeView<TItem> : IAsyncDisposable
             }
         }
         catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
+        catch (JSException) { }
         selfRef?.Dispose();
     }
 

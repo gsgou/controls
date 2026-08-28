@@ -5,5 +5,6 @@ public partial class SliderPage : ContentPage
     public SliderPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

@@ -8,6 +8,7 @@ public partial class BarcodeGalleryPage : ContentPage
     public BarcodeGalleryPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

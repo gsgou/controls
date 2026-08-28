@@ -9,6 +9,7 @@ public partial class QRCodePage : ContentPage
     public QRCodePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

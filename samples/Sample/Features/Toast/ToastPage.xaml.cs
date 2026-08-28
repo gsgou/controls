@@ -5,5 +5,6 @@ public partial class ToastPage : ContentPage
     public ToastPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

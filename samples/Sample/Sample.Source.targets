@@ -1,0 +1,22 @@
+<Project>
+
+    <!--
+        Ships the gallery's own demo sources inside the app so each page can show the code that makes
+        it (see Controls\SampleSourceCode.cs). Imported by all three MAUI heads: Sample.MacOS and
+        Sample.Linux compile the same files out of ..\Sample\, so the resources have to land in their
+        assemblies too.
+
+        The LogicalName keeps the feature folder for readability. Look-up is by file name, which is
+        unique across Features\.
+    -->
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)Features\**\*.xaml;$(MSBuildThisFileDirectory)Features\**\*.cs"
+                          LogicalName="SampleSource/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <!-- Every page constructor calls SampleSourceCode.Attach(this), so the namespace is global. -->
+    <ItemGroup>
+        <Using Include="Sample.Controls" />
+    </ItemGroup>
+
+</Project>

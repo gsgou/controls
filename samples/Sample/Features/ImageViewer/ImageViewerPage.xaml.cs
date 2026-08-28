@@ -5,5 +5,6 @@ public partial class ImageViewerPage : Shiny.Maui.Controls.ShinyContentPage
     public ImageViewerPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

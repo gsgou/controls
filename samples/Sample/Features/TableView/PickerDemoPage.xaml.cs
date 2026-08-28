@@ -11,6 +11,7 @@ public partial class PickerDemoPage : Shiny.Maui.Controls.ShinyContentPage
     public PickerDemoPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

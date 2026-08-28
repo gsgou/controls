@@ -118,18 +118,34 @@
     [Parameter] public bool ShowItemLabels { get; set; }
 
     /// <summary>
-    /// When true a themed <see cref="Tooltip"/> bubble appears on pointer-hover over each item -
-    /// the way to name an icon-only button that would otherwise mean nothing to a first-time user.
-    /// Off, or on a bar with <see cref="ShowItemLabels"/> on, hover falls back to the browser's
-    /// native title tooltip: a labelled item already reads its own text off the bar, so a second
-    /// bubble covering the button is redundant. Icon-only bars are the case this exists for, and
-    /// desktop is the platform: a hover trigger does not fire on touch, so nothing appears on a
-    /// phone regardless of the setting.
+    /// When true a themed <see cref="Tooltip"/> bubble appears on hover over each item - the way to
+    /// name an icon-only button that would otherwise mean nothing to a first-time user. The
+    /// default <see cref="TooltipTrigger.HoverOrFocus"/> trigger never fires on touch, so nothing
+    /// appears on a phone regardless of the setting; switch <see cref="TooltipTrigger"/> only when
+    /// touch access is deliberate (long-press for accessibility, for example).
     /// </summary>
     [Parameter] public bool ShowTooltips { get; set; } = true;
 
     /// <summary>Which side of the button the themed tooltip sits on.</summary>
     [Parameter] public TooltipPlacement TooltipPlacement { get; set; } = TooltipPlacement.Bottom;
+
+    /// <summary>
+    /// What opens the tooltip. <see cref="TooltipTrigger.HoverOrFocus"/> (the default) is the
+    /// "tablet-and-desktop only" mode - a touch tap never counts as hover, so the bubble stays out
+    /// of the way on phones. Set to <see cref="TooltipTrigger.LongPress"/> to opt in for touch, or
+    /// <see cref="TooltipTrigger.Manual"/> to drive it from your own state.
+    /// </summary>
+    [Parameter] public TooltipTrigger TooltipTrigger { get; set; } = TooltipTrigger.HoverOrFocus;
+
+    /// <summary>
+    /// Milliseconds a hover has to persist before the bubble appears. Small enough that the tip is
+    /// there when the pointer stops moving, large enough that skimming across the bar does not
+    /// flash a tip on every button under it.
+    /// </summary>
+    [Parameter] public int TooltipShowDelay { get; set; } = 800;
+
+    /// <summary>Milliseconds before the bubble closes itself. Zero (default) leaves it up until the pointer leaves.</summary>
+    [Parameter] public int TooltipAutoDismissDelay { get; set; }
 
     // overflow -> hamburger dropdown
     /// <summary>When true (default) items that don't fit collapse into a dropdown menu behind the overflow button.</summary>
@@ -176,6 +192,7 @@
     ElementReference backdropEl;
     IJSObjectReference? module;
     DotNetObjectReference<ShinyToolbar>? selfRef;
+    bool disposed;
     bool loadingModule;
     bool observerAttached;
 
@@ -271,11 +288,11 @@
     string MenuStyle => $"background-color:{MenuBackgroundColor};color:{MenuTextColor};";
 
     /// <summary>
-    /// Whether the themed <see cref="Tooltip"/> wraps items. Only true on an icon-only bar - the
-    /// same rule <see cref="ShowTooltips"/> documents. A labelled bar already shows the text and
-    /// the bubble would be a second copy of the same word.
+    /// Whether the themed <see cref="Tooltip"/> wraps items. Gated only by <see cref="ShowTooltips"/>:
+    /// responsive CSS can hide the label at runtime (icon-only breakpoints) even when the toolbar
+    /// declares <see cref="ShowItemLabels"/>=true, so we can't rely on that flag to decide.
     /// </summary>
-    bool UseTooltips => ShowTooltips && !ShowItemLabels;
+    bool UseTooltips => ShowTooltips;
 
     // measuring == the off-screen mirror row, which wants the button's width and nothing else:
     // no open dropdown, no click handlers, nothing focusable.
@@ -283,17 +300,30 @@
         @<text>
             @{
                 var tip = item.Tooltip ?? item.Text;
-                // wrap only the real row, never the off-screen mirror. Two Tooltips per item would
-                // fight over the popover slot and race their JS init against each other.
-                var wrap = UseTooltips && !measuring && !string.IsNullOrWhiteSpace(tip);
+                // Wrap only the real row - never the off-screen mirror (two Tooltips per item
+                // would fight over the popover slot and race their JS init) - and never a labelled
+                // button (a button that already reads "Save as" doesn't need a bubble that also
+                // says "Save as"). Icon-only items still get the tip either because the toolbar
+                // was declared icon-only or because a narrow breakpoint has collapsed the label
+                // and the item declares Tooltip explicitly.
+                var labelled = ShowItemLabels && !string.IsNullOrEmpty(item.Text);
+                var hasExplicitTip = !string.IsNullOrWhiteSpace(item.Tooltip);
+                var wrap = UseTooltips && !measuring && !string.IsNullOrWhiteSpace(tip)
+                           && (!labelled || hasExplicitTip);
                 // title stays on when nothing else is going to name the button - the native tip is
                 // the fallback for touch (LongPress via the platform) and for a browser without the
-                // popover API. Where the themed bubble is up, title would double it up.
-                string? htmlTitle = wrap ? null : tip;
+                // popover API. Where the themed bubble is up, title would double it up. Where the
+                // button already renders its own text label, title would also double it up (the
+                // browser's native bubble on hover just repeats what the button says).
+                string? htmlTitle = wrap || labelled ? null : tip;
             }
             @if (wrap)
             {
-                <Tooltip Text="@tip" Placement="TooltipPlacement">
+                <Tooltip Text="@tip"
+                         Placement="TooltipPlacement"
+                         Trigger="TooltipTrigger"
+                         ShowDelay="TooltipShowDelay"
+                         AutoDismissDelay="TooltipAutoDismissDelay">
                     @ItemMarkup(item, measuring, htmlTitle)
                 </Tooltip>
             }
@@ -534,37 +564,49 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // the module is loaded on demand - a bar with no items and no dropdowns never needs JS at all,
-        // and one that gets its items later still picks it up
-        if (module == null && !loadingModule && (UseOverflow || AnyMenuOpen))
+        if (disposed) return;
+        try
         {
-            loadingModule = true;
-            selfRef ??= DotNetObjectReference.Create(this);
-            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls/toolbar.js");
-            loadingModule = false;
-        }
+            // the module is loaded on demand - a bar with no items and no dropdowns never needs JS at all,
+            // and one that gets its items later still picks it up
+            if (module == null && !loadingModule && (UseOverflow || AnyMenuOpen))
+            {
+                loadingModule = true;
+                selfRef ??= DotNetObjectReference.Create(this);
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Shiny.Blazor.Controls/toolbar.js");
+                loadingModule = false;
+            }
 
-        if (module == null)
-            return;
+            if (module == null || disposed)
+                return;
 
-        if (UseOverflow && !observerAttached)
-        {
-            observerAttached = true;
-            await module.InvokeVoidAsync("init", rootEl, selfRef);
-        }
-        else if (UseOverflow)
-        {
-            await module.InvokeVoidAsync("remeasure", rootEl);
-        }
+            if (UseOverflow && !observerAttached)
+            {
+                observerAttached = true;
+                await module.InvokeVoidAsync("init", rootEl, selfRef);
+            }
+            else if (UseOverflow)
+            {
+                await module.InvokeVoidAsync("remeasure", rootEl);
+            }
 
-        // open dropdowns are raised into the top layer and placed against their button
-        if (AnyMenuOpen)
-            await module.InvokeVoidAsync("placeMenus", rootEl, backdropEl);
+            if (disposed) return;
+
+            // open dropdowns are raised into the top layer and placed against their button
+            if (AnyMenuOpen)
+                await module.InvokeVoidAsync("placeMenus", rootEl, backdropEl);
+        }
+        catch (ObjectDisposedException) { }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
+        catch (Microsoft.JSInterop.JSException) { }
     }
 
     [JSInvokable]
     public Task SetVisibleCount(int count)
     {
+        if (disposed) return Task.CompletedTask;
         if (count != visibleCount)
         {
             visibleCount = count;
@@ -577,6 +619,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        disposed = true;
         try
         {
             if (module != null)
@@ -585,14 +628,11 @@
                 await module.DisposeAsync();
             }
         }
-        catch (JSDisconnectedException)
-        {
-            // circuit already gone — nothing to clean up
-        }
-        catch (Microsoft.JSInterop.JSException)
-        {
-            // module never finished importing
-        }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
+        catch (Microsoft.JSInterop.JSException) { }
         selfRef?.Dispose();
     }
 

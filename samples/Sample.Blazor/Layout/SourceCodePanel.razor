@@ -1,0 +1,41 @@
+@namespace Sample.Blazor.Layout
+
+@* Every demo page ends with the code that makes it: the routed component's own .razor (plus its code
+   and scoped styles when it has them), rendered by MarkdownView. The layout drops one of these under
+   @Body, so no page has to carry it. *@
+@if (files.Count > 0)
+{
+    <div class="source-code-panel">
+        @* Nothing is read or parsed until it is opened - this renders on every page in the gallery. *@
+        <Expander HeaderText="&lt;/&gt;  Source Code"
+                  HeaderDetail="@String.Join("  ·  ", files)"
+                  LoadContentOnDemand="true">
+            <MarkdownView Markdown="@Markdown"
+                          Theme="@(Dark ? MarkdownTheme.Dark : MarkdownTheme.Light)"
+                          IsScrollEnabled="false" />
+        </Expander>
+    </div>
+}
+
+@code {
+    IReadOnlyList<string> files = [];
+    string? markdown;
+
+    /// <summary>
+    /// The sources, read out of the assembly the first time the panel is opened and kept after that -
+    /// the layout re-renders on every navigation and this must not re-read on each one.
+    /// </summary>
+    string Markdown => this.markdown ??= SampleSourceFiles.MarkdownFor(this.files);
+
+    /// <summary>Cascaded from App.razor, above the RouteView that renders this layout.</summary>
+    [CascadingParameter] public Type? PageType { get; set; }
+
+    /// <summary>Follows the gallery's own dark switch: MarkdownTheme.Light is black on white whatever the page is doing.</summary>
+    [Parameter] public bool Dark { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        this.files = SampleSourceFiles.FilesFor(this.PageType);
+        this.markdown = null;
+    }
+}

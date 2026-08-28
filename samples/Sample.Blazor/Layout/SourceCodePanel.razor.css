@@ -1,0 +1,13 @@
+/* Separated from the demo above it, and out of the way: the panel is the last thing on the page,
+   not part of the sample. */
+.source-code-panel {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+}
+
+/* Long XAML and Razor lines scroll rather than reflowing the page. ::deep because the code blocks
+   are MarkdownView's DOM, not this component's markup. */
+.source-code-panel ::deep pre {
+    overflow-x: auto;
+}

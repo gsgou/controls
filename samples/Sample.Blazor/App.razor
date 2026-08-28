@@ -2,7 +2,12 @@
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        @* MainLayout is rendered by the RouteView below, so a value cascaded here reaches it. That is
+           how the source-code panel in the layout knows which page it is under, without reflecting
+           over route attributes. *@
+        <CascadingValue Value="@routeData.PageType">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        </CascadingValue>
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>

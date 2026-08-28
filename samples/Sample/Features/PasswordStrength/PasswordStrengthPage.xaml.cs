@@ -7,6 +7,7 @@ public partial class PasswordStrengthPage : ContentPage
     public PasswordStrengthPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         // Per-control override. Registering it with SetCustomPasswordStrengthEvaluator would apply
         // it to every field in the app instead, which is what a real app usually wants.

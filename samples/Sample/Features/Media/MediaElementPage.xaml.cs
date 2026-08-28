@@ -8,6 +8,7 @@ public partial class MediaElementPage : ShinyContentPage
     public MediaElementPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         this.AspectPicker.SelectedIndex = 0;
         this.RatePicker.SelectedIndex = 1;

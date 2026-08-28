@@ -8,6 +8,7 @@ public partial class MarkdownEditorPage : ContentPage
     public MarkdownEditorPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

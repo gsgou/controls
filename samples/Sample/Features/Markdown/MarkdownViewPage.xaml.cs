@@ -8,6 +8,7 @@ public partial class MarkdownViewPage : ContentPage
     public MarkdownViewPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

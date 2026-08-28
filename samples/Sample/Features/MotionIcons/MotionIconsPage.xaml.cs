@@ -9,6 +9,7 @@ public partial class MotionIconsPage : ContentPage
     public MotionIconsPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
 
         IconNames = MotionIconLibrary.Names.OrderBy(x => x, StringComparer.Ordinal).ToList();
         PresetNames = Enum.GetNames<MotionPreset>().ToList();

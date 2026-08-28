@@ -5,5 +5,6 @@ public partial class DataGridGroupingPage : ContentPage
     public DataGridGroupingPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

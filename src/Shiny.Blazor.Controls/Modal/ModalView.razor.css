@@ -1,0 +1,303 @@
+/*
+ * The root is the layer: fixed over the viewport, holding the backdrop and the panel. Placement is a
+ * flex alignment on the root rather than a transform on the panel, because the panel's transform is
+ * spoken for - it carries both the entry animation and the drag offset.
+ */
+.shiny-modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    /* The panel is a flex item that must be allowed to shrink, or a long body pushes it off screen. */
+    overflow: hidden;
+}
+
+.shiny-modal-root.place-center {
+    align-items: center;
+}
+
+.shiny-modal-root.place-top {
+    align-items: flex-start;
+}
+
+.shiny-modal-root.place-bottom {
+    align-items: flex-end;
+}
+
+.shiny-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--shiny-color-scrim, #000);
+    opacity: 0;
+    transition: opacity var(--shiny-modal-duration, 200ms) ease;
+}
+
+.is-open > .shiny-modal-backdrop {
+    opacity: var(--shiny-modal-backdrop-opacity, 0.45);
+}
+
+/* No backdrop asked for: the surface stays, invisible, so an outside click still lands somewhere. */
+.shiny-modal-backdrop.is-transparent {
+    background: transparent;
+}
+
+.shiny-modal-backdrop.is-blurred {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.shiny-modal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    max-height: calc(100dvh - 48px);
+    background: var(--shiny-color-surface-container-low, #fff);
+    color: var(--shiny-color-on-surface, #161C23);
+    border-radius: var(--shiny-shape-corner-large, 16px);
+    box-shadow: var(--shiny-elevation-5, 0 24px 48px rgba(0, 0, 0, 0.28));
+    /* Keeps a full-bleed header and footer inside the rounded corners. */
+    overflow: hidden;
+    transition: opacity var(--shiny-modal-duration, 200ms) ease,
+                transform var(--shiny-modal-duration, 200ms) cubic-bezier(0.2, 0, 0, 1);
+}
+
+.size-small { max-width: 360px; }
+.size-medium { max-width: 520px; }
+.size-large { max-width: 760px; }
+.size-xlarge { max-width: 1080px; }
+
+.size-full,
+.shiny-modal.is-maximized {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+}
+
+/*
+ * Maximised means "fill the viewport", so the root's own padding has to go with it - otherwise the
+ * panel stops 24px short on every side and reads as merely large.
+ */
+.shiny-modal-root:has(> .shiny-modal.is-maximized),
+.shiny-modal-root:has(> .shiny-modal.size-full) {
+    padding: 0;
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+ * Motion. Each animation is a start state on .is-closed; .is-open is always the resting state, so
+ * the same rules run the exit backwards.
+ * --------------------------------------------------------------------------------------------- */
+
+.is-closed > .shiny-modal {
+    opacity: 0;
+}
+
+.is-closed > .shiny-modal.anim-zoom { transform: scale(0.94); }
+.is-closed > .shiny-modal.anim-pop { transform: scale(0.88); }
+.is-closed > .shiny-modal.anim-slide-top { transform: translateY(-24px); }
+.is-closed > .shiny-modal.anim-slide-bottom { transform: translateY(24px); }
+
+.is-open > .shiny-modal {
+    opacity: 1;
+    transform: none;
+}
+
+.shiny-modal.anim-pop {
+    transition-timing-function: cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.shiny-modal.anim-none {
+    transition: none;
+}
+
+/* A refused dismissal: a short shove, not a bounce, so it reads as "no" and not as decoration. */
+.shiny-modal.is-nudging {
+    animation: shiny-modal-nudge 180ms ease;
+}
+
+@keyframes shiny-modal-nudge {
+    0%, 100% { transform: none; }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shiny-modal,
+    .shiny-modal-backdrop {
+        transition-duration: 1ms;
+    }
+
+    .shiny-modal.is-nudging {
+        animation: none;
+    }
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+ * Header
+ * --------------------------------------------------------------------------------------------- */
+
+.shiny-modal-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 16px 12px 20px;
+    border-bottom: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    background: var(--shiny-color-surface-container, #F3F4F6);
+}
+
+.is-draggable > .shiny-modal-header {
+    cursor: grab;
+    user-select: none;
+}
+
+.is-draggable.is-dragging > .shiny-modal-header {
+    cursor: grabbing;
+}
+
+.shiny-modal-header-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.shiny-modal-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    color: var(--shiny-color-primary, #0055D9);
+}
+
+.shiny-modal-titles {
+    min-width: 0;
+}
+
+.shiny-modal-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.shiny-modal-subtitle {
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--shiny-color-on-surface-variant, #3B475B);
+}
+
+.shiny-modal-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: default;
+}
+
+.shiny-modal-header-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border: 0;
+    border-radius: var(--shiny-shape-corner-full, 9999px);
+    background: transparent;
+    color: var(--shiny-color-on-surface-variant, #3B475B);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.shiny-modal-header-button:hover {
+    background: var(--shiny-color-surface-container-highest, #DBE3EE);
+    color: var(--shiny-color-on-surface, #161C23);
+}
+
+.shiny-modal-header-button:focus-visible {
+    outline: 2px solid var(--shiny-color-primary, #0055D9);
+    outline-offset: 2px;
+}
+
+/* The glyphs are inline SVG written by the component, so they are sized here rather than inline. */
+.shiny-modal-header-button ::deep svg,
+.shiny-modal-icon ::deep svg {
+    width: 100%;
+    height: 100%;
+}
+
+.shiny-modal-close-custom {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+
+/* ---------------------------------------------------------------------------------------------
+ * Body and footer
+ * --------------------------------------------------------------------------------------------- */
+
+.shiny-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--shiny-modal-content-padding, 20px);
+}
+
+.scroll-body > .shiny-modal-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.shiny-modal-footer {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px 16px;
+    border-top: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
+    background: var(--shiny-color-surface-container-low, #fff);
+}
+
+.shiny-modal-resize-grip {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    height: 18px;
+    cursor: nwse-resize;
+    /* Two hairlines in the corner - the desktop grip, without an image to ship. */
+    background:
+        linear-gradient(135deg, transparent 45%, var(--shiny-color-outline, #9CA3AF) 45%, var(--shiny-color-outline, #9CA3AF) 55%, transparent 55%),
+        linear-gradient(135deg, transparent 70%, var(--shiny-color-outline, #9CA3AF) 70%, var(--shiny-color-outline, #9CA3AF) 80%, transparent 80%);
+    touch-action: none;
+}
+
+
+/* On a phone every modal is effectively full width; centred still, but with the edges given back. */
+@media (max-width: 640px) {
+    .shiny-modal-root {
+        padding: 12px;
+    }
+
+    .shiny-modal {
+        max-height: calc(100dvh - 24px);
+    }
+
+    .place-bottom > .shiny-modal {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}

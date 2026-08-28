@@ -7,6 +7,7 @@ public partial class FlyoutDemoPage : ShinyFlyoutPage
     public FlyoutDemoPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.UpdateStatus();
     }
 

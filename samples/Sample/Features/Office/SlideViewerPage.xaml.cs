@@ -10,7 +10,11 @@ public partial class SlideViewerPage : ContentPage
     SlideDeck? deck;
     bool dark;
 
-    public SlideViewerPage() => this.InitializeComponent();
+    public SlideViewerPage()
+    {
+        this.InitializeComponent();
+        SampleSourceCode.Attach(this);
+    }
 
     protected override async void OnAppearing()
     {

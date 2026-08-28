@@ -9,6 +9,7 @@ public partial class FontPickerPage : ContentPage
     public FontPickerPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

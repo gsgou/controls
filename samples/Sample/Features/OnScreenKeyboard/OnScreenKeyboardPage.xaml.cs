@@ -5,5 +5,6 @@ public partial class OnScreenKeyboardPage : ContentPage
     public OnScreenKeyboardPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

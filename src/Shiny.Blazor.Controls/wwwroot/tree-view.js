@@ -59,7 +59,10 @@ export function init(root, dotNetRef) {
         state.sourceId = null;
         if (!row || !sourceId || row.dataset.treenodeId === sourceId) return;
         e.preventDefault();
-        dotNetRef.invokeMethodAsync('OnJsDrop', sourceId, row.dataset.treenodeId, zoneFor(row, e.clientY));
+        try {
+            dotNetRef.invokeMethodAsync('OnJsDrop', sourceId, row.dataset.treenodeId, zoneFor(row, e.clientY))
+                .catch(() => {});
+        } catch { }
     });
 
     on('dragend', () => {

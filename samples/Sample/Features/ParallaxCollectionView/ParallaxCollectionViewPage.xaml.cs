@@ -5,5 +5,6 @@ public partial class ParallaxCollectionViewPage : ContentPage
     public ParallaxCollectionViewPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

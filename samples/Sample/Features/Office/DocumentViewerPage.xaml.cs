@@ -14,6 +14,7 @@ public partial class DocumentViewerPage : ContentPage
     public DocumentViewerPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.UpdateZoomLabel();
     }
 

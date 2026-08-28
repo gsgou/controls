@@ -7,5 +7,6 @@ public partial class OverlayPage : ShinyContentPage
     public OverlayPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

@@ -5,5 +5,6 @@ public partial class BadgePage : ContentPage
     public BadgePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

@@ -80,4 +80,7 @@
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.MediaElement\Shiny.Maui.Controls.MediaElement.csproj" />
 		<ProjectReference Include="..\..\src\Shiny.Maui.Controls.Office\Shiny.Maui.Controls.Office.csproj" />
 	</ItemGroup>
+	<!-- The gallery renders its own source under each demo page. -->
+	<Import Project="Sample.Source.targets" />
+
 </Project>

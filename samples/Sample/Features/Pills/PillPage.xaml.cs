@@ -5,5 +5,6 @@ public partial class PillPage : ContentPage
     public PillPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

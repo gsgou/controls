@@ -9,6 +9,7 @@ public partial class DurationPickerPage : Shiny.Maui.Controls.ShinyContentPage
     public DurationPickerPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

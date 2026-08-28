@@ -10,6 +10,7 @@ public partial class BasicSettingsPage : ContentPage
     public BasicSettingsPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

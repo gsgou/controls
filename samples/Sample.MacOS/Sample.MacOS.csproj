@@ -92,4 +92,7 @@
             <LogicalName>README.md</LogicalName>
         </BundleResource>
     </ItemGroup>
+    <!-- The gallery renders its own source under each demo page. -->
+    <Import Project="..\Sample\Sample.Source.targets" />
+
 </Project>

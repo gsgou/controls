@@ -11,6 +11,7 @@ public partial class DragSortPage : ContentPage
     public DragSortPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
 

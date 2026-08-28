@@ -5,5 +5,6 @@ public partial class BasicFlowchartPage : ContentPage
     public BasicFlowchartPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

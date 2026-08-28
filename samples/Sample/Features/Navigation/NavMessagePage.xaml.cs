@@ -2,7 +2,11 @@ namespace Sample.Features.Navigation;
 
 public partial class NavMessagePage : ContentPage
 {
-    public NavMessagePage() => this.InitializeComponent();
+    public NavMessagePage()
+    {
+        this.InitializeComponent();
+        SampleSourceCode.Attach(this);
+    }
 
     void OnStar(object? sender, EventArgs e) => this.Status.Text = "Left item: starred";
 

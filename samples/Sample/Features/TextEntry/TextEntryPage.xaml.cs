@@ -5,5 +5,6 @@ public partial class TextEntryPage : ContentPage
     public TextEntryPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

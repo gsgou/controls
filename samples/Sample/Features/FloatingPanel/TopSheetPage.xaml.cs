@@ -5,5 +5,6 @@ public partial class TopSheetPage : Shiny.Maui.Controls.ShinyContentPage
     public TopSheetPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

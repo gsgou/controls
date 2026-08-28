@@ -59,4 +59,7 @@
         <MauiAsset Include="..\Sample\Resources\Raw\**" Link="Resources\Raw\%(RecursiveDir)%(Filename)%(Extension)" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiAsset Include="..\..\README.md" LogicalName="README.md" />
     </ItemGroup>
+    <!-- The gallery renders its own source under each demo page. -->
+    <Import Project="..\Sample\Sample.Source.targets" />
+
 </Project>

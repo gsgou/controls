@@ -5,5 +5,6 @@ public partial class SignaturePadPage : Shiny.Maui.Controls.ShinyContentPage
     public SignaturePadPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

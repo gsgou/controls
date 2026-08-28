@@ -10,6 +10,7 @@ public partial class InteractiveEditorPage : ContentPage
     public InteractiveEditorPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
         DiagramEditor.Text = DefaultDiagram;
         DiagramControl.DiagramText = DefaultDiagram;
     }

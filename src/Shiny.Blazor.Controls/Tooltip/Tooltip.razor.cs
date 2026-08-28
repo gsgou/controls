@@ -193,14 +193,21 @@ public partial class Tooltip
         if (!firstRender)
             return;
 
-        this.module = await this.JS.InvokeAsync<IJSObjectReference>(
-            "import",
-            "./_content/Shiny.Blazor.Controls/tooltip.js"
-        );
+        try
+        {
+            this.module = await this.JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/Shiny.Blazor.Controls/tooltip.js"
+            );
 
-        // A tooltip whose IsOpen bound true before the module loaded has nothing to place against yet.
-        if (this.open)
-            await this.PresentAsync();
+            // A tooltip whose IsOpen bound true before the module loaded has nothing to place against yet.
+            if (this.open)
+                await this.PresentAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
     }
 
 
@@ -430,41 +437,48 @@ public partial class Tooltip
         if (target is null)
             return;
 
-        var result = await this.module.InvokeAsync<TooltipPlacementResult?>(
-            "place",
-            this.bubbleRef,
-            target,
-            this.Placement.ToString().ToLowerInvariant(),
-            this.Offset,
-            this.ScreenMargin,
-            16d
-        );
-
-        if (result is null)
-            return;
-
-        var moved = this.placement != (result.Placement ?? "bottom")
-            || Math.Abs(this.tailOffset - result.TailOffset) > 0.5;
-
-        this.placement = result.Placement ?? "bottom";
-        this.tailOffset = result.TailOffset;
-
-        if (moved)
+        try
         {
-            // The tail moves to a different edge, which is a class change rather than something JS can
-            // write, so the bubble is re-rendered and then re-placed against its new size.
-            this.StateHasChanged();
-            await Task.Yield();
-            await this.module.InvokeAsync<TooltipPlacementResult?>(
+            var result = await this.module.InvokeAsync<TooltipPlacementResult?>(
                 "place",
                 this.bubbleRef,
                 target,
-                this.placement,
+                this.Placement.ToString().ToLowerInvariant(),
                 this.Offset,
                 this.ScreenMargin,
                 16d
             );
+
+            if (result is null)
+                return;
+
+            var moved = this.placement != (result.Placement ?? "bottom")
+                || Math.Abs(this.tailOffset - result.TailOffset) > 0.5;
+
+            this.placement = result.Placement ?? "bottom";
+            this.tailOffset = result.TailOffset;
+
+            if (moved)
+            {
+                // The tail moves to a different edge, which is a class change rather than something JS can
+                // write, so the bubble is re-rendered and then re-placed against its new size.
+                this.StateHasChanged();
+                await Task.Yield();
+                await this.module.InvokeAsync<TooltipPlacementResult?>(
+                    "place",
+                    this.bubbleRef,
+                    target,
+                    this.placement,
+                    this.Offset,
+                    this.ScreenMargin,
+                    16d
+                );
+            }
         }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
     }
 
 
@@ -519,6 +533,9 @@ public partial class Tooltip
             }
             catch (JSDisconnectedException) { }
             catch (ObjectDisposedException) { }
+            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) { }
+            catch (JSException) { }
         }
 
         this.selfRef?.Dispose();

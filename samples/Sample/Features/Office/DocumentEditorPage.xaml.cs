@@ -32,6 +32,7 @@ public partial class DocumentEditorPage : ContentPage
     public DocumentEditorPage()
     {
         this.InitializeComponent();
+        SampleSourceCode.Attach(this);
         this.UpdateStatus();
     }
 

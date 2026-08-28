@@ -5,5 +5,6 @@ public partial class CalendarPage : ContentPage
     public CalendarPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

@@ -5,5 +5,6 @@ public partial class AutoCompletePage : ContentPage
     public AutoCompletePage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }

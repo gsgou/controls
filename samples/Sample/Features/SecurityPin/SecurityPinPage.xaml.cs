@@ -7,6 +7,7 @@ public partial class SecurityPinPage : ContentPage
     public SecurityPinPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 
     void OnHiddenPinCompleted(object? sender, SecurityPinCompletedEventArgs e)

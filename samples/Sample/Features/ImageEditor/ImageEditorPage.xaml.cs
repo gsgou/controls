@@ -5,5 +5,6 @@ public partial class ImageEditorPage : ContentPage
     public ImageEditorPage()
     {
         InitializeComponent();
+        SampleSourceCode.Attach(this);
     }
 }
