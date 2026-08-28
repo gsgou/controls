@@ -28,6 +28,7 @@ public partial class DocumentEditorPage : ContentPage
 {
     WordDocument? document;
     bool dark;
+    int marginPreset;
 
     public DocumentEditorPage()
     {
@@ -77,6 +78,26 @@ public partial class DocumentEditorPage : ContentPage
         this.UpdateStatus();
     }
 
+    /// <summary>
+    /// Steps through the margin presets.
+    /// </summary>
+    /// <remarks>
+    /// The toolbar already carries this gallery as an action sheet; the button is here to show the
+    /// controller API a host with its own chrome would call, and it is the only route to it when the
+    /// toolbar is hidden. The presets come from <c>PageMarginPresets</c> rather than being listed
+    /// again, which is the same list the Blazor sample and both toolbars offer.
+    /// </remarks>
+    void OnCycleMargins(object? sender, EventArgs e)
+    {
+        if (this.Editor.Controller is not { } controller)
+            return;
+
+        this.marginPreset = (this.marginPreset + 1) % PageMarginPresets.All.Count;
+        controller.SetPageMargins(PageMarginPresets.All[this.marginPreset].Margins);
+
+        this.UpdateStatus();
+    }
+
     void OnDocumentChanged(object? sender, EventArgs e) => this.UpdateStatus();
 
     void UpdateStatus()
@@ -85,6 +106,9 @@ public partial class DocumentEditorPage : ContentPage
 
         this.SpellButton.Text = this.Editor.IsSpellCheckEnabled ? "Spelling: on" : "Spelling: off";
         this.SpellButton.IsEnabled = available;
+
+        this.MarginButton.Text = $"Margins: {PageMarginPresets.All[this.marginPreset].Name}";
+        this.MarginButton.IsEnabled = this.document is not null;
 
         this.StatusLabel.Text = available
             ? $"Spell checker: {SpellCheckers.Default.GetType().Name} ({SpellCheckers.Default.DefaultLanguage}). Right-click or long-press an underlined word."

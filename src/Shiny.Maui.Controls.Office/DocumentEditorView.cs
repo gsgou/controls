@@ -47,6 +47,7 @@ public class DocumentEditorView : ContentView, IDisposable
     readonly OfficeToolbarButton insertShape;
     readonly OfficeToolbarButton insertTable;
     readonly OfficeToolbarButton insertPicture;
+    readonly OfficeToolbarButton pageMargins;
     readonly ColorPickerButton textColor;
     readonly List<OfficeToolbarButton> buttons = [];
 
@@ -71,6 +72,8 @@ public class DocumentEditorView : ContentView, IDisposable
         this.insertShape = this.MakeAsyncButton(OfficeIcon.Shape, "Shapes", this.InsertShapeAsync);
         this.insertTable = this.MakeAsyncButton(OfficeIcon.Table, "Table", this.InsertTableAsync);
         this.insertPicture = this.MakeAsyncButton(OfficeIcon.Picture, "Picture", this.InsertPictureAsync);
+
+        this.pageMargins = this.MakeAsyncButton(OfficeIcon.PageMargins, "Page margins", this.PickPageMarginsAsync);
 
         this.undo = this.MakeButton(OfficeIcon.Undo, "Undo (Ctrl+Z)", () => this.editor.Controller?.Undo());
         this.redo = this.MakeButton(OfficeIcon.Redo, "Redo (Ctrl+Shift+Z)", () => this.editor.Controller?.Redo());
@@ -336,6 +339,8 @@ public class DocumentEditorView : ContentView, IDisposable
         this.bar.Add(this.alignRight);
         this.bar.Add(this.alignJustify);
         this.bar.Add(Separator());
+        this.bar.Add(this.pageMargins);
+        this.bar.Add(Separator());
         this.bar.Add(this.undo);
         this.bar.Add(this.redo);
     }
@@ -492,6 +497,23 @@ public class DocumentEditorView : ContentView, IDisposable
             return;
 
         this.editor.Controller?.SetHighlight(color);
+        this.AfterCommand();
+    }
+
+    /// <summary>
+    /// Applies a margin preset to the whole document.
+    /// </summary>
+    /// <remarks>
+    /// Enabled in both layouts, though only <see cref="DocumentPageLayout.Print"/> can show the
+    /// result: the margins are the document's own and are written and saved either way, exactly as a
+    /// page break is. Disabling it in reflow would hide a setting the file still has.
+    /// </remarks>
+    async Task PickPageMarginsAsync()
+    {
+        if (await OfficeMenus.PickPageMarginsAsync(OfficeMenus.PageOf(this)) is not { } margins)
+            return;
+
+        this.editor.Controller?.SetPageMargins(margins);
         this.AfterCommand();
     }
 

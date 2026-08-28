@@ -684,6 +684,60 @@ public sealed class DocumentEditorController : DocumentController
         this.AfterChromeEdit();
     }
 
+    /// <summary>The document's current page margins.</summary>
+    public PageMargins PageMargins => this.Document.Page.Margins;
+
+    /// <summary>
+    /// Sets the page margins for the whole document.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Undoable in one step, and total: a document that had no <c>w:pgMar</c> of its own goes back to
+    /// having none rather than to whatever the defaults were.
+    /// </para>
+    /// <para>
+    /// Only <see cref="DocumentPageLayout.Print"/> shows it. A reflowed column has no paper to inset
+    /// content from, so it insets by a cosmetic gutter instead — the change is still written to the
+    /// document and still saved, exactly as a page break is, it simply has nowhere to appear until the
+    /// view is showing pages.
+    /// </para>
+    /// </remarks>
+    /// <param name="margins">The new margins, in pixels at 96 dpi. See <see cref="PageMargins.FromInches"/>.</param>
+    public void SetPageMargins(PageMargins margins)
+    {
+        ArgumentNullException.ThrowIfNull(margins);
+
+        if (this.IsReadOnlyDocument)
+            return;
+
+        this.document.Execute(new SetPageMarginsCommand(margins));
+        this.AfterPageSetupEdit();
+    }
+
+    /// <summary>Sets the four margins, in pixels at 96 dpi, keeping the header and footer distances.</summary>
+    public void SetPageMargins(double left, double top, double right, double bottom)
+        => this.SetPageMargins(this.PageMargins with
+        {
+            Left = left,
+            Top = top,
+            Right = right,
+            Bottom = bottom
+        });
+
+    /// <summary>
+    /// Settles the view after a page-geometry change.
+    /// </summary>
+    /// <remarks>
+    /// The layout has to be thrown away even though no text changed. Margins move the content box, so
+    /// every line re-wraps and every page break moves — and a top-or-bottom-only change does not alter
+    /// the measure at all, which is the one the layout cache keys on and would otherwise keep.
+    /// </remarks>
+    void AfterPageSetupEdit()
+    {
+        this.InvalidateLayout();
+        this.RaiseChanged();
+    }
+
     /// <summary>
     /// Adds a page number to the header or footer, creating it if the document has none.
     /// </summary>

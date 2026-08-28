@@ -1,0 +1,97 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Document
+@using Shiny.Controls.Office.Icons
+
+@*
+    The page margins gallery.
+
+    The presets come from PageMarginPresets in the shared kernel, not from a list written here, so this
+    panel and the MAUI action sheet offer the same four with the same measurements. Word's own names
+    and numbers, because a gallery invented here would be one more set of values for a reader to learn.
+
+    The current margins are marked rather than merely offered: a document opened with something Word
+    would call Moderate should say so before anything is clicked. A document whose margins match none
+    of the four - which is most real documents - marks nothing, which is honest.
+
+    Shell classes (.shiny-office-picker, .shiny-office-backdrop, .shiny-office-panel) are repeated in
+    the scoped CSS beside this file rather than factored out, for the reason given in
+    OfficeHighlightButton.razor.css: Blazor's scoped CSS is per component, so a shared file would have
+    to be unscoped and would leak these names into every consuming app.
+*@
+<div class="shiny-office-picker">
+    <Tooltip Text="Page margins" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn"
+                aria-label="Page margins"
+                title="@(this.ShowTooltips ? null : "Page margins")"
+                aria-haspopup="true"
+                aria-expanded="@(this.open ? "true" : "false")"
+                disabled="@this.Disabled"
+                @onclick="() => this.open = !this.open">@OfficeToolbarIcons.Get(OfficeIcon.PageMargins)</button>
+    </Tooltip>
+
+    @if (this.open)
+    {
+        <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
+
+        <div class="shiny-office-panel" role="dialog" aria-label="Page margins">
+            <div class="margin-list">
+                @foreach (var preset in PageMarginPresets.All)
+                {
+                    var chosen = preset;
+
+                    <button type="button"
+                            class="@(this.IsCurrent(chosen.Margins) ? "margin-item on" : "margin-item")"
+                            aria-current="@(this.IsCurrent(chosen.Margins) ? "true" : null)"
+                            @onclick="() => this.PickAsync(chosen.Margins)">
+                        <span class="margin-name">@chosen.Name</span>
+                        <span class="margin-detail">@chosen.Description</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    bool open;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Whether the icon-only trigger carries a tooltip. See the editor views.</summary>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>The document's margins now, so the matching preset can be marked. Null when nothing is open.</summary>
+    [Parameter] public PageMargins? Current { get; set; }
+
+    [Parameter] public EventCallback<PageMargins> MarginsPicked { get; set; }
+
+    /// <summary>
+    /// Muting the tooltip rather than leaving it out - see the note in OfficeInsertMenu.
+    /// </summary>
+    TooltipTrigger TooltipTriggerMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
+
+    /// <summary>
+    /// Whether a preset is what the document is already set to.
+    /// </summary>
+    /// <remarks>
+    /// Compared to within half a pixel rather than exactly. Margins arrive as twips converted to
+    /// pixels at 96 dpi, and 1440 twips is exactly 96px - but a document written by something that
+    /// rounded differently comes back a hundredth out, and an exact match would mark nothing.
+    /// </remarks>
+    bool IsCurrent(PageMargins margins)
+        => this.Current is { } current
+           && Near(current.Left, margins.Left)
+           && Near(current.Top, margins.Top)
+           && Near(current.Right, margins.Right)
+           && Near(current.Bottom, margins.Bottom);
+
+    static bool Near(double a, double b) => Math.Abs(a - b) < 0.5;
+
+    async Task PickAsync(PageMargins margins)
+    {
+        this.open = false;
+        await this.MarginsPicked.InvokeAsync(margins);
+    }
+}

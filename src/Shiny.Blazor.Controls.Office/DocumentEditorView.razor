@@ -110,6 +110,13 @@
 
             <span class="doc-sep"></span>
 
+            <OfficePageMarginsMenu Disabled="Disabled"
+                                   ShowTooltips="ShowToolbarTooltips"
+                                   Current="@Margins"
+                                   MarginsPicked="OnMarginsPicked" />
+
+            <span class="doc-sep"></span>
+
             <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo (Ctrl+Z)" ShowTooltip="ShowToolbarTooltips"
                                  Disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))"
                                  Clicked="() => Run(c => c.Undo())" />
@@ -222,6 +229,9 @@
 
     CaretFormat Format => this.editor?.Controller?.CaretFormat ?? CaretFormat.Default;
 
+    /// <summary>The document's current margins, for the gallery to mark. Null until one is open.</summary>
+    PageMargins? Margins => this.editor?.Controller?.PageMargins;
+
     string ColorHex => OfficeColors.ToHex(this.Format.Color);
 
     async Task Run(Action<DocumentEditorController> action)
@@ -255,6 +265,16 @@
             : Task.CompletedTask;
 
     Task OnHighlightPicked(ArgbColor? color) => this.Run(c => c.SetHighlight(color));
+
+    /// <summary>
+    /// Applies a margin preset to the whole document.
+    /// </summary>
+    /// <remarks>
+    /// Offered in both layouts although only <see cref="DocumentPageLayout.Print"/> can show the
+    /// result — the margins belong to the document and are written and saved either way, exactly as a
+    /// page break is. Hiding the control in reflow would hide a setting the file still has.
+    /// </remarks>
+    Task OnMarginsPicked(PageMargins margins) => this.Run(c => c.SetPageMargins(margins));
 
     Task OnShapePicked(ShapeGeometry geometry)
         => this.Run(c => c.InsertShape(geometry, this.ShapeWidth, this.ShapeHeight));

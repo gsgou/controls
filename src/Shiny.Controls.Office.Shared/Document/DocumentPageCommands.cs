@@ -74,6 +74,136 @@ public sealed record RestoreElementCommand(int Block, OpenXmlElement Element, Op
 
 
 /// <summary>
+/// Sets the section's page margins.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The whole <c>w:pgMar</c> element is captured before the write and handed back as the inverse, which
+/// is what makes undo total: a document that had no margins element at all is restored to having none
+/// rather than to the defaults this command would otherwise have to guess at. It also preserves
+/// <c>w:gutter</c> and anything else Word wrote there, which a field-by-field inverse would quietly
+/// drop.
+/// </para>
+/// <para>
+/// The last section's properties, matching how <see cref="WordDocument.Page"/> is read. Multi-section
+/// documents are not modelled — the reader takes one page setup for the document, so writing per
+/// section would produce a document the view could not show.
+/// </para>
+/// </remarks>
+public sealed record SetPageMarginsCommand(PageMargins Margins) : DocumentCommand
+{
+    public override string Name => "Page margins";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        ArgumentNullException.ThrowIfNull(this.Margins);
+
+        if (!this.Margins.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(this.Margins), "A page margin must be a finite, non-negative length.");
+
+        var section = context.SectionProperties(create: true);
+        if (section is null)
+            return new NoOpCommand();
+
+        var existing = section.GetFirstChild<PageMargin>();
+        var inverse = new RestorePageMarginCommand(existing?.CloneNode(true) as PageMargin);
+
+        var margin = existing;
+
+        if (margin is null)
+        {
+            margin = new PageMargin();
+            Place(section, margin);
+        }
+
+        Write(margin, this.Margins);
+
+        context.MarkPageSetupChanged();
+        return inverse;
+    }
+
+    /// <summary>Writes the six measurements, leaving whatever else the element carries alone.</summary>
+    internal static void Write(PageMargin margin, PageMargins values)
+    {
+        // w:top and w:bottom are signed in the schema and the sides are not, which is not an
+        // inconsistency to paper over: a negative top margin is how Word puts content in the header
+        // band, and there is no equivalent sideways.
+        margin.Top = OoxmlUnits.PixelsToTwips(values.Top);
+        margin.Bottom = OoxmlUnits.PixelsToTwips(values.Bottom);
+        margin.Left = (uint)OoxmlUnits.PixelsToTwips(values.Left);
+        margin.Right = (uint)OoxmlUnits.PixelsToTwips(values.Right);
+        margin.Header = (uint)OoxmlUnits.PixelsToTwips(values.Header);
+        margin.Footer = (uint)OoxmlUnits.PixelsToTwips(values.Footer);
+
+        // Optional in the schema, required in practice: Word writes it on every section and a pgMar
+        // without it round-trips back with one anyway.
+        if (margin.Gutter is null)
+            margin.Gutter = 0U;
+    }
+
+    /// <summary>
+    /// Adds a <c>w:pgMar</c> in the one place the schema allows it.
+    /// </summary>
+    /// <remarks>
+    /// <c>sectPr</c> is a sequence, not a bag: the header and footer references come first, then the
+    /// paper size, then the margins. Appending would put the margins after <c>w:titlePg</c> in a
+    /// document that has one, and Word refuses to open a section whose children are out of order —
+    /// which is a corrupt-file dialog, not a layout bug.
+    /// </remarks>
+    internal static void Place(SectionProperties section, PageMargin margin)
+    {
+        if (section.GetFirstChild<PageSize>() is { } size)
+        {
+            size.InsertAfterSelf(margin);
+            return;
+        }
+
+        var anchor = section.ChildElements.LastOrDefault(x =>
+            x is HeaderReference or FooterReference or FootnoteProperties or EndnoteProperties or SectionType);
+
+        if (anchor is not null)
+            anchor.InsertAfterSelf(margin);
+        else
+            section.PrependChild(margin);
+    }
+}
+
+
+/// <summary>Puts back the <c>w:pgMar</c> that was there — or the absence of one. The inverse of a margin change.</summary>
+public sealed record RestorePageMarginCommand(PageMargin? Previous) : DocumentCommand
+{
+    public override string Name => "Page margins";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var section = context.SectionProperties(create: this.Previous is not null);
+        if (section is null)
+            return new NoOpCommand();
+
+        var existing = section.GetFirstChild<PageMargin>();
+        var inverse = new RestorePageMarginCommand(existing?.CloneNode(true) as PageMargin);
+
+        if (this.Previous is null)
+        {
+            existing?.Remove();
+        }
+        else if (existing is not null)
+        {
+            existing.InsertAfterSelf(this.Previous.CloneNode(true));
+            existing.Remove();
+        }
+        else
+        {
+            SetPageMarginsCommand.Place(section, (PageMargin)this.Previous.CloneNode(true));
+        }
+
+        context.MarkPageSetupChanged();
+        return inverse;
+    }
+}
+
+
+/// <summary>
 /// Replaces one header or footer wholesale, creating or removing the part as needed.
 /// </summary>
 /// <remarks>

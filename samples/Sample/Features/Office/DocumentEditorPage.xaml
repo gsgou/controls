@@ -11,6 +11,7 @@
             <Button Text="Toolbar" Clicked="OnToggleToolbar" />
             <Button Text="Theme" Clicked="OnToggleTheme" />
             <Button x:Name="SpellButton" Clicked="OnToggleSpelling" />
+            <Button x:Name="MarginButton" Clicked="OnCycleMargins" />
         </HorizontalStackLayout>
 
         <Border Grid.Row="1" StrokeThickness="1">

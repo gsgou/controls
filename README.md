@@ -1315,6 +1315,16 @@ formatted, and is abandoned if the caret moves off the spot where it was made �
 thought better of cannot resurface in something typed later. Slides do the same thing through
 PowerPoint's own mechanism, the paragraph end mark.
 
+**Page margins are settable from both toolbars.** A page-margins button opens Word's own four presets
+— Normal, Narrow, Moderate and Wide — as an action sheet on MAUI and a popover on Blazor, with the
+preset the document already matches marked. `DocumentEditorController.SetPageMargins` takes a preset,
+`PageMargins.FromInches(...)`, or four numbers, and the change is one undo step: the whole `w:pgMar`
+element is captured before the write, so a document that never had one goes back to not having one and
+anything else Word wrote there — a binding gutter, most of all — survives. Only the paginated
+(`Print`) layout can show the result; a reflowed column has no paper to inset from, so the margins are
+written and saved but have nowhere to appear until the view is showing pages, exactly like a page
+break.
+
 **Spell check uses the platform's own dictionary.** On MAUI nothing has to be registered — referencing
 the package installs `UITextChecker` (iOS, Mac Catalyst), `NSSpellChecker` (macOS), Android's
 text-services session, or the Windows `ISpellChecker` COM API. It is the *user's* dictionary, so words
@@ -1457,7 +1467,9 @@ width, so there are no pages, headers or footers. That is deliberate: a viewer w
 pagination engine puts page breaks in the wrong places, which reads as a bug rather than a gap. It
 resolves the whole style chain — document defaults, the named style with its entire `basedOn`
 ancestry, then direct formatting — along with list numbering from `numbering.xml`, tables with column
-spans, vertical merges and shading, inline images, and an `Outline()` for navigation.
+spans, vertical merges and shading, inline images, and an `Outline()` for navigation. List numbers are
+derived from document order rather than frozen at read time, so editing inside a list item leaves its
+number alone and adding or removing an item renumbers the rest of the list.
 
 **PowerPoint scales; it does not reflow.** Slides are fixed-size artboards, so the view fits and
 letterboxes them. Shapes arrive resolved through slide → layout → master, which matters because a

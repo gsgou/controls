@@ -27,6 +27,9 @@ public enum OfficeIcon
     /// <summary>The chevron on a split button, saying that pressing it opens a gallery.</summary>
     Chevron,
 
+    /// <summary>A sheet of paper with its content box drawn inside it — the page margins gallery.</summary>
+    PageMargins,
+
     // The spreadsheet toolbar's own. Everything above is shared with the document and slide bars;
     // these have no meaning outside a grid, which is why they sit apart rather than interleaved.
 
@@ -166,6 +169,15 @@ public static class OfficeIcons
             OfficeIconShape.Line(3.4f, 14.5f, 20.6f, 14.5f),
             OfficeIconShape.Line(9.2f, 4.6f, 9.2f, 19.4f),
             OfficeIconShape.Line(15f, 4.6f, 15f, 19.4f)
+        ],
+
+        // A portrait sheet with the content box inside it. Two rectangles and nothing else, because
+        // what the icon has to say is "this inner box moves" — the corner ticks Word draws are
+        // illegible at 24px and read as a table once they are thick enough to see.
+        OfficeIcon.PageMargins =>
+        [
+            OfficeIconShape.Rectangle(5f, 2.6f, 14f, 18.8f, 1.4f),
+            OfficeIconShape.Rectangle(8f, 6.2f, 8f, 11.6f)
         ],
 
         OfficeIcon.Picture =>

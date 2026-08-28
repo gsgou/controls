@@ -33,8 +33,20 @@ public sealed record ParagraphFormat
     public int OutlineLevel { get; init; }
 }
 
-/// <summary>A list label already resolved to the text that should be drawn.</summary>
-public sealed record ListLabel(string Text, TextStyle Style, double Indent, double HangingIndent);
+/// <summary>A paragraph's reference into <c>numbering.xml</c> — which list it is in, and how deep.</summary>
+public sealed record ListNumbering(int NumId, int Level);
+
+/// <summary>A list label, and the reference the number in it was worked out from.</summary>
+/// <remarks>
+/// <see cref="Text"/> is filled in by a pass over the finished block list, not by the reader. The
+/// number in front of a paragraph is a function of every numbered paragraph before it, so a paragraph
+/// read on its own — which is what happens after every edit — cannot know it.
+/// </remarks>
+public sealed record ListLabel(string Text, TextStyle Style, double Indent, double HangingIndent)
+{
+    /// <summary>The list this label belongs to, or null for one the editor synthesised.</summary>
+    public ListNumbering? Numbering { get; init; }
+}
 
 public sealed record DocumentParagraph(IReadOnlyList<StyledRun> Runs, ParagraphFormat Format) : DocumentBlock
 {
@@ -101,6 +113,119 @@ public sealed record DocumentTable(IReadOnlyList<DocumentTableRow> Rows) : Docum
 /// <summary>A horizontal rule.</summary>
 public sealed record DocumentRule : DocumentBlock;
 
+/// <summary>
+/// The four page margins, plus the header and footer distances that sit inside the top and bottom ones.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Pixels at 96 dpi, the unit every other measurement in this model uses. <see cref="FromInches"/> and
+/// <see cref="FromPoints"/> exist because nobody sets a margin in pixels — a page margin is an inch or
+/// three quarters of one, and doing that conversion at every call site is how one of them ends up in
+/// points.
+/// </para>
+/// <para>
+/// Separate from <see cref="PageSetup"/> rather than being it: the paper size, the header layout flags
+/// and the margins are read together but set apart, and a caller changing the margins should not have
+/// to restate the page size to do it.
+/// </para>
+/// </remarks>
+public sealed record PageMargins
+{
+    /// <summary>Word's Normal: one inch all round.</summary>
+    public static readonly PageMargins Normal = FromInches(1, 1, 1, 1);
+
+    /// <summary>Word's Narrow: half an inch all round.</summary>
+    public static readonly PageMargins Narrow = FromInches(0.5, 0.5, 0.5, 0.5);
+
+    /// <summary>Word's Moderate: an inch top and bottom, three quarters at the sides.</summary>
+    public static readonly PageMargins Moderate = FromInches(0.75, 1, 0.75, 1);
+
+    /// <summary>Word's Wide: an inch top and bottom, two inches at the sides.</summary>
+    public static readonly PageMargins Wide = FromInches(2, 1, 2, 1);
+
+    public double Left { get; init; } = 96;
+    public double Top { get; init; } = 96;
+    public double Right { get; init; } = 96;
+    public double Bottom { get; init; } = 96;
+
+    /// <summary>
+    /// Distance from the top of the page to the top of the header.
+    /// </summary>
+    /// <remarks>
+    /// Inside <see cref="Top"/>, not added to it — the header sits in the top margin, above where body
+    /// text starts, which is why a header can be present without moving the body at all.
+    /// </remarks>
+    public double Header { get; init; } = 48;
+
+    /// <summary>Distance from the bottom of the page to the bottom of the footer.</summary>
+    public double Footer { get; init; } = 48;
+
+    /// <summary>The same margin on all four sides, in pixels.</summary>
+    public static PageMargins Uniform(double pixels) => new()
+    {
+        Left = pixels,
+        Top = pixels,
+        Right = pixels,
+        Bottom = pixels
+    };
+
+    /// <summary>Margins in inches, which is how a page is actually described.</summary>
+    public static PageMargins FromInches(double left, double top, double right, double bottom) => new()
+    {
+        Left = OoxmlUnits.InchesToPixels(left),
+        Top = OoxmlUnits.InchesToPixels(top),
+        Right = OoxmlUnits.InchesToPixels(right),
+        Bottom = OoxmlUnits.InchesToPixels(bottom),
+        Header = OoxmlUnits.InchesToPixels(0.5),
+        Footer = OoxmlUnits.InchesToPixels(0.5)
+    };
+
+    public static PageMargins FromPoints(double left, double top, double right, double bottom) => new()
+    {
+        Left = OoxmlUnits.PointsToPixels(left),
+        Top = OoxmlUnits.PointsToPixels(top),
+        Right = OoxmlUnits.PointsToPixels(right),
+        Bottom = OoxmlUnits.PointsToPixels(bottom),
+        Header = OoxmlUnits.PointsToPixels(36),
+        Footer = OoxmlUnits.PointsToPixels(36)
+    };
+
+    /// <summary>True when every measurement is a finite, non-negative length.</summary>
+    public bool IsValid =>
+        IsLength(this.Left) && IsLength(this.Top) && IsLength(this.Right) && IsLength(this.Bottom)
+        && IsLength(this.Header) && IsLength(this.Footer);
+
+    static bool IsLength(double value) => Double.IsFinite(value) && value >= 0;
+}
+
+
+/// <summary>One entry in the margin gallery both editing toolbars offer.</summary>
+/// <param name="Name">What the entry is called, matching Word's own names.</param>
+/// <param name="Description">The measurements, so the name is not the only thing to go on.</param>
+/// <param name="Margins">What choosing it applies.</param>
+public sealed record PageMarginPreset(string Name, string Description, PageMargins Margins);
+
+
+/// <summary>
+/// The margin presets the MAUI and Blazor toolbars offer, in one place so they cannot differ.
+/// </summary>
+/// <remarks>
+/// Word's own four, with Word's own names and measurements. A preset offered on one host and not the
+/// other would be a difference with nothing behind it, and a gallery invented here would be one more
+/// set of numbers for a reader to learn.
+/// </remarks>
+public static class PageMarginPresets
+{
+    public static IReadOnlyList<PageMarginPreset> All { get; } =
+    [
+        new("Normal", "1\" all round", PageMargins.Normal),
+        new("Narrow", "0.5\" all round", PageMargins.Narrow),
+        new("Moderate", "1\" top and bottom, 0.75\" sides", PageMargins.Moderate),
+        new("Wide", "1\" top and bottom, 2\" sides", PageMargins.Wide)
+    ];
+}
+
+
 /// <summary>Page geometry, from the section properties.</summary>
 /// <remarks>
 /// Used two ways. In reflow it only supplies a sensible measure; in print layout it is the actual
@@ -135,6 +260,33 @@ public sealed record PageSetup
 
     /// <summary>True when the document declares distinct even-page headers and footers.</summary>
     public bool DifferentOddAndEvenPages { get; init; }
+
+    /// <summary>The margins on their own, for reading back what a document is currently set to.</summary>
+    public PageMargins Margins => new()
+    {
+        Left = this.MarginLeft,
+        Top = this.MarginTop,
+        Right = this.MarginRight,
+        Bottom = this.MarginBottom,
+        Header = this.HeaderDistance,
+        Footer = this.FooterDistance
+    };
+
+    /// <summary>This setup with different margins and the same paper.</summary>
+    public PageSetup WithMargins(PageMargins margins)
+    {
+        ArgumentNullException.ThrowIfNull(margins);
+
+        return this with
+        {
+            MarginLeft = margins.Left,
+            MarginTop = margins.Top,
+            MarginRight = margins.Right,
+            MarginBottom = margins.Bottom,
+            HeaderDistance = margins.Header,
+            FooterDistance = margins.Footer
+        };
+    }
 
     public double ContentWidth => Math.Max(1, this.Width - this.MarginLeft - this.MarginRight);
 

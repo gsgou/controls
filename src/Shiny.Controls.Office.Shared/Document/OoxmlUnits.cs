@@ -24,6 +24,18 @@ public static class OoxmlUnits
     /// <summary>WordprocessingML sizes are in twentieths of a point.</summary>
     public static double TwipsToPixels(double twips) => twips / 20 / PointsPerInch * PixelsPerInch;
 
+    /// <summary>
+    /// Pixels back to twentieths of a point, for writing a WordprocessingML measurement.
+    /// </summary>
+    /// <remarks>
+    /// Rounded rather than truncated: a margin the user asked for in inches lands on a whole number of
+    /// twips either way, and truncating turns 1440 into 1439 for any value that arrives a hair light
+    /// from a floating-point round trip.
+    /// </remarks>
+    public static int PixelsToTwips(double pixels) => (int)Math.Round(pixels / PixelsPerInch * PointsPerInch * 20);
+
+    public static double InchesToPixels(double inches) => inches * PixelsPerInch;
+
     /// <summary>Run font size in WordprocessingML is in half-points.</summary>
     public static double HalfPointsToPixels(double halfPoints) => halfPoints / 2 / PointsPerInch * PixelsPerInch;
 

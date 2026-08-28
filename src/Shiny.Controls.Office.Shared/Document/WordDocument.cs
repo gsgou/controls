@@ -32,7 +32,8 @@ public sealed class WordDocument : OfficeDocument
     readonly WordprocessingDocument document;
     readonly List<DocumentBlock> blocks = new();
     readonly WordBodyReader reader;
-    readonly WordBodyReader chromeReader;
+    readonly WordNumbering numbering;
+    readonly NumberingSequencer sequencer;
     readonly Body? body;
     bool contentChanged;
 
@@ -45,17 +46,16 @@ public sealed class WordDocument : OfficeDocument
             ?? throw new InvalidDataException("The package has no main document part.");
 
         var styles = new WordStyleResolver(main);
-        var numbering = new WordNumbering(main);
-        this.reader = new WordBodyReader(main, styles, numbering, unsupported);
+        this.numbering = new WordNumbering(main);
+        this.reader = new WordBodyReader(main, styles, this.numbering, unsupported);
+        this.sequencer = new NumberingSequencer(this.numbering);
         this.body = main.Document?.Body;
 
         this.DefaultStyle = styles.DefaultRunStyle;
         this.Page = ReadPageSetup(main);
         this.blocks.AddRange(this.reader.ReadBody(this.body));
+        this.sequencer.Apply(this.blocks);
 
-        // A second reader with its own numbering state: list counters are consumed as the body is
-        // walked, and a numbered list in a header would otherwise continue the body's sequence.
-        this.chromeReader = new WordBodyReader(main, styles, new WordNumbering(main), unsupported);
         this.RereadHeadersFooters();
 
         this.Undo = new UndoStack<WordDocument>(this);
@@ -329,6 +329,11 @@ public sealed class WordDocument : OfficeDocument
 
     void MarkChanged()
     {
+        // Every edit path lands here, which makes it the one place list numbering can be brought back
+        // into agreement with the block order: a re-projected item keeps the number it had, and an
+        // inserted or deleted one renumbers the rest of its list.
+        this.sequencer.Apply(this.blocks);
+
         this.contentChanged = true;
         this.MarkDirty();
         this.ContentChanged?.Invoke(this, EventArgs.Empty);
@@ -414,18 +419,28 @@ public sealed class WordDocument : OfficeDocument
         foreach (var reference in section.Elements<HeaderReference>())
         {
             if (PartFor(main, reference.Id?.Value) is HeaderPart part)
-                set.SetHeader(KindOf(reference), new DocumentHeaderFooter(this.chromeReader.ReadContainer(part.Header)));
+                set.SetHeader(KindOf(reference), new DocumentHeaderFooter(this.ReadChrome(part.Header)));
         }
 
         foreach (var reference in section.Elements<FooterReference>())
         {
             if (PartFor(main, reference.Id?.Value) is FooterPart part)
-                set.SetFooter(KindOf(reference), new DocumentHeaderFooter(this.chromeReader.ReadContainer(part.Footer)));
+                set.SetFooter(KindOf(reference), new DocumentHeaderFooter(this.ReadChrome(part.Footer)));
         }
 
         this.HeadersFooters = set;
         this.Page = ReadPageSetup(main);
     }
+
+    /// <summary>
+    /// Reads one header or footer part, numbering any list in it as a sequence of its own.
+    /// </summary>
+    /// <remarks>
+    /// A fresh sequencer per part, deliberately: a numbered list in a header is its own list, and must
+    /// neither continue the body's numbering nor the previous header's.
+    /// </remarks>
+    IReadOnlyList<DocumentBlock> ReadChrome(OpenXmlElement? root)
+        => new NumberingSequencer(this.numbering).Applied(this.reader.ReadContainer(root));
 
     static DocumentPageKind KindOf(OpenXmlElement reference) => OoxmlUnits.EnumAttribute(reference, "type") switch
     {
@@ -493,6 +508,22 @@ public sealed class WordDocument : OfficeDocument
         };
 
         return root?.ChildElements.Select(x => x.CloneNode(true)).ToList() ?? [];
+    }
+
+    /// <summary>
+    /// Re-reads the page geometry after the section properties have been edited.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Page"/> is read once at open and cached, because every paint asks for it. A margin
+    /// change writes to the XML the cache came from, so without this the pages keep the geometry they
+    /// were opened with and the edit is only visible after a reload.
+    /// </remarks>
+    internal void MarkPageSetupChanged()
+    {
+        if (this.Main is { } main)
+            this.Page = ReadPageSetup(main);
+
+        this.MarkChanged();
     }
 
     /// <summary>Marks the document changed after an edit that did not go through a block.</summary>

@@ -1,3 +1,4 @@
+using Shiny.Controls.Office.Document;
 using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
@@ -146,6 +147,34 @@ static class OfficeMenus
         {
             if (labels[i] == picked)
                 return TableSizes[i];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Asks which page margins to apply. Null when the user backed out.
+    /// </summary>
+    /// <remarks>
+    /// The presets come from <see cref="PageMarginPresets"/> rather than being listed here, so this
+    /// sheet and the Blazor gallery offer the same four with the same measurements. The measurements
+    /// are on the label because "Moderate" says nothing on its own.
+    /// </remarks>
+    public static async Task<PageMargins?> PickPageMarginsAsync(Page? page)
+    {
+        if (page is null)
+            return null;
+
+        var labels = PageMarginPresets.All.Select(x => $"{x.Name} — {x.Description}").ToArray();
+        var picked = await page.DisplayActionSheet("Page margins", "Cancel", null, labels);
+
+        if (string.IsNullOrEmpty(picked) || picked == "Cancel")
+            return null;
+
+        for (var i = 0; i < labels.Length; i++)
+        {
+            if (labels[i] == picked)
+                return PageMarginPresets.All[i].Margins;
         }
 
         return null;

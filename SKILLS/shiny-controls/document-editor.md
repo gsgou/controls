@@ -140,6 +140,34 @@ c.CaretFormat;                       // what a toolbar should show as active
 c.Selection.Range;
 ```
 
+### Page margins
+
+The document's own margins, set for the whole document and undoable in one step:
+
+```csharp
+c.PageMargins;                                    // what it is set to now, in pixels at 96dpi
+c.SetPageMargins(PageMargins.Narrow);             // Normal / Narrow / Moderate / Wide
+c.SetPageMargins(PageMargins.FromInches(1, 1.25, 1, 1.25));   // left, top, right, bottom
+c.SetPageMargins(left: 96, top: 96, right: 96, bottom: 96);   // pixels, keeps header/footer distances
+```
+
+`PageMargins` also carries `Header` and `Footer` — the distance from the page edge to the header and
+footer, which sit **inside** the top and bottom margins rather than adding to them. `PageSetup.Margins`
+reads them off an open document, `PageSetup.WithMargins` writes them back onto a copy.
+
+`PageMarginPresets.All` is the gallery both toolbars offer (name, description, margins). Use it rather
+than a list of your own — it is the one place the two hosts agree on what "Moderate" means.
+
+**Both toolbars carry a page-margins button** — an action sheet on MAUI, a popover on Blazor, and the
+preset the document already matches is marked.
+
+Two things to know:
+
+- Only `DocumentPageLayout.Print` can show it. A reflowed column has no paper, so it insets content by
+  a cosmetic gutter instead. The change is still written and still saved — same as a page break.
+- Margins are the **last section's**, matching how the geometry is read. Multi-section documents are
+  not modelled.
+
 ### Highlighting
 
 `w:highlight` takes a **name from a closed list**, not a colour, so a highlight is resolved to the
@@ -156,6 +184,21 @@ HighlightPalette.ColorOf("yellow");  // the other way
 Both toolbars already show a split highlight button over this palette — the same one on both hosts,
 and the same palette the slide editor uses (there `a:highlight` holds a real colour, so nothing is
 approximated).
+
+### Numbered lists
+
+A list number is **not** stored on the paragraph that carries it — it is a function of every numbered
+paragraph before it, so it is worked out in a pass over the whole block list after every edit. Two
+consequences worth knowing:
+
+- Formatting, typing in or undoing an edit inside a list item leaves its number alone. (This was not
+  true before: the number was resolved once at read time from running counters that were then never
+  rewound, so re-reading an edited paragraph handed it the number after the document's last one, and
+  every further edit pushed it one higher.)
+- Splitting an item, deleting one, or dropping a block in renumbers the rest of that list on its own.
+
+`ListLabel.Text` is what to draw; `ListLabel.Numbering` is the `numId`/level it came from, for a
+toolbar that wants to say which list the caret is in.
 
 ## Shapes, pictures and tables
 
@@ -314,4 +357,6 @@ underlined.
 - **Grammar** checking. Android reports grammar errors and they are deliberately ignored — only
   `LooksLikeTypo` is treated as an error, so the behaviour matches the other three platforms.
 - Inserting new paragraph styles.
+- Setting the **paper size or orientation** — margins can be set, the sheet they sit on cannot.
+- **Per-section** page setup. One geometry is read for the document and one is written back.
 - Everything the viewer does not render is still not rendered — see `document-viewer.md`.

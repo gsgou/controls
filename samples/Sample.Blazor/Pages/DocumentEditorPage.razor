@@ -30,10 +30,18 @@
     <button class="btn" @onclick="ClearHeader">Clear</button>
     <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.Plain)">Page number</button>
     <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.PageOfCount)">Page X of Y</button>
+    <select class="txt" value="@marginPreset" @onchange="ApplyMargins">
+        <option value="">Page margins…</option>
+        @foreach (var preset in PageMarginPresets.All)
+        {
+            <option value="@preset.Name">@preset.Name — @preset.Description</option>
+        }
+    </select>
     <button class="btn" @onclick="() => Nudge(-0.25)">&minus;</button>
     <span class="status">@($"{this.zoom * 100:0}%")</span>
     <button class="btn" @onclick="() => Nudge(0.25)">+</button>
     <span class="status">@PageStatus</span>
+    <span class="status">@MarginStatus</span>
 </div>
 
 <div class="editor-host">
@@ -90,6 +98,7 @@
     DocumentPageLayout pageLayout = DocumentPageLayout.Print;
     double zoom = 1.0;
     string headerText = "Quarterly Report";
+    string marginPreset = string.Empty;
 
     DocumentEditorController? Controller => this.withToolbar ? this.view?.Controller : this.editor?.Controller;
 
@@ -107,6 +116,29 @@
     void ApplyHeader() => this.Controller?.SetHeaderText(this.headerText, PageNumberPosition.Center);
 
     void ClearHeader() => this.Controller?.SetHeaderText(null);
+
+    /// <summary>
+    /// The margin presets, driven from the page rather than from the toolbar.
+    /// </summary>
+    /// <remarks>
+    /// The toolbar already carries this gallery — it is repeated here to show the controller API a
+    /// host with its own chrome would call, and because the bare <c>DocumentEditor</c> (toolbar
+    /// wrapper off) has no toolbar to carry it.
+    /// </remarks>
+    void ApplyMargins(ChangeEventArgs e)
+    {
+        this.marginPreset = e.Value as string ?? string.Empty;
+
+        if (PageMarginPresets.All.FirstOrDefault(x => x.Name == this.marginPreset) is { } preset)
+            this.Controller?.SetPageMargins(preset.Margins);
+    }
+
+    /// <summary>The margins as a reader would state them — the model keeps pixels at 96 dpi.</summary>
+    string MarginStatus => this.Controller?.PageMargins is { } margins
+        ? $"margins {Inches(margins.Left)}/{Inches(margins.Top)}/{Inches(margins.Right)}/{Inches(margins.Bottom)} in"
+        : string.Empty;
+
+    static string Inches(double pixels) => (pixels / 96).ToString("0.##");
 
     void AddPageNumber(PageNumberFormat format)
         => this.Controller?.InsertPageNumber(PageNumberPlacement.Footer, PageNumberPosition.Center, format);

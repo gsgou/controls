@@ -4,8 +4,28 @@ using Shiny.Controls.Office.Text;
 
 namespace Shiny.Controls.Office.Document;
 
+/// <summary>One level of a numbering definition, resolved to the parts a label is built from.</summary>
+/// <remarks>
+/// For a bullet level <see cref="Template"/> is the glyph itself rather than a placeholder template —
+/// a bullet has nothing to substitute into, and carrying the mapped glyph here keeps the
+/// <c>lvlText</c> handling in one place.
+/// </remarks>
+sealed record ListLevel(
+    NumberFormatValues Format,
+    string Template,
+    int Start,
+    double Indent,
+    double Hanging)
+{
+    public bool IsBullet => this.Format == NumberFormatValues.Bullet;
+
+    /// <summary>A level that deliberately draws nothing.</summary>
+    public bool IsNone => this.Format == NumberFormatValues.None;
+}
+
+
 /// <summary>
-/// Resolves list numbering into the label text that should appear in front of a paragraph.
+/// Resolves <c>numbering.xml</c> into the level definitions a list label is built from.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,8 +35,10 @@ namespace Shiny.Controls.Office.Document;
 /// <c>%1.%2.</c> whose placeholders refer to the running counters of *outer* levels, not to itself.
 /// </para>
 /// <para>
-/// Counters are stateful: they run as the document is read, and starting a level resets every level
-/// below it. That is why this is a class you walk the document with rather than a pure function.
+/// Deliberately stateless. Running the counters is <see cref="NumberingSequencer"/>'s job, because
+/// they are a property of a walk over the document rather than of the definitions — and definitions
+/// that held counters could only be walked once, which is exactly the trap that made a re-read
+/// paragraph come back with the wrong number.
 /// </para>
 /// </remarks>
 sealed class WordNumbering
@@ -24,7 +46,6 @@ sealed class WordNumbering
     readonly Dictionary<int, AbstractNum> abstractNumbering = new();
     readonly Dictionary<int, int> numToAbstract = new();
     readonly Dictionary<int, Dictionary<int, Level>> overrides = new();
-    readonly Dictionary<(int NumId, int Level), int> counters = new();
 
     public WordNumbering(MainDocumentPart main)
     {
@@ -61,8 +82,8 @@ sealed class WordNumbering
 
     public bool IsEmpty => this.abstractNumbering.Count == 0;
 
-    /// <summary>Advances the counters and returns the label for a numbered paragraph.</summary>
-    public ListLabel? Next(int numId, int levelIndex, TextStyle style)
+    /// <summary>The definition for one level of one list, or null when the document has no such level.</summary>
+    public ListLevel? Level(int numId, int levelIndex)
     {
         var level = this.FindLevel(numId, levelIndex);
         if (level is null)
@@ -70,69 +91,18 @@ sealed class WordNumbering
 
         var format = level.NumberingFormat?.Val?.Value ?? NumberFormatValues.Decimal;
 
-        if (format == NumberFormatValues.None)
-            return null;
+        // Bullet glyphs come from symbol fonts whose code points mean nothing in a text font; mapping
+        // the common ones keeps a list looking like a list.
+        var template = format == NumberFormatValues.Bullet
+            ? MapBullet(level.LevelText?.Val?.Value)
+            : level.LevelText?.Val?.Value ?? "%1.";
 
-        if (format == NumberFormatValues.Bullet)
-        {
-            // Bullet glyphs come from symbol fonts whose code points mean nothing in a text font;
-            // mapping the common ones keeps a list looking like a list.
-            var glyph = MapBullet(level.LevelText?.Val?.Value);
-            return new ListLabel(glyph, style, IndentOf(level), HangingOf(level));
-        }
-
-        this.Advance(numId, levelIndex, level);
-
-        var template = level.LevelText?.Val?.Value ?? "%1.";
-        var text = this.Substitute(template, numId, levelIndex, format);
-        return new ListLabel(text, style, IndentOf(level), HangingOf(level));
-    }
-
-    void Advance(int numId, int levelIndex, Level level)
-    {
-        var key = (numId, levelIndex);
-        if (this.counters.TryGetValue(key, out var current))
-        {
-            this.counters[key] = current + 1;
-        }
-        else
-        {
-            this.counters[key] = level.StartNumberingValue?.Val?.Value ?? 1;
-        }
-
-        // Starting a level restarts everything nested inside it, which is what makes 1.1, 1.2, 2.1
-        // rather than 1.1, 1.2, 2.3.
-        foreach (var deeper in this.counters.Keys.Where(k => k.NumId == numId && k.Level > levelIndex).ToList())
-            this.counters.Remove(deeper);
-    }
-
-    string Substitute(string template, int numId, int levelIndex, NumberFormatValues format)
-    {
-        var builder = new System.Text.StringBuilder();
-
-        for (var i = 0; i < template.Length; i++)
-        {
-            if (template[i] != '%' || i + 1 >= template.Length || !char.IsAsciiDigit(template[i + 1]))
-            {
-                builder.Append(template[i]);
-                continue;
-            }
-
-            // %1 is level 0, %2 is level 1, and so on.
-            var referenced = template[i + 1] - '1';
-            i++;
-
-            var value = this.counters.GetValueOrDefault((numId, referenced), 0);
-            if (value == 0)
-                continue;
-
-            // Only the paragraph's own level uses its own format; outer levels contribute their
-            // running number, which Word always renders as decimal inside a compound label.
-            var levelFormat = referenced == levelIndex ? format : NumberFormatValues.Decimal;
-            builder.Append(Render(value, levelFormat));
-        }
-
-        return builder.ToString();
+        return new ListLevel(
+            format,
+            template,
+            level.StartNumberingValue?.Val?.Value ?? 1,
+            IndentOf(level),
+            HangingOf(level));
     }
 
     Level? FindLevel(int numId, int levelIndex)
@@ -165,7 +135,8 @@ sealed class WordNumbering
         return 0;
     }
 
-    static string Render(int value, NumberFormatValues format)
+    /// <summary>Renders one counter value in a level's number format.</summary>
+    public static string Render(int value, NumberFormatValues format)
     {
         if (format == NumberFormatValues.UpperLetter)
             return Alphabetic(value).ToUpperInvariant();

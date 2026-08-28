@@ -125,14 +125,22 @@ sealed class WordBodyReader(
     {
         var numberingProperties = properties?.NumberingProperties;
         var numId = numberingProperties?.NumberingId?.Val?.Value;
-        var level = numberingProperties?.NumberingLevelReference?.Val?.Value ?? 0;
+        var levelIndex = numberingProperties?.NumberingLevelReference?.Val?.Value ?? 0;
 
         if (numId is null || numId == 0 || numbering.IsEmpty)
             return null;
 
-        var label = numbering.Next(numId.Value, level, runStyle);
-        if (label is null)
+        var level = numbering.Level(numId.Value, levelIndex);
+        if (level is null || level.IsNone)
             return null;
+
+        // The text is deliberately left empty. The number depends on every numbered paragraph before
+        // this one, which a paragraph read on its own cannot see, so NumberingSequencer fills it in
+        // once the whole block list exists.
+        var label = new ListLabel(string.Empty, runStyle, level.Indent, level.Hanging)
+        {
+            Numbering = new ListNumbering(numId.Value, levelIndex)
+        };
 
         // The level's own indent applies unless the paragraph overrides it directly.
         if (format.IndentLeft == 0 && label.Indent > 0)
