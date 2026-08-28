@@ -1,0 +1,36 @@
+# SecurityPin
+
+[← All Shiny Controls](../../README.md)
+
+A PIN entry control with individually rendered cells that captures input through a hidden Entry. Digits remain visible by default and can optionally be masked with any character.
+
+![SecurityPin](../../assets/securitypin.png)
+
+```xml
+<shiny:SecurityPin Length="4"
+                   HideCharacter="*"
+                   Value="{Binding Pin}"
+                   Keyboard="Numeric"
+                   Completed="OnPinCompleted" />
+```
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| Length | int | 4 | Number of PIN cells |
+| Value | string | "" | Current PIN value (TwoWay) |
+| Keyboard | Keyboard | Numeric | Keyboard type for input |
+| HideCharacter | string? | null | When set, masks entered characters; when null/empty, shows actual values |
+| CellSize | double | 50 | Width/height of each cell |
+| CellSpacing | double | 8 | Space between cells |
+| CellCornerRadius | double | 8 | Border corner radius |
+| CellBorderColor | Color? | null | Cell border color |
+| CellFocusedBorderColor | Color? | null | Border color for the active cell |
+| CellBackgroundColor | Color? | null | Cell fill color |
+| CellTextColor | Color? | null | Entered character color |
+| FontSize | double | 24 | Character font size |
+
+| UseFeedback | bool | Enable/disable feedback on digit entry (click) and completion (long press) (default: true) |
+
+Events: `Completed` fires with a `SecurityPinCompletedEventArgs` once the entered value reaches `Length`.
+
+Methods: `Focus()`, `Unfocus()`, `Clear()`.

@@ -8,7 +8,8 @@ Guidance for working in the **Shiny Controls** repo (`Shiny.Maui.Controls` + `Sh
 - `samples/Sample/` — the MAUI + Blazor demo app. Each control has a feature page under `samples/Sample/Features/<Area>/`, wired into `AppShell.xaml` and `MauiProgram.cs`.
 - `tests/` — unit tests.
 - `SKILLS/shiny-controls/` — the **local skill** (`SKILL.md` + one markdown file per control) that teaches code generation for these controls.
-- `README.md` — the package-level overview (top-of-file summary paragraph + per-control sections + NuGet badges).
+- `README.md` — the front door: summary paragraph, NuGet badges, Getting Started, and a grouped index linking to `docs/controls/`.
+- `docs/controls/` — **one markdown file per control** (`datagrid.md`, `document-editor.md`, …), named to match `SKILLS/shiny-controls/` where a skill file exists, plus `styling.md` for the cross-cutting styling/theming note. Images are referenced as `../../assets/…`.
 - `themes/` — M3 theme pack seeds.
 
 ## Documentation site
@@ -24,7 +25,7 @@ The public docs live in a **separate repo**: `~/Desktop/dev/documentation` (Astr
 
 With each fix and each new feature, update all of the following so they stay in sync:
 
-1. **README.md** — reflect new/changed behavior; add a NuGet badge + section if it's a new package.
+1. **`docs/controls/<control>.md`** — reflect new/changed behavior in that control's own page (add the page and a row in the README's grouped index if the control is new). Touch `README.md` itself only for the summary paragraph, a NuGet badge, Getting Started, or the index.
 2. **Local skill** (`SKILLS/shiny-controls/`) — update the relevant control's `.md` (or add a new one and reference it in `SKILL.md`) so generated code matches.
 3. **Shiny docs** (`~/Desktop/dev/documentation`):
    - **Release notes** — add an entry to `src/content/docs/controls/release-notes.mdx`.
@@ -40,7 +41,7 @@ With each fix and each new feature, update all of the following so they stay in 
 ### Additionally, if the PACKAGE is new (or removed / renamed)
 
 8. Add it to the solution (`Shiny.Controls.slnx`) and to `Build.slnf`.
-9. Add a NuGet badge to `README.md` (see step 1) — the badge block sits directly under the summary paragraph.
+9. Add a NuGet badge to `README.md` — the badge block sits directly under the summary paragraph — and mention the package in the summary paragraph itself.
 10. Add it to the **`Package` dropdown** in `.github/ISSUE_TEMPLATE/bug_report.yml` and to the **`Target Package`** dropdown in `.github/ISSUE_TEMPLATE/feature_request.yml`. Both dropdowns mirror `src/` exactly, so a removed or renamed package must come out of them too.
 11. Update the **Repo layout** bullet at the top of this file.
 
