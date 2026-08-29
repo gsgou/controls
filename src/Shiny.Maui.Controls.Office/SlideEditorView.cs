@@ -3,6 +3,7 @@ using Shiny.Controls.Office.Packaging;
 using Shiny.Controls.Office.Presentation;
 using Shiny.Controls.Office.Shapes;
 using Shiny.Maui.Controls.ColorPicker;
+using Shiny.Maui.Controls.Ribbons;
 using Shiny.Maui.Controls.FontPicker;
 using Shiny.Controls.Office.Text;
 using TextAlignment = Shiny.Controls.Office.Text.TextAlignment;
@@ -29,35 +30,34 @@ namespace Shiny.Maui.Controls.Office;
 public class SlideEditorView : ContentView, IDisposable
 {
     readonly SlideEditor editor = new();
-    readonly HorizontalStackLayout bar;
-    readonly ScrollView barScroller;
+    readonly Ribbon ribbon;
     readonly Grid root;
     readonly Label status;
     readonly Label counter;
 
-    readonly OfficeToolbarButton previous;
-    readonly OfficeToolbarButton next;
-    readonly OfficeToolbarButton bold;
-    readonly OfficeToolbarButton italic;
-    readonly OfficeToolbarButton underline;
-    readonly OfficeToolbarButton strike;
-    readonly OfficeToolbarButton alignLeft;
-    readonly OfficeToolbarButton alignCenter;
-    readonly OfficeToolbarButton alignRight;
-    readonly OfficeToolbarButton outdent;
-    readonly OfficeToolbarButton indent;
-    readonly OfficeToolbarButton bulletList;
-    readonly OfficeToolbarButton numberedList;
-    readonly OfficeToolbarButton addTextBox;
-    readonly OfficeToolbarButton highlight;
-    readonly OfficeToolbarButton insertShape;
-    readonly OfficeToolbarButton insertTable;
-    readonly OfficeToolbarButton insertPicture;
-    readonly OfficeToolbarButton deleteShape;
-    readonly OfficeToolbarButton undo;
-    readonly OfficeToolbarButton redo;
+    readonly RibbonButton previous;
+    readonly RibbonButton next;
+    readonly RibbonToggleButton bold;
+    readonly RibbonToggleButton italic;
+    readonly RibbonToggleButton underline;
+    readonly RibbonToggleButton strike;
+    readonly RibbonToggleButton alignLeft;
+    readonly RibbonToggleButton alignCenter;
+    readonly RibbonToggleButton alignRight;
+    readonly RibbonButton outdent;
+    readonly RibbonButton indent;
+    readonly RibbonToggleButton bulletList;
+    readonly RibbonToggleButton numberedList;
+    readonly RibbonButton addTextBox;
+    readonly RibbonToggleButton highlight;
+    readonly RibbonButton insertTable;
+    readonly RibbonButton insertPicture;
+    readonly RibbonButton watermark;
+    readonly RibbonButton deleteShape;
+    readonly RibbonButton undo;
+    readonly RibbonButton redo;
     readonly ColorPickerButton textColor;
-    readonly List<OfficeToolbarButton> buttons = [];
+    readonly List<RibbonItem> buttons = [];
 
     View? fontPicker;
     View? sizePicker;
@@ -69,17 +69,17 @@ public class SlideEditorView : ContentView, IDisposable
         this.previous = this.MakeButton(OfficeIcon.Previous, "Previous slide", () => this.editor.Previous());
         this.next = this.MakeButton(OfficeIcon.Next, "Next slide", () => this.editor.Next());
 
-        this.bold = this.MakeButton(OfficeIcon.Bold, "Bold (Ctrl+B)", () => this.editor.Controller?.ToggleBold());
-        this.italic = this.MakeButton(OfficeIcon.Italic, "Italic (Ctrl+I)", () => this.editor.Controller?.ToggleItalic());
-        this.underline = this.MakeButton(OfficeIcon.Underline, "Underline (Ctrl+U)", () => this.editor.Controller?.ToggleUnderline());
-        this.strike = this.MakeButton(OfficeIcon.Strikethrough, "Strikethrough", () => this.editor.Controller?.ToggleStrikethrough());
+        this.bold = this.MakeToggle(OfficeIcon.Bold, "Bold (Ctrl+B)", () => this.editor.Controller?.ToggleBold());
+        this.italic = this.MakeToggle(OfficeIcon.Italic, "Italic (Ctrl+I)", () => this.editor.Controller?.ToggleItalic());
+        this.underline = this.MakeToggle(OfficeIcon.Underline, "Underline (Ctrl+U)", () => this.editor.Controller?.ToggleUnderline());
+        this.strike = this.MakeToggle(OfficeIcon.Strikethrough, "Strikethrough", () => this.editor.Controller?.ToggleStrikethrough());
 
-        this.alignLeft = this.MakeButton(OfficeIcon.AlignLeft, "Align left", () => this.editor.Controller?.SetAlignment(TextAlignment.Left));
-        this.alignCenter = this.MakeButton(OfficeIcon.AlignCenter, "Centre", () => this.editor.Controller?.SetAlignment(TextAlignment.Center));
-        this.alignRight = this.MakeButton(OfficeIcon.AlignRight, "Align right", () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
+        this.alignLeft = this.MakeToggle(OfficeIcon.AlignLeft, "Align left", () => this.editor.Controller?.SetAlignment(TextAlignment.Left));
+        this.alignCenter = this.MakeToggle(OfficeIcon.AlignCenter, "Centre", () => this.editor.Controller?.SetAlignment(TextAlignment.Center));
+        this.alignRight = this.MakeToggle(OfficeIcon.AlignRight, "Align right", () => this.editor.Controller?.SetAlignment(TextAlignment.Right));
 
-        this.bulletList = this.MakeButton(OfficeIcon.BulletList, "Bulleted list", () => this.editor.Controller?.ToggleBulletList());
-        this.numberedList = this.MakeButton(OfficeIcon.NumberedList, "Numbered list", () => this.editor.Controller?.ToggleNumberedList());
+        this.bulletList = this.MakeToggle(OfficeIcon.BulletList, "Bulleted list", () => this.editor.Controller?.ToggleBulletList());
+        this.numberedList = this.MakeToggle(OfficeIcon.NumberedList, "Numbered list", () => this.editor.Controller?.ToggleNumberedList());
 
         this.outdent = this.MakeButton(OfficeIcon.Outdent, "Outdent (Shift+Tab)", () => this.editor.Controller?.ShiftLevel(-1));
         this.indent = this.MakeButton(OfficeIcon.Indent, "Indent (Tab)", () => this.editor.Controller?.ShiftLevel(1));
@@ -87,10 +87,10 @@ public class SlideEditorView : ContentView, IDisposable
         this.addTextBox = this.MakeButton(OfficeIcon.TextBox, "Add a text box", this.AddTextBox);
         this.deleteShape = this.MakeButton(OfficeIcon.Delete, "Delete the selected shape", () => this.editor.Controller?.DeleteSelectedShape());
 
-        this.highlight = this.MakeAsyncButton(OfficeIcon.Highlight, "Highlight", this.PickHighlightAsync);
-        this.insertShape = this.MakeAsyncButton(OfficeIcon.Shape, "Shapes", this.InsertShapeAsync);
+        this.highlight = this.MakeToggle(OfficeIcon.Highlight, "Highlight", () => _ = this.PickHighlightAsync());
         this.insertTable = this.MakeAsyncButton(OfficeIcon.Table, "Table", this.InsertTableAsync);
         this.insertPicture = this.MakeAsyncButton(OfficeIcon.Picture, "Picture", this.InsertPictureAsync);
+        this.watermark = this.MakeAsyncButton(OfficeIcon.Watermark, "Watermark", this.PickWatermarkAsync);
 
         this.undo = this.MakeButton(OfficeIcon.Undo, "Undo (Ctrl+Z)", () => this.editor.Controller?.Undo());
         this.redo = this.MakeButton(OfficeIcon.Redo, "Redo (Ctrl+Shift+Z)", () => this.editor.Controller?.Redo());
@@ -100,6 +100,12 @@ public class SlideEditorView : ContentView, IDisposable
             FontSize = 13,
             WidthRequest = 54,
             HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+
+            // VerticalTextAlignment, not just VerticalOptions. The ribbon pins every small-item row to
+            // one height, so the label *is* the row - there is no spare room for VerticalOptions to
+            // centre it in, and the text falls to the top of its own box while the arrows beside it
+            // centre their glyphs in theirs. That reads as the counter sitting too high.
+            VerticalTextAlignment = Microsoft.Maui.TextAlignment.Center,
             VerticalOptions = LayoutOptions.Center
         };
 
@@ -113,13 +119,24 @@ public class SlideEditorView : ContentView, IDisposable
 
         this.textColor = this.CreateColorPicker();
 
-        this.bar = new HorizontalStackLayout { Spacing = 4, Padding = new Thickness(8, 6) };
-        this.barScroller = new ScrollView
+        this.ribbon = new Ribbon
         {
-            Orientation = ScrollOrientation.Horizontal,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
-            Content = this.bar
+            SmallItemRows = 2,
+
+            // These bars mix 32px pickers with icon buttons, and every group sizes its own rows - so
+            // without one height the groups stop lining up with one another and the titles under them
+            // land on different baselines.
+            SmallItemRowHeight = 32,
+            AllowGroupCollapse = true,
+
+            // Below this the bar runs dense rather than folding its groups away: at phone width there
+            // is room for no group at all, so collapsing puts every command behind a dropdown.
+            SimplifyBelowWidth = 600
         };
+
+        // Explicitly, because a BindableProperty's propertyChanged does not fire for its default -
+        // so the accent every one of these ships with would never have been applied at all.
+        this.ApplyAccent();
 
         this.root = new Grid
         {
@@ -131,7 +148,7 @@ public class SlideEditorView : ContentView, IDisposable
             }
         };
 
-        this.root.Add(this.barScroller);
+        this.root.Add(this.ribbon);
         this.root.Add(this.editor);
         this.root.Add(this.status);
         Grid.SetRow(this.editor, 1);
@@ -188,7 +205,7 @@ public class SlideEditorView : ContentView, IDisposable
         typeof(bool),
         typeof(SlideEditorView),
         true,
-        propertyChanged: (b, _, value) => ((SlideEditorView)b).barScroller.IsVisible = (bool)value);
+        propertyChanged: (b, _, value) => ((SlideEditorView)b).ribbon.IsVisible = (bool)value);
 
     /// <summary>A one-line hint under the canvas saying what the current gesture will do.</summary>
     public static readonly BindableProperty ShowStatusProperty = BindableProperty.Create(
@@ -212,12 +229,9 @@ public class SlideEditorView : ContentView, IDisposable
         nameof(ShowToolbarTooltips),
         typeof(bool),
         typeof(SlideEditorView),
-        OfficeToolbarButton.TooltipsByDefault,
-        propertyChanged: (b, _, value) =>
-        {
-            foreach (var button in ((SlideEditorView)b).buttons)
-                button.SetTooltipEnabled((bool)value);
-        });
+        // The ribbon decides for itself whether to show a tooltip, from the same hover-capability
+        // rule - so this now only reaches the pickers the bar hosts, which draw their own.
+        OfficeToolbarButton.TooltipsByDefault);
 
     public static readonly BindableProperty FontFamiliesProperty = BindableProperty.Create(
         nameof(FontFamilies),
@@ -338,47 +352,73 @@ public class SlideEditorView : ContentView, IDisposable
 
     void BuildBar()
     {
-        this.bar.Clear();
+        this.ribbon.Tabs.Clear();
 
         this.fontPicker = this.CreateFontPicker();
         this.sizePicker = this.CreateSizePicker();
 
-        this.bar.Add(this.previous);
-        this.bar.Add(this.counter);
-        this.bar.Add(this.next);
-        this.bar.Add(Separator());
+        this.ribbon.QuickAccessItems.Clear();
+        this.ribbon.QuickAccessItems.Add(this.undo);
+        this.ribbon.QuickAccessItems.Add(this.redo);
+
+        var tab = new RibbonTab { Title = "Home", Key = "home" };
+
+        // Which slide you are on is navigation, not formatting, so it leads rather than sitting among
+        // the text commands.
+        var slide = new RibbonGroup { Title = "Slide", Priority = 110 };
+        // The counter belongs between the arrows, not after them: it is the thing the two arrows move,
+        // and reading "< > 1/3" makes them look like two commands with an unrelated label beside them.
+        slide.Items.Add(this.previous);
+        slide.Items.Add(OfficeRibbonItems.Host(this.counter));
+        slide.Items.Add(this.next);
+        tab.Groups.Add(slide);
+
+        var font = new RibbonGroup { Title = "Font", Priority = 100 };
 
         if (this.fontPicker is not null)
-            this.bar.Add(this.fontPicker);
+            font.Items.Add(OfficeRibbonItems.Host(this.fontPicker));
 
         if (this.sizePicker is not null)
-            this.bar.Add(this.sizePicker);
+            font.Items.Add(OfficeRibbonItems.Host(this.sizePicker));
 
-        this.bar.Add(Separator());
-        this.bar.Add(this.bold);
-        this.bar.Add(this.italic);
-        this.bar.Add(this.underline);
-        this.bar.Add(this.strike);
-        this.bar.Add(Separator());
-        this.bar.Add(this.textColor);
-        this.bar.Add(this.highlight);
-        this.bar.Add(Separator());
-        this.bar.Add(this.alignLeft);
-        this.bar.Add(this.alignCenter);
-        this.bar.Add(this.alignRight);
-        this.bar.Add(this.bulletList);
-        this.bar.Add(this.numberedList);
-        this.bar.Add(this.outdent);
-        this.bar.Add(this.indent);
-        this.bar.Add(Separator());
-        this.bar.Add(this.addTextBox);
-        this.bar.Add(this.insertShape);
-        this.bar.Add(this.insertTable);
-        this.bar.Add(this.insertPicture);
-        this.bar.Add(this.deleteShape);
-        this.bar.Add(Separator());
-        this.bar.Add(this.undo);
-        this.bar.Add(this.redo);
+        font.Items.Add(this.bold);
+        font.Items.Add(this.italic);
+        font.Items.Add(this.underline);
+        font.Items.Add(this.strike);
+        font.Items.Add(OfficeRibbonItems.Host(this.textColor));
+        font.Items.Add(this.highlight);
+        tab.Groups.Add(font);
+
+        var paragraph = new RibbonGroup { Title = "Paragraph", Priority = 90 };
+        paragraph.Items.Add(this.alignLeft);
+        paragraph.Items.Add(this.alignCenter);
+        paragraph.Items.Add(this.alignRight);
+        paragraph.Items.Add(new RibbonSeparator());
+        paragraph.Items.Add(this.bulletList);
+        paragraph.Items.Add(this.numberedList);
+        paragraph.Items.Add(this.outdent);
+        paragraph.Items.Add(this.indent);
+        tab.Groups.Add(paragraph);
+
+        this.ribbon.Tabs.Add(tab);
+
+        // Two tabs. Home is the slide you are on and the text on it; Insert is what goes on it. The
+        // split is only worth making because the second tab holds a real bar - a text box, three ways
+        // to place an object and the way to remove one - rather than a token button.
+        var insertTab = new RibbonTab { Title = "Insert", Key = "insert" };
+        var insert = new RibbonGroup { Title = "Insert", Priority = 100 };
+        insert.Items.Add(this.addTextBox);
+        insert.Items.Add(this.insertTable);
+        insert.Items.Add(this.insertPicture);
+        insert.Items.Add(this.watermark);
+        insert.Items.Add(new RibbonSeparator());
+
+        // Removing is the opposite of the four beside it, so it belongs here rather than among the
+        // text commands - with a rule in front, because it is destructive and the others are not.
+        insert.Items.Add(this.deleteShape);
+        insertTab.Groups.Add(insert);
+        this.ribbon.Tabs.Add(insertTab);
+        this.ribbon.Tabs.Add(OfficeRibbonItems.ShapesTab(this.InsertShape));
 
         this.RefreshBar();
     }
@@ -502,12 +542,10 @@ public class SlideEditorView : ContentView, IDisposable
         this.AfterCommand();
     }
 
-    async Task InsertShapeAsync()
+    /// <summary>Drops a shape on the current slide, centred.</summary>
+    void InsertShape(ShapeGeometry geometry)
     {
         if (this.editor.Controller is not { } controller)
-            return;
-
-        if (await OfficeMenus.PickShapeAsync(OfficeMenus.PageOf(this)) is not { } geometry)
             return;
 
         var (x, y) = Centred(controller, this.ShapeWidth, this.ShapeHeight);
@@ -535,7 +573,7 @@ public class SlideEditorView : ContentView, IDisposable
 
     async Task InsertPictureAsync()
     {
-        var (image, rejected) = await OfficeMenus.PickImageAsync();
+        var (image, rejected) = await OfficeMenus.PickImageAsync(OfficeMenus.PageOf(this));
 
         if (rejected is not null)
         {
@@ -619,52 +657,36 @@ public class SlideEditorView : ContentView, IDisposable
     /// <summary>One height for every control in the bar. See <see cref="OfficeToolbarButton.ItemHeight"/>.</summary>
     const double ToolbarItemHeight = OfficeToolbarButton.ItemHeight;
 
-    static BoxView Separator() => new()
-    {
-        WidthRequest = 1,
-        HeightRequest = 22,
-        Color = Colors.Gray,
-        Opacity = 0.35,
-        VerticalOptions = LayoutOptions.Center,
-        Margin = new Thickness(3, 0)
-    };
 
-    OfficeToolbarButton MakeButton(OfficeIcon icon, string hint, Action action)
-    {
-        var button = this.NewButton(icon, hint);
-
-        button.Clicked += (_, _) =>
+    RibbonButton MakeButton(OfficeIcon icon, string hint, Action action)
+        => this.Track(OfficeRibbonItems.Command(icon, hint, () =>
         {
             action();
             this.AfterCommand();
-        };
-
-        return button;
-    }
+        }, automationId: $"SlideToolbar{icon}"));
 
     /// <summary>
-    /// A button whose work opens a menu or a file picker first.
+    /// A command whose work opens a menu or a file picker first.
     /// </summary>
     /// <remarks>
-    /// It does not call <c>AfterCommand</c> itself: each of these has to wait for the user to choose
-    /// something, and refreshing the bar and stealing focus back before then would happen while the
-    /// menu is still up.
+    /// It does not call <c>AfterCommand</c> itself: each waits for the user to choose something, and
+    /// refreshing the bar before then would happen while the menu is still up.
     /// </remarks>
-    OfficeToolbarButton MakeAsyncButton(OfficeIcon icon, string hint, Func<Task> action)
+    RibbonButton MakeAsyncButton(OfficeIcon icon, string hint, Func<Task> action)
+        => this.Track(OfficeRibbonItems.Command(icon, hint, () => _ = action(), automationId: $"SlideToolbar{icon}"));
+
+    RibbonToggleButton MakeToggle(OfficeIcon icon, string hint, Action action)
+        => this.Track(OfficeRibbonItems.Toggle(icon, hint, () =>
+        {
+            action();
+            this.AfterCommand();
+        }, $"SlideToolbar{icon}"));
+
+    /// <summary>Remembers an item so <c>RefreshBar</c> can drive the set in one pass.</summary>
+    T Track<T>(T item) where T : RibbonItem
     {
-        var button = this.NewButton(icon, hint);
-        button.Clicked += async (_, _) => await action();
-
-        return button;
-    }
-
-    OfficeToolbarButton NewButton(OfficeIcon icon, string hint)
-    {
-        var button = new OfficeToolbarButton(icon, hint);
-        button.SetTooltipEnabled(this.ShowToolbarTooltips);
-        this.buttons.Add(button);
-
-        return button;
+        this.buttons.Add(item);
+        return item;
     }
 
     void AfterCommand()
@@ -712,41 +734,40 @@ public class SlideEditorView : ContentView, IDisposable
         // something.
         var hasText = enabled && controller?.IsEditingText == true;
 
-        SetActive(this.bold, format.Bold);
-        SetActive(this.italic, format.Italic);
-        SetActive(this.underline, format.Underline);
-        SetActive(this.strike, format.Strike);
-        SetActive(this.highlight, format.Highlight is not null);
+        this.bold.IsChecked = format.Bold;
+        this.italic.IsChecked = format.Italic;
+        this.underline.IsChecked = format.Underline;
+        this.strike.IsChecked = format.Strike;
+        this.highlight.IsChecked = format.Highlight is not null;
 
-        SetActive(this.alignLeft, format.Alignment == TextAlignment.Left);
-        SetActive(this.alignCenter, format.Alignment == TextAlignment.Center);
-        SetActive(this.alignRight, format.Alignment == TextAlignment.Right);
+        this.alignLeft.IsChecked = format.Alignment == TextAlignment.Left;
+        this.alignCenter.IsChecked = format.Alignment == TextAlignment.Center;
+        this.alignRight.IsChecked = format.Alignment == TextAlignment.Right;
 
-        SetActive(this.bulletList, format.List == ListStyle.Bullet);
-        SetActive(this.numberedList, format.List == ListStyle.Numbered);
+        this.bulletList.IsChecked = format.List == ListStyle.Bullet;
+        this.numberedList.IsChecked = format.List == ListStyle.Numbered;
 
-        foreach (var button in new[] { this.bold, this.italic, this.underline, this.strike, this.highlight,
-                                       this.alignLeft, this.alignCenter, this.alignRight,
-                                       this.bulletList, this.numberedList, this.indent })
+        foreach (RibbonItem item in new RibbonItem[] { this.bold, this.italic, this.underline, this.strike, this.highlight,
+                                                       this.alignLeft, this.alignCenter, this.alignRight,
+                                                       this.bulletList, this.numberedList, this.indent })
         {
-            button.SetEnabled(hasText);
+            item.IsEnabled = hasText;
         }
 
         // The top level is as far out as a paragraph can come, so the button is off there rather than
         // clamping silently.
-        this.outdent.SetEnabled(hasText && format.Level > 0);
+        this.outdent.IsEnabled = hasText && format.Level > 0;
 
-        this.addTextBox.SetEnabled(enabled);
-        this.insertShape.SetEnabled(enabled);
-        this.insertTable.SetEnabled(enabled);
-        this.insertPicture.SetEnabled(enabled);
-        this.deleteShape.SetEnabled(hasSelection);
+        this.addTextBox.IsEnabled = enabled;
+        this.insertTable.IsEnabled = enabled;
+        this.insertPicture.IsEnabled = enabled;
+        this.deleteShape.IsEnabled = hasSelection;
 
-        this.previous.SetEnabled(controller?.CanGoPrevious ?? false);
-        this.next.SetEnabled(controller?.CanGoNext ?? false);
+        this.previous.IsEnabled = controller?.CanGoPrevious ?? false;
+        this.next.IsEnabled = controller?.CanGoNext ?? false;
 
-        this.undo.SetEnabled(enabled && (controller?.CanUndo ?? false));
-        this.redo.SetEnabled(enabled && (controller?.CanRedo ?? false));
+        this.undo.IsEnabled = enabled && (controller?.CanUndo ?? false);
+        this.redo.IsEnabled = enabled && (controller?.CanRedo ?? false);
 
         this.counter.Text = controller is null ? "—" : $"{controller.Index + 1}/{controller.Count}";
 
@@ -777,8 +798,6 @@ public class SlideEditorView : ContentView, IDisposable
         this.suppressPickerEvents = false;
     }
 
-    static void SetActive(OfficeToolbarButton button, bool active) => button.IsActive = active;
-
     public void Dispose()
     {
         this.Dispose(true);
@@ -800,4 +819,99 @@ public class SlideEditorView : ContentView, IDisposable
 
         this.editor.Dispose();
     }
+
+    /// <summary>
+    /// The colour this control wears: its ribbon's header band and tab underline.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="OfficeAccent.Presentation"/> — the colour Microsoft's own PowerPoint wears,
+    /// because that is what a user reads as "slides" before any label has been looked at. Set it to
+    /// take on the app's own brand instead, or to <c>null</c> to leave the bar on the theme's neutrals
+    /// like the rest of the chrome.
+    /// </remarks>
+    public static readonly BindableProperty AccentProperty = BindableProperty.Create(
+        nameof(Accent),
+        typeof(OfficeAccent),
+        typeof(SlideEditorView),
+        OfficeAccent.Presentation,
+        propertyChanged: (b, _, _) => ((SlideEditorView)b).ApplyAccent());
+
+    /// <inheritdoc cref="AccentProperty"/>
+    public OfficeAccent? Accent
+    {
+        get => (OfficeAccent?)this.GetValue(AccentProperty);
+        set => this.SetValue(AccentProperty, value);
+    }
+
+    /// <summary>Paints the ribbon in the accent, or puts it back on the theme when there is none.</summary>
+    void ApplyAccent()
+    {
+        // A propertyChanged can arrive from a Style before this constructor has built the ribbon.
+        if (this.ribbon is null)
+            return;
+
+        if (this.Accent is not { } accent)
+        {
+            this.ribbon.HeaderBackgroundColor = null;
+            this.ribbon.HeaderForegroundColor = null;
+            this.ribbon.AccentColor = null;
+            return;
+        }
+
+        this.ribbon.HeaderBackgroundColor = ToColor(accent.Color);
+        this.ribbon.HeaderForegroundColor = ToColor(accent.Ink);
+
+        // The underline is the ink rather than the accent: on a band already painted the accent, an
+        // accent-coloured underline is invisible.
+        this.ribbon.AccentColor = ToColor(accent.Ink);
+    }
+
+    static Color ToColor(ArgbColor value)
+        => Color.FromRgba(value.R / 255f, value.G / 255f, value.B / 255f, value.A / 255f);
+
+    /// <summary>
+    /// A picture drawn behind the content. Forwarded to the surface.
+    /// </summary>
+    /// <remarks>
+    /// A display watermark - drawn, not written into the file. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    public OfficeWatermark? Watermark
+    {
+        get => this.editor.Watermark;
+        set => this.editor.Watermark = value;
+    }
+
+    /// <summary>
+    /// Picks a picture and sets it as the watermark, or clears one already there.
+    /// </summary>
+    /// <remarks>
+    /// The button toggles rather than always asking: once a mark is set, the next thing anyone wants
+    /// from that button is to take it off, and a picker that reopens on a document already stamped is
+    /// a dead end with no way back.
+    /// </remarks>
+    async Task PickWatermarkAsync()
+    {
+        if (this.Watermark is not null)
+        {
+            this.Watermark = null;
+            this.RefreshBar();
+            return;
+        }
+
+        var (image, rejected) = await OfficeMenus.PickImageAsync(OfficeMenus.PageOf(this));
+
+        if (rejected is not null || image is null)
+            return;
+
+        // Turned onto the diagonal, which is where a stamp goes and what stops it being mistaken for
+        // content someone placed on the page.
+        this.Watermark = new OfficeWatermark
+        {
+            Image = image.Data,
+            RotationDegrees = 315
+        };
+
+        this.RefreshBar();
+    }
+
 }

@@ -92,7 +92,9 @@
 }
 
 .shiny-cal-event {
-    color: var(--shiny-color-on-primary, white);
+    /* the ink is chosen per event from its own colour (see EventInk) and arrives inline; this is
+       only the fallback for a chip rendered without one */
+    color: #FFFFFF;
     font-size: var(--shiny-type-label-small-size, 11px);
     padding: calc(2px * var(--shiny-density-scale, 1)) calc(6px * var(--shiny-density-scale, 1));
     border-radius: var(--shiny-shape-corner-extra-small, 4px);
@@ -117,7 +119,7 @@
 .shiny-cal-loader {
     position: absolute;
     inset: 0;
-    background: rgba(255,255,255,0.7);
+    background: color-mix(in srgb, var(--shiny-color-surface, #FFFFFF) 70%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;

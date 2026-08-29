@@ -29,7 +29,7 @@ public class SpreadsheetPainterTests
         return (workbook, controller);
     }
 
-    static SKBitmap Render(SpreadsheetController controller, SpreadsheetTheme? theme = null)
+    static SKBitmap Render(SpreadsheetController controller, SpreadsheetTheme? theme = null, float dashPhase = 0)
     {
         var bitmap = new SKBitmap(Width, Height, SKColorType.Rgba8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
@@ -42,10 +42,26 @@ public class SpreadsheetPainterTests
             Viewport = controller.Viewport,
             Selection = controller.Selection,
             Theme = theme ?? SpreadsheetTheme.Light,
-            EditingCell = controller.EditingCell
+            EditingCell = controller.EditingCell,
+            ClipboardRange = controller.ClipboardRange,
+            ClipboardDashPhase = dashPhase
         });
 
         return bitmap;
+    }
+
+    /// <summary>How many pixels along a horizontal run match a colour, sampled every pixel.</summary>
+    static int CountMatches(SKBitmap bitmap, int y, int fromX, int toX, ArgbColor colour)
+    {
+        var count = 0;
+        for (var x = fromX; x <= toX; x++)
+        {
+            var pixel = bitmap.GetPixel(x, y);
+            if (pixel.Red == colour.R && pixel.Green == colour.G && pixel.Blue == colour.B)
+                count++;
+        }
+
+        return count;
     }
 
     static int DistinctColours(SKBitmap bitmap)
@@ -100,6 +116,110 @@ public class SpreadsheetPainterTests
         pixel.Red.ShouldBe((byte)0xFF);
         pixel.Green.ShouldBe((byte)0xF2);
         pixel.Blue.ShouldBe((byte)0xCC);
+    }
+
+    [Fact]
+    public async Task NothingIsMarchingUntilSomethingIsCopied()
+    {
+        var (workbook, controller) = await SetupAsync();
+        using var _ = workbook;
+
+        controller.Selection.SelectRange(CellRange.Parse("B2:C4"));
+        using var bitmap = Render(controller);
+
+        var rect = controller.Viewport.RangeRect(CellRange.Parse("B2:C4"));
+        CountMatches(bitmap, (int)rect.Y, (int)rect.X, (int)rect.Right, SpreadsheetTheme.Light.ClipboardBorder)
+            .ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ACopiedRangeGetsADashedBorderInTheClipboardColour()
+    {
+        var (workbook, controller) = await SetupAsync();
+        using var _ = workbook;
+
+        var range = CellRange.Parse("B2:C4");
+        controller.Selection.SelectRange(range);
+        controller.Copy();
+
+        // Moved away so the solid selection border is nowhere near the copied range, which is the
+        // situation the dashed border exists for: source and destination visible at once.
+        controller.Selection.MoveTo(CellRef.Parse("A8"));
+
+        using var bitmap = Render(controller);
+
+        var rect = controller.Viewport.RangeRect(range);
+        var top = (int)rect.Y;
+        var from = (int)rect.X + 2;
+        var to = (int)rect.Right - 2;
+
+        var painted = CountMatches(bitmap, top, from, to, SpreadsheetTheme.Light.ClipboardBorder);
+
+        // Dashed, not solid: some of the run is the border colour and some of it is not.
+        painted.ShouldBeGreaterThan(0);
+        painted.ShouldBeLessThan(to - from + 1);
+    }
+
+    [Fact]
+    public async Task TheDashesAreSomewhereElseAfterThePhaseAdvances()
+    {
+        var (workbook, controller) = await SetupAsync();
+        using var _ = workbook;
+
+        controller.Selection.SelectRange(CellRange.Parse("B2:C4"));
+        controller.Copy();
+        controller.Selection.MoveTo(CellRef.Parse("A8"));
+
+        using var first = Render(controller);
+        using var moved = Render(controller, dashPhase: 5f);
+
+        var rect = controller.Viewport.RangeRect(CellRange.Parse("B2:C4"));
+        var top = (int)rect.Y;
+
+        var changed = false;
+        for (var x = (int)rect.X + 2; x <= (int)rect.Right - 2 && !changed; x++)
+            changed = first.GetPixel(x, top) != moved.GetPixel(x, top);
+
+        changed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AbandoningTheClipboardTakesTheBorderWithIt()
+    {
+        var (workbook, controller) = await SetupAsync();
+        using var _ = workbook;
+
+        controller.Selection.SelectRange(CellRange.Parse("B2:C4"));
+        controller.Copy();
+        controller.Selection.MoveTo(CellRef.Parse("A8"));
+        controller.ClearClipboard();
+
+        using var bitmap = Render(controller);
+
+        var rect = controller.Viewport.RangeRect(CellRange.Parse("B2:C4"));
+        CountMatches(bitmap, (int)rect.Y, (int)rect.X + 2, (int)rect.Right - 2, SpreadsheetTheme.Light.ClipboardBorder)
+            .ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task TheDashesDoNotLeakOntoTheGridLines()
+    {
+        var (workbook, controller) = await SetupAsync();
+        using var _ = workbook;
+
+        controller.Selection.SelectRange(CellRange.Parse("B2:C4"));
+        controller.Copy();
+
+        using var withClipboard = Render(controller);
+
+        controller.ClearClipboard();
+        using var without = Render(controller);
+
+        // Well below the copied range: the shared stroke paint carries the dash effect, and forgetting
+        // to clear it turns every grid line in later panes into a dotted one.
+        var row = (int)controller.Viewport.CellRect(CellRef.Parse("A9")).Y;
+        for (var x = (int)controller.Metrics.RowHeaderWidth + 2; x < Width - 2; x++)
+            withClipboard.GetPixel(x, row).ShouldBe(without.GetPixel(x, row));
     }
 
     [Fact]

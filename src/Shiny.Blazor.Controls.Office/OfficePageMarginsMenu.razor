@@ -19,7 +19,7 @@
     OfficeHighlightButton.razor.css: Blazor's scoped CSS is per component, so a shared file would have
     to be unscoped and would leak these names into every consuming app.
 *@
-<div class="shiny-office-picker">
+<div class="shiny-office-picker" data-popover-host>
     <Tooltip Text="Page margins" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
         <button type="button"
                 class="shiny-office-btn"
@@ -35,7 +35,7 @@
     {
         <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
 
-        <div class="shiny-office-panel" role="dialog" aria-label="Page margins">
+        <div class="shiny-office-panel" popover="manual" data-popover role="dialog" aria-label="Page margins">
             <div class="margin-list">
                 @foreach (var preset in PageMarginPresets.All)
                 {

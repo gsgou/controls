@@ -34,6 +34,13 @@ static class SpreadsheetMenus
         AutoFunction.Max
     ];
 
+    /// <remarks>
+    /// Unused since <see cref="SpreadsheetToolbar"/> became a ribbon - its number formats and auto
+    /// functions are ribbon menus now, which show each preset's live sample beside its name where an
+    /// action sheet had room only for the name. Kept because the sheet is still the right shape for a
+    /// host driving the controller from its own chrome, and because <see cref="Formats"/> and
+    /// <see cref="Functions"/> are the single definition of what those lists contain.
+    /// </remarks>
     public static async Task<NumberFormatPreset?> PickNumberFormatAsync(Page? page)
     {
         if (page is null)

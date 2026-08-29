@@ -136,3 +136,14 @@ Events: `SelectedKeyChanged` (two-way bind via `@bind-SelectedKey`), `ItemClicke
 `ShinyToolbar` as the first element of your page/layout scroll area and drop `ShinyTabBar` anywhere (it's
 `Fixed`). The Blazor sample wires both into `MainLayout` — a frosted top header plus a bottom tab bar that
 appears on narrow viewports.
+
+## Dark mode
+
+`BackgroundColor`, `TextColor`, `MenuBackgroundColor`, `MenuTextColor`, `TintColor` and (on
+`ShinyTabBar`) `ActiveColor` / `InactiveColor` default to theme tokens, so a bar follows the app's
+scheme with nothing set. They are emitted as inline styles, so a literal you pass wins permanently —
+and if you pass a background, pass a matching `TextColor` too.
+
+Item and menu-item hover is keyed off the bar's own `currentColor` rather than a fixed black wash, so
+it stays visible on a dark bar and on a brand-coloured one. See
+[Styling & theming](styling.md#dark-mode).

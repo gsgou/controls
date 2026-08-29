@@ -169,6 +169,115 @@ public sealed record SetPageMarginsCommand(PageMargins Margins) : DocumentComman
 }
 
 
+/// <summary>
+/// Turns the paper, swapping the two dimensions and recording which way round it now is.
+/// </summary>
+/// <remarks>
+/// Both halves matter. Swapping the dimensions without <c>w:orient</c> gives a page the right shape
+/// that Word still calls portrait — so its own Orientation control shows the wrong state, and the next
+/// change from there flips it the wrong way. Writing the attribute without swapping gives a section
+/// that claims landscape on portrait paper, which Word obeys by re-swapping on open.
+/// </remarks>
+public sealed record SetPageOrientationCommand(PageOrientation Orientation) : DocumentCommand
+{
+    public override string Name => "Page orientation";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var section = context.SectionProperties(create: true);
+        if (section is null)
+            return new NoOpCommand();
+
+        var existing = section.GetFirstChild<PageSize>();
+        var inverse = new RestorePageSizeCommand(existing?.CloneNode(true) as PageSize);
+
+        var size = existing;
+
+        if (size is null)
+        {
+            // Seeded from the setup rather than from nothing: a section with no w:pgSz is Letter by
+            // Word's own default, and writing the dimensions we are about to swap keeps the two in step.
+            var setup = context.Page;
+
+            size = new PageSize
+            {
+                Width = (uint)OoxmlUnits.PixelsToTwips(setup.Width),
+                Height = (uint)OoxmlUnits.PixelsToTwips(setup.Height)
+            };
+
+            // w:pgSz leads the geometry in the sequence, before w:pgMar.
+            if (section.GetFirstChild<PageMargin>() is { } margin)
+                margin.InsertBeforeSelf(size);
+            else
+                Place(section, size);
+        }
+
+        var width = size.Width?.Value ?? 0;
+        var height = size.Height?.Value ?? 0;
+
+        var landscape = this.Orientation == PageOrientation.Landscape;
+        var wantsWider = landscape;
+
+        // Only swap when the paper is not already that way round. Asking for landscape twice must not
+        // turn the page back.
+        if (width > 0 && height > 0 && (width > height) != wantsWider)
+        {
+            size.Width = height;
+            size.Height = width;
+        }
+
+        size.Orient = landscape ? PageOrientationValues.Landscape : PageOrientationValues.Portrait;
+
+        context.MarkPageSetupChanged();
+        return inverse;
+    }
+
+    /// <summary>Puts w:pgSz in the one place the schema allows it, when the section has none.</summary>
+    static void Place(SectionProperties section, PageSize size)
+    {
+        var anchor = section.ChildElements.LastOrDefault(x =>
+            x is HeaderReference or FooterReference or FootnoteProperties or EndnoteProperties or SectionType);
+
+        if (anchor is not null)
+            anchor.InsertAfterSelf(size);
+        else
+            section.PrependChild(size);
+    }
+}
+
+
+/// <summary>Puts back the <c>w:pgSz</c> that was there — or the absence of one.</summary>
+public sealed record RestorePageSizeCommand(PageSize? Previous) : DocumentCommand
+{
+    public override string Name => "Page orientation";
+
+    public override IEditCommand<WordDocument> Apply(WordDocument context)
+    {
+        var section = context.SectionProperties(create: false);
+        if (section is null)
+            return new NoOpCommand();
+
+        var current = section.GetFirstChild<PageSize>();
+        var inverse = new RestorePageSizeCommand(current?.CloneNode(true) as PageSize);
+
+        current?.Remove();
+
+        if (this.Previous is not null)
+        {
+            var restored = (PageSize)this.Previous.CloneNode(true);
+
+            if (section.GetFirstChild<PageMargin>() is { } margin)
+                margin.InsertBeforeSelf(restored);
+            else
+                section.PrependChild(restored);
+        }
+
+        context.MarkPageSetupChanged();
+        return inverse;
+    }
+}
+
+
 /// <summary>Puts back the <c>w:pgMar</c> that was there — or the absence of one. The inverse of a margin change.</summary>
 public sealed record RestorePageMarginCommand(PageMargin? Previous) : DocumentCommand
 {

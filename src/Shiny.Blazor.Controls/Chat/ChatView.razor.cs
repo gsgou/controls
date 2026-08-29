@@ -56,10 +56,13 @@ public partial class ChatView : IAsyncDisposable
     [Parameter] public bool OpenImagesInViewer { get; set; } = true;
 
     // ---- Parameters: styling (kept) ----
-    [Parameter] public string MyBubbleColor { get; set; } = "#DCF8C6";
-    [Parameter] public string MyTextColor { get; set; } = "#000000";
-    [Parameter] public string OtherBubbleColor { get; set; } = "#FFFFFF";
-    [Parameter] public string OtherTextColor { get; set; } = "#000000";
+    // Bubbles are chrome, so they follow the theme by default rather than shipping a fixed pale
+    // green and white - both of which stayed exactly as light in dark mode, since these land as
+    // inline styles. An app that wants the messenger look still sets them and that still pins.
+    [Parameter] public string MyBubbleColor { get; set; } = "var(--shiny-color-primary-container, #DCF8C6)";
+    [Parameter] public string MyTextColor { get; set; } = "var(--shiny-color-on-primary-container, #000000)";
+    [Parameter] public string OtherBubbleColor { get; set; } = "var(--shiny-color-surface-container-high, #FFFFFF)";
+    [Parameter] public string OtherTextColor { get; set; } = "var(--shiny-color-on-surface, #000000)";
     [Parameter] public string PlaceholderText { get; set; } = "Type a message...";
     [Parameter] public string SendButtonText { get; set; } = "Send";
     [Parameter] public bool IsInputBarVisible { get; set; } = true;

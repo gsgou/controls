@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Scheduler.Internal;
 
@@ -93,7 +94,7 @@ class CalendarSheetPicker : ContentView
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
-        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         prevButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
@@ -105,7 +106,7 @@ class CalendarSheetPicker : ContentView
             HeightRequest = HeaderHeight,
             BorderWidth = 0,
             Padding = 0
-        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         nextButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         nextButton.Clicked += (_, _) => NavigateMonth(1);
 

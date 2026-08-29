@@ -39,180 +39,210 @@
     }
     else
     {
-        <div class="shiny-imgeditor-toolbar @ToolbarOrderClass">
-            <div class="shiny-imgeditor-bar">
+        @*
+            The ribbon is the toolbar now. The tools were already grouped the way a ribbon wants them,
+            and it earns its keep on the options row: those used to be an unlabelled strip that changed
+            shape under the buttons that caused it, and they are a captioned contextual tab here.
 
-                @* Tools — scrolls horizontally so the row never runs off a narrow screen *@
-                <div class="shiny-imgeditor-scroller">
-                    <div class="shiny-imgeditor-tools">
+            Every item is Small rather than the ribbon's Large default - a dozen large buttons is not a
+            palette, and Simplified keeps a label only on items declared Small, so a mix of sizes gave a
+            row where some tools were labelled and some were bare icons.
+        *@
+        <div class="shiny-imgeditor-toolbar @ToolbarOrderClass">
+            @* Two rows, not the ribbon's three: a shorter bar matters more here than in a document app,
+               and the editor's groups divide more evenly over two. *@
+            <Ribbon @bind-SelectedKey="ribbonTabKey"
+                    @bind-DisplayMode="ribbonDisplayMode"
+                    SmallItemRows="2"
+                    CssClass="shiny-imgeditor-ribbon">
+                <QuickAccess>
+                    @* Undo, redo and reset apply to every tool, so they sit outside the tabs and never
+                       move or disappear when the tab does. *@
+                    <RibbonButton Size="RibbonItemSize.Small" Tooltip="Undo" Icon="@ImageEditorIcons.Undo.Value"
+                                  Disabled="@(!canUndo)" Clicked="Undo" />
+                    <RibbonButton Size="RibbonItemSize.Small" Tooltip="Redo" Icon="@ImageEditorIcons.Redo.Value"
+                                  Disabled="@(!canRedo)" Clicked="Redo" />
+                    <RibbonButton Size="RibbonItemSize.Small" Tooltip="Reset" Icon="@ImageEditorIcons.Reset.Value"
+                                  Disabled="@(!canUndo)" Clicked="Reset" />
+                </QuickAccess>
+
+                <ChildContent>
+                <RibbonTab Title="Home" Key="home">
+                    <RibbonGroup Title="Tools" Priority="100">
                         @if (AllowZoom)
                         {
-                            <button class="shiny-imgeditor-tool @Active("none")" @onclick="SelectMoveTool" title="Move">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Move</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Move</span> }
-                            </button>
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Move" Tooltip="Move"
+                                                Icon="@ImageEditorIcons.Move.Value"
+                                                Checked="@(currentMode == "none")" Clicked="_ => SelectMoveTool()" />
                         }
                         @if (AllowCrop)
                         {
-                            <button class="shiny-imgeditor-tool @Active("crop")" @onclick="ToggleCrop" title="Crop">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Crop</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Crop</span> }
-                            </button>
-                        }
-                        @if (AllowRotate)
-                        {
-                            <button class="shiny-imgeditor-tool" @onclick="RotateClockwise" title="Rotate">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Rotate</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Rotate</span> }
-                            </button>
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Crop" Tooltip="Crop"
+                                                Icon="@ImageEditorIcons.Crop.Value"
+                                                Checked="@(currentMode == "crop")" Clicked="_ => ToggleCrop()" />
                         }
                         @if (AllowDraw)
                         {
-                            <button class="shiny-imgeditor-tool @Active("draw")" @onclick="ToggleDraw" title="Draw">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Draw</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Draw</span> }
-                            </button>
-                        }
-                        @if (AllowLine)
-                        {
-                            <button class="shiny-imgeditor-tool @Active("line")" @onclick="ToggleLine" title="Line">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Line</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Line</span> }
-                            </button>
-                        }
-                        @if (AllowArrow)
-                        {
-                            <button class="shiny-imgeditor-tool @Active("arrow")" @onclick="ToggleArrow" title="Arrow">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Arrow</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Arrow</span> }
-                            </button>
-                        }
-                        @if (AllowRectangle)
-                        {
-                            <button class="shiny-imgeditor-tool @Active("rect")" @onclick="ToggleRectangle" title="Rectangle">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Rectangle</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Rect</span> }
-                            </button>
-                        }
-                        @if (AllowEllipse)
-                        {
-                            <button class="shiny-imgeditor-tool @Active("ellipse")" @onclick="ToggleEllipse" title="Ellipse">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Ellipse</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Ellipse</span> }
-                            </button>
-                        }
-                        @if (AllowCircle)
-                        {
-                            <button class="shiny-imgeditor-tool @Active("circle")" @onclick="ToggleCircle" title="Circle">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Circle</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Circle</span> }
-                            </button>
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Draw" Tooltip="Draw"
+                                                Icon="@ImageEditorIcons.Draw.Value"
+                                                Checked="@(currentMode == "draw")" Clicked="_ => ToggleDraw()" />
                         }
                         @if (AllowTextAnnotation)
                         {
-                            <button class="shiny-imgeditor-tool @Active("text")" @onclick="ToggleText" title="Text">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.Text</span>
-                                @if (ShowToolLabels) { <span class="shiny-imgeditor-cap">Text</span> }
-                            </button>
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Text" Tooltip="Text"
+                                                Icon="@ImageEditorIcons.Text.Value"
+                                                Checked="@(currentMode == "text")" Clicked="_ => ToggleText()" />
                         }
-                    </div>
-                </div>
+                    </RibbonGroup>
 
-                @* Options for the active tool only *@
-                @if (IsInkMode || IsShapeMode || currentMode == "text")
+                    <RibbonGroup Title="Shapes" Priority="60">
+                        @if (AllowLine)
+                        {
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Line" Tooltip="Line"
+                                                Icon="@ImageEditorIcons.Line.Value"
+                                                Checked="@(currentMode == "line")" Clicked="_ => ToggleLine()" />
+                        }
+                        @if (AllowArrow)
+                        {
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Arrow" Tooltip="Arrow"
+                                                Icon="@ImageEditorIcons.Arrow.Value"
+                                                Checked="@(currentMode == "arrow")" Clicked="_ => ToggleArrow()" />
+                        }
+                        @if (AllowRectangle)
+                        {
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Rectangle" Tooltip="Rectangle"
+                                                Icon="@ImageEditorIcons.Rectangle.Value"
+                                                Checked="@(currentMode == "rect")" Clicked="_ => ToggleRectangle()" />
+                        }
+                        @if (AllowEllipse)
+                        {
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Ellipse" Tooltip="Ellipse"
+                                                Icon="@ImageEditorIcons.Ellipse.Value"
+                                                Checked="@(currentMode == "ellipse")" Clicked="_ => ToggleEllipse()" />
+                        }
+                        @if (AllowCircle)
+                        {
+                            <RibbonToggleButton Size="RibbonItemSize.Small" Text="Circle" Tooltip="Circle"
+                                                Icon="@ImageEditorIcons.Circle.Value"
+                                                Checked="@(currentMode == "circle")" Clicked="_ => ToggleCircle()" />
+                        }
+                    </RibbonGroup>
+
+                    @if (AllowRotate || ToolbarActions != null)
+                    {
+                        @* Rotate and the host's actions share a group rather than taking one each: a
+                           group costs a divider and a title whatever is in it, so two one-item groups
+                           spent more width on chrome than on commands. CanCollapse is off because the
+                           host's actions are in here - whatever they are, they are the reason the
+                           editor is open, and they must never fold into an overflow button. *@
+                        <RibbonGroup Title="Image" Priority="200" CanCollapse="false">
+                            @if (AllowRotate)
+                            {
+                                <RibbonButton Size="RibbonItemSize.Small" Text="Rotate" Tooltip="Rotate"
+                                              Icon="@ImageEditorIcons.Rotate.Value" Clicked="RotateClockwise" />
+                            }
+                            @if (ToolbarActions != null)
+                            {
+                                <RibbonContent>@ToolbarActions</RibbonContent>
+                            }
+                        </RibbonGroup>
+                    }
+                </RibbonTab>
+
+                @if (AllowZoom && ShowZoomControls)
                 {
-                    <div class="shiny-imgeditor-scroller">
-                        <div class="shiny-imgeditor-options">
-                            @* For a shape this swatch and these weights are the border — the
-                               interior gets its own swatch, opacity and on/off toggle below *@
-                            <input type="color" class="shiny-imgeditor-color" value="@activeColor"
-                                   @onchange="OnColorChanged" title="Colour" />
-
-                            @if ((IsInkMode || IsShapeMode) && ShowStrokeWidthPicker)
-                            {
-                                @foreach (var width in StrokeWidthPresets)
-                                {
-                                    var w = width;
-                                    <button class="shiny-imgeditor-weight @(IsSelectedWidth(w) ? "active" : "")"
-                                            @onclick="() => SetStrokeWidthAsync(w)" title="@($"{w}px")">
-                                        <span style="width:@((6 + w * 1.6).ToString(Culture))px;height:@((6 + w * 1.6).ToString(Culture))px"></span>
-                                    </button>
-                                }
-                            }
-
-                            @if (IsShapeMode && ShowShapeFillPicker)
-                            {
-                                <span class="shiny-imgeditor-divider"></span>
-                                <input type="color" class="shiny-imgeditor-color" value="@shapeFillHex"
-                                       @onchange="OnFillColorChanged" title="Fill colour" />
-                                <input type="range" class="shiny-imgeditor-range" min="0" max="100" step="1"
-                                       value="@FillOpacityPercent" @onchange="OnFillOpacityChanged"
-                                       title="Fill opacity" aria-label="Fill opacity" />
-                                <button class="shiny-imgeditor-btn @(shapeFill == null ? "" : "active")"
-                                        @onclick="ToggleShapeFill"
-                                        title="@(shapeFill == null ? "No fill" : "Fill")">
-                                    <span class="shiny-imgeditor-ico">@(shapeFill == null ? ImageEditorIcons.NoFill : ImageEditorIcons.Fill)</span>
-                                </button>
-                            }
-
-                            @if (currentMode == "text" && AllowFontSelection && AvailableFonts != null)
-                            {
-                                <select class="shiny-imgeditor-select" @onchange="OnFontFamilySelected" title="Font">
-                                    @foreach (var font in AvailableFonts)
-                                    {
-                                        <option value="@font" selected="@(font == TextFontFamily)" style="font-family:@font">@font</option>
-                                    }
-                                </select>
-                            }
-                            @if (currentMode == "text" && AllowFontSizeSelection && AvailableFontSizes != null)
-                            {
-                                <select class="shiny-imgeditor-select" @onchange="OnFontSizeSelected" title="Font size">
-                                    @foreach (var size in AvailableFontSizes)
-                                    {
-                                        <option value="@size.ToString(Culture)"
-                                                selected="@(System.Math.Abs(size - TextFontSize) < 0.001)">@size pt</option>
-                                    }
-                                </select>
-                            }
-                        </div>
-                    </div>
+                    <RibbonTab Title="View" Key="view">
+                        <RibbonGroup Title="Zoom">
+                            <RibbonButton Size="RibbonItemSize.Small" Text="Out" Tooltip="Zoom out"
+                                          Icon="@ImageEditorIcons.ZoomOut.Value" Clicked="ZoomOut" />
+                            <RibbonButton Size="RibbonItemSize.Small" Text="In" Tooltip="Zoom in"
+                                          Icon="@ImageEditorIcons.ZoomIn.Value" Clicked="ZoomIn" />
+                            <RibbonButton Size="RibbonItemSize.Small" Text="Fit" Tooltip="Fit to view"
+                                          Icon="@ImageEditorIcons.ZoomFit.Value" Clicked="ZoomToFit" />
+                            <RibbonContent>
+                                @* A value, not a command, so it is hosted rather than made a button. *@
+                                <button class="shiny-imgeditor-zoomvalue" @onclick="ZoomToFit" title="Reset zoom">@ZoomText</button>
+                            </RibbonContent>
+                        </RibbonGroup>
+                    </RibbonTab>
                 }
 
-                @* History on the left, zoom in the middle *@
-                <div class="shiny-imgeditor-actions">
-                    <div class="shiny-imgeditor-group">
-                        <button class="shiny-imgeditor-btn" @onclick="Undo" disabled="@(!canUndo)" title="Undo">
-                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Undo</span>
-                        </button>
-                        <button class="shiny-imgeditor-btn" @onclick="Redo" disabled="@(!canRedo)" title="Redo">
-                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Redo</span>
-                        </button>
-                        <button class="shiny-imgeditor-btn" @onclick="Reset" disabled="@(!canUndo)" title="Reset">
-                            <span class="shiny-imgeditor-ico">@ImageEditorIcons.Reset</span>
-                        </button>
-                    </div>
+                @if (IsInkMode || IsShapeMode || currentMode == "text")
+                {
+                    @* Contextual: the band above the strip is what says these options belong to the
+                       tool you just picked rather than to the picture. *@
+                    <RibbonTab Key="tool"
+                               Title="@(currentMode == "text" ? "Text" : IsShapeMode ? "Shape" : "Draw")"
+                               ContextTitle="@(currentMode == "text" ? "Text Tools" : IsShapeMode ? "Shape Tools" : "Drawing Tools")">
 
-                    @if (AllowZoom && ShowZoomControls)
-                    {
-                        <div class="shiny-imgeditor-group shiny-imgeditor-group--zoom">
-                            <button class="shiny-imgeditor-btn" @onclick="ZoomOut" title="Zoom out">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomOut</span>
-                            </button>
-                            <button class="shiny-imgeditor-zoomvalue" @onclick="ZoomToFit" title="Reset zoom">@ZoomText</button>
-                            <button class="shiny-imgeditor-btn" @onclick="ZoomIn" title="Zoom in">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomIn</span>
-                            </button>
-                            <button class="shiny-imgeditor-btn" @onclick="ZoomToFit" title="Fit to view">
-                                <span class="shiny-imgeditor-ico">@ImageEditorIcons.ZoomFit</span>
-                            </button>
-                        </div>
-                    }
+                        <RibbonGroup Title="@(IsShapeMode ? "Border" : "Colour")" Priority="100">
+                            <RibbonContent>
+                                <input type="color" class="shiny-imgeditor-color" value="@activeColor"
+                                       @onchange="OnColorChanged" title="Colour" />
+                            </RibbonContent>
+                            @if ((IsInkMode || IsShapeMode) && ShowStrokeWidthPicker)
+                            {
+                                <RibbonContent>
+                                    @foreach (var width in StrokeWidthPresets)
+                                    {
+                                        var w = width;
+                                        <button class="shiny-imgeditor-weight @(IsSelectedWidth(w) ? "active" : "")"
+                                                @onclick="() => SetStrokeWidthAsync(w)" title="@($"{w}px")">
+                                            <span style="width:@((6 + w * 1.6).ToString(Culture))px;height:@((6 + w * 1.6).ToString(Culture))px"></span>
+                                        </button>
+                                    }
+                                </RibbonContent>
+                            }
+                        </RibbonGroup>
 
-                    <div class="shiny-imgeditor-group shiny-imgeditor-group--end">
-                        @ToolbarActions
-                    </div>
-                </div>
-            </div>
+                        @if (IsShapeMode && ShowShapeFillPicker)
+                        {
+                            <RibbonGroup Title="Fill" Priority="80">
+                                <RibbonContent>
+                                    <input type="color" class="shiny-imgeditor-color" value="@shapeFillHex"
+                                           @onchange="OnFillColorChanged" title="Fill colour" />
+                                    <input type="range" class="shiny-imgeditor-range" min="0" max="100" step="1"
+                                           value="@FillOpacityPercent" @onchange="OnFillOpacityChanged"
+                                           title="Fill opacity" aria-label="Fill opacity" />
+                                </RibbonContent>
+                                <RibbonToggleButton Size="RibbonItemSize.Small"
+                                                    Text="@(shapeFill == null ? "No fill" : "Fill")"
+                                                    Tooltip="@(shapeFill == null ? "No fill" : "Fill")"
+                                                    Icon="@((shapeFill == null ? ImageEditorIcons.NoFill : ImageEditorIcons.Fill).Value)"
+                                                    Checked="@(shapeFill != null)" Clicked="_ => ToggleShapeFill()" />
+                            </RibbonGroup>
+                        }
+
+                        @if (currentMode == "text" && ((AllowFontSelection && AvailableFonts != null) || (AllowFontSizeSelection && AvailableFontSizes != null)))
+                        {
+                            <RibbonGroup Title="Font" Priority="80">
+                                <RibbonContent>
+                                    @if (AllowFontSelection && AvailableFonts != null)
+                                    {
+                                        <select class="shiny-imgeditor-select" @onchange="OnFontFamilySelected" title="Font">
+                                            @foreach (var font in AvailableFonts)
+                                            {
+                                                <option value="@font" selected="@(font == TextFontFamily)" style="font-family:@font">@font</option>
+                                            }
+                                        </select>
+                                    }
+                                    @if (AllowFontSizeSelection && AvailableFontSizes != null)
+                                    {
+                                        <select class="shiny-imgeditor-select" @onchange="OnFontSizeSelected" title="Font size">
+                                            @foreach (var size in AvailableFontSizes)
+                                            {
+                                                <option value="@size.ToString(Culture)"
+                                                        selected="@(System.Math.Abs(size - TextFontSize) < 0.001)">@size pt</option>
+                                            }
+                                        </select>
+                                    }
+                                </RibbonContent>
+                            </RibbonGroup>
+                        }
+                    </RibbonTab>
+                }
+                </ChildContent>
+            </Ribbon>
         </div>
     }
 </div>

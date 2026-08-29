@@ -22,7 +22,20 @@ public enum HitTarget
 
     /// <summary>The draggable divider between two column headers.</summary>
     ColumnResize,
-    RowResize
+    RowResize,
+
+    /// <summary>One of the two grab handles drawn on a touch selection.</summary>
+    SelectionHandle
+}
+
+/// <summary>Which end of the selection a grab handle moves.</summary>
+public enum SelectionHandle
+{
+    /// <summary>The top-left handle, which moves the anchor.</summary>
+    Start,
+
+    /// <summary>The bottom-right handle, which moves the active cell.</summary>
+    End
 }
 
 /// <summary>
@@ -37,6 +50,17 @@ public sealed class GridViewport(GridMetrics metrics)
 {
     /// <summary>How close to a header divider counts as a resize grab.</summary>
     public const double ResizeGripPixels = 4;
+
+    /// <summary>
+    /// How far from a touch handle's centre still counts as grabbing it.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately larger than the handle is drawn. The handle marks the corner of the selection
+    /// precisely, which is what makes it readable, but a corner is the hardest thing on the grid to
+    /// land a fingertip on - and a miss does not do nothing, it pans the sheet out from under the
+    /// selection the user was trying to adjust.
+    /// </remarks>
+    public const double HandleGripPixels = 22;
 
     public GridMetrics Metrics { get; } = metrics;
 
@@ -53,10 +77,29 @@ public sealed class GridViewport(GridMetrics metrics)
     public double ContentOriginY
         => this.Metrics.ColumnHeaderHeight + this.Metrics.Rows.SizeOfRange(0, this.Metrics.FrozenPane.Row);
 
+    /// <summary>
+    /// How far past the content a scroll may go, or null for no limit.
+    /// </summary>
+    /// <remarks>
+    /// A grid is a million rows by sixteen thousand columns whether or not anything is in them, so
+    /// there is nothing in the metrics to stop a scroll. That is survivable with a wheel, which moves
+    /// a notch at a time; a finger flings, and a sheet that scrolls into an unbounded field of blank
+    /// cells with no way back but flinging the other way is indistinguishable from having lost the
+    /// data. The host sets this from the used range plus a screen of slack, so there is somewhere to
+    /// go past the last cell without there being everywhere.
+    /// </remarks>
+    public double? MaxScrollX { get; set; }
+
+    /// <inheritdoc cref="MaxScrollX"/>
+    public double? MaxScrollY { get; set; }
+
     public void ScrollTo(double x, double y)
     {
-        this.ScrollX = Math.Max(0, x);
-        this.ScrollY = Math.Max(0, y);
+        this.ScrollX = Clamp(x, this.MaxScrollX);
+        this.ScrollY = Clamp(y, this.MaxScrollY);
+
+        static double Clamp(double value, double? max)
+            => max is { } limit ? Math.Clamp(value, 0, Math.Max(0, limit)) : Math.Max(0, value);
     }
 
     public void ScrollBy(double dx, double dy) => this.ScrollTo(this.ScrollX + dx, this.ScrollY + dy);
@@ -215,6 +258,42 @@ public sealed class GridViewport(GridMetrics metrics)
     /// Scrolls the minimum amount needed to bring a cell fully into view. A cell inside a frozen band
     /// is always visible, so nothing moves.
     /// </summary>
+    /// <summary>Where the two grab handles sit for a selection, in viewport coordinates.</summary>
+    public (GridRect Start, GridRect End) SelectionHandles(CellRange range)
+    {
+        var rect = this.RangeRect(range);
+        var size = HandleGripPixels;
+        var half = size / 2;
+
+        return (
+            new GridRect(rect.X - half, rect.Y - half, size, size),
+            new GridRect(rect.Right - half, rect.Bottom - half, size, size));
+    }
+
+    /// <summary>Which handle, if either, a point grabs.</summary>
+    /// <remarks>
+    /// End is tested first. The two handles overlap on a single-cell selection in a small cell, and
+    /// End is the one that grows the range - starting a drag by shrinking from the anchor is almost
+    /// never what was meant.
+    /// </remarks>
+    public SelectionHandle? SelectionHandleAt(CellRange range, double x, double y)
+    {
+        // Handles belong to the content area. Letting one be grabbed over the headers would put a
+        // grab target on top of the row and column selection strips.
+        if (x < this.Metrics.RowHeaderWidth || y < this.Metrics.ColumnHeaderHeight)
+            return null;
+
+        var (start, end) = this.SelectionHandles(range);
+
+        if (end.Contains(x, y))
+            return SelectionHandle.End;
+
+        if (start.Contains(x, y))
+            return SelectionHandle.Start;
+
+        return null;
+    }
+
     public void ScrollIntoView(CellRef cell)
     {
         var frozen = this.Metrics.FrozenPane;

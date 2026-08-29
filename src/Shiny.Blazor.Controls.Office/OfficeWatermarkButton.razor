@@ -1,0 +1,92 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Microsoft.AspNetCore.Components.Forms
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
+@using Shiny.Controls.Office.Theming
+@using Shiny.Controls.Office.Packaging
+
+@*
+    Sets or clears the picture drawn behind the content.
+
+    A label wrapping an InputFile, exactly as the picture button is, because the file input has to be
+    inside the thing that is clicked — and because choosing a watermark is choosing a picture, so it
+    should reach the camera and the gallery on a phone the same way inserting one does.
+
+    Once a mark is set the control becomes a plain button that takes it off: a picker that reopens on a
+    document already stamped is a dead end with no way back.
+*@
+@if (this.HasWatermark)
+{
+    <Tooltip Text="Remove watermark" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <button type="button"
+                class="shiny-office-btn on"
+                aria-label="Remove watermark"
+                title="@(this.ShowTooltips ? null : "Remove watermark")"
+                disabled="@this.Disabled"
+                @onclick="() => this.Picked.InvokeAsync(null)">@OfficeToolbarIcons.Get(OfficeIcon.Watermark)</button>
+    </Tooltip>
+}
+else
+{
+    <Tooltip Text="Watermark" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
+        <label class="shiny-office-btn shiny-office-btn-file"
+               aria-label="Watermark"
+               title="@(this.ShowTooltips ? null : "Watermark")">
+            @OfficeToolbarIcons.Get(OfficeIcon.Watermark)
+            <InputFile OnChange="this.OnFileAsync" accept="@Accept" disabled="@this.Disabled" />
+        </label>
+    </Tooltip>
+}
+
+@code {
+    const long MaxBytes = 20 * 1024 * 1024;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>True when a mark is already set, so the button offers to take it off.</summary>
+    [Parameter] public bool HasWatermark { get; set; }
+
+    /// <summary>The chosen mark, or null when the one already set is being cleared.</summary>
+    [Parameter] public EventCallback<OfficeWatermark?> Picked { get; set; }
+
+    [Parameter] public EventCallback<OfficeDropRejected> Rejected { get; set; }
+
+    TooltipTrigger TooltipTriggerMode => this.ShowTooltips ? TooltipTrigger.Hover : TooltipTrigger.Manual;
+
+    /// <summary>Built from the shared map, so this and the drop handler agree on what an image is.</summary>
+    static readonly string Accept = string.Join(",", ImageContentTypes.ByExtension.Keys);
+
+    async Task OnFileAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null)
+            return;
+
+        if (ImageContentTypes.Resolve(file.Name, file.ContentType) is null)
+        {
+            await this.Rejected.InvokeAsync(new OfficeDropRejected(file.Name, "That file is not an image the editor can use."));
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            // Turned onto the diagonal, which is where a stamp goes and what stops it being mistaken
+            // for content someone placed on the page.
+            await this.Picked.InvokeAsync(new OfficeWatermark
+            {
+                Image = buffer.ToArray(),
+                RotationDegrees = 315
+            });
+        }
+        catch (IOException)
+        {
+            await this.Rejected.InvokeAsync(new OfficeDropRejected(file.Name, "The file is too large to use."));
+        }
+    }
+}

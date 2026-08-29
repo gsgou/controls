@@ -1,4 +1,4 @@
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>The new state of a <see cref="RibbonToggleButton"/>.</summary>
 public class RibbonCheckedEventArgs(bool isChecked) : EventArgs

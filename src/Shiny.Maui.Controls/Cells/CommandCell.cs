@@ -94,7 +94,7 @@ public class CommandCell : LabelCell
                 Padding = 0,
                 CornerRadius = 0,
                 Text = string.Empty
-            };
+            }.Neutralize();
             tapOverlay.Clicked += (_, _) => OnCellTapped(this, new TappedEventArgs(null));
             Grid.SetColumn(tapOverlay, 0);
             Grid.SetColumnSpan(tapOverlay, 3);

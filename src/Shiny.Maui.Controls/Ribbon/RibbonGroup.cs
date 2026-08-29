@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// A titled box of related commands inside a <see cref="RibbonTab"/> — Clipboard, Font, Paragraph.

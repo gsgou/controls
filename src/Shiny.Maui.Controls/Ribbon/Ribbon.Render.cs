@@ -3,7 +3,7 @@ using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 public partial class Ribbon
 {
@@ -50,6 +50,11 @@ public partial class Ribbon
                 this.tabStack.Children.Add(this.BuildTabButton(tab));
 
                 var groupHost = new HorizontalStackLayout { Spacing = 4 };
+
+                // The fades depend on the content being wider than the scroller, and the content is
+                // not measured when the ribbon's own SizeChanged fires - a group's width is not known
+                // until its handler has laid it out, which is a frame or two later.
+                groupHost.SizeChanged += (_, _) => this.UpdateScrollHints();
                 var groupViews = new List<RibbonGroupView>();
 
                 for (var i = 0; i < tab.VisibleGroups.Count; i++)
@@ -74,9 +79,15 @@ public partial class Ribbon
                     IsVisible = false
                 };
 
+                panel.Scrolled += this.OnPanelScrolled;
+
                 this.bodyHost.Children.Add(panel);
                 this.panels.Add((tab, panel, groupViews));
             }
+
+            // Last, so they overlay every panel. Children.Clear above dropped the previous pair.
+            this.bodyHost.Children.Add(this.startFade);
+            this.bodyHost.Children.Add(this.endFade);
 
             this.shapeSignature = this.Signature();
         }
@@ -121,6 +132,16 @@ public partial class Ribbon
             this.HeaderBackgroundColor,
             ShinyThemeKeys.Color.SurfaceContainer
         );
+
+        // The chevron sits on the band, so it takes the band's ink rather than the body's foreground -
+        // otherwise it is a dark glyph on a saturated header, which is the same unreadable pairing the
+        // tab labels had.
+        this.collapseGlyph.Stroke = new SolidColorBrush(this.HeaderInk);
+
+        // The tab labels carry resolved colours rather than dynamic resources - see ApplyTabInk - so
+        // they have to be re-inked whenever the chrome changes, which is where a theme flip lands.
+        foreach (var (tab, _, _, label) in this.tabButtons)
+            this.ApplyTabInk(label, ReferenceEquals(tab, this.SelectedTab));
 
         ThemeProbe.Tint(
             this.bodyFrame,
@@ -211,7 +232,9 @@ public partial class Ribbon
             VerticalTextAlignment = TextAlignment.Center,
             HorizontalTextAlignment = TextAlignment.Center
         }.WithFontSize(ShinyThemeKeys.Type.LabelLargeSize);
-        label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+
+        // Left to ApplySelection: which ink reads depends on whether the tab is sitting on the header
+        // band or lifted out of it onto the body, and those are two different grounds.
 
         var underline = new BoxView { HeightRequest = 2, Margin = new Thickness(6, 0, 6, 0) };
 
@@ -248,7 +271,14 @@ public partial class Ribbon
         pointer.PointerEntered += (_, _) =>
         {
             if (!ReferenceEquals(this.SelectedTab, tab) && tab.IsSelectable)
+            {
                 border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+
+                // Hovering lifts the tab off the band onto a surface tint, so the ink has to come off
+                // the band with it - otherwise pointing at a tab in a light theme makes its label
+                // disappear, which is the one moment the user is looking straight at it.
+                this.ApplyTabInk(label, onSurface: true);
+            }
         };
         pointer.PointerExited += (_, _) =>
         {
@@ -256,11 +286,12 @@ public partial class Ribbon
             {
                 border.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
                 border.BackgroundColor = Colors.Transparent;
+                this.ApplyTabInk(label, onSurface: false);
             }
         };
         border.GestureRecognizers.Add(pointer);
 
-        this.tabButtons.Add((tab, border, underline));
+        this.tabButtons.Add((tab, border, underline, label));
         return border;
     }
 
@@ -312,7 +343,7 @@ public partial class Ribbon
     {
         var selected = this.SelectedTab;
 
-        foreach (var (tab, button, underline) in this.tabButtons)
+        foreach (var (tab, button, underline, label) in this.tabButtons)
         {
             var isSelected = ReferenceEquals(tab, selected);
 
@@ -323,11 +354,19 @@ public partial class Ribbon
             {
                 button.ClearValue(VisualElement.BackgroundColorProperty);
                 button.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLow);
+
+                // The selected tab is lifted out of the header onto the body's own surface, so it takes
+                // the theme's ink whatever the band behind it is. Giving it the header's ink instead is
+                // white text on a light grey tab in a light theme - present, and unreadable.
+                this.ApplyTabInk(label, onSurface: true);
             }
             else
             {
                 button.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
                 button.BackgroundColor = Colors.Transparent;
+
+                // The rest sit on the band, so they take whatever reads on it.
+                this.ApplyTabInk(label, onSurface: false);
             }
 
             // Color, not BackgroundColor - AppKit paints a BoxView from Color alone.
@@ -350,6 +389,9 @@ public partial class Ribbon
 
         foreach (var (tab, panel, _) in this.panels)
             panel.IsVisible = ReferenceEquals(tab, selected);
+
+        // Each tab's groups are a different width, so switching tabs changes what overflows.
+        this.UpdateScrollHints();
 
         // The contextual band captions the tab set, so it only means anything while one is showing.
         var contextual = selected is { IsContextual: true } ? selected : null;

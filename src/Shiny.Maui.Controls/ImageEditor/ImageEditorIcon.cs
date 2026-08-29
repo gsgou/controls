@@ -157,6 +157,15 @@ internal sealed class ImageEditorIconDrawable : IDrawable
         canvas.DrawLine(8.5f, 19, 15.5f, 19);
     }
 
+    /// <summary>
+    /// The undo arrow: a chevron head at the left, a straight run right, and a tail curving down.
+    /// </summary>
+    /// <remarks>
+    /// Béziers rather than <c>DrawArc</c>. The previous version was a 70-degree arc segment plus a
+    /// two-line head, which at the ~20px these are actually drawn at collapsed into a small hook that
+    /// read as neither an arrow nor a curve - the shape only held together at the size it was designed
+    /// against. An explicit path is the same on every platform and at every size.
+    /// </remarks>
     static void DrawUndo(ICanvas canvas, bool mirrored)
     {
         canvas.SaveState();
@@ -166,23 +175,37 @@ internal sealed class ImageEditorIconDrawable : IDrawable
             canvas.Scale(-1, 1);
         }
 
-        // Arrow head pointing back into the arc
-        canvas.DrawLine(4, 9.5f, 9.5f, 9.5f);
-        canvas.DrawLine(4, 9.5f, 4, 4);
-        canvas.DrawArc(4, 6, 16, 14, 175, -70, false, false);
+        var body = new PathF();
+        body.MoveTo(4.5f, 10.5f);
+        body.LineTo(13.5f, 10.5f);
+        body.CurveTo(17.1f, 10.5f, 20f, 13.4f, 20f, 17f);
+        body.CurveTo(20f, 18.2f, 19.7f, 19.3f, 19.2f, 20.2f);
+        canvas.DrawPath(body);
+
+        var head = new PathF();
+        head.MoveTo(8.6f, 6.4f);
+        head.LineTo(4.5f, 10.5f);
+        head.LineTo(8.6f, 14.6f);
+        canvas.DrawPath(head);
+
         canvas.RestoreState();
     }
 
+    /// <summary>
+    /// Reset: a near-closed circle with a head on the open end, so it reads as "all the way back"
+    /// rather than as the single-step undo beside it.
+    /// </summary>
     static void DrawReset(ICanvas canvas)
     {
-        // Mirrored (anti-clockwise) so it never reads as the rotate icon
-        canvas.SaveState();
-        canvas.Translate(24, 0);
-        canvas.Scale(-1, 1);
-        canvas.DrawArc(5, 5, 14, 14, 110, -260, true, false);
-        canvas.DrawLine(16.5f, 3.2f, 19.8f, 6.6f);
-        canvas.DrawLine(19.8f, 6.6f, 15.8f, 8.9f);
-        canvas.RestoreState();
+        // A three-quarter circle, drawn anti-clockwise so it is not the rotate icon.
+        canvas.DrawArc(4.5f, 4.5f, 15, 15, 70, 340, false, false);
+
+        // Head on the open end, at roughly 70 degrees - up and slightly right of centre.
+        var head = new PathF();
+        head.MoveTo(11.8f, 2.6f);
+        head.LineTo(15.6f, 5.2f);
+        head.LineTo(11.6f, 7.6f);
+        canvas.DrawPath(head);
     }
 
     static void DrawMagnifier(ICanvas canvas, int sign)

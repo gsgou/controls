@@ -365,13 +365,11 @@
         <ShellContent Title="Tree" ContentTemplate="{DataTemplate datagrid:TreeDataGridPage}" Route="treedatagrid" />
         <ShellContent Title="Formatting" ContentTemplate="{DataTemplate datagrid:DataGridFormattingPage}" Route="datagridformatting" />
         <ShellContent Title="Grouping" ContentTemplate="{DataTemplate datagrid:DataGridGroupingPage}" Route="datagridgrouping" />
-        <ShellContent Title="Spreadsheet" ContentTemplate="{DataTemplate office:SpreadsheetPage}" Route="spreadsheet" />
-        <ShellContent Title="Document" ContentTemplate="{DataTemplate office:DocumentViewerPage}" Route="documentviewer" />
-        <ShellContent Title="Doc Editor" ContentTemplate="{DataTemplate office:DocumentEditorPage}" Route="documenteditor" />
-        <ShellContent Title="Slides" ContentTemplate="{DataTemplate office:SlideViewerPage}" Route="slideviewer" />
-        <ShellContent Title="Slide Editor" ContentTemplate="{DataTemplate office:SlideEditorPage}" Route="slideeditor" />
     </FlyoutItem>
 
+    <!-- The Office pages used to hang off the Data Grid item, which put nine tabs in one bar: only
+         four fit, so every one of these lived behind the "More" overflow and "Slide Editor" was filed
+         under "Data Grid". They get their own item, matching the Blazor gallery's Office section. -->
     <FlyoutItem Title="Docking">
         <FlyoutItem.FlyoutIcon>
             <FontImageSource Glyph="&#x25A8;" Size="20"
@@ -386,6 +384,58 @@
                              Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate ribbon:RibbonPage}" Route="ribbon" />
+    </FlyoutItem>
+
+    <!--  OFFICE DOCUMENTS -->
+    <MenuItem Text="OFFICE DOCUMENTS"
+              StyleClass="SectionHeader"
+              IsEnabled="False">
+        <MenuItem.IconImageSource>
+            <FontImageSource Glyph=" " Size="1" Color="Transparent" />
+        </MenuItem.IconImageSource>
+    </MenuItem>
+
+    <!-- One flyout entry per Office control, rather than one "Office" item with five tabs. These are
+         five separate controls, not five views of one - a viewer and an editor per format, plus the
+         spreadsheet - and the Blazor gallery lists them the same way, under this same heading. -->
+    <FlyoutItem Title="Spreadsheet">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4CA;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate office:SpreadsheetPage}" Route="spreadsheet" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Document Viewer">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4C4;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate office:DocumentViewerPage}" Route="documentviewer" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Document Editor">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4DD;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate office:DocumentEditorPage}" Route="documenteditor" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Slide Viewer">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x1F4FD;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate office:SlideViewerPage}" Route="slideviewer" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Slide Editor">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x2728;" Size="20"
+                             Color="{AppThemeBinding Light=#0284C7, Dark=#60A5FA}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate office:SlideEditorPage}" Route="slideeditor" />
     </FlyoutItem>
 
     <!-- ============================================================ -->

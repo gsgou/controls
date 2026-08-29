@@ -1,3 +1,5 @@
+using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 namespace Shiny.Maui.Controls.Markdown;
 
 public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
@@ -47,7 +49,7 @@ public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
             BackgroundColor = Colors.Transparent,
             FontSize = 18,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.Neutralize();
         toggleButton.Clicked += OnTogglePreview;
 
         toolbarRow = new Grid
@@ -310,31 +312,26 @@ public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
         }
     }
 
+    /// <summary>
+    /// Binds the toolbar chrome to the theme.
+    /// </summary>
+    /// <remarks>
+    /// These were literals chosen from <c>RequestedTheme</c> when the editor was constructed, which
+    /// was wrong twice: a theme pack restyled the editor and left its toolbar in the same two greys,
+    /// and because the colour was read once the bar kept its old value when the appearance flipped -
+    /// so a light editor could sit under a near-black formatting bar. A dynamic resource re-resolves
+    /// on both, which is the pattern the rest of the control set already used.
+    /// </remarks>
     void ApplyThemeColors()
     {
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-
-        toolbarRow.BackgroundColor = isDark
-            ? Color.FromArgb("#1F2937")
-            : Color.FromArgb("#F9FAFB");
-
-        toolbarSeparator.Color = isDark
-            ? Color.FromArgb("#374151")
-            : Color.FromArgb("#E5E7EB");
-
-        toggleButton.TextColor = isDark
-            ? Color.FromArgb("#D1D5DB")
-            : Color.FromArgb("#6B7280");
+        toolbarRow.SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainer);
+        toolbarSeparator.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+        toggleButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
     }
 
     void BuildToolbar(IReadOnlyList<MarkdownToolbarItem> items)
     {
         toolbar.Children.Clear();
-
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        var buttonBg = isDark ? Color.FromArgb("#374151") : Color.FromArgb("#E5E7EB");
-        var buttonText = isDark ? Color.FromArgb("#E5E7EB") : Color.FromArgb("#374151");
-        var separatorColor = isDark ? Color.FromArgb("#4B5563") : Color.FromArgb("#D1D5DB");
 
         string? lastGroup = null;
 
@@ -343,14 +340,16 @@ public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
             var group = GetToolbarGroup(item);
             if (lastGroup != null && group != lastGroup)
             {
-                toolbar.Children.Add(new BoxView
+                var groupSeparator = new BoxView
                 {
                     WidthRequest = 1,
                     HeightRequest = 24,
-                    Color = separatorColor,
                     VerticalOptions = LayoutOptions.Center,
                     Margin = new Thickness(2, 0)
-                });
+                };
+
+                groupSeparator.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+                toolbar.Children.Add(groupSeparator);
             }
             lastGroup = group;
 
@@ -363,10 +362,11 @@ public class MarkdownEditor : ContentView, IKeyboardAccessoryHost
                 Padding = 0,
                 CornerRadius = 8,
                 BorderWidth = 0,
-                FontSize = 14,
-                BackgroundColor = buttonBg,
-                TextColor = buttonText
-            };
+                FontSize = 14
+            }.Neutralize();
+
+            button.SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+            button.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
             if (ReferenceEquals(item, MarkdownToolbarItems.Bold))
                 button.FontAttributes = FontAttributes.Bold;

@@ -84,6 +84,80 @@ static class ColumnSpans
         return true;
     }
 
+    /// <summary>
+    /// Moves the spans along with an inserted or deleted band of columns.
+    /// </summary>
+    /// <remarks>
+    /// The insert deliberately leaves the new columns with no span of their own rather than copying
+    /// the one they were pushed out of: Excel gives an inserted column the width of its left-hand
+    /// neighbour but no style, and a span silently extended over the gap would carry the style too.
+    /// </remarks>
+    /// <param name="delta">Positive to insert that many columns at <paramref name="at"/>, negative to delete.</param>
+    public static void Shift(SheetElement sheetElement, int at, int delta)
+    {
+        ArgumentNullException.ThrowIfNull(sheetElement);
+
+        if (delta == 0)
+            return;
+
+        var spans = Read(sheetElement);
+        if (spans.Count == 0)
+            return;
+
+        var result = new List<Span>(spans.Count + 1);
+
+        foreach (var span in spans)
+        {
+            if (span.Last < at)
+            {
+                result.Add(span);
+                continue;
+            }
+
+            // A span straddling the edit keeps its left half where it is; only the part at or past the
+            // insertion point moves, so the columns before it do not silently change width.
+            if (span.First < at)
+            {
+                result.Add(span with { Last = at - 1 });
+
+                var tail = Move(at, span.Last);
+                if (tail is { } moved)
+                    result.Add(span with { First = moved.First, Last = moved.Last });
+
+                continue;
+            }
+
+            if (Move(span.First, span.Last) is { } shifted)
+                result.Add(span with { First = shifted.First, Last = shifted.Last });
+        }
+
+        result.Sort((a, b) => a.First.CompareTo(b.First));
+
+        var merged = Merge(result);
+        if (!Same(spans, merged))
+            Write(sheetElement, merged);
+
+        (int First, int Last)? Move(int first, int last)
+        {
+            if (delta < 0)
+            {
+                // A span that falls entirely inside the deleted band goes with it; one that only
+                // starts inside it loses its left end and resumes where the band did.
+                var bandEnd = at - delta;
+                if (last < bandEnd)
+                    return null;
+
+                first = Math.Max(first, bandEnd);
+            }
+
+            var from = first + delta;
+            if (from > CellRef.MaxColumn)
+                return null;
+
+            return (from, Math.Min(last + delta, CellRef.MaxColumn));
+        }
+    }
+
     /// <summary>The properties recorded for one column, or null when the file says nothing about it.</summary>
     public static Span? Find(SheetElement sheetElement, int column)
     {

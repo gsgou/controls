@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Shiny;
-using Shiny.Maui.Controls.Desktop.Ribbons;
+using Shiny.Maui.Controls.Ribbons;
 
 namespace Sample.Features.Ribbon;
 

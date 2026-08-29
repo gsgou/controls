@@ -13,7 +13,7 @@
     caller supplies the current highlight and receives the chosen one; nothing here knows which kind
     of document it is over.
 *@
-<div class="shiny-office-picker">
+<div class="shiny-office-picker" data-popover-host>
     @*
         The apply half keeps its own mark rather than taking the plain Highlight icon: the bar under
         the letter is the colour it would apply, and that is the one thing a monochrome icon set
@@ -53,7 +53,7 @@
         *@
         <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
 
-        <div class="shiny-office-panel" role="dialog" aria-label="Highlight colours">
+        <div class="shiny-office-panel" popover="manual" data-popover role="dialog" aria-label="Highlight colours">
             <div class="hl-grid">
                 @foreach (var swatch in HighlightPalette.Swatches)
                 {

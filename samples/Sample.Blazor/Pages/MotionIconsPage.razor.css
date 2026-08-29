@@ -17,8 +17,13 @@
 
 .mi-cell span {
     font-size: 11px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     word-break: break-word;
+}
+
+.mi-filter {
+    max-width: 260px;
+    margin-top: 12px;
 }
 
 .mi-gallery {
@@ -30,7 +35,7 @@
 
 .mi-note {
     font-size: 12px;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     max-width: 240px;
 }
 

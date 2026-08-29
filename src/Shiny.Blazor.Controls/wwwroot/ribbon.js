@@ -25,11 +25,58 @@ export function init(root, dotnet) {
     const state = { root, dotnet, widths: new Map(), collapsedWidths: new Map(), reported: null };
     states.set(root, state);
 
-    const ro = new ResizeObserver(() => measure(state));
+    const ro = new ResizeObserver(() => {
+        measure(state);
+        markOverflow(state);
+    });
     ro.observe(root);
     state.ro = ro;
 
+    // A scroller only says how much is hidden while it is being scrolled, so the fades have to be
+    // recomputed on scroll as well as on resize.
+    // Hosted pickers open their own panels, and the body clips them: it scrolls horizontally, and CSS
+    // makes an element a clipping context on BOTH axes the moment either one is not visible. Their
+    // components re-render on their own without the ribbon knowing, so there is nothing to hook - the
+    // only way to see the panel appear is to watch for it.
+    const panels = new MutationObserver(() => raisePanels(state));
+    panels.observe(root, { childList: true, subtree: true });
+    state.panels = panels;
+
+    state.overflowHook = () => markOverflow(state);
+    for (const scroller of scrollers(root))
+        scroller.addEventListener('scroll', state.overflowHook, { passive: true });
+
     measure(state);
+    markOverflow(state);
+}
+
+
+// The two things in a ribbon that scroll rather than collapsing: the body, when the groups on a tab
+// are wider than the bar, and the tab strip, when there are more tabs than fit.
+function scrollers(root) {
+    return [
+        root.querySelector('.shiny-ribbon__body'),
+        root.querySelector('.shiny-ribbon__tabs')
+    ].filter(Boolean);
+}
+
+
+// Marks each scroller with which side still has content off-screen, which is all the stylesheet needs
+// to draw a fade on that edge. Without it a bar that scrolls looks exactly like one that does not:
+// the last group ends flush at the edge and there is nothing to say another one follows.
+function markOverflow(state) {
+    for (const scroller of scrollers(state.root)) {
+        // A one-pixel tolerance: scrollWidth and clientWidth are rounded independently, so an element
+        // that fits exactly can report a scrollWidth a fraction larger and show a fade forever.
+        const max = scroller.scrollWidth - scroller.clientWidth;
+        const start = scroller.scrollLeft > 1;
+        const end = scroller.scrollLeft < max - 1;
+
+        const value = start && end ? 'both' : start ? 'start' : end ? 'end' : 'none';
+
+        if (scroller.dataset.overflow !== value)
+            scroller.dataset.overflow = value;
+    }
 }
 
 
@@ -37,7 +84,13 @@ export function init(root, dotnet) {
 // render that swapped which items are in a group changes the widths without changing that.
 export function remeasure(root) {
     const state = states.get(root);
-    if (state) measure(state);
+    if (!state) return;
+
+    measure(state);
+
+    // After the layout settles: a render that changed what is in a group changes how much overflows,
+    // and the group widths measure() just applied are not on screen until the next frame.
+    requestAnimationFrame(() => markOverflow(state));
 }
 
 
@@ -53,7 +106,12 @@ export function dispose(root) {
     if (state.escapeHook)
         document.removeEventListener('keydown', state.escapeHook, true);
 
+    if (state.overflowHook)
+        for (const scroller of scrollers(root))
+            scroller.removeEventListener('scroll', state.overflowHook);
+
     state.ro?.disconnect();
+    state.panels?.disconnect();
     states.delete(root);
 }
 
@@ -121,6 +179,28 @@ function measure(state) {
 
 
 // ---- menu placement --------------------------------------------------------------------------
+
+/*
+    Raises any hosted picker panel into the top layer and places it under the control it belongs to.
+
+    The panel keeps its own markup and its own dismissal - all this does is take it out of the
+    scroller that would otherwise cut it off. `[data-popover-host]` is the control, `[data-popover]`
+    the panel inside it, and a panel that is already floating is left alone so this is safe to run on
+    every mutation.
+*/
+function raisePanels(state) {
+    if (!state?.root?.isConnected) return;
+
+    for (const panel of state.root.querySelectorAll('[data-popover]')) {
+        if (panel.matches(':popover-open')) continue;
+
+        if (!raise(panel)) continue;
+
+        const host = panel.closest('[data-popover-host]');
+        if (host) position(panel, host, false);
+    }
+}
+
 
 export function placeMenus(root) {
     const state = states.get(root);

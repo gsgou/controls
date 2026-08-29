@@ -380,6 +380,19 @@ public sealed class WordDocument : OfficeDocument
         if (size?.Height?.Value is { } height)
             setup = setup with { Height = OoxmlUnits.TwipsToPixels(height) };
 
+        // The attribute is the authority, not the dimensions: a section can legitimately declare
+        // landscape on paper that is taller than it is wide (a custom size), and the two have to come
+        // back the way they were written or the next save flips the page.
+        if (size?.Orient?.Value is { } orient)
+        {
+            setup = setup with
+            {
+                Orientation = orient == PageOrientationValues.Landscape
+                    ? PageOrientation.Landscape
+                    : PageOrientation.Portrait
+            };
+        }
+
         if (margin is not null)
         {
             setup = setup with

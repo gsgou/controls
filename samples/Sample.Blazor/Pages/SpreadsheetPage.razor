@@ -18,7 +18,7 @@
     <button class="btn" @onclick="AddRow">Add row</button>
     <button class="btn" disabled="@(!CanUndo)" @onclick="Undo">Undo</button>
     <button class="btn" disabled="@(!CanRedo)" @onclick="Redo">Redo</button>
-    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@Status</span>
 </div>
 
@@ -28,20 +28,24 @@
         ShowFormulaBar and ShowSheetTabs turn each on or off. The toolbar is the one that is off by
         default, since a viewer should not grow a formatting bar it never asked for.
     *@
+    @* Theme left null: the grid follows the page's light/dark scheme on its own. The button above
+       pins it dark, to show that an explicit Theme still wins. *@
     <SpreadsheetView @ref="view"
                      Workbook="workbook"
                      ShowToolbar="true"
-                     Theme="@(dark ? SpreadsheetTheme.Dark : SpreadsheetTheme.Light)"
+                     Theme="@(dark ? SpreadsheetTheme.Dark : null)"
                      CellChanged="OnCellChanged" />
 </div>
 
 <p class="hint">
-    The toolbar formats the selection: bold, colour, cell fill, alignment, number formats and decimal
-    places. Click a <em>column header</em> first and the format lands on the whole column - including
-    rows that do not exist yet, which is how a currency column stays currency. &#x03A3; writes SUM
-    over whatever the selection implies, and its chevron offers average, count, min and max. Drag a
-    column header's right edge to resize it, or use the fit button; either way the width is saved
-    with the file. Everything here is one undo step.
+    <em>Home</em> formats the selection: bold, colour, cell fill, alignment, indent, number formats and
+    decimal places. Click a <em>column header</em> first and the format lands on the whole column -
+    including rows that do not exist yet, which is how a currency column stays currency. &#x03A3;
+    writes SUM over whatever the selection implies, and its chevron offers average, count, min and max.
+    <em>Data</em> is the sheet's own shape: insert and delete rows and columns, hide and unhide them,
+    and a button each for the five aggregates. Drag a column header's right edge to resize it, or use
+    Data ▸ Width - the button fits the column to its contents, the chevron sets a fixed width; either
+    way it is saved with the file. Everything here is one undo step.
 </p>
 
 <p class="hint">

@@ -17,7 +17,7 @@
     <button class="btn" @onclick="() => Zoom(-0.1)">−</button>
     <span class="zoom">@((zoom * 100).ToString("0")) %</span>
     <button class="btn" @onclick="() => Zoom(0.1)">+</button>
-    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@(document?.Blocks.Count ?? 0) blocks</span>
 </div>
 
@@ -48,7 +48,7 @@
         <DocumentView @ref="view"
                       Document="document"
                       Zoom="zoom"
-                      Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)" />
+                      Theme="@(dark ? DocumentTheme.Dark : null)" />
     </div>
 </div>
 

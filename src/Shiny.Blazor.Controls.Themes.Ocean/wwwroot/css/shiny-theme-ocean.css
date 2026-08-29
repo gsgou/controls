@@ -4,6 +4,8 @@
    </auto-generated> */
 
 :root {
+    color-scheme: light;
+
     /* ===== Color (light) ===== */
     --shiny-color-primary: #006783;
     --shiny-color-on-primary: #FFFFFF;
@@ -177,6 +179,8 @@
 /* Explicit dark mode (toggle .shiny-theme-dark on <html> or a container) */
 :root.shiny-theme-dark,
 .shiny-theme-dark {
+    color-scheme: dark;
+
     --shiny-color-primary: #82D1F0;
     --shiny-color-on-primary: #003851;
     --shiny-color-primary-container: #004F6A;
@@ -234,9 +238,73 @@
     --shiny-color-on-critical-container: #FFACB7;
 }
 
+/* Explicit light mode has to restate the scheme: it may sit inside a dark scope */
+:root.shiny-theme-light,
+.shiny-theme-light {
+    color-scheme: light;
+
+    --shiny-color-primary: #006783;
+    --shiny-color-on-primary: #FFFFFF;
+    --shiny-color-primary-container: #9FEDFF;
+    --shiny-color-on-primary-container: #00233A;
+    --shiny-color-secondary: #006B63;
+    --shiny-color-on-secondary: #FFFFFF;
+    --shiny-color-secondary-container: #9AF2E8;
+    --shiny-color-on-secondary-container: #00251F;
+    --shiny-color-tertiary: #2450DB;
+    --shiny-color-on-tertiary: #FFFFFF;
+    --shiny-color-tertiary-container: #D1D2FF;
+    --shiny-color-on-tertiary-container: #001387;
+    --shiny-color-error: #BC0D3A;
+    --shiny-color-on-error: #FFFFFF;
+    --shiny-color-error-container: #FFACB7;
+    --shiny-color-on-error-container: #610000;
+    --shiny-color-background: #F7F9FE;
+    --shiny-color-on-background: #171C23;
+    --shiny-color-surface: #F7F9FE;
+    --shiny-color-on-surface: #171C23;
+    --shiny-color-surface-variant: #C8E7F7;
+    --shiny-color-on-surface-variant: #2E4B58;
+    --shiny-color-surface-container-lowest: #FFFFFF;
+    --shiny-color-surface-container-low: #F0F4FA;
+    --shiny-color-surface-container: #E9EEF6;
+    --shiny-color-surface-container-high: #E3E9F2;
+    --shiny-color-surface-container-highest: #DCE3ED;
+    --shiny-color-surface-tint: #006783;
+    --shiny-color-outline: #5E7B89;
+    --shiny-color-outline-variant: #ADCBDB;
+    --shiny-color-shadow: #000000;
+    --shiny-color-scrim: #000000;
+    --shiny-color-inverse-surface: #2B3139;
+    --shiny-color-inverse-on-surface: #ECF1F8;
+    --shiny-color-inverse-primary: #82D1F0;
+    --shiny-color-success: #006D62;
+    --shiny-color-on-success: #FFFFFF;
+    --shiny-color-success-container: #87F5E7;
+    --shiny-color-on-success-container: #00271F;
+    --shiny-color-info: #006989;
+    --shiny-color-on-info: #FFFFFF;
+    --shiny-color-info-container: #8CF0FF;
+    --shiny-color-on-info-container: #00243F;
+    --shiny-color-warning: #885300;
+    --shiny-color-on-warning: #FFFFFF;
+    --shiny-color-warning-container: #FFD55E;
+    --shiny-color-on-warning-container: #400E00;
+    --shiny-color-caution: #AF3000;
+    --shiny-color-on-caution: #FFFFFF;
+    --shiny-color-caution-container: #FFB97D;
+    --shiny-color-on-caution-container: #590000;
+    --shiny-color-critical: #BC0D3A;
+    --shiny-color-on-critical: #FFFFFF;
+    --shiny-color-critical-container: #FFACB7;
+    --shiny-color-on-critical-container: #610000;
+}
+
 /* Follow OS dark preference unless explicitly set to light */
 @media (prefers-color-scheme: dark) {
     :root:not(.shiny-theme-light) {
+        color-scheme: dark;
+
         --shiny-color-primary: #82D1F0;
         --shiny-color-on-primary: #003851;
         --shiny-color-primary-container: #004F6A;

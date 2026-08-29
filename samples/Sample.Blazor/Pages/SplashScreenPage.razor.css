@@ -10,13 +10,13 @@
     flex-direction: column;
     gap: 4px;
     font-size: 0.8125rem;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
 }
 
 .splash-options input,
 .splash-options select {
     padding: 6px 8px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
     border-radius: 8px;
     font-size: 0.875rem;
 }

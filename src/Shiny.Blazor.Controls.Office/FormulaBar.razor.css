@@ -44,7 +44,7 @@
     border-radius: 4px;
     background: var(--shiny-color-surface, #fff);
     color: inherit;
-    font-family: var(--shiny-type-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-family: var(--shiny-type-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     font-size: 12px;
     outline: none;
 }

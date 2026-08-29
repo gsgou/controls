@@ -8,3 +8,5 @@ global using Shiny.Controls.Office.Document;
 global using Shiny.Controls.Office.Presentation;
 global using Shiny.Controls.Office.Skia;
 global using Shiny.Controls.Office.Spelling;
+global using Shiny.Controls.Office.View;
+global using Shiny.Controls.Office.Theming;

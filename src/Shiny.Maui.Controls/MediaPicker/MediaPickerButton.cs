@@ -479,7 +479,7 @@ public class MediaPickerButton : ContentView
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(6)
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         removeButton.Clicked += (s, _) =>
         {
             if (((BindableObject)s!).BindingContext is MediaPickerItem item)
@@ -588,7 +588,7 @@ public class MediaPickerButton : ContentView
             Padding = new Thickness(20, 0),
             Margin = new Thickness(0, 0, 0, 40),
             HorizontalOptions = LayoutOptions.Center
-        };
+        }.Neutralize();
         edit.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         edit.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         edit.Clicked += (_, _) =>
@@ -619,7 +619,7 @@ public class MediaPickerButton : ContentView
         CornerRadius = 22,
         BackgroundColor = Color.FromRgba(0, 0, 0, 0.5),
         TextColor = Colors.White
-    }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
+    }.Neutralize().WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
 
     void OpenEditor(int index)
     {

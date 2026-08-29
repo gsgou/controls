@@ -1,4 +1,25 @@
 /*
+    These bars host 30px pickers beside 24px icon buttons. The row height is set here, on the wrapper,
+    so every group in the ribbon is in step - left to each group, the picker would grow only its own
+    rows and the groups would stop lining up with one another. It goes on the ribbon element rather
+    than this wrapper because the ribbon sets the same property on itself, which would win over an
+    inherited value.
+*/
+.sheet-toolbar ::deep .shiny-ribbon {
+    --shiny-ribbon-row-h: 32px;
+}
+
+/*
+    The ribbon is a flex item in the bar, so left alone it shrinks to its content and the strip's
+    surface stops where the last group does - the rest of the row falls through to whatever is behind
+    the editor, which reads as a bar that is missing its right-hand half.
+*/
+.sheet-toolbar ::deep .shiny-ribbon {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/*
     The toolbar row.
 
     A flex container rather than the block it would otherwise be: left to itself every control here is
@@ -62,14 +83,14 @@
     cursor: pointer;
 }
 
-.sheet-toolbar ::deep .shiny-office-btn:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
+.sheet-toolbar ::deep .shiny-office-btn:hover:not(:disabled) { background: color-mix(in srgb, currentColor 10%, transparent); }
 
 .sheet-toolbar ::deep .shiny-office-btn:disabled { opacity: 0.35; cursor: default; }
 
 /* The active state has to survive the hover background, hence the border as well as the fill. */
 .sheet-toolbar ::deep .shiny-office-btn.on {
-    background: rgba(37, 99, 235, 0.14);
-    border-color: rgba(37, 99, 235, 0.35);
+    background: color-mix(in srgb, var(--shiny-color-primary, #2563EB) 22%, transparent);
+    border-color: color-mix(in srgb, var(--shiny-color-primary, #2563EB) 55%, transparent);
 }
 
 .sheet-toolbar ::deep .shiny-office-btn-chevron {
@@ -126,6 +147,10 @@
     toolbar, and without one the buttons underneath show straight through the menu.
 */
 .shiny-office-panel {
+    /* Load-bearing, not cosmetic: the panel carries `popover` so a clipping host can raise it into the
+       top layer, and the UA stylesheet gives every [popover] `display: none` until it is shown. Without
+       an explicit display here the panel is invisible anywhere it is NOT inside such a host. */
+    display: block;
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
@@ -163,9 +188,9 @@
     cursor: pointer;
 }
 
-.sheet-menu-item:hover { background: rgba(0, 0, 0, 0.06); }
+.sheet-menu-item:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 
-.sheet-menu-item.on { background: rgba(37, 99, 235, 0.14); }
+.sheet-menu-item.on { background: color-mix(in srgb, var(--shiny-color-primary, #2563EB) 22%, transparent); }
 
 /*
     The sample of what the format does to a number. Tabular figures so the column of samples lines up
@@ -173,7 +198,7 @@
 */
 .sheet-menu-sample {
     color: var(--shiny-color-on-surface-variant, #6b7280);
-    font-family: var(--shiny-type-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-family: var(--shiny-type-font-family-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;

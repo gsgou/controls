@@ -946,7 +946,7 @@ public partial class DataGrid : ContentView
 
         var valueEntry = new Entry { Placeholder = "Value", Text = existing?.Value?.ToString() };
 
-        var clear = new Button { Text = "Clear", FontSize = 13 };
+        var clear = new Button { Text = "Clear", FontSize = 13 }.Neutralize();
         clear.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         clear.BackgroundColor = Colors.Transparent;
         clear.Clicked += (_, _) =>
@@ -956,7 +956,7 @@ public partial class DataGrid : ContentView
             this.RebuildHeader();
         };
 
-        var apply = new Button { Text = "Apply", FontSize = 13 };
+        var apply = new Button { Text = "Apply", FontSize = 13 }.Neutralize();
         apply.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         apply.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         apply.Clicked += (_, _) =>
@@ -1340,6 +1340,9 @@ public partial class DataGrid : ContentView
 
     Button PagerButton(string text, Action action)
     {
+        // Neutralize, or the app's implicit Button style repaints the disabled ones: the MAUI
+        // template's Disabled setter fills them with Gray600 in dark mode, so the buttons you
+        // cannot press are the only ones with a background.
         var button = new Button
         {
             Text = text,
@@ -1347,7 +1350,7 @@ public partial class DataGrid : ContentView
             HeightRequest = 40,
             Padding = 0,
             BackgroundColor = Colors.Transparent
-        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         button.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
         button.Clicked += (_, _) => action();
         return button;
@@ -1387,11 +1390,11 @@ public partial class DataGrid : ContentView
 
     Border BuildEditActionsBar()
     {
-        var cancel = new Button { Text = "Cancel", FontSize = 13, BackgroundColor = Colors.Transparent };
+        var cancel = new Button { Text = "Cancel", FontSize = 13, BackgroundColor = Colors.Transparent }.Neutralize();
         cancel.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         cancel.Clicked += (_, _) => this.CancelEdit();
 
-        var save = new Button { Text = "Save", FontSize = 13 };
+        var save = new Button { Text = "Save", FontSize = 13 }.Neutralize();
         save.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         save.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         save.Clicked += (_, _) => this.CommitEdit();

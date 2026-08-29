@@ -67,6 +67,9 @@
     top: calc(100% + 4px);
     left: 0;
     z-index: 41;
+
+    /* Load-bearing, not cosmetic: the panel carries `popover` so a clipping host can raise it into the
+       top layer, and the UA stylesheet gives every [popover] `display: none` until it is shown. */
     display: flex;
     flex-direction: column;
     box-sizing: border-box;

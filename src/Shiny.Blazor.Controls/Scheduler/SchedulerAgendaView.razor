@@ -15,7 +15,7 @@
                 {
                     var captured = evt;
                     <div class="shiny-agenda-allday-event"
-                         style="background:@(evt.Color ?? DefaultEventColor);"
+                         style="background:@(evt.Color ?? DefaultEventColor);color:@(ContrastInk.For(evt.Color ?? DefaultEventColor));"
                          @onclick="() => OnEventTapped(captured)">@evt.Title</div>
                 }
             </div>
@@ -140,7 +140,7 @@
                     {
                         var captured = p.Event;
                         <div class="shiny-agenda-event"
-                             style="top:@(Px(p.Top))px;height:@(Px(p.Height))px;left:@(Px(p.LeftPct))%;width:calc(@(Px(p.WidthPct))% - 4px);background:@(p.Event.Color ?? DefaultEventColor);"
+                             style="top:@(Px(p.Top))px;height:@(Px(p.Height))px;left:@(Px(p.LeftPct))%;width:calc(@(Px(p.WidthPct))% - 4px);background:@(p.Event.Color ?? DefaultEventColor);color:@(ContrastInk.For(p.Event.Color ?? DefaultEventColor));"
                              data-event-id="@p.Event.Identifier"
                              data-draggable="@(DragEnabled ? "true" : null)"
                              @onclick:stopPropagation

@@ -113,6 +113,125 @@ sealed class SheetDataEditor
         cell?.Remove();
     }
 
+    /// <summary>
+    /// Moves every row at or below <paramref name="at"/> down by <paramref name="count"/>.
+    /// </summary>
+    /// <remarks>
+    /// The elements keep their relative order because they all move by the same amount, so this only
+    /// has to renumber them — no re-sorting, and no risk of transiently violating the ascending order
+    /// Excel treats as corruption. Rows pushed past the last one Excel has are dropped, which is what
+    /// Excel itself does rather than refusing the insert.
+    /// </remarks>
+    public void InsertRows(int at, int count)
+    {
+        foreach (var row in this.sheetData.Elements<Row>().ToList())
+        {
+            var index = IndexOf(row);
+            if (index < at)
+                continue;
+
+            if (index + count > CellRef.MaxRow)
+                row.Remove();
+            else
+                Renumber(row, index + count);
+        }
+
+        this.Reindex();
+    }
+
+    /// <summary>Removes the rows in the band and pulls everything below it up by <paramref name="count"/>.</summary>
+    public void RemoveRows(int at, int count)
+    {
+        foreach (var row in this.sheetData.Elements<Row>().ToList())
+        {
+            var index = IndexOf(row);
+            if (index < at)
+                continue;
+
+            if (index < at + count)
+                row.Remove();
+            else
+                Renumber(row, index - count);
+        }
+
+        this.Reindex();
+    }
+
+    /// <summary>Moves every cell at or right of <paramref name="at"/> right by <paramref name="count"/>.</summary>
+    public void InsertColumns(int at, int count)
+    {
+        foreach (var row in this.sheetData.Elements<Row>())
+        {
+            foreach (var (cell, column) in Columns(row))
+            {
+                if (column < at)
+                    continue;
+
+                if (column + count > CellRef.MaxColumn)
+                    cell.Remove();
+                else
+                    cell.CellReference = new CellRef(column + count, IndexOf(row)).ToString();
+            }
+        }
+    }
+
+    /// <summary>Removes the cells in the band and pulls everything right of it left by <paramref name="count"/>.</summary>
+    public void RemoveColumns(int at, int count)
+    {
+        foreach (var row in this.sheetData.Elements<Row>())
+        {
+            foreach (var (cell, column) in Columns(row))
+            {
+                if (column < at)
+                    continue;
+
+                if (column < at + count)
+                    cell.Remove();
+                else
+                    cell.CellReference = new CellRef(column - count, IndexOf(row)).ToString();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Every cell in a row with the column it currently sits at, read before anything moves.
+    /// </summary>
+    /// <remarks>
+    /// Materialised, and the columns resolved up front, because <see cref="ColumnOf"/> falls back to
+    /// sibling position when a cell carries no <c>r</c> attribute — and half-renumbering a row would
+    /// then make that fallback answer a different question for every cell after the first.
+    /// </remarks>
+    static List<(Cell Cell, int Column)> Columns(Row row)
+    {
+        var result = new List<(Cell, int)>();
+        foreach (var cell in row.Elements<Cell>())
+            result.Add((cell, ColumnOf(cell)));
+
+        return result;
+    }
+
+    static int IndexOf(Row row) => (int)(row.RowIndex?.Value ?? 0) - 1;
+
+    /// <summary>Points a row and every cell in it at a new row number.</summary>
+    static void Renumber(Row row, int index)
+    {
+        row.RowIndex = (uint)(index + 1);
+
+        foreach (var (cell, column) in Columns(row))
+            cell.CellReference = new CellRef(column, index).ToString();
+    }
+
+    /// <summary>Rebuilds the row lookup after the elements were renumbered underneath it.</summary>
+    void Reindex()
+    {
+        this.rowIndex.Clear();
+        foreach (var row in this.sheetData.Elements<Row>())
+        {
+            if (row.RowIndex?.Value is { } index)
+                this.rowIndex[index] = row;
+        }
+    }
+
     /// <summary>Parses the column index out of a cell's <c>r</c> attribute, falling back to sibling order.</summary>
     public static int ColumnOf(Cell cell)
     {

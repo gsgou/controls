@@ -5,6 +5,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Cells;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 using TvTableSection = Shiny.Maui.Controls.Sections.TableSection;
 using TvTableRoot = Shiny.Maui.Controls.Sections.TableRoot;
 
@@ -299,11 +300,19 @@ public partial class TableView : ContentView
                 // Section separator
                 if (ShowSectionSeparator && i < sections.Count - 1)
                 {
-                    rootLayout.Children.Add(new BoxView
-                    {
-                        HeightRequest = SectionSeparatorHeight,
-                        Color = SectionSeparatorColor ?? GetDefaultSectionSeparatorColor(),
-                    });
+                    var gap = new BoxView { HeightRequest = SectionSeparatorHeight };
+
+                    // Bound, not assigned: a literal captured here is read once, at render time, so
+                    // it survives an appearance flip and leaves a near-black band sitting between the
+                    // sections of a light table.
+                    if (SectionSeparatorColor is { } explicitColor)
+                        gap.Color = explicitColor;
+                    else if (BackgroundColor is { } ownBackground && ownBackground != Colors.Transparent)
+                        gap.Color = ownBackground;
+                    else
+                        gap.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Background);
+
+                    rootLayout.Children.Add(gap);
                 }
             }
         }
@@ -456,16 +465,6 @@ public partial class TableView : ContentView
 
     public double VisibleContentHeight => scrollView.ContentSize.Height;
 
-    Color GetDefaultSectionSeparatorColor()
-    {
-        if (BackgroundColor != null && BackgroundColor != Colors.Transparent)
-            return BackgroundColor;
-
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        return isDark
-            ? Color.FromRgb(28, 28, 30)
-            : Color.FromRgb(242, 242, 247);
-    }
 
 }
 

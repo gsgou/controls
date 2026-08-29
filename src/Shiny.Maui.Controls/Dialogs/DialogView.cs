@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Dialogs;
 
@@ -177,7 +178,7 @@ sealed class DialogView : ContentView
                 Padding = new Thickness(16, 12),
                 CornerRadius = 10,
                 HorizontalOptions = LayoutOptions.Fill
-            };
+            }.Neutralize();
             ApplyColor(button, Button.BackgroundColorProperty, null, ShinyThemeKeys.Color.SurfaceVariant, FallbackSurfaceVariant);
             if (string.Equals(option, this.config.DestructiveAction, StringComparison.Ordinal))
                 ApplyColor(button, Button.TextColorProperty, null, ShinyThemeKeys.Color.Error, FallbackError);
@@ -214,7 +215,7 @@ sealed class DialogView : ContentView
             FontAttributes = FontAttributes.Bold,
             Padding = new Thickness(16, 9),
             CornerRadius = 8
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         ApplyColor(button, Button.BackgroundColorProperty, overrideBg, bgToken, bgFallback);
         ApplyColor(button, Button.TextColorProperty, overrideText, textToken, textFallback);
         return button;

@@ -65,6 +65,7 @@ public partial class ImageEditor : ContentView
 
         Content = rootGrid;
 
+
         // Invalidate once layout is ready so images set during binding actually render. A resize
         // (rotation, split view) also changes the viewport the pan is clamped against, so the
         // offsets are re-clamped on the next frame — once the drawable knows the new viewport.
@@ -507,7 +508,10 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty ToolbarBackgroundColorProperty = BindableProperty.Create(
-        nameof(ToolbarBackgroundColor), typeof(Color), typeof(ImageEditor), Color.FromRgba(20, 20, 22, 0.86f),
+        // 20/255f, not 20: FromRgba(20, 20, 22, 0.86f) binds to the all-float overload (the ints widen),
+        // where the channels are 0-1 - so 20 clamped to 1 and the "dark scrim" was painted white. It
+        // rendered a near-white bar under the white icons and labels, which read as an empty strip.
+        nameof(ToolbarBackgroundColor), typeof(Color), typeof(ImageEditor), Color.FromRgba(20 / 255f, 20 / 255f, 22 / 255f, 0.86f),
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
                 ((ImageEditor)b).BuildDefaultToolbar();
@@ -524,7 +528,9 @@ public partial class ImageEditor : ContentView
     }
 
     public static readonly BindableProperty ToolbarPositionProperty = BindableProperty.Create(
-        nameof(ToolbarPosition), typeof(ToolbarPosition), typeof(ImageEditor), ToolbarPosition.Bottom,
+        // Top, since the toolbar became a ribbon: a ribbon is top-of-window chrome, and read upside
+        // down - tab strip above a body of groups, pinned to the floor - it stops looking like one.
+        nameof(ToolbarPosition), typeof(ToolbarPosition), typeof(ImageEditor), ToolbarPosition.Top,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(ImageEditor), () =>
             {
                 ((ImageEditor)b).UpdateToolbarPosition();
@@ -690,6 +696,10 @@ public partial class ImageEditor : ContentView
 
     void OnToolModeChanged(ImageEditorToolMode mode)
     {
+        // The rebuild that follows adds or drops the contextual tab; this tells it to reveal one that
+        // has just appeared. Only on a tool change - every other rebuild leaves the tab where it was.
+        toolTabIsNew = true;
+
         // Finalize any in-progress operations
         FinalizeCurrentOperation();
 
@@ -815,201 +825,16 @@ public partial class ImageEditor : ContentView
         AddToolbarToGrid();
     }
 
-    View BuildStandardToolbar()
-    {
-        var rows = new VerticalStackLayout { Spacing = 6 };
+    // The ribbon is the standard toolbar now - see ImageEditor.Ribbon.cs. It groups and captions what
+    // the old three-row bar left unlabelled, and on a narrow editor it runs in Simplified mode rather
+    // than eating a quarter of the screen. The crop bar below stays hand-rolled: it is modal, two
+    // commands wide, and a ribbon would be the wrong shape for it entirely.
+    View BuildStandardToolbar() => BuildRibbonToolbar();
 
-        rows.Children.Add(BuildToolRow());
-
-        var options = BuildOptionsRow();
-        if (options != null)
-            rows.Children.Add(options);
-
-        rows.Children.Add(BuildActionRow());
-
-        return WrapInChrome(rows);
-    }
-
-    /// <summary>
-    /// The tool picker. It lives in a horizontal scroller because the row grows with every
-    /// enabled tool and used to run straight off the edge of a phone screen.
-    /// </summary>
-    View BuildToolRow()
-    {
-        var tools = new HorizontalStackLayout
-        {
-            Spacing = 2,
-            HorizontalOptions = LayoutOptions.Center
-        };
-
-        if (AllowZoom)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Move, "Move", ImageEditorToolMode.Move));
-
-        if (AllowCrop)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Crop, "Crop", ImageEditorToolMode.Crop));
-
-        if (AllowRotate)
-            tools.Children.Add(CreateChromeButton(ImageEditorIcon.Rotate, "Rotate", false, true, () => Rotate(90)));
-
-        if (AllowDraw)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Draw, "Draw", ImageEditorToolMode.Draw));
-
-        if (AllowLine)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Line, "Line", ImageEditorToolMode.Line));
-
-        if (AllowArrow)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Arrow, "Arrow", ImageEditorToolMode.Arrow));
-
-        if (AllowRectangle)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Rectangle, "Rect", ImageEditorToolMode.Rectangle));
-
-        if (AllowEllipse)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Ellipse, "Ellipse", ImageEditorToolMode.Ellipse));
-
-        if (AllowCircle)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Circle, "Circle", ImageEditorToolMode.Circle));
-
-        if (AllowTextAnnotation)
-            tools.Children.Add(CreateToolButton(ImageEditorIcon.Text, "Text", ImageEditorToolMode.Text));
-
-        return new ScrollView
-        {
-            Orientation = ScrollOrientation.Horizontal,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
-            Content = tools
-        };
-    }
-
-    /// <summary>Per-tool options — colour, stroke weight, font — shown only when they apply.</summary>
-    View? BuildOptionsRow()
-    {
-        var isInk = CurrentToolMode is ImageEditorToolMode.Draw or ImageEditorToolMode.Line or ImageEditorToolMode.Arrow;
-        var isText = CurrentToolMode == ImageEditorToolMode.Text;
-        var isShape = ImageEditorDrawable.IsShapeMode(CurrentToolMode);
-
-        if (!isInk && !isText && !isShape)
-            return null;
-
-        var row = new HorizontalStackLayout
-        {
-            Spacing = 8,
-            HorizontalOptions = LayoutOptions.Center
-        };
-
-        // For a shape this swatch and these weights are the border — the interior gets its own pair
-        row.Children.Add(CreateDrawColorButton());
-
-        if ((isInk || isShape) && ShowStrokeWidthPicker)
-        {
-            foreach (var width in StrokeWidthPresets)
-                row.Children.Add(CreateStrokeWidthButton(width));
-        }
-
-        if (isShape && ShowShapeFillPicker)
-        {
-            row.Children.Add(CreateShapeFillButton());
-            row.Children.Add(CreateShapeFillToggle());
-        }
-
-        if (isText)
-        {
-            if (AllowFontSelection && AvailableFonts is { Count: > 0 })
-                row.Children.Add(CreateFontPickerButton());
-
-            if (AllowFontSizeSelection && AvailableFontSizes is { Count: > 0 })
-                row.Children.Add(CreateFontSizePickerButton());
-        }
-
-        return new ScrollView
-        {
-            Orientation = ScrollOrientation.Horizontal,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Never,
-            Content = row
-        };
-    }
-
-    /// <summary>History on the left, zoom in the middle, save on the right.</summary>
-    View BuildActionRow()
-    {
-        var grid = new Grid
-        {
-            ColumnDefinitions =
-            [
-                new ColumnDefinition(GridLength.Star),
-                new ColumnDefinition(GridLength.Auto),
-                new ColumnDefinition(GridLength.Star)
-            ],
-            ColumnSpacing = 6
-        };
-
-        var history = new HorizontalStackLayout
-        {
-            Spacing = 2,
-            HorizontalOptions = LayoutOptions.Start,
-            VerticalOptions = LayoutOptions.Center
-        };
-        undoButton = CreateChromeButton(ImageEditorIcon.Undo, null, false, CanUndo, Undo);
-        redoButton = CreateChromeButton(ImageEditorIcon.Redo, null, false, CanRedo, Redo);
-        resetButton = CreateChromeButton(ImageEditorIcon.Reset, null, false, CanUndo, Reset);
-        history.Children.Add(undoButton);
-        history.Children.Add(redoButton);
-        history.Children.Add(resetButton);
-        grid.Add(history, 0);
-
-        if (AllowZoom && ShowZoomControls)
-            grid.Add(BuildZoomCluster(), 1);
-
-        if (SaveCommand != null)
-        {
-            var save = new Button
-            {
-                Text = SaveText,
-                FontAttributes = FontAttributes.Bold,
-                TextColor = ThemeColor(ShinyThemeKeys.Color.OnPrimary, Colors.White),
-                BackgroundColor = AccentColor,
-                CornerRadius = 14,
-                HeightRequest = 40,
-                Padding = new Thickness(16, 0),
-                HorizontalOptions = LayoutOptions.End,
-                VerticalOptions = LayoutOptions.Center
-            }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
-            save.Clicked += (_, _) => ExecuteSave();
-            grid.Add(save, 2);
-        }
-
-        return grid;
-    }
-
-    View BuildZoomCluster()
-    {
-        var cluster = new HorizontalStackLayout
-        {
-            Spacing = 0,
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center
-        };
-
-        zoomReadout = new Label
-        {
-            Text = FormatZoom(zoomScale),
-            TextColor = ChromeForeground,
-            WidthRequest = 42,
-            HorizontalTextAlignment = TextAlignment.Center,
-            VerticalTextAlignment = TextAlignment.Center
-        }.WithFontSize(ShinyThemeKeys.Type.LabelSmallSize);
-
-        // Tapping the percentage is the fastest way back to fit-to-view
-        var tap = new TapGestureRecognizer();
-        tap.Tapped += (_, _) => ZoomToFit();
-        zoomReadout.GestureRecognizers.Add(tap);
-
-        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomOut, null, false, true, ZoomOut, 38));
-        cluster.Children.Add(zoomReadout);
-        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomIn, null, false, true, ZoomIn, 38));
-        cluster.Children.Add(CreateChromeButton(ImageEditorIcon.ZoomFit, null, false, true, ZoomToFit, 38));
-
-        return cluster;
-    }
+    // BuildToolRow / BuildOptionsRow / BuildActionRow / BuildZoomCluster used to build the
+    // three-row floating bar. The ribbon replaced all four - see ImageEditor.Ribbon.cs. The crop
+    // bar below is still hand-rolled: it is modal and two commands wide, and a ribbon would be
+    // the wrong shape for it.
 
     View BuildCropToolbar()
     {
@@ -1034,7 +859,7 @@ public partial class ImageEditor : ContentView
             MinimumWidthRequest = 64,
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         cancelBtn.Clicked += (_, _) => CurrentToolMode = ImageEditorToolMode.Move;
         grid.Add(cancelBtn, 0);
 
@@ -1058,7 +883,7 @@ public partial class ImageEditor : ContentView
             MinimumWidthRequest = 64,
             Padding = new Thickness(16, 0),
             VerticalOptions = LayoutOptions.Center
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         applyBtn.Clicked += (_, _) => ApplyCrop();
         grid.Add(applyBtn, 2);
 

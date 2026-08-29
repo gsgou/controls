@@ -303,10 +303,28 @@ public sealed class DocumentViewport
     public double ScrollY { get; private set; }
     public double ContentHeight { get; set; }
 
+    /// <summary>
+    /// How far the page is scrolled sideways.
+    /// </summary>
+    /// <remarks>
+    /// A page is a fixed width - that is what makes it a page - so on anything narrower than one it is
+    /// clipped, and without this axis the right-hand side of every line simply could not be reached.
+    /// It stays zero on a viewport wide enough for the page, where the page is centred instead.
+    /// </remarks>
+    public double ScrollX { get; private set; }
+
+    /// <summary>The laid-out width, which is the page's rather than the viewport's.</summary>
+    public double ContentWidth { get; set; }
+
     public void ScrollTo(double y)
         => this.ScrollY = Math.Clamp(y, 0, Math.Max(0, this.ContentHeight - this.Height));
 
+    public void ScrollToX(double x)
+        => this.ScrollX = Math.Clamp(x, 0, Math.Max(0, this.ContentWidth - this.Width));
+
     public void ScrollBy(double delta) => this.ScrollTo(this.ScrollY + delta);
+
+    public void ScrollByX(double delta) => this.ScrollToX(this.ScrollX + delta);
 
     /// <summary>Blocks intersecting the visible band. Everything else is skipped entirely.</summary>
     public IEnumerable<LaidOutBlock> Visible(IReadOnlyList<LaidOutBlock> blocks)

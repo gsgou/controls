@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// A plain command button on the ribbon.

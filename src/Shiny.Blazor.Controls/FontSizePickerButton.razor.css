@@ -62,6 +62,10 @@
 }
 
 .shiny-fontsizepickerbutton-popover {
+    /* Load-bearing, not cosmetic: the panel carries `popover` so a clipping host can raise it into the
+       top layer, and the UA stylesheet gives every [popover] `display: none` until it is shown. Without
+       an explicit display here the picker is invisible anywhere it is NOT inside such a host. */
+    display: block;
     position: absolute;
     top: calc(100% + 4px);
     left: 0;

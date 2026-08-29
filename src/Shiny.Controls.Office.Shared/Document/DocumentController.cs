@@ -132,7 +132,17 @@ public class DocumentController
     public double PageHeight => this.IsPaginated ? this.Document.Page.Height : this.Viewport.Height;
 
     /// <summary>The page panel's left edge, centring it in the viewport.</summary>
-    public double PageX => Math.Max(0, (this.Viewport.Width - this.PageWidth) / 2);
+    /// <summary>
+    /// The page's left edge in the viewport: centred when there is room, and pulled left by the
+    /// horizontal scroll when there is not.
+    /// </summary>
+    /// <remarks>
+    /// Every other horizontal coordinate is derived from this one - <see cref="ContentX"/>, the
+    /// painter's origin, and the inverse in <see cref="ToFlow"/> - so subtracting the scroll here is
+    /// what makes hit-testing, the caret and the painted page all move together. Doing it in the
+    /// painter alone would draw a scrolled page that still answered taps at its old position.
+    /// </remarks>
+    public double PageX => Math.Max(0, (this.Viewport.Width - this.PageWidth) / 2) - this.Viewport.ScrollX;
 
     /// <summary>How far content is inset from the page's left edge.</summary>
     /// <remarks>The document's own left margin in print; a cosmetic gutter in reflow.</remarks>
@@ -196,6 +206,28 @@ public class DocumentController
         var scale = this.ViewScale;
         var viewY = (y / scale) + this.Viewport.ScrollY;
         return ((x / scale) - this.ContentX, this.Pagination.ViewToFlow(viewY));
+    }
+
+    /// <summary>Scrolls the page sideways, in layout units.</summary>
+    /// <remarks>
+    /// Separate from <see cref="Scroll"/> rather than a second parameter on it: the vertical axis is
+    /// driven by a wheel and by the caret moving, neither of which has a horizontal component to pass.
+    /// </remarks>
+    public void ScrollHorizontally(double delta)
+    {
+        this.EnsureLayout();
+        this.Viewport.ScrollByX(delta);
+        this.OnViewportChanged();
+        this.Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Scrolls sideways to an absolute offset, in layout units.</summary>
+    public void ScrollToHorizontal(double x)
+    {
+        this.EnsureLayout();
+        this.Viewport.ScrollToX(x);
+        this.OnViewportChanged();
+        this.Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Scroll(double delta)
@@ -268,9 +300,13 @@ public class DocumentController
             : DocumentPagination.Reflowed(this.layout.Height, this.Viewport.Height);
 
         this.Viewport.ContentHeight = this.pagination.ViewHeight;
+        this.Viewport.ContentWidth = this.PageWidth;
 
-        // A width change can leave the scroll offset past the new end of the document.
+        // A width change can leave either scroll offset past the new end of the document. Re-applying
+        // both re-clamps them: widening the viewport past the page has to bring the sideways offset
+        // back to zero, or the page stays pushed off-centre with nothing left to scroll to.
         this.Viewport.ScrollTo(this.Viewport.ScrollY);
+        this.Viewport.ScrollToX(this.Viewport.ScrollX);
         return this.layout;
     }
 

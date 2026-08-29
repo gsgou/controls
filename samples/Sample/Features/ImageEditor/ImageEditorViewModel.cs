@@ -19,8 +19,11 @@ public partial class ImageEditorViewModel(IDialogs dialogs) : ObservableObject
     [ObservableProperty]
     bool canRedo;
 
+    // Move, not the enum's default of None. The binding is two-way, so an unset field pushes None into
+    // the editor at bind time and overrides the control's own Move default - leaving the toolbar with
+    // no tool selected and nothing highlighted, which reads as the selection being broken.
     [ObservableProperty]
-    ImageEditorToolMode currentToolMode;
+    ImageEditorToolMode currentToolMode = ImageEditorToolMode.Move;
 
     [ObservableProperty]
     Color drawColor = Colors.White;

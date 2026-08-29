@@ -86,3 +86,50 @@ The default toolbar is a floating rounded bar with vector (not glyph-font) icons
 **Events:** `ZoomChanged`
 
 On Blazor the equivalents are `ZoomInAsync()`, `ZoomOutAsync()`, `ZoomToFitAsync()`, `SetZoomAsync(double)`, the `ZoomLevel` property and the `ZoomLevelChanged` callback, plus a `ToolbarActions` render fragment for host-supplied buttons at the trailing edge of the bar. `ShapeFillColor` there is a `#rrggbb` string and carries its alpha in a companion `ShapeFillOpacity` (0-1), because `<input type="color">` cannot express alpha — MAUI keeps it in the `Color` itself.
+
+## The toolbar is a Ribbon
+
+The editor's toolbar is a [Ribbon](ribbon.md) on both hosts, replacing the three-row bar it used to
+build by hand. The tools were already grouped the way a ribbon wants them, so most of it is a change
+of container — but one part is genuinely better for it: the per-tool options are a **contextual tab**
+now, captioned *Drawing Tools* / *Shape Tools* / *Text Tools*, instead of an unlabelled strip that
+changed shape under the buttons that caused it.
+
+| Where | What |
+| --- | --- |
+| **Home** | Tools (Move, Crop, Draw, Text), Shapes (Line, Arrow, Rectangle, Ellipse, Circle), Image (Rotate), and the host's own actions — which never fold into an overflow button. |
+| **View** | Zoom out / in / fit, and the zoom readout. Only present when `AllowZoom` and `ShowZoomControls` are both on. |
+| **Contextual tab** | Colour, stroke weights, shape fill and opacity, font and font size — whichever apply to the tool in hand. Absent for Move and Crop, which have no options. |
+| **Quick access** | Undo, redo, reset. Outside the tabs, so they never move or disappear when the tab does. |
+
+The bar is **two rows** rather than the ribbon's three: a shorter bar matters more here than in a
+document app — the picture is the point of the control — and the editor's groups divide more evenly
+over two, so the columns come out square instead of leaving one item stranded in a column of its own.
+Rotate shares the *Image* group with the host's actions rather than taking a group of its own, because
+a group costs a divider and a title whatever is in it.
+
+Every item is `Small` rather than the ribbon's `Large` default. Two reasons: expanded, a dozen large
+buttons is not a palette — small stacks them three to a column and the whole tool set reads at a
+glance; and simplified mode keeps a label only on items declared small, so a mix of sizes produced a
+row where some tools were labelled and some were bare icons.
+
+**On a narrow editor the ribbon runs in `Simplified` mode** — one dense row, every item small, group
+titles dropped — below 600px wide. An expanded ribbon is about a quarter of a phone screen, and this
+control's whole job is to show the picture underneath it. On MAUI that is measured against the editor,
+so it holds for an editor in a side panel too.
+
+**Crop is still a hand-rolled bar.** It is modal and two commands wide; a ribbon would be the wrong
+shape for it entirely.
+
+`ToolbarTemplate` still replaces the whole thing, as before.
+
+## Dark mode
+
+`ToolbarBackgroundColor` defaulted to `Color.FromRgba(20, 20, 22, 0.86f)`, which binds to the
+**all-float** overload — the ints widen, and channels there run 0-1, so 20 clamped to 1 and the
+"dark scrim" was painted white. With white icons and labels on it, the bar read as an empty strip.
+Fixed; the ribbon toolbar draws on a themed surface and does not use it, but the crop bar still does.
+
+**Collapsing sticks.** The editor rebuilds its toolbar on every tool and property change, which means
+a fresh `Ribbon` each time — so it reads the display mode back before discarding the old one. Without
+that the chevron did nothing you could keep: collapse the bar, pick a tool, and it was open again.

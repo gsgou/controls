@@ -4,7 +4,7 @@ using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// The desktop ribbon: a strip of tabs over a body of titled command groups.
@@ -58,8 +58,10 @@ public partial class Ribbon : ContentView
     readonly Polyline collapseGlyph;
     readonly Border bodyFrame;
     readonly Grid bodyHost;
+    readonly BoxView startFade;
+    readonly BoxView endFade;
 
-    readonly List<(RibbonTab Tab, Border Button, BoxView Underline)> tabButtons = new();
+    readonly List<(RibbonTab Tab, Border Button, BoxView Underline, Label Label)> tabButtons = new();
     readonly List<(RibbonTab Tab, ScrollView Panel, List<RibbonGroupView> Groups)> panels = new();
 
     readonly BoxView foregroundProbe;
@@ -164,6 +166,28 @@ public partial class Ribbon : ContentView
         };
 
         this.bodyHost = new Grid();
+
+        // Overlays, so they sit on top of whichever tab's panel is showing. Input-transparent because
+        // they cover the leading and trailing groups, which still have to be tappable through them.
+        this.startFade = new BoxView
+        {
+            WidthRequest = ScrollHintWidth,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Fill,
+            Color = Colors.Transparent,
+            InputTransparent = true,
+            IsVisible = false
+        };
+
+        this.endFade = new BoxView
+        {
+            WidthRequest = ScrollHintWidth,
+            HorizontalOptions = LayoutOptions.End,
+            VerticalOptions = LayoutOptions.Fill,
+            Color = Colors.Transparent,
+            InputTransparent = true,
+            IsVisible = false
+        };
         this.bodyFrame = new Border
         {
             Content = this.bodyHost,
@@ -193,7 +217,15 @@ public partial class Ribbon : ContentView
 
         this.tabs.CollectionChanged += this.OnTabsChanged;
         this.quickAccess.CollectionChanged += (_, _) => this.Rebuild();
-        this.SizeChanged += (_, _) => this.RelayoutGroups();
+        this.SizeChanged += (_, _) =>
+        {
+            this.ApplyWidthRule();
+            this.RelayoutGroups();
+
+            // A resize changes how much overflows, and collapsing a group in RelayoutGroups above can
+            // remove the overflow entirely.
+            this.UpdateScrollHints();
+        };
 
         this.Content = this.root;
         this.Rebuild();
@@ -358,20 +390,156 @@ public partial class Ribbon : ContentView
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>Collapses an expanded ribbon and expands a collapsed one. The chevron and a double-tap both come here.</summary>
+    /// <summary>The mode to come back to. Collapsed is a hidden body, not a third layout.</summary>
+    /// <remarks>
+    /// Without this, collapsing a <see cref="RibbonDisplayMode.Simplified"/> bar and re-opening it
+    /// returned <see cref="RibbonDisplayMode.Expanded"/> - the dense single row could be put away but
+    /// never got back, so on a narrow window the chevron was a one-way trip to a bar three times the
+    /// height of the one you collapsed.
+    /// </remarks>
+    RibbonDisplayMode restoreMode = RibbonDisplayMode.Expanded;
+
+    /// <summary>
+    /// Applies <see cref="SimplifyBelowWidth"/>. Silent when the rule is off, when the width is not
+    /// known yet, or when the user has collapsed the bar - their choice outranks the width.
+    /// </summary>
+    /// <summary>
+    /// Re-measures the tab strip once there is a platform view.
+    /// </summary>
+    /// <remarks>
+    /// The strip is built in the constructor, before the control has a handler and before the theme's
+    /// resources are necessarily resolvable — and on Android the labels come out of that first pass
+    /// zero pixels wide and are never measured again. The band is there, correctly sized and correctly
+    /// coloured, with nothing in it: the tabs only appear once something else forces a relayout, which
+    /// in practice means collapsing and re-opening the bar.
+    ///
+    /// Queued rather than called straight away because the handler is only half-attached at this
+    /// point; the invalidation has to land after the platform view has been added to the tree.
+    /// </remarks>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+
+        if (this.Handler is null)
+            return;
+
+        this.Dispatcher.Dispatch(() =>
+        {
+            this.tabStack.InvalidateMeasure();
+            this.header.InvalidateMeasure();
+        });
+    }
+
+    /// <summary>
+    /// The ink that reads on the header band, whatever colour the band ended up.
+    /// </summary>
+    /// <remarks>
+    /// Derived rather than trusted. <see cref="HeaderForegroundColor"/> is a promise a caller makes
+    /// about a background they also set, and the two get out of step - a host that themes one and not
+    /// the other, a default that survives a colour change - at which point the tabs are white on a
+    /// light grey band and simply cannot be read. Reading the band's resolved colour and choosing
+    /// against it cannot be wrong, because it is measuring the thing the text is actually sitting on.
+    /// </remarks>
+    Color HeaderInk
+    {
+        get
+        {
+            if (this.HeaderForegroundColor is { } explicitInk)
+                return explicitInk;
+
+            var ground = this.headerFrame.BackgroundColor;
+            if (ground is null || ground.Alpha <= 0)
+                return this.OnSurfaceInk();
+
+            // sRGB relative luminance, cut at 0.179 - where white and black are equally readable. The
+            // midpoint is the wrong cut: contrast is a ratio of (L + 0.05), so a mid-grey scores 2.7:1
+            // against white and 7.8:1 against black.
+            static double Channel(float v) => v <= 0.03928f ? v / 12.92 : Math.Pow((v + 0.055) / 1.055, 2.4);
+
+            var luminance =
+                (0.2126 * Channel(ground.Red)) +
+                (0.7152 * Channel(ground.Green)) +
+                (0.0722 * Channel(ground.Blue));
+
+            return luminance > 0.179 ? Color.FromRgb(0x1A, 0x1A, 0x1A) : Colors.White;
+        }
+    }
+
+    Color OnSurfaceInk()
+        => Application.Current?.Resources.TryGetValue(ShinyThemeKeys.Color.OnSurface, out var value) == true && value is Color color
+            ? color
+            : Colors.Black;
+
+    /// <summary>
+    /// Gives a tab label the ink for the ground it is currently on.
+    /// </summary>
+    /// <param name="onSurface">
+    /// True while the tab is lifted off the header band — selected, or hovered — and so is sitting on
+    /// the theme's own surface rather than on the accent.
+    /// </param>
+    /// <remarks>
+    /// One place decides this because three states reach it — build, selection and hover — and each was
+    /// originally written on its own, which is how hover ended up still wearing the band's ink after
+    /// selection had been fixed. The header's ink is chosen to read on the band; on a tab lifted onto a
+    /// light surface it is white on near-white.
+    /// </remarks>
+    void ApplyTabInk(Label label, bool onSurface)
+    {
+        // Both branches assign the colour directly, and that symmetry is the fix rather than a style.
+        // One of them used to SetDynamicResource: in MAUI a locally-set value outranks a dynamic
+        // resource, so once a tab had been unselected - which assigns TextColor - selecting it again
+        // could not put the resource back, and it stayed on the header's ink while sitting on the
+        // light selected tab. The first render looked right because nothing had been assigned yet,
+        // which is why this only showed up after changing tabs.
+        label.TextColor = onSurface ? this.OnSurfaceInk() : this.HeaderInk;
+    }
+
+    void ApplyWidthRule()
+    {
+        if (this.SimplifyBelowWidth <= 0 || this.Width <= 0)
+            return;
+
+        if (this.DisplayMode == RibbonDisplayMode.Collapsed)
+        {
+            // Still worth recording, so re-opening lands in the mode the width now calls for rather
+            // than the one it was in when it was put away at some other size.
+            this.restoreMode = this.WidthMode;
+            return;
+        }
+
+        if (this.DisplayMode != this.WidthMode)
+            this.DisplayMode = this.WidthMode;
+    }
+
+    RibbonDisplayMode WidthMode
+        => this.Width < this.SimplifyBelowWidth
+            ? RibbonDisplayMode.Simplified
+            : RibbonDisplayMode.Expanded;
+
+
     public void ToggleCollapsed()
     {
         if (!this.AllowCollapse)
             return;
 
-        this.DisplayMode = this.DisplayMode == RibbonDisplayMode.Collapsed
-            ? RibbonDisplayMode.Expanded
-            : RibbonDisplayMode.Collapsed;
+        if (this.DisplayMode == RibbonDisplayMode.Collapsed)
+        {
+            this.DisplayMode = this.restoreMode;
+            return;
+        }
+
+        this.restoreMode = this.DisplayMode;
+        this.DisplayMode = RibbonDisplayMode.Collapsed;
     }
 
 
     void OnDisplayModeChanged(RibbonDisplayMode oldMode, RibbonDisplayMode newMode)
     {
         this.peeking = false;
+
+        // A mode set from outside - a binding, a width rule - is also the one to come back to.
+        if (newMode != RibbonDisplayMode.Collapsed)
+            this.restoreMode = newMode;
 
         // Simplified is a different set of item sizes, not a different visibility - it has to rebuild.
         if (oldMode == RibbonDisplayMode.Simplified || newMode == RibbonDisplayMode.Simplified)

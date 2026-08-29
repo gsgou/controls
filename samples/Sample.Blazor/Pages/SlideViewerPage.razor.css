@@ -1,26 +1,26 @@
-.lead { color: var(--shiny-on-surface-variant, #666); max-width: 62ch; }
+.lead { color: var(--shiny-color-on-surface-variant, #666); max-width: 62ch; }
 
 .toolbar { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
 
 .btn {
     min-width: 38px;
     padding: 6px 12px;
-    border: 1px solid var(--shiny-outline, #ccc);
+    border: 1px solid var(--shiny-color-outline, #ccc);
     border-radius: 6px;
-    background: var(--shiny-surface, #fff);
-    color: var(--shiny-on-surface, #1a1a1a);
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
     cursor: pointer;
 }
 
 .btn:disabled { opacity: 0.4; cursor: default; }
 
 .counter { min-width: 6ch; text-align: center; font-variant-numeric: tabular-nums; }
-.status { margin-left: auto; font-size: 0.85rem; color: var(--shiny-on-surface-variant, #666); }
+.status { margin-left: auto; font-size: 0.85rem; color: var(--shiny-color-on-surface-variant, #666); }
 
 /* The viewer paints to a canvas that fills its host, so the host needs an explicit height. */
 .deck-host {
     height: 460px;
-    border: 1px solid var(--shiny-outline, #ccc);
+    border: 1px solid var(--shiny-color-outline, #ccc);
     border-radius: 6px;
     overflow: hidden;
 }
@@ -28,11 +28,11 @@
 .notes {
     margin-top: 12px;
     padding: 10px 12px;
-    border-left: 3px solid var(--shiny-primary, #2E74B5);
-    background: var(--shiny-surface-variant, #fafafa);
+    border-left: 3px solid var(--shiny-color-primary, #2E74B5);
+    background: var(--shiny-color-surface-variant, #fafafa);
     font-size: 0.9rem;
 }
 
 .notes p { margin: 4px 0 0; }
 
-.hint { margin-top: 10px; font-size: 0.85rem; color: var(--shiny-on-surface-variant, #666); }
+.hint { margin-top: 10px; font-size: 0.85rem; color: var(--shiny-color-on-surface-variant, #666); }

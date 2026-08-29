@@ -74,6 +74,8 @@
 
 <div class="demo-section">
     <h2>Custom Styling</h2>
+    @* Pinning a literal fill means pinning the ink with it: the theme's on-surface goes light in
+       dark mode and would vanish into this lavender. *@
     <TextEntry Placeholder="Purple theme"
                @bind-Text="customText"
                FocusedBorderColor="#7C3AED"
@@ -81,6 +83,7 @@
                FocusedBorderThickness="2"
                CornerRadius="16px"
                EntryBackgroundColor="#F5F3FF"
+               TextColor="#1E1B4B"
                RightTools="customTools" />
 </div>
 
@@ -89,8 +92,8 @@
     <TextEntry Placeholder="Read only"
                Text="This field is read only"
                IsReadOnly="true"
-               BorderColor="#E5E7EB"
-               EntryBackgroundColor="#F9FAFB" />
+               BorderColor="var(--shiny-color-outline-variant, #E5E7EB)"
+               EntryBackgroundColor="var(--shiny-color-surface-container, #F9FAFB)" />
 </div>
 
 <div class="demo-section">

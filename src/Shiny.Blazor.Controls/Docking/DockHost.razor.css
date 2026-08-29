@@ -167,7 +167,7 @@
     cursor: pointer;
 }
 
-.shiny-dock-collapse:hover { background: rgba(0, 0, 0, 0.08); }
+.shiny-dock-collapse:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
 
 /* ---- collapsed rail bars ---- */
 .shiny-dock-railbar {

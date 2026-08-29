@@ -225,6 +225,14 @@ public sealed record PageMarginPreset(string Name, string Description, PageMargi
 /// other would be a difference with nothing behind it, and a gallery invented here would be one more
 /// set of numbers for a reader to learn.
 /// </remarks>
+/// <summary>Which way round the paper is.</summary>
+public enum PageOrientation
+{
+    Portrait,
+    Landscape
+}
+
+
 public static class PageMarginPresets
 {
     public static IReadOnlyList<PageMarginPreset> All { get; } =
@@ -265,6 +273,33 @@ public sealed record PageSetup
 
     /// <summary>Distance from the bottom of the page to the bottom of the footer.</summary>
     public double FooterDistance { get; init; } = 48;
+
+    /// <summary>
+    /// Which way round the paper is.
+    /// </summary>
+    /// <remarks>
+    /// Carried separately from <see cref="Width"/> and <see cref="Height"/> rather than inferred from
+    /// which is larger, because <c>w:orient</c> is its own attribute and Word writes it: a landscape
+    /// section has the two swapped <i>and</i> says so, and a document that dropped the attribute would
+    /// come back portrait on the next open even though the dimensions were right.
+    /// </remarks>
+    public PageOrientation Orientation { get; init; } = PageOrientation.Portrait;
+
+    /// <summary>The same setup with the paper turned, swapping the two dimensions with it.</summary>
+    public PageSetup WithOrientation(PageOrientation orientation)
+    {
+        if (orientation == this.Orientation)
+            return this;
+
+        // The margins are deliberately left alone. Word keeps them as they were when the page turns,
+        // and recomputing them would silently rewrite a page setup the user chose.
+        return this with
+        {
+            Orientation = orientation,
+            Width = this.Height,
+            Height = this.Width
+        };
+    }
 
     /// <summary>True when the section declares a distinct first-page header and footer (<c>w:titlePg</c>).</summary>
     public bool DifferentFirstPage { get; init; }

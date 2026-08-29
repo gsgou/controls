@@ -360,6 +360,115 @@ public sealed class Worksheet
             this.workbook.OnContentChanged();
     }
 
+    // ---- structural row and column edits ----
+    //
+    // Everything below moves cells that already exist rather than changing what one of them says, so
+    // each of these has three jobs, not one: renumber the sheetData, carry the per-row and per-column
+    // properties along with the band, and repoint the merged ranges. Formulas are the workbook's job,
+    // because a formula on any other sheet can name this one.
+
+    /// <summary>Pushes <paramref name="count"/> blank rows in at <paramref name="at"/>.</summary>
+    internal void InsertRows(int at, int count)
+    {
+        this.editor.InsertRows(at, count);
+        this.ShiftMerges(at, count, rows: true);
+        this.workbook.OnContentChanged();
+    }
+
+    /// <summary>Removes <paramref name="count"/> rows at <paramref name="at"/>, closing the gap.</summary>
+    internal void DeleteRows(int at, int count)
+    {
+        this.editor.RemoveRows(at, count);
+        this.ShiftMerges(at, -count, rows: true);
+        this.workbook.OnContentChanged();
+    }
+
+    /// <summary>Pushes <paramref name="count"/> blank columns in at <paramref name="at"/>.</summary>
+    internal void InsertColumns(int at, int count)
+    {
+        this.editor.InsertColumns(at, count);
+        ColumnSpans.Shift(this.SheetElement(), at, count);
+        this.ShiftMerges(at, count, rows: false);
+        this.workbook.OnContentChanged();
+    }
+
+    /// <summary>Removes <paramref name="count"/> columns at <paramref name="at"/>, closing the gap.</summary>
+    internal void DeleteColumns(int at, int count)
+    {
+        this.editor.RemoveColumns(at, count);
+        ColumnSpans.Shift(this.SheetElement(), at, -count);
+        this.ShiftMerges(at, -count, rows: false);
+        this.workbook.OnContentChanged();
+    }
+
+    /// <summary>
+    /// Moves the merged ranges along with an inserted or deleted band.
+    /// </summary>
+    /// <remarks>
+    /// A merge that straddles the insertion point grows rather than moves, which is why the two edges
+    /// are shifted independently. One that falls entirely inside a deleted band has nothing left to
+    /// merge and is dropped — leaving it behind is a reference to cells that no longer exist, and
+    /// Excel reports that as a corrupt file rather than ignoring it.
+    /// </remarks>
+    void ShiftMerges(int at, int delta, bool rows)
+    {
+        var merges = this.part.Worksheet?.GetFirstChild<MergeCells>();
+        if (merges is null)
+            return;
+
+        foreach (var merge in merges.Elements<MergeCell>().ToList())
+        {
+            if (merge.Reference?.Value is not { } text || !CellRange.TryParse(text, out var range))
+                continue;
+
+            var first = Edge(rows ? range.Top : range.Left);
+            var last = Edge(rows ? range.Bottom : range.Right);
+
+            var moved = first is null || last is null
+                ? (CellRange?)null
+                : rows
+                    ? new CellRange(new CellRef(range.Left, first.Value), new CellRef(range.Right, last.Value))
+                    : new CellRange(new CellRef(first.Value, range.Top), new CellRef(last.Value, range.Bottom));
+
+            // A merge the delete reduced to one cell is no longer a merge, and Excel rejects a
+            // <mergeCell> whose reference names a single cell.
+            if (moved is not { } result || result.IsSingleCell)
+            {
+                merge.Remove();
+                continue;
+            }
+
+            if (result != range)
+                merge.Reference = result.ToString();
+        }
+
+        if (!merges.Elements<MergeCell>().Any())
+        {
+            merges.Remove();
+        }
+        else
+        {
+            merges.Count = (uint)merges.Elements<MergeCell>().Count();
+        }
+
+        int? Edge(int index)
+        {
+            if (index < at)
+                return index;
+
+            if (delta > 0)
+            {
+                var shifted = index + delta;
+                var limit = rows ? CellRef.MaxRow : CellRef.MaxColumn;
+                return shifted > limit ? null : shifted;
+            }
+
+            // Inside a deleted band there is no cell left to point at, so the edge collapses onto the
+            // row or column that now occupies the position.
+            return index < at - delta ? at : index + delta;
+        }
+    }
+
     /// <summary>The worksheet's root element. Present for every sheet the model loaded.</summary>
     SheetElement SheetElement()
         => this.part.Worksheet ?? throw new InvalidOperationException($"Sheet '{this.Name}' has no content.");

@@ -56,6 +56,33 @@ public partial class TableView
                 ((TableView)b).RenderSections();
             }));
 
+    /// <summary>
+    /// Case treatment for a section's title. Uppercase by default, matching the Blazor
+    /// <c>TableView</c> (which does it in CSS) and the platform convention for a grouped table.
+    /// </summary>
+    /// <remarks>
+    /// This is <see cref="TextTransform"/>, so it changes how the title is <em>drawn</em> and never
+    /// what <c>Title</c> holds - a binding, an accessibility label and a test assertion all still see
+    /// the string that was set.
+    /// </remarks>
+    public static readonly BindableProperty HeaderTextTransformProperty = BindableProperty.Create(
+        nameof(HeaderTextTransform), typeof(TextTransform), typeof(TableView), TextTransform.Uppercase,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
+
+    /// <summary>
+    /// Tracking on a section title, in em-independent units. Uppercase small text needs a little
+    /// air; the Blazor side applies the same 0.04em.
+    /// </summary>
+    public static readonly BindableProperty HeaderCharacterSpacingProperty = BindableProperty.Create(
+        nameof(HeaderCharacterSpacing), typeof(double), typeof(TableView), 0.5d,
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
+            {
+                ((TableView)b).RenderSections();
+            }));
+
     public static readonly BindableProperty HeaderPaddingProperty = BindableProperty.Create(
         nameof(HeaderPadding), typeof(Thickness), typeof(TableView), new Thickness(14, 8, 8, 8),
         propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(TableView), () =>
@@ -76,6 +103,20 @@ public partial class TableView
             {
                 ((TableView)b).RenderSections();
             }));
+
+    /// <inheritdoc cref="HeaderTextTransformProperty" />
+    public TextTransform HeaderTextTransform
+    {
+        get => (TextTransform)GetValue(HeaderTextTransformProperty);
+        set => SetValue(HeaderTextTransformProperty, value);
+    }
+
+    /// <inheritdoc cref="HeaderCharacterSpacingProperty" />
+    public double HeaderCharacterSpacing
+    {
+        get => (double)GetValue(HeaderCharacterSpacingProperty);
+        set => SetValue(HeaderCharacterSpacingProperty, value);
+    }
 
     public Color? HeaderBackgroundColor
     {

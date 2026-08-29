@@ -27,6 +27,31 @@ public class MarkdownTheme
     public double ListIndent { get; set; } = 24;
     public string CodeFontFamily { get; set; } = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
+    /// <summary>
+    /// The default when <c>Theme</c> is left unset: every colour is a Shiny theme token, so the
+    /// rendered markdown follows the app's light/dark scheme (and its theme pack) on its own.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Light"/> and <see cref="Dark"/> remain literal palettes, for a host that wants
+    /// one regardless of what the app around it is doing - rendering a document preview that must
+    /// stay paper-white, say.
+    /// </remarks>
+    public static MarkdownTheme Themed => new()
+    {
+        TextColor = "var(--shiny-color-on-surface, #000000)",
+        MutedTextColor = "var(--shiny-color-on-surface-variant, #6B7280)",
+        LinkColor = "var(--shiny-color-primary, #2563EB)",
+        CodeBackgroundColor = "var(--shiny-color-surface-container-high, #F3F4F6)",
+        CodeTextColor = "var(--shiny-color-tertiary, #D946EF)",
+        CodeBlockBackgroundColor = "var(--shiny-color-inverse-surface, #1F2937)",
+        CodeBlockTextColor = "var(--shiny-color-inverse-on-surface, #E5E7EB)",
+        BlockquoteBorderColor = "var(--shiny-color-outline, #D1D5DB)",
+        BlockquoteBackgroundColor = "var(--shiny-color-surface-container, #F9FAFB)",
+        HorizontalRuleColor = "var(--shiny-color-outline-variant, #E5E7EB)",
+        TableBorderColor = "var(--shiny-color-outline-variant, #E5E7EB)",
+        TableHeaderBackgroundColor = "var(--shiny-color-surface-container-high, #F3F4F6)"
+    };
+
     public static MarkdownTheme Light => new();
 
     public static MarkdownTheme Dark => new()

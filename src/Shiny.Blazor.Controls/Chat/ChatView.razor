@@ -39,7 +39,16 @@
                 var user = GetUser(msg.SenderId);
                 var showAvatar = !mine && isFirst && IsMultiPerson;
                 var bubbleColor = mine ? MyBubbleColor : (user?.BubbleColor ?? OtherBubbleColor);
-                var textColor = mine ? MyTextColor : OtherTextColor;
+
+                // A per-user BubbleColor is a literal the app picked and does not follow the theme,
+                // so the themed ink is right only by coincidence - and in dark mode it is reliably
+                // wrong, which left a light bubble carrying near-invisible light text. Derive the ink
+                // from that colour instead. The themed defaults are var() references, which
+                // ContrastInk cannot measure and does not try to: they fall back to the pair the
+                // theme already matched.
+                var textColor = mine
+                    ? MyTextColor
+                    : (user?.BubbleColor is { } chosen ? ContrastInk.For(chosen, OtherTextColor) : OtherTextColor);
                 var tapMsg = msg;
 
                 <div class="shiny-chat-bubble-wrap @(mine ? "is-me" : "is-other") @(isFirst ? "group-first" : "") @(isLast ? "group-last" : "")">

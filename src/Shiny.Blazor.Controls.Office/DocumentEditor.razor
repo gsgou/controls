@@ -88,6 +88,17 @@
     bool preventKeyDefault;
     bool focused;
     bool dragging;
+    bool panning;
+    bool panMoved;
+    double panOriginX;
+    double panOriginY;
+    double panScroll;
+    double panScrollX;
+    TextHandle? draggingHandle;
+    DocumentPosition? tapCandidate;
+
+    /// <summary>How far a finger may travel before a press stops being a tap.</summary>
+    const double TapSlop = 6;
     bool focusInput;
     double dpr = 1;
     double lastWidth;
@@ -102,11 +113,18 @@
     /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
     /// </remarks>
     DocumentTheme? paintedTheme;
+    ThemeSchemeWatcher scheme = null!;
 
     /// <summary>The document to edit. Must have been opened with <c>editable: true</c>.</summary>
     [Parameter] public WordDocument? Document { get; set; }
 
-    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+    /// <summary>
+    /// Chrome colours. Left unset the surface follows the page's light/dark scheme;
+    /// setting it pins the choice, including to <see cref="DocumentTheme.Light"/>.
+    /// </summary>
+    [Parameter] public DocumentTheme? Theme { get; set; }
+
+    DocumentTheme EffectiveTheme => OfficeScheme.Resolve(this.scheme, this.Theme);
 
     [Parameter] public double Zoom { get; set; } = 1.0;
 
@@ -197,14 +215,23 @@
 
     static string Css(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
+    protected override void OnInitialized()
+        // The canvas only redraws when told to, so a scheme flip has to invalidate it explicitly.
+        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        {
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+
     protected override void OnParametersSet()
     {
         // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
         // called, so a theme change that does not reach this leaves the old pixels on screen and the
         // toggle appears to do nothing.
-        if (this.paintedTheme != this.Theme)
+        if (this.paintedTheme != this.EffectiveTheme)
         {
-            this.paintedTheme = this.Theme;
+            this.paintedTheme = this.EffectiveTheme;
             this.canvas?.Invalidate();
         }
 
@@ -250,6 +277,10 @@
     {
         if (firstRender)
         {
+            // Before the DPR read: the canvas paints its first frame off this, and starting the
+            // watch second would flash a white page in a dark app.
+            await this.scheme.StartAsync(this.host);
+
             try
             {
                 this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
@@ -284,7 +315,7 @@
     void OnPaint(SKPaintSurfaceEventArgs e)
     {
         var info = e.Info;
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
 
         if (this.controller is null || this.painter is null)
         {
@@ -307,6 +338,7 @@
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
+            Watermark = this.Watermark,
             Blocks = this.controller.Blocks,
             Viewport = this.controller.Viewport,
             Theme = theme,
@@ -325,6 +357,10 @@
             Caret = this.focused && !this.ReadOnly && this.controller.SelectedObject is null
                 ? this.controller.CaretRect(this.controller.Selection.Focus)
                 : null,
+
+            TouchHandles = this.controller.UsesTouch
+                ? this.controller.TouchHandleRects()
+                : [],
 
             ObjectChrome = this.BuildObjectChrome()
         });
@@ -363,6 +399,28 @@
             return;
         }
 
+        // Under touch a drag pans the page, so neither the caret nor a selection may be moved on the
+        // way down: until the finger lifts there is no telling a tap from the start of a pan. A grab
+        // on one of the selection's handles is the exception - that gesture is unambiguous.
+        if (e.PointerType == "touch")
+        {
+            this.controller.UsesTouch = true;
+
+            this.draggingHandle = this.controller.TouchHandleAt(e.OffsetX, e.OffsetY);
+            if (this.draggingHandle is not null)
+                return;
+
+            this.panning = true;
+            this.panOriginX = e.OffsetX;
+            this.panOriginY = e.OffsetY;
+            this.panScroll = this.controller.Viewport.ScrollY;
+            this.panScrollX = this.controller.Viewport.ScrollX;
+            this.panMoved = false;
+            this.tapCandidate = this.controller.PositionAt(e.OffsetX, e.OffsetY);
+            this.focusInput = true;
+            return;
+        }
+
         if (this.controller.PositionAt(e.OffsetX, e.OffsetY) is not { } position)
             return;
 
@@ -390,6 +448,33 @@
             return;
         }
 
+        if (this.draggingHandle is { } grabbed)
+        {
+            this.controller.DragTouchHandle(grabbed, e.OffsetX, e.OffsetY);
+            return;
+        }
+
+        if (this.panning)
+        {
+            var travelled = this.panOriginY - e.OffsetY;
+            var travelledX = this.panOriginX - e.OffsetX;
+
+            if (!this.panMoved && Math.Abs(travelled) <= TapSlop && Math.Abs(travelledX) <= TapSlop)
+                return;
+
+            this.panMoved = true;
+
+            // Both axes: a page is a fixed width, so on a phone it is always wider than the screen and
+            // the right-hand end of every line is off it.
+            //
+            // travelled is in control pixels and the viewport scrolls in view units, which differ by
+            // the zoom - the same conversion ScrollByControlPixels does.
+            var scale = this.controller.ViewScale;
+            this.controller.ScrollToHorizontal(this.panScrollX + (travelledX / scale));
+            this.controller.ScrollTo(this.panScroll + (travelled / scale));
+            return;
+        }
+
         if (!this.dragging)
             return;
 
@@ -401,6 +486,18 @@
     {
         this.dragging = false;
         this.controller?.EndObjectDrag();
+
+        // A press that went nowhere was a tap, and a tap places the caret.
+        if (this.panning && !this.panMoved && this.tapCandidate is { } tapped)
+        {
+            this.controller?.Selection.MoveTo(tapped);
+            this.focusInput = true;
+        }
+
+        this.panning = false;
+        this.panMoved = false;
+        this.draggingHandle = null;
+        this.tapCandidate = null;
     }
 
     /// <summary>
@@ -533,6 +630,40 @@
         this.StateHasChanged();
     }
 
+    /// <summary>
+    /// Opens the spelling menu for the word the caret is in, anchored under it.
+    /// </summary>
+    /// <remarks>
+    /// The toolbar's entry point. A right-click supplies its own coordinates because the pointer says
+    /// where the menu goes; stepping to an error from the Review tab has no pointer, so the caret's
+    /// own rectangle is the anchor.
+    /// </remarks>
+    public async Task ShowSpellingMenuForCaretAsync()
+    {
+        this.spellingMenu = null;
+
+        if (this.controller is null || this.ReadOnly)
+            return;
+
+        var position = this.controller.Selection.Focus;
+        if (this.controller.SpellingErrorAt(position) is not { } error)
+        {
+            this.StateHasChanged();
+            return;
+        }
+
+        var suggestions = await this.controller.SuggestAtAsync(position);
+        var caret = this.controller.CaretRect(position);
+        var scale = this.controller.ViewScale;
+
+        // CaretRect is in flow coordinates; the menu is placed in the surface's.
+        var x = (caret.X + this.controller.ContentX) * scale;
+        var y = (this.controller.Pagination.FlowToView(caret.Bottom) - this.controller.Viewport.ScrollY) * scale;
+
+        this.spellingMenu = new SpellingMenu(x, y, position, error.Word, suggestions);
+        this.StateHasChanged();
+    }
+
     async Task ApplySuggestionAsync(string suggestion)
     {
         if (this.spellingMenu is { } menu && this.controller is not null)
@@ -568,7 +699,34 @@
         await this.FocusAsync();
     }
 
-    void OnWheel(WheelEventArgs e) => this.controller?.ScrollByControlPixels(e.DeltaY);
+    /// <summary>
+    /// Wheel scrolls; ctrl-wheel zooms; a wheel with a sideways component pans.
+    /// </summary>
+    /// <remarks>
+    /// Ctrl-wheel is not a keyboard shortcut anyone had to learn - it is what a trackpad pinch is
+    /// delivered as in every browser, so this is the pinch gesture as much as it is a modifier.
+    /// </remarks>
+    void OnWheel(WheelEventArgs e)
+    {
+        if (this.controller is not { } controller)
+            return;
+
+        if (e.CtrlKey)
+        {
+            // Small steps: a trackpad pinch arrives as a stream of these, and a per-notch factor big
+            // enough to feel on a mouse wheel makes a pinch jump straight to the clamp.
+            controller.Zoom *= e.DeltaY < 0 ? 1.05 : 1 / 1.05;
+            return;
+        }
+
+        if (Math.Abs(e.DeltaX) > Math.Abs(e.DeltaY))
+        {
+            controller.ScrollHorizontally(e.DeltaX / controller.ViewScale);
+            return;
+        }
+
+        controller.ScrollByControlPixels(e.DeltaY);
+    }
 
     void OnFocus()
     {
@@ -736,6 +894,8 @@
         if (this.controller is not null)
             this.controller.Changed -= this.OnControllerChanged;
 
+        await this.scheme.DisposeAsync();
+
         try
         {
             if (this.inputModule is not null && this.inputHandle is not null)
@@ -759,4 +919,15 @@
         this.painter?.Dispose();
         this.measurer?.Dispose();
     }
+
+    /// <summary>
+    /// A picture drawn behind the content - a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
 }

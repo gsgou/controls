@@ -112,6 +112,17 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
     /// <summary>Fill behind the tab strip. Any CSS colour; falls back to the theme.</summary>
     [Parameter] public string? HeaderBackgroundColor { get; set; }
 
+    /// <summary>
+    /// Ink for the tab strip, when <see cref="HeaderBackgroundColor"/> is something the theme's own
+    /// text colour would not be legible on.
+    /// </summary>
+    /// <remarks>
+    /// Needed the moment the header is painted a saturated colour rather than a surface tint: the tab
+    /// labels inherit the ribbon's <c>on-surface</c> ink, which would vanish into a Word-blue or
+    /// Excel-green band. Null leaves them on the theme.
+    /// </remarks>
+    [Parameter] public string? HeaderForegroundColor { get; set; }
+
     /// <summary>Fill behind the groups. Any CSS colour; falls back to the theme.</summary>
     [Parameter] public string? BodyBackgroundColor { get; set; }
 
@@ -299,19 +310,35 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
     // Display mode
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>Collapses an expanded ribbon and expands a collapsed one.</summary>
+    /// <summary>The mode to come back to. Collapsed is a hidden body, not a third layout.</summary>
+    /// <remarks>
+    /// Without this, collapsing a <see cref="RibbonDisplayMode.Simplified"/> bar and re-opening it
+    /// returned <see cref="RibbonDisplayMode.Expanded"/> - the dense single row could be put away but
+    /// never got back, so on a narrow window the chevron was a one-way trip to a bar three times the
+    /// height of the one you collapsed.
+    /// </remarks>
+    RibbonDisplayMode restoreMode = RibbonDisplayMode.Expanded;
+
+    /// <summary>Collapses an expanded ribbon and restores a collapsed one to the mode it had.</summary>
     public Task ToggleCollapsedAsync()
-        => this.AllowCollapse
-            ? this.SetDisplayModeAsync(
-                this.DisplayMode == RibbonDisplayMode.Collapsed
-                    ? RibbonDisplayMode.Expanded
-                    : RibbonDisplayMode.Collapsed
-            )
-            : Task.CompletedTask;
+    {
+        if (!this.AllowCollapse)
+            return Task.CompletedTask;
+
+        if (this.DisplayMode == RibbonDisplayMode.Collapsed)
+            return this.SetDisplayModeAsync(this.restoreMode);
+
+        this.restoreMode = this.DisplayMode;
+        return this.SetDisplayModeAsync(RibbonDisplayMode.Collapsed);
+    }
 
 
     async Task SetDisplayModeAsync(RibbonDisplayMode mode)
     {
+        // A mode set any other way - a binding, a host's width rule - is also the one to come back to.
+        if (mode != RibbonDisplayMode.Collapsed)
+            this.restoreMode = mode;
+
         this.DisplayMode = mode;
         this.peeking = false;
         await this.DisplayModeChanged.InvokeAsync(mode).ConfigureAwait(false);
@@ -461,6 +488,9 @@ public partial class Ribbon : ComponentBase, IAsyncDisposable
 
             if (!string.IsNullOrWhiteSpace(this.HeaderBackgroundColor))
                 css += $"--shiny-ribbon-header-bg:{this.HeaderBackgroundColor};";
+
+            if (!string.IsNullOrWhiteSpace(this.HeaderForegroundColor))
+                css += $"--shiny-ribbon-header-ink:{this.HeaderForegroundColor};";
 
             return css + this.Style;
         }

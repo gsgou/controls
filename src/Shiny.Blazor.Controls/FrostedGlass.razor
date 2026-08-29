@@ -7,7 +7,9 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public double BlurRadius { get; set; } = 20;
-    [Parameter] public string TintColor { get; set; } = "rgba(255, 255, 255, 0.6)";
+    // The veil over the blur has to be the scheme's own surface - a white tint in dark mode reads
+    // as fog rather than glass.
+    [Parameter] public string TintColor { get; set; } = "color-mix(in srgb, var(--shiny-color-surface, #FFFFFF) 60%, transparent)";
     [Parameter] public double CornerRadius { get; set; }
     [Parameter] public string? CssClass { get; set; }
     [Parameter] public string? Style { get; set; }

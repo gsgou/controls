@@ -33,3 +33,9 @@ A view that applies a native frosted glass (blur) effect behind its content. Pla
 | CornerRadius | double | 0 | Corner radius for clipping |
 
 **Platform implementation:** iOS uses `UIVisualEffectView`, Android 12+ uses `RenderEffect.CreateBlurEffect`, Blazor uses CSS `backdrop-filter: blur()`.
+
+## Dark mode
+
+`TintColor` defaults to the themed surface at 60% rather than a fixed white veil, which in dark mode
+read as fog rather than glass. Pass your own tint to pin it — and if you pin a light tint, pin the
+text colour on the content you put inside it too. See [Styling & theming](styling.md#dark-mode).

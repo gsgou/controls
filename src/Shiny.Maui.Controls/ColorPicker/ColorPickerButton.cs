@@ -50,7 +50,7 @@ public class ColorPickerButton : ContentView
             HeightRequest = 36,
             HorizontalOptions = LayoutOptions.Fill,
             Margin = new Thickness(12, 0, 12, 12)
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         doneButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         doneButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         doneButton.Clicked += (_, _) => Close();
@@ -95,6 +95,29 @@ public class ColorPickerButton : ContentView
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(ColorPickerButton));
+    }
+
+    /// <summary>
+    /// Keeps the trigger the width the host asked for.
+    /// </summary>
+    /// <remarks>
+    /// The trigger is <see cref="LayoutOptions.Start"/> by default so that, dropped into a stack with
+    /// no width of its own, it shrink-wraps its label rather than stretching across the whole row. That
+    /// leaves it at its minimum, though, and a host that pins a <see cref="VisualElement.WidthRequest"/>
+    /// - a toolbar sizing its controls to a common width, say - got the width it asked for on this
+    /// element and a trigger still drawn at the minimum inside it, with the rest showing as a hole
+    /// beside the button. Nothing overflows and nothing is clipped, so it reads as stray padding.
+    /// </remarks>
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+
+        // WhenReady, because a WidthRequest arriving from a Style is applied before this constructor's
+        // body has run and there is no trigger to align yet.
+        if (propertyName == WidthRequestProperty.PropertyName)
+            StyleGuard.WhenReady<ColorPickerButton>(this, self => self.buttonBorder.HorizontalOptions = self.WidthRequest >= 0
+                ? LayoutOptions.Fill
+                : LayoutOptions.Start);
     }
 
     // Properties

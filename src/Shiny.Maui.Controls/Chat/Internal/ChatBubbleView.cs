@@ -1,4 +1,5 @@
 using Shiny.Maui.Controls.Themes;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Chat.Internal;
 
@@ -107,7 +108,7 @@ partial class ChatBubbleView : ContentView
             HeightRequest = 28,
             Padding = 0,
             VerticalOptions = LayoutOptions.Center
-        }.WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyLargeSize);
         this.actionsButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.actionsButton.Clicked += this.OnActionsButtonClicked;
 

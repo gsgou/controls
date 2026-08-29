@@ -159,3 +159,11 @@ composer; the rounded outline is the edge.
 - Entire input bar can be hidden for read-only use
 
 <!-- TODO: capture screenshots for chatview (provider, markdown toolbar, attachment picker) -->
+
+## Dark mode
+
+`MyBubbleColor`, `MyTextColor`, `OtherBubbleColor` and `OtherTextColor` default to theme tokens
+(`primary-container` / `surface-container-high` and their `on-` pairs), so bubbles follow the app's
+scheme. They previously defaulted to a fixed pale green and white, which stayed exactly as light in
+dark mode. Set them to pin the classic messenger look — and set the matching text colour whenever you
+set a bubble colour. See [Styling & theming](styling.md#dark-mode).

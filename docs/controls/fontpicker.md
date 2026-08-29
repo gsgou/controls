@@ -47,4 +47,15 @@ The Blazor `FontSizePickerButton` puts a text field beside the caret so a size t
 13pt, say — can be typed; a value that will not parse, or falls outside `MinimumFontSize`/
 `MaximumFontSize`, snaps back rather than being committed.
 
+## Sizing the button
+
+On MAUI the trigger shrink-wraps its label, down to a minimum width, so a button dropped into a stack
+does not stretch across the row. Set a `WidthRequest` and the trigger fills it instead — which is what
+a toolbar sizing several controls to a common width wants. Without that it would draw at its minimum
+inside the width you asked for, and the remainder would show as a gap beside the button.
+
+```xml
+<shiny:FontPickerButton WidthRequest="150" />
+```
+
 These controls are also integrated into the **ImageEditor** toolbar when `AllowFontSelection` and `AllowFontSizeSelection` are enabled, and into both **Office editor** toolbars on both hosts.

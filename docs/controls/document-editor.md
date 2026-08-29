@@ -176,3 +176,218 @@ store.
 Word's `w:highlight` takes a name from a closed list rather than a colour, so a highlight resolves to
 the nearest one it can express; `HighlightPalette` is that list, and every swatch on offer round-trips
 exactly.
+
+## Dark mode
+
+`Theme` is nullable and **unset means follow the host** — the app's light/dark appearance on MAUI,
+the page's `color-scheme` on Blazor — and it keeps up live when that flips. Pass `DocumentTheme.Light`
+or `DocumentTheme.Dark` only to pin one regardless of the app around it. See
+[Styling & theming](styling.md#dark-mode).
+
+## The toolbar is a Ribbon
+
+The formatting bar is a [Ribbon](ribbon.md) on both hosts, replacing the single scrolling strip of
+icons it used to be. Font, Paragraph, Insert and Page, each titled.
+
+Two things the strip could not do:
+
+- **The ad-hoc dropdowns became real ribbon items.** Insert and page margins are hosted menu components in their own groups. That deleted a hand-written backdrop
+  div, an absolutely-positioned panel and a `bool …Open` field per menu on Blazor, and an action sheet
+  per menu on MAUI — along with their dismissal, keyboard and edge-flipping behaviour, which the
+  ribbon already has.
+- **Commands are grouped and captioned** instead of separated by anonymous hairlines.
+
+Undo and redo sit in the ribbon's quick access row, outside the tabs, so they never move or disappear.
+
+**The tab strip is off by default** (`ShowRibbonTabs`). This is a bar a host drops above a surface, not
+an application's whole chrome, and a strip carrying a single "Home" is noise — the groups do the
+organising. Turn it on when the editor *is* the application, and you get the tab strip and the
+collapse chevron with it.
+
+**Below 600px wide the bar runs in `Simplified` mode** — one dense row, every item small, group titles
+dropped. Group collapsing is the wrong answer at phone width: it folds groups into dropdowns
+worst-first, which is right when a window is a little too narrow, but on a phone there is room for no
+group at all and every command ends up behind a dropdown. See [Ribbon](ribbon.md).
+
+## Mouse and touch are not the same gesture
+
+A mouse drag selects text; a finger has no wheel, so a drag has to pan or the page cannot be scrolled
+at all. Under touch the editor takes the mobile convention: **tap** places the caret, **drag** pans the
+page, **double-tap** selects a word and **triple-tap** a paragraph, and a selection is adjusted by
+dragging the round **handles** drawn under each of its ends. Long-press still opens the spelling menu.
+
+The caret is placed on the way *up* rather than the way down, because until the finger lifts there is
+no telling a tap from the start of a pan.
+
+Nothing changes for a mouse: drag still selects, shift-click still extends, and the handles are not
+drawn at all — they would be two targets that do nothing a drag does not.
+
+## The toolbar
+
+Two tabs, not four. **Home** is what you do to the text under the caret — Font, Paragraph and Proofing.
+**Layout** is what you do to the page it sits on — Page Setup, Insert and Zoom. Splitting further gave
+Insert, Layout and Review one group each, which is a click to reach a bar with a single button on it.
+
+Proofing rides on Home rather than a Review tab of its own: spelling is something you do while writing,
+not a separate pass.
+
+## Reading a document on a phone
+
+A page is a fixed width — that is what makes it a page — so on a phone it is always wider than the
+screen and the right-hand end of every line is off it. Three things address that, and they are meant to
+be used together:
+
+| | |
+|---|---|
+| **Pan** | A one-finger drag moves the page on **both** axes. Under touch a drag pans rather than selecting; see below |
+| **Zoom** | Pinch, or the Layout tab's zoom controls, which step through 50 / 75 / 100 / 125 / 150 / 200 / 300%. `Zoom` is also a plain property |
+| **Fit width** | Sets the zoom so the page exactly spans the window — the one-tap answer to "I cannot see the whole line". Print layout only; reflow already fits by construction |
+
+On the desktop the wheel scrolls, a wheel with a sideways component pans, and **ctrl-wheel zooms** —
+which is not a shortcut anyone had to learn, but what a trackpad pinch is delivered as in every browser.
+
+## Spelling
+
+The red underline is only half of it; the other half is reaching the suggestions. There are three ways
+in, because the one that works depends on the device:
+
+| | |
+|---|---|
+| **Long press** (touch) or **right-click** (desktop) | Opens the menu on the word under the pointer: suggestions, Ignore, Add to dictionary |
+| **Home ▸ Proofing** | Turn the pass on or off, and step to the previous or next misspelling. Stepping selects the word and opens its menu, so the arrows are a complete review loop on their own |
+| **Keyboard accessory** (MAUI, iOS and Android) | While the caret is inside a misspelling, the corrections appear on the bar above the keyboard, one tap from the finger already typing. `ShowSpellingSuggestions="false"` turns it off |
+
+The accessory bar is the mobile answer, and it exists because a long press is not a gesture anyone
+performs on a word they were not already suspicious of — without it the underlines on a phone were
+decoration. It appears only while the caret is actually in a misspelling, so it costs nothing the rest
+of the time, and it is the same `KeyboardAccessoryView` the rest of the library uses, so iOS gets a
+real `InputAccessoryView` and Android gets a bar anchored above the IME.
+
+Stepping through errors checks each paragraph as it reaches it. The pass itself only ever runs over
+what is on screen — nothing off screen can show a squiggle, so checking a long document up front would
+stall it for no benefit — which means a walk that trusted the cache would step through a document full
+of misspellings and report that it had none.
+
+## Inserting a picture
+
+A file browser is the right answer on a desktop, where a picture is a file in a folder. On a phone it
+is the wrong one twice over: photos live in the gallery rather than the filesystem, and the picture
+someone wants in a document is often one that does not exist yet — they mean to take it. So on iOS and
+Android the button asks first: **Take Photo**, **Photo Library**, **Browse Files**. Camera is offered
+only where the platform reports one, which correctly leaves it out on a simulator.
+
+Mac Catalyst is deliberately not treated as mobile: it runs the iOS code but presents as a desktop,
+where a Files browser is what a user reaches for.
+
+An iOS host needs `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in its `Info.plist`.
+
+## Shapes are a tab, not a dropdown
+
+Twenty shapes behind one button is a panel large enough to cover the document it is about to draw on,
+and it has to be dismissed before the result can be seen. They are a **Shapes** tab instead — grouped
+Rectangles / Basic / Arrows — and every button is drawn as the shape it inserts.
+
+Those icons are built with the same polygon, star and arrow maths the painter uses to lay the shape
+into the document, at a smaller size. Hand-drawn ones drift from what gets inserted the first time
+either side is adjusted, and a pentagon icon that yields a differently proportioned pentagon is a small
+lie the user only catches after clicking.
+
+The gallery and its names are shared by both editors and both hosts, so the four copies cannot drift.
+
+## Margins are on the ribbon
+
+Four presets — Normal, Narrow, Moderate, Wide — as four buttons in Layout ▸ Margins, rather than one
+button that opens a sheet of four. Four is few enough to show, and the whole reason to have a ribbon is
+that the choices are on it.
+
+## Page chrome on the ribbon
+
+Four tabs now: **Home** (Font · Paragraph · Proofing), **Layout** (Margins · Page · Zoom),
+**Insert** (Objects · Header & Footer · Breaks) and **Shapes**.
+
+| | Where | |
+|---|---|---|
+| **Header** / **Footer** | Insert ▸ Header & Footer | Prompts for the line, seeded with whatever is there. An empty line removes it — the only way back out of having one |
+| **Page number** | Insert ▸ Header & Footer | A menu, not a button: header or footer × left, centre or right. It appends to a header already there rather than replacing it |
+| **Page break** | Insert ▸ Breaks | Splits the page at the caret |
+| **Print layout** | Layout ▸ Page | A toggle between sheets of paper and one continuous column. Pressed means print |
+
+Header and footer are asked for rather than edited in place on the page. They are separate stories in
+the document — their own parts, laid out per page and repeated — so editing them in the canvas means a
+second caret, a second selection and a way in and out of them. Asking for the line is the whole of
+what most documents need, and it is undoable like any other command.
+
+Note that headers and footers only *show* in print layout: a reflowing view has no pages to attach
+them to. Setting one in reflow still writes it, and the Layout toggle is next to the buttons that do.
+
+## Orientation
+
+Layout ▸ Page carries **Portrait** and **Landscape** — two toggles rather than one, because a page is
+one of two things rather than on or off, and a lone "Landscape" button leaves the reader working out
+its pressed state backwards.
+
+Turning the paper does two things at once, and doing only one is the failure worth knowing about:
+the dimensions swap **and** the section records `w:orient`. Swapping without the attribute gives a page
+the right shape that Word still calls portrait, so Word's own control shows the wrong state and the
+next change flips it the wrong way; writing the attribute without swapping gives a section claiming
+landscape on portrait paper, which Word obeys by re-swapping on open. Margins are deliberately left
+alone — Word keeps them when the page turns.
+
+`SetPageOrientation` is undoable and survives a save and reopen.
+
+## Accent
+
+Each Office control wears a colour — its ribbon's header band, the tab ink and the underline:
+
+| | |
+|---|---|
+| `SpreadsheetView` / `SpreadsheetToolbar` | `OfficeAccent.Spreadsheet` — Excel green `#107C41` |
+| `DocumentEditorView` | `OfficeAccent.Document` — Word blue `#185ABD` |
+| `SlideEditorView` | `OfficeAccent.Presentation` — PowerPoint red `#C43E1C` |
+
+These are the defaults, not a sample setting. They are the colours Microsoft uses, and that is the
+point: a user reads them as "spreadsheet" and "slides" before any label has been looked at, and a
+workbook and a deck open side by side want telling apart rather than matching.
+
+Set `Accent` to take on your own brand, or to `null` to leave the bar on the theme's neutrals like the
+rest of the chrome. `OfficeAccent.From(colour)` picks the ink for you — deliberately, because a caller
+choosing a brand colour is not thinking about whether their tab labels have gone invisible on it.
+
+This is the one part of an Office control's appearance that is **not** taken from the app's theme.
+Everything else — the grid, the page, the surround — follows the host's neutrals so the control sits on
+the same ground as the chrome around it. See [Spreadsheet](spreadsheet.md#dark-mode).
+
+## Watermarks
+
+A picture drawn behind the content — a logo, a DRAFT stamp, a company mark. `Watermark` is on all six
+controls: the three editors and the three **viewers**, so a document opened read-only shows its mark
+too.
+
+```csharp
+view.Watermark = new OfficeWatermark
+{
+    Image = bytes,
+    Opacity = 0.15,          // a wash: there is text to read through it
+    Scale = 0.6,             // of the surface's shorter side
+    RotationDegrees = 315,   // the diagonal a stamp goes on
+    Fit = OfficeWatermarkFit.Contain
+};
+```
+
+The editors carry a **Watermark** button — document in Layout ▸ Page, slide in Insert, spreadsheet in
+Data ▸ Sheet. It picks a picture through exactly the same path as inserting one: camera or gallery on
+iOS and Android, the platform's own image-filtered dialog on a desktop, a file input in the browser.
+Once a mark is set the button clears it, because a picker that reopens on a document already stamped is
+a dead end.
+
+It is drawn per page in print layout and once behind the viewport in reflow — reflow has no pages, and
+a mark that scrolled with the content would slide away and leave most of the document unmarked. It is
+clipped to the surface it marks, since a rotated mark scaled to the page is wider than the page across
+its diagonal.
+
+**This is a display watermark: it is drawn, not written into the file.** That is a deliberate limit.
+The three formats have no common notion of one — Word keeps a VML shape in the header part, Excel has
+no watermark at all and fakes it with a header-and-footer image, PowerPoint expects a picture on the
+slide master. Persisting to all three means three unrelated mechanisms; drawing on all three means one.
+So it is right for stamping a preview, marking a draft or badging an export, and wrong as the way to
+put a permanent watermark into a file someone else will open in Word.

@@ -1,10 +1,11 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @using Shiny.Controls.Office.Presentation
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IJSRuntime Js
 
 <div class="shiny-slides @Class"
+     @ref="schemeHost"
      style="@Style"
      tabindex="0"
      @onwheel="OnWheel"
@@ -38,6 +39,8 @@
     /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
     /// </remarks>
     SlideTheme? paintedTheme;
+    ThemeSchemeWatcher scheme = null!;
+    ElementReference schemeHost;
 
     /// <summary>
     /// Device pixel ratio, read once from the browser.
@@ -52,7 +55,13 @@
 
     [Parameter] public SlideDeck? Deck { get; set; }
 
-    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+    /// <summary>
+    /// Chrome colours. Left unset the surface follows the page's light/dark scheme;
+    /// setting it pins the choice, including to <see cref="SlideTheme.Light"/>.
+    /// </summary>
+    [Parameter] public SlideTheme? Theme { get; set; }
+
+    SlideTheme EffectiveTheme => OfficeScheme.Resolve(this.scheme, this.Theme);
 
     [Parameter] public SlideViewMode Mode { get; set; } = SlideViewMode.Single;
 
@@ -68,14 +77,23 @@
 
     public SlideController? Controller => this.controller;
 
+    protected override void OnInitialized()
+        // The canvas only redraws when told to, so a scheme flip has to invalidate it explicitly.
+        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        {
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+
     protected override void OnParametersSet()
     {
         // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
         // called, so a theme change that does not reach this leaves the old pixels on screen and the
         // toggle appears to do nothing.
-        if (this.paintedTheme != this.Theme)
+        if (this.paintedTheme != this.EffectiveTheme)
         {
-            this.paintedTheme = this.Theme;
+            this.paintedTheme = this.EffectiveTheme;
             this.canvas?.Invalidate();
         }
 
@@ -142,7 +160,7 @@
     void OnPaint(SKPaintSurfaceEventArgs e)
     {
         var info = e.Info;
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         var surface = e.Surface.Canvas;
 
         surface.Clear(new SKColor(theme.Surround.R, theme.Surround.G, theme.Surround.B));
@@ -181,6 +199,7 @@
 
         this.painter.Paint(surface, new SlidePaintRequest
         {
+            Watermark = this.Watermark,
             Slide = placement.Slide,
             SlideWidth = this.controller.Deck.SlideWidth,
             SlideHeight = this.controller.Deck.SlideHeight,
@@ -197,6 +216,10 @@
     {
         if (!firstRender)
             return;
+
+        // Before the DPR read: the canvas paints its first frame off this, and starting the watch
+        // second would flash a white page in a dark app.
+        await this.scheme.StartAsync(this.schemeHost);
 
         try
         {
@@ -284,12 +307,24 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (this.controller is not null)
             this.controller.Changed -= this.OnControllerChanged;
 
         this.painter?.Dispose();
         this.measurer?.Dispose();
+        await this.scheme.DisposeAsync();
     }
+
+    /// <summary>
+    /// A picture drawn behind the content - a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
 }

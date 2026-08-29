@@ -1,6 +1,6 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IJSRuntime Js
 
 @*
@@ -17,6 +17,8 @@
                             ReadOnly="this.ReadOnly"
                             ShowTooltips="this.ShowTooltips"
                             ToolbarContent="this.ToolbarContent"
+                            Watermark="this.Watermark"
+                            WatermarkChanged="this.OnWatermarkChanged"
                             Changed="this.OnSheetsChanged" />
     }
 
@@ -75,6 +77,10 @@
     SpreadsheetController? controller;
     bool preventKeyDefault;
     bool focusEditor;
+
+    /// <summary>Drives the marching-ants border; see <see cref="StartMarching"/>.</summary>
+    PeriodicTimer? marching;
+    float dashPhase;
     double lastWidth;
     double lastHeight;
 
@@ -87,6 +93,7 @@
     /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
     /// </remarks>
     SpreadsheetTheme? paintedTheme;
+    ThemeSchemeWatcher scheme = null!;
 
     /// <summary>
     /// Device pixel ratio, read once from the browser.
@@ -152,7 +159,16 @@
     /// <summary>Blocks formatting and structural sheet edits. Cell editing is unaffected.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
-    [Parameter] public SpreadsheetTheme Theme { get; set; } = SpreadsheetTheme.Light;
+    /// <summary>
+    /// Grid chrome colours. Left unset the control follows the host page's light/dark scheme, so a
+    /// spreadsheet dropped into a dark app is dark without the app wiring anything up. Setting it
+    /// pins the choice - including to <see cref="SpreadsheetTheme.Light"/>, which is how a host asks
+    /// for a paper-white grid regardless of the app around it.
+    /// </summary>
+    [Parameter] public SpreadsheetTheme? Theme { get; set; }
+
+    /// <summary>The theme actually painted: <see cref="Theme"/> when set, otherwise the page's scheme.</summary>
+    SpreadsheetTheme EffectiveTheme => OfficeScheme.Resolve(this.scheme, this.Theme);
 
     [Parameter] public string? Class { get; set; }
 
@@ -164,14 +180,24 @@
     /// <summary>The live controller, exposed so a toolbar or formula bar can drive the same state.</summary>
     public SpreadsheetController? Controller => this.controller;
 
+    protected override void OnInitialized()
+        // Repaint on a scheme flip: the canvas only redraws when told to, so without this the grid
+        // keeps the pixels it had when the app was the other way round.
+        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        {
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+
     protected override void OnParametersSet()
     {
         // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
         // called, so a theme change that does not reach this leaves the old pixels on screen and the
         // toggle appears to do nothing.
-        if (this.paintedTheme != this.Theme)
+        if (this.paintedTheme != this.EffectiveTheme)
         {
-            this.paintedTheme = this.Theme;
+            this.paintedTheme = this.EffectiveTheme;
             this.canvas?.Invalidate();
         }
 
@@ -203,6 +229,7 @@
         this.controller.Changed += this.OnControllerChanged;
         this.controller.EditingChanged += this.OnEditingChanged;
         this.controller.ActiveSheetChanged += this.OnActiveSheetChanged;
+        this.controller.ClipboardChanged += this.OnClipboardChanged;
         this.controller.Resize(this.lastWidth > 0 ? this.lastWidth : 800, this.lastHeight > 0 ? this.lastHeight : 600);
     }
 
@@ -248,6 +275,9 @@
     {
         if (firstRender)
         {
+            // Before the DPR read: the canvas paints its first frame off this, and starting the watch
+            // second would flash a white grid in a dark app.
+            await this.scheme.StartAsync(this.host);
             await this.ReadDevicePixelRatioAsync();
         if (await OfficeFonts.EnsureLoadedAsync(this.Js))
         {
@@ -280,7 +310,8 @@
 
         if (this.controller is null)
         {
-            e.Surface.Canvas.Clear(new SKColor(this.Theme.Background.R, this.Theme.Background.G, this.Theme.Background.B));
+            var theme = this.EffectiveTheme;
+            e.Surface.Canvas.Clear(new SKColor(theme.Background.R, theme.Background.G, theme.Background.B));
             return;
         }
 
@@ -298,13 +329,17 @@
 
         this.painter.Paint(e.Surface.Canvas, new SpreadsheetPaintRequest
         {
+            Watermark = this.Watermark,
             Workbook = this.controller.Workbook,
             Sheet = this.controller.Sheet,
             Viewport = this.controller.Viewport,
             Selection = this.controller.Selection,
-            Theme = this.Theme,
+            Theme = this.EffectiveTheme,
             Scale = scale,
-            EditingCell = this.controller.EditingCell
+            EditingCell = this.controller.EditingCell,
+            ClipboardRange = this.controller.ClipboardRange,
+            ClipboardDashPhase = this.dashPhase,
+            ShowTouchHandles = this.controller.UsesTouch
         });
     }
 
@@ -330,8 +365,23 @@
 
     void OnPointerDown(PointerEventArgs e)
     {
-        this.controller?.PointerDown(e.OffsetX, e.OffsetY, e.ShiftKey);
+        this.controller?.PointerDown(e.OffsetX, e.OffsetY, e.ShiftKey, KindOf(e.PointerType));
     }
+
+    /// <summary>
+    /// The browser reports the pointer kind as a string; anything unrecognised is treated as a mouse.
+    /// </summary>
+    /// <remarks>
+    /// Mouse is the safe default: it keeps drag-to-extend, whereas guessing touch would turn a drag
+    /// into a pan on a device that has no other way to select a range.
+    /// </remarks>
+    static PointerKind KindOf(string? pointerType)
+        => pointerType switch
+        {
+            "touch" => PointerKind.Touch,
+            "pen" => PointerKind.Pen,
+            _ => PointerKind.Mouse
+        };
 
     void OnPointerMove(PointerEventArgs e)
     {
@@ -365,7 +415,17 @@
             case "Delete":
             case "Backspace": this.controller.ClearSelection(); break;
             case "F2": this.controller.BeginEdit(); break;
-            case "Escape": this.controller.CancelEdit(); break;
+
+            case "Escape":
+                // Excel's own way out of a pending cut or copy, and the only one that does not also
+                // change the sheet.
+                this.controller.CancelEdit();
+                this.controller.ClearClipboard();
+                break;
+
+            case "c" when e.CtrlKey || e.MetaKey: this.controller.Copy(); break;
+            case "x" when e.CtrlKey || e.MetaKey: this.controller.Cut(); break;
+            case "v" when e.CtrlKey || e.MetaKey: this.controller.Paste(); break;
 
             // Excel's own sheet shortcuts, and the only way to change sheet without the mouse.
             case "PageUp" when e.CtrlKey || e.MetaKey: this.StepSheet(-1); break;
@@ -410,6 +470,63 @@
 
         if (at >= 0 && sheets.ElementAtOrDefault(at + offset) is { } target)
             controller.SwitchSheet(target);
+    }
+
+    /// <summary>Starts or stops the marching-ants animation as the clipboard fills and empties.</summary>
+    void OnClipboardChanged(object? sender, EventArgs e)
+    {
+        if (this.controller?.ClipboardRange is null)
+            this.StopMarching();
+        else
+            this.StartMarching();
+    }
+
+    /// <summary>
+    /// Walks the dash phase forward until the clipboard is abandoned.
+    /// </summary>
+    /// <remarks>
+    /// A timer rather than a CSS animation because the border is drawn into a canvas, and the canvas
+    /// only redraws when something calls Invalidate. It runs only while there is something on the
+    /// clipboard: a permanent frame loop under a grid that is usually idle would keep the tab awake
+    /// and, in a Blazor Server circuit, would do it once per connected user.
+    /// </remarks>
+    void StartMarching()
+    {
+        if (this.marching is not null)
+            return;
+
+        var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(120));
+        this.marching = timer;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (await timer.WaitForNextTickAsync())
+                {
+                    // Two dashes' worth of travel per cycle, so the phase never grows without bound.
+                    this.dashPhase = (this.dashPhase + 2f) % 10f;
+                    await this.InvokeAsync(() => this.canvas?.Invalidate());
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // The component went away mid-tick; there is nothing left to repaint.
+            }
+        });
+    }
+
+    void StopMarching()
+    {
+        var timer = this.marching;
+        this.marching = null;
+
+        if (timer is null)
+            return;
+
+        timer.Dispose();
+        this.dashPhase = 0;
+        this.canvas?.Invalidate();
     }
 
     void OnEditorInput(ChangeEventArgs e) => this.controller?.UpdateEditingText(e.Value?.ToString() ?? string.Empty);
@@ -459,11 +576,33 @@
         this.controller.Changed -= this.OnControllerChanged;
         this.controller.EditingChanged -= this.OnEditingChanged;
         this.controller.ActiveSheetChanged -= this.OnActiveSheetChanged;
+        this.controller.ClipboardChanged -= this.OnClipboardChanged;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         this.Detach();
+        this.StopMarching();
         this.painter?.Dispose();
+        await this.scheme.DisposeAsync();
     }
+
+    Task OnWatermarkChanged(OfficeWatermark? mark)
+    {
+        this.Watermark = mark;
+        this.canvas?.Invalidate();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A picture drawn behind the content - a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
 }

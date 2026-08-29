@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 namespace Shiny.Maui.Controls.Office;
 
 /// <summary>
@@ -27,10 +28,10 @@ public class SheetTabStrip : ContentView
     {
         this.tabs = new HorizontalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Fill };
 
-        this.add = new Button { Text = "+", WidthRequest = 34, Padding = 0 };
+        this.add = new Button { Text = "+", WidthRequest = 34, Padding = 0 }.Neutralize();
         this.add.Clicked += this.OnAdd;
 
-        this.overflow = new Button { Text = "⋯", WidthRequest = 34, Padding = 0 };
+        this.overflow = new Button { Text = "⋯", WidthRequest = 34, Padding = 0 }.Neutralize();
         this.overflow.Clicked += this.OnOverflow;
 
         var row = new Grid
@@ -65,13 +66,16 @@ public class SheetTabStrip : ContentView
         };
 
         this.Content = this.frame;
+    
+        // An unset Theme tracks the app's appearance, so a flip has to redraw.
+        this.FollowAppTheme(static v => v.Rebuild());
     }
 
     public static readonly BindableProperty ThemeProperty = BindableProperty.Create(
         nameof(Theme),
         typeof(SpreadsheetTheme),
         typeof(SheetTabStrip),
-        SpreadsheetTheme.Light,
+        null,
         propertyChanged: (b, _, _) => ((SheetTabStrip)b).Rebuild());
 
     public static readonly BindableProperty AllowEditingProperty = BindableProperty.Create(
@@ -81,11 +85,17 @@ public class SheetTabStrip : ContentView
         true,
         propertyChanged: (b, _, _) => ((SheetTabStrip)b).Rebuild());
 
-    public SpreadsheetTheme Theme
+    /// <summary>
+    /// Chrome colours. Left unset the bar follows the app's light/dark appearance; setting it pins
+    /// the choice. <see cref="SpreadsheetView"/> pushes its own value down here.
+    /// </summary>
+    public SpreadsheetTheme? Theme
     {
-        get => (SpreadsheetTheme)this.GetValue(ThemeProperty);
+        get => (SpreadsheetTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    SpreadsheetTheme EffectiveTheme => this.Theme ?? OfficeScheme.Default;
 
     /// <summary>
     /// Whether tabs can be added, renamed, reordered, hidden and deleted, as opposed to only switched
@@ -126,8 +136,18 @@ public class SheetTabStrip : ContentView
     /// <summary>Redraws the row from the workbook. Cheap enough to do wholesale; sheets are few.</summary>
     public void Rebuild()
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         this.frame.BackgroundColor = ToColor(theme.HeaderBackground);
+
+        // Explicit, or the host app's implicit Button style fills these with its brand colour and
+        // two lozenges of the app's accent land on the sheet strip. They are strip chrome, so they
+        // take the strip's own colours.
+        foreach (var button in new[] { this.add, this.overflow })
+        {
+            button.BackgroundColor = Colors.Transparent;
+            button.TextColor = ToColor(theme.HeaderText);
+        }
+
         this.add.IsVisible = this.AllowEditing;
 
         this.tabs.Clear();
@@ -206,63 +226,73 @@ public class SheetTabStrip : ContentView
         await this.RenameAsync(added);
     }
 
+    /// <summary>
+    /// The menu behind the ⋯ button: the current sheet's own actions, plus anything hidden.
+    /// </summary>
+    /// <remarks>
+    /// One sheet, not two. This used to offer a single entry - "Sheet actions…" - whose only job was
+    /// to open the menu below, so unless a sheet happened to be hidden the button put a dialog in
+    /// front of the dialog it was really for, with one thing to tap in it. Unhiding is a sheet action
+    /// like any other, so it belongs in the same list rather than in a menu above it.
+    /// </remarks>
     async void OnOverflow(object? sender, EventArgs e)
     {
         if (this.controller is not { } current)
             return;
 
-        var hidden = current.Workbook.Sheets.Where(x => !x.IsVisible).ToList();
-        if (this.Page is not { } page)
+        await this.ShowSheetMenuAsync(current.Sheet, includeHidden: true);
+    }
+
+    async Task ShowSheetMenuAsync(Worksheet sheet, bool includeHidden = false)
+    {
+        if (this.controller is not { } current || this.Page is not { } page)
             return;
 
-        var options = new List<string>();
-        if (this.AllowEditing)
-            options.Add($"Sheet actions…");
+        var position = current.IndexOf(sheet);
+        var removable = this.AllowEditing && current.CanRemoveFromView(sheet);
 
+        var hidden = includeHidden
+            ? current.Workbook.Sheets.Where(x => !x.IsVisible).ToList()
+            : [];
+
+        var options = new List<string>();
+
+        if (this.AllowEditing)
+        {
+            options.Add("Rename");
+            options.Add("Duplicate");
+
+            if (position > 0)
+                options.Add("Move left");
+
+            if (position >= 0 && position < current.Workbook.Sheets.Count - 1)
+                options.Add("Move right");
+
+            if (removable)
+                options.Add("Hide");
+        }
+
+        // Last, and named, so a workbook with several hidden sheets reads as a list of them rather
+        // than as more commands.
         options.AddRange(hidden.Select(x => $"Show “{x.Name}”"));
 
         if (options.Count == 0)
             return;
-
-        var choice = await page.DisplayActionSheetAsync("Sheets", "Cancel", null, [.. options]);
-        if (choice is null or "Cancel")
-            return;
-
-        if (this.AllowEditing && choice == options[0])
-        {
-            await this.ShowSheetMenuAsync(current.Sheet);
-            return;
-        }
-
-        var target = hidden.FirstOrDefault(x => choice == $"Show “{x.Name}”");
-        if (target is not null)
-            this.Act(() => current.SetSheetVisible(target, true));
-    }
-
-    async Task ShowSheetMenuAsync(Worksheet sheet)
-    {
-        if (this.controller is not { } current || !this.AllowEditing || this.Page is not { } page)
-            return;
-
-        var position = current.IndexOf(sheet);
-        var removable = current.CanRemoveFromView(sheet);
-
-        var options = new List<string> { "Rename", "Duplicate" };
-
-        if (position > 0)
-            options.Add("Move left");
-
-        if (position >= 0 && position < current.Workbook.Sheets.Count - 1)
-            options.Add("Move right");
-
-        if (removable)
-            options.Add("Hide");
 
         var choice = await page.DisplayActionSheetAsync(
             sheet.Name,
             "Cancel",
             removable ? "Delete" : null,
             [.. options]);
+
+        if (choice is null or "Cancel")
+            return;
+
+        if (hidden.FirstOrDefault(x => choice == $"Show “{x.Name}”") is { } unhide)
+        {
+            this.Act(() => current.SetSheetVisible(unhide, true));
+            return;
+        }
 
         switch (choice)
         {

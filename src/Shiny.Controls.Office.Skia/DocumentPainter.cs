@@ -2,6 +2,7 @@ using Shiny.Controls.Office.Document;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using SkiaSharp;
+using Shiny.Controls.Office.Theming;
 
 namespace Shiny.Controls.Office.Skia;
 
@@ -20,7 +21,12 @@ public sealed record DocumentTheme
         TableBorder = new ArgbColor(255, 0x55, 0x55, 0x55),
         Link = new ArgbColor(255, 0x6C, 0xB6, 0xFF),
         SelectionFill = new ArgbColor(80, 0x4C, 0x9A, 0xFF),
-        Caret = new ArgbColor(255, 0xEE, 0xEE, 0xEE)
+        Caret = new ArgbColor(255, 0xEE, 0xEE, 0xEE),
+        TouchHandle = new ArgbColor(255, 0x4C, 0x9A, 0xFF),
+
+        // The ring takes the page's own ground rather than staying white, which on a dark page would
+        // be a brighter mark than the handle it is meant to separate.
+        TouchHandleRing = new ArgbColor(255, 0x1E, 0x1E, 0x1E)
     };
 
     public ArgbColor PageBackground { get; init; } = new(255, 255, 255, 255);
@@ -40,6 +46,16 @@ public sealed record DocumentTheme
     public ArgbColor SelectionFill { get; init; } = new(70, 0x21, 0x7A, 0xD8);
 
     public ArgbColor Caret { get; init; } = new(255, 0x11, 0x11, 0x11);
+
+    /// <summary>The grab handles drawn on a touch selection.</summary>
+    public ArgbColor TouchHandle { get; init; } = new(255, 0x21, 0x7A, 0xD8);
+
+    /// <summary>Keeps a handle readable over the text and the selection wash underneath it.</summary>
+    public ArgbColor TouchHandleRing { get; init; } = new(255, 0xFF, 0xFF, 0xFF);
+
+    public double TouchHandleRadius { get; init; } = 7;
+
+    public double TouchHandleRingWidth { get; init; } = 2;
 
     /// <summary>The spelling squiggle. Red by convention, and the one place a document may not override.</summary>
     public ArgbColor SpellingUnderline { get; init; } = new(255, 0xD1, 0x34, 0x38);
@@ -96,6 +112,18 @@ public sealed record DocumentPaintRequest
 
     /// <summary>The caret, or null when the view is not focused or the caret is blinking off.</summary>
     public GridRectLike? Caret { get; init; }
+
+    /// <summary>
+    /// Grab handles for the selection, in document coordinates. Empty for a mouse.
+    /// </summary>
+    /// <remarks>
+    /// Only meaningful under touch, where dragging pans the page rather than extending the selection -
+    /// these are the only way left to adjust one, so they have to be visible rather than implied.
+    /// </remarks>
+    public IReadOnlyList<GridRectLike> TouchHandles { get; init; } = [];
+
+    /// <summary>A picture drawn behind the page, under everything on it.</summary>
+    public OfficeWatermark? Watermark { get; init; }
 
     /// <summary>Spans to underline as misspelled, in document coordinates.</summary>
     public IReadOnlyList<GridRectLike> Spelling { get; init; } = [];
@@ -171,14 +199,18 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
     {
         // The page is a lighter panel inside the surround, so a narrow measure still reads as a
         // document rather than as text floating on a background.
+        var panel = new SKRect(
+            Snap(request.PageX, request.Scale),
+            0,
+            Snap(request.PageX + request.PageWidth, request.Scale),
+            (float)request.Viewport.Height);
+
         this.fill.Color = ToSk(theme.PageBackground);
-        canvas.DrawRect(
-            new SKRect(
-                Snap(request.PageX, request.Scale),
-                0,
-                Snap(request.PageX + request.PageWidth, request.Scale),
-                (float)request.Viewport.Height),
-            this.fill);
+        canvas.DrawRect(panel, this.fill);
+
+        // Behind the text and pinned to the panel rather than to the flow: reflow has no pages, so a
+        // mark that scrolled with the content would slide away and leave most of the document unmarked.
+        WatermarkPainter.Draw(canvas, panel, request.Watermark);
 
         canvas.Save();
         canvas.Translate((float)request.ResolvedContentX, (float)-request.Viewport.ScrollY);
@@ -201,7 +233,7 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
                 Snap(request.PageX + request.PageWidth, request.Scale),
                 Snap(top + request.PageHeight, request.Scale));
 
-            this.PaintPaper(canvas, paper, theme);
+            this.PaintPaper(canvas, paper, theme, request.Watermark);
 
             // Clipped to the sheet: a paragraph whose last line straddles the boundary is drawn on
             // both pages, and without the clip the overhang would spill into the gap below.
@@ -253,7 +285,7 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
     /// the side it is offset towards gains a second, darker line against the surround, so the page
     /// looks like it has a 2px border on one side and a 1px border on the other.
     /// </remarks>
-    void PaintPaper(SKCanvas canvas, SKRect paper, DocumentTheme theme)
+    void PaintPaper(SKCanvas canvas, SKRect paper, DocumentTheme theme, OfficeWatermark? watermark)
     {
         using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 3f))
         {
@@ -265,6 +297,10 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
 
         this.fill.Color = ToSk(theme.PageBackground);
         canvas.DrawRect(paper, this.fill);
+
+        // Per page, under the text. Drawn on the paper rather than across the surround so it lands the
+        // same way on every sheet and does not run between them.
+        WatermarkPainter.Draw(canvas, paper, watermark);
 
         // Inset by half the stroke so the hairline lands inside the paper rather than straddling its
         // edge — a centred stroke on a snapped edge still spills half a pixel into the surround.
@@ -336,6 +372,30 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
             canvas.DrawRect(
                 new SKRect((float)caret.X, (float)caret.Y, (float)(caret.X + Math.Max(1, caret.Width)), (float)caret.Bottom),
                 this.fill);
+        }
+
+        // Over the caret, because a handle marks the same edge and the two coincide on a collapsed
+        // selection - a caret drawn on top would show through the middle of the dot.
+        if (request.TouchHandles.Count > 0)
+        {
+            var radius = (float)theme.TouchHandleRadius;
+            this.fill.Color = ToSk(theme.TouchHandle);
+            this.stroke.Color = ToSk(theme.TouchHandleRing);
+            this.stroke.StrokeWidth = (float)theme.TouchHandleRingWidth;
+
+            foreach (var handle in request.TouchHandles)
+            {
+                if (handle.Bottom < flowTop || handle.Y > flowBottom)
+                    continue;
+
+                var cx = (float)(handle.X + (handle.Width / 2));
+                var cy = (float)(handle.Y + (handle.Height / 2));
+
+                canvas.DrawCircle(cx, cy, radius, this.fill);
+                canvas.DrawCircle(cx, cy, radius, this.stroke);
+            }
+
+            this.stroke.StrokeWidth = 1;
         }
 
         // Last, over everything: the frame surrounds an object drawn a moment ago, and drawing it

@@ -69,8 +69,8 @@
     [Parameter] public EventCallback<DateOnly> SelectedDateChanged { get; set; }
     [Parameter] public int DaysPerPage { get; set; } = 30;
     [Parameter] public string DefaultEventColor { get; set; } = "#6366F1";
-    [Parameter] public string DayHeaderBackgroundColor { get; set; } = "#F9FAFB";
-    [Parameter] public string DayHeaderTextColor { get; set; } = "#111827";
+    [Parameter] public string DayHeaderBackgroundColor { get; set; } = "var(--shiny-color-surface-container, #F9FAFB)";
+    [Parameter] public string DayHeaderTextColor { get; set; } = "var(--shiny-color-on-surface, #111827)";
     [Parameter] public DateOnly? MinDate { get; set; }
     [Parameter] public DateOnly? MaxDate { get; set; }
 

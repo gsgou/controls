@@ -1,0 +1,75 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Blazor.Controls
+@using Shiny.Controls.Office.Icons
+@using Shiny.Controls.Office.Shapes
+
+@*
+    A tab of shapes, each drawn as the shape it inserts.
+
+    A gallery, not a dropdown. Twenty shapes behind a button is a panel large enough to cover the
+    document it is about to draw on, and it has to be dismissed before the result can be seen. On a tab
+    they are simply there, and the tab strip already says what the alternative is.
+
+    Shared by the document and slide bars so the two galleries cannot drift apart — which is the same
+    reason the geometry list itself lives in one place.
+*@
+<RibbonTab Title="Shapes" Key="shapes">
+    @foreach (var (title, priority, geometries) in Groups)
+    {
+        <RibbonGroup Title="@title" Priority="priority">
+            @foreach (var geometry in geometries)
+            {
+                var picked = geometry;
+                <RibbonButton Size="RibbonItemSize.Small"
+                              Tooltip="@NameOf(picked)"
+                              Icon="@OfficeToolbarIcons.Get(ShapeIcons.For(picked)).Value"
+                              Disabled="Disabled"
+                              Clicked="() => Picked.InvokeAsync(picked)" />
+            }
+        </RibbonGroup>
+    }
+</RibbonTab>
+
+@code {
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback<ShapeGeometry> Picked { get; set; }
+
+    // Grouped the way the shapes themselves divide, so the gallery can be scanned rather than read:
+    // things with corners, things without, and the arrows - which are what most of a diagram is.
+    static readonly (string Title, int Priority, ShapeGeometry[] Geometries)[] Groups =
+    [
+        ("Rectangles", 100,
+        [
+            ShapeGeometry.Rectangle,
+            ShapeGeometry.RoundedRectangle,
+            ShapeGeometry.Parallelogram,
+            ShapeGeometry.Trapezoid
+        ]),
+        ("Basic", 90,
+        [
+            ShapeGeometry.Ellipse,
+            ShapeGeometry.Triangle,
+            ShapeGeometry.RightTriangle,
+            ShapeGeometry.Diamond,
+            ShapeGeometry.Pentagon,
+            ShapeGeometry.Hexagon,
+            ShapeGeometry.Star5,
+            ShapeGeometry.Plus,
+            ShapeGeometry.Can,
+            ShapeGeometry.Cloud,
+            ShapeGeometry.Line
+        ]),
+        ("Arrows", 80,
+        [
+            ShapeGeometry.RightArrow,
+            ShapeGeometry.LeftArrow,
+            ShapeGeometry.UpArrow,
+            ShapeGeometry.DownArrow,
+            ShapeGeometry.Chevron
+        ])
+    ];
+
+    static string NameOf(ShapeGeometry geometry)
+        => ShapeNames.Of(geometry);
+}

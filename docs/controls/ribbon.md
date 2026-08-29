@@ -7,19 +7,29 @@ convention for applications with more commands than a toolbar can hold. Tabs, gr
 buttons, toggles, split and menu buttons, contextual tabs, a quick access row, a collapsing body, and
 groups that fold themselves into buttons when the window gets narrow.
 
-It ships in `Shiny.Maui.Controls.Desktop` on MAUI and in the core `Shiny.Blazor.Controls` package on
-Blazor — the same split docking uses, and for the same reason: Blazor has no desktop add-on.
+It ships in the **core** package on both hosts, and targets everything they do — iOS and Android
+included.
 
 ```bash
-dotnet add package Shiny.Maui.Controls.Desktop     # MAUI  (Windows, macOS, Mac Catalyst, Linux)
+dotnet add package Shiny.Maui.Controls             # MAUI
 dotnet add package Shiny.Blazor.Controls           # Blazor
 ```
 
+> **Moved.** The MAUI ribbon used to live in `Shiny.Maui.Controls.Desktop`, whose target frameworks
+> stop at the desktop ones. That put it out of reach of every control in the core package that might
+> want it — the [Image Editor](image-editor.md) now does — since core cannot reference the add-on that
+> references it. The namespace changed with it, from `Shiny.Maui.Controls.Desktop.Ribbons` to
+> `Shiny.Maui.Controls.Ribbons`. **Markup is unaffected**: the ribbon was always mapped onto the
+> `http://shiny.net/maui/controls` URI, so `shiny:Ribbon` reads exactly as before. Only a C# `using`
+> needs changing.
+
 The ribbon needs no registration on either host — it is markup, not a service.
 
-> **A desktop control, and only nominally a cross-platform one.** It wants a pointer to hover with and
-> enough width for three rows of small commands. Nothing stops it running on a phone, but a phone
-> should have a [`ShinyToolbar` or `ShinyTabBar`](toolbar-tabbar.md) instead.
+> **Still a desktop shape at heart.** Expanded, it wants a pointer to hover with and enough width for
+> three rows of small commands. On a phone, set `DisplayMode="Simplified"` — one dense row, every item
+> small, group titles dropped — which is what the [Image Editor](image-editor.md) does below its width
+> breakpoint. For app-level navigation a phone still wants a
+> [`ShinyToolbar` or `ShinyTabBar`](toolbar-tabbar.md) rather than a ribbon.
 
 ---
 
@@ -76,8 +86,8 @@ Ribbon
 </shiny:Ribbon>
 ```
 
-`xmlns:shiny="http://shiny.net/maui/controls"` — the same prefix as the core controls; the ribbon is
-mapped onto it from the Desktop assembly so a XAML author never has to know there are two.
+`xmlns:shiny="http://shiny.net/maui/controls"` — the same prefix as the core controls, which is now
+literally where the ribbon lives.
 
 ### Blazor
 
@@ -146,6 +156,31 @@ shared column. A `RibbonSeparator`, or a large item, ends the current column and
 │    ▾     │ Format painter   │         │   Bullets = Large → the next column
 └──────────┴──────────────────┴─────────┘
 ```
+
+### Rows only line up if you say how tall they are
+
+Each group lays out its own columns, so by default a group's rows are as tall as whatever is in that
+group. Put a 32px picker in one group and icon buttons in the next and the two groups end up on
+different lines, with their captions on different baselines — every group correct on its own, the bar
+ragged as a whole.
+
+A bar that mixes hosted controls with icon buttons should pin one row height:
+
+```csharp
+new Ribbon { SmallItemRows = 2, SmallItemRowHeight = 32 }   // MAUI
+```
+
+```css
+.my-toolbar ::deep .shiny-ribbon { --shiny-ribbon-row-h: 32px; }  /* Blazor */
+```
+
+On Blazor the custom property has to be set on the `.shiny-ribbon` element itself, not on a wrapper
+around it: the ribbon declares the same property in its own rule, and that beats an inherited value.
+
+One consequence catches hosted content on MAUI: a pinned row means the hosted view **is** the row
+height, so there is no spare room for `VerticalOptions` to centre it in. A `Label` dropped into a group
+draws its text at the top of its own box while the icon buttons beside it centre their glyphs — which
+reads as that one item sitting too high. Set `VerticalTextAlignment` as well as `VerticalOptions`.
 
 That is the whole of a ribbon's layout language, and it is why reordering a group's items re-flows it
 with nothing else touched. On MAUI the columns are built in code; on Blazor they are a CSS grid with
@@ -250,6 +285,7 @@ stays open and the body scrolls.
 | `ShowGroupTitles` | ✓ | ✓ | Draw each group's caption. Default true |
 | `ShowTabStrip` | ✓ | ✓ | Draw the strip at all — false gives a single-tab ribbon that is really a toolbar |
 | `SmallItemRows` | ✓ | ✓ | How deep small items stack before a new column. Default 3 |
+| `SmallItemRowHeight` | ✓ | `--shiny-ribbon-row-h` | One fixed height for every small-item row. Default 0/24px = size to content |
 | Application button | `ApplicationButtonText`, `ApplicationButtonCommand` | `ApplicationButtonText`, `ApplicationButtonClicked` | The accented "File" button at the head of the strip. Null leaves it out |
 | Colours | `AccentColor`, `HeaderBackgroundColor`, `BodyBackgroundColor` | same, as CSS colour strings | Fall back to the theme |
 | `ShowTooltips` | ✓ | — | MAUI uses the Shiny `Tooltip` control; Blazor uses the browser's own `title` |
@@ -304,3 +340,35 @@ properties, and both flip with light/dark. `AccentColor`, `HeaderBackgroundColor
 
 Both build the same bar — Home / Insert / View plus a contextual Picture Tools tab — with switches for
 the display mode, the contextual tab and group collapsing, and a log of every command the bar raises.
+
+## Collapsing
+
+The chevron at the right of the tab strip puts the body away and brings it back. Re-opening returns
+the bar to **the mode it was in when you collapsed it**, not to `Expanded` — collapsing a `Simplified`
+bar and re-opening it used to hand back the full three-row layout, so on a narrow window the chevron
+was a one-way trip to a bar three times the height of the one you had just put away. A `DisplayMode`
+set any other way — a binding, a host's own width rule — is remembered the same way.
+
+`AllowCollapse="false"` removes the chevron.
+
+> **If the host rebuilds the ribbon, it has to carry `DisplayMode` across.** A collapsed bar is state
+> that lives on the instance, so a host that replaces the whole ribbon on every change — the
+> [Image Editor](image-editor.md) does — has to read the mode back before it throws the old one away,
+> or the chevron appears to do nothing: collapse it, touch a command, and the bar is simply open again.
+
+## A bar that scrolls says so
+
+Groups fold into buttons when a tab is too wide for the bar, but with `AllowGroupCollapse` off — or at
+a width where even the collapsed groups do not fit — the body scrolls instead. A scrolling bar looks
+exactly like one that does not: the last group ends flush at the edge and nothing says another follows.
+
+Both hosts draw a fade on whichever edge still has content past it, and drop it once that edge is
+reached. There is nothing to switch on. The platform scroll indicator is not the answer here — it is
+hidden deliberately, and on iOS and Android it only appears once a scroll is already under way, which
+is after the moment the user needed to be told.
+
+On MAUI the fade is two input-transparent overlays tinted from the body's resolved background; a colour
+token cannot reach a gradient stop, so the brush is rebuilt from the colour the body actually ended up
+with. On Blazor `ribbon.js` marks each scroller with which side overflows and the stylesheet draws an
+inset shadow in the surface colour — an inset shadow rather than a mask, which would fade the bar's own
+background out and show the page through its edge.

@@ -59,7 +59,85 @@ public enum OfficeIcon
     ColumnWidth,
     AlignTop,
     AlignMiddle,
-    AlignBottom
+    AlignBottom,
+
+    /// <summary>Scissors — cut the selection to the clipboard.</summary>
+    Cut,
+
+    /// <summary>Two offset sheets — copy the selection to the clipboard.</summary>
+    Copy,
+
+    /// <summary>A clipboard with a sheet on it — paste what is held.</summary>
+    Paste,
+
+    /// <summary>A grid with a new band opening across it, and a plus. Rows.</summary>
+    InsertRow,
+
+    /// <summary>The same, turned: a new band opening down the grid. Columns.</summary>
+    InsertColumn,
+
+    /// <summary>The same grid with a minus in the band: the row comes out.</summary>
+    DeleteRow,
+
+    /// <summary>The same, turned: the column comes out.</summary>
+    DeleteColumn,
+
+    /// <summary>An eye with a stroke through it — the selection is taken out of view.</summary>
+    Hide,
+
+    /// <summary>The same eye, open — what was hidden comes back.</summary>
+    Unhide,
+
+    /// <summary>A run of values with the mean drawn through it — AVERAGE.</summary>
+    Average,
+
+    /// <summary>A hash — COUNT, how many of them there are rather than what they add to.</summary>
+    Count,
+
+    /// <summary>An arrow down onto a floor rule — MIN.</summary>
+    Min,
+
+    /// <summary>An arrow up to a ceiling rule — MAX.</summary>
+    Max,
+
+    /// <summary>A tick over a wavy underline — the mark for the spelling pass.</summary>
+    SpellCheck,
+
+    ZoomIn,
+    ZoomOut,
+
+    /// <summary>Arrows pushing out to a page's two edges — fit the page across the screen.</summary>
+    FitWidth,
+
+    /// <summary>A page with its top band filled — the running head.</summary>
+    Header,
+
+    /// <summary>The same page with its bottom band filled.</summary>
+    Footer,
+
+    /// <summary>A page with a hash in it.</summary>
+    PageNumber,
+
+    /// <summary>Two page edges parted by a dashed rule.</summary>
+    PageBreak,
+
+    /// <summary>Sheets of paper — the print view, as against the continuous one.</summary>
+    PrintLayout,
+
+    /// <summary>Paper taller than it is wide.</summary>
+    Portrait,
+
+    /// <summary>The same sheet turned.</summary>
+    Landscape,
+
+    /// <summary>A page with a mark washed across it.</summary>
+    Watermark,
+
+    /// <summary>A page whose text block is inset by each of the four presets.</summary>
+    MarginsNarrow,
+    MarginsNormal,
+    MarginsModerate,
+    MarginsWide
 }
 
 
@@ -366,8 +444,232 @@ public static class OfficeIcons
         OfficeIcon.AlignMiddle => [OfficeIconShape.Line(4f, 12f, 20f, 12f), .. Lines(6.5f, 17.5f)],
         OfficeIcon.AlignBottom => [OfficeIconShape.Line(4f, 19.5f, 20f, 19.5f), .. Lines(10f, 14.5f)],
 
+        // Two blades crossed over their handles. Drawn as two strokes plus two rings rather than an
+        // outline, because at 18px an outlined pair of scissors is a smudge.
+        OfficeIcon.Cut =>
+        [
+            OfficeIconShape.Line(7f, 5f, 16.5f, 17.5f),
+            OfficeIconShape.Line(17f, 5f, 7.5f, 17.5f),
+            OfficeIconShape.Circle(6.6f, 19f, 2.1f),
+            OfficeIconShape.Circle(17.4f, 19f, 2.1f)
+        ],
+
+        // The back sheet is offset up and right, and only its two visible edges are drawn - a full
+        // second rectangle behind the front one reads as a frame rather than a stack.
+        OfficeIcon.Copy =>
+        [
+            OfficeIconShape.Rectangle(4.5f, 7.5f, 11f, 12f, 1.5f),
+            OfficeIconShape.Polyline(8.5f, 5.5f, 19.5f, 5.5f, 19.5f, 16f)
+        ],
+
+        // The clip at the top is what separates this from a plain page: without it the shape is the
+        // same one Copy's front sheet uses.
+        OfficeIcon.Paste =>
+        [
+            OfficeIconShape.Rectangle(5.5f, 5.5f, 13f, 14f, 1.5f),
+            OfficeIconShape.Rectangle(9.5f, 3.5f, 5f, 3.5f, 1f)
+        ],
+
+        // A grid with the band being opened drawn as a gap, and a plus in it. The plus is what says
+        // "insert" rather than "select": the band alone is the row-header gesture.
+        OfficeIcon.InsertRow =>
+        [
+            OfficeIconShape.Line(4f, 6f, 20f, 6f),
+            OfficeIconShape.Line(4f, 18f, 20f, 18f),
+            OfficeIconShape.Line(12f, 9f, 12f, 15f),
+            OfficeIconShape.Line(9f, 12f, 15f, 12f)
+        ],
+
+        OfficeIcon.InsertColumn =>
+        [
+            OfficeIconShape.Line(6f, 4f, 6f, 20f),
+            OfficeIconShape.Line(18f, 4f, 18f, 20f),
+            OfficeIconShape.Line(12f, 9f, 12f, 15f),
+            OfficeIconShape.Line(9f, 12f, 15f, 12f)
+        ],
+
+        // The insert pair with the plus's upright taken away. A minus rather than a cross or a bin,
+        // so insert and delete read as the same gesture in two directions - which is what they are.
+        OfficeIcon.DeleteRow =>
+        [
+            OfficeIconShape.Line(4f, 6f, 20f, 6f),
+            OfficeIconShape.Line(4f, 18f, 20f, 18f),
+            OfficeIconShape.Line(9f, 12f, 15f, 12f)
+        ],
+
+        OfficeIcon.DeleteColumn =>
+        [
+            OfficeIconShape.Line(6f, 4f, 6f, 20f),
+            OfficeIconShape.Line(18f, 4f, 18f, 20f),
+            OfficeIconShape.Line(9f, 12f, 15f, 12f)
+        ],
+
+        // An eye, struck and open. The other candidate was the two column edges closing on each
+        // other, which is nearer to what the command does - and all but identical to ColumnWidth,
+        // two buttons away in the same group.
+        OfficeIcon.Hide => [.. Eye(), OfficeIconShape.Line(4.6f, 19.4f, 19.4f, 4.6f)],
+        OfficeIcon.Unhide => Eye(),
+
+        // The aggregates. Sum is the sigma above; these four are the shape of what each one answers
+        // about the range rather than a letterform, which at 18px would be three illegible capitals.
+
+        // x-bar, the notation for a mean. Two drawings came before it: a zigzag with the mean ruled
+        // through it, which at 18px was two peaks and a smudge because the line spent most of its
+        // length inside a stroke going the other way; and bars under that rule, which read well and
+        // were filled - and a filled figure is one the toolbar cannot tint.
+        OfficeIcon.Average =>
+        [
+            OfficeIconShape.Line(7.5f, 6f, 16.5f, 6f),
+            OfficeIconShape.Line(7.5f, 10.5f, 16.5f, 19.5f),
+            OfficeIconShape.Line(16.5f, 10.5f, 7.5f, 19.5f)
+        ],
+
+        // A hash: how many, not how much.
+        OfficeIcon.Count =>
+        [
+            OfficeIconShape.Line(9.8f, 4.5f, 7.8f, 19.5f),
+            OfficeIconShape.Line(16.2f, 4.5f, 14.2f, 19.5f),
+            OfficeIconShape.Line(5.4f, 9.6f, 18.6f, 9.6f),
+            OfficeIconShape.Line(4.6f, 14.4f, 17.8f, 14.4f)
+        ],
+
+        // An arrow onto the floor, and the same arrow up to the ceiling.
+        OfficeIcon.Min =>
+        [
+            OfficeIconShape.Line(4.5f, 19.5f, 19.5f, 19.5f),
+            OfficeIconShape.Line(12f, 4.5f, 12f, 15.5f),
+            OfficeIconShape.Polyline(8.4f, 12f, 12f, 15.5f, 15.6f, 12f)
+        ],
+
+        OfficeIcon.Max =>
+        [
+            OfficeIconShape.Line(4.5f, 4.5f, 19.5f, 4.5f),
+            OfficeIconShape.Line(12f, 19.5f, 12f, 8.5f),
+            OfficeIconShape.Polyline(8.4f, 12f, 12f, 8.5f, 15.6f, 12f)
+        ],
+
+        // A tick above the same wavy rule the editor draws under a misspelling, so the button and the
+        // thing it acts on carry one mark. Two glyphs would be two ideas.
+        OfficeIcon.SpellCheck =>
+        [
+            OfficeIconShape.Polyline(4f, 11f, 8f, 15f, 16f, 5f),
+            OfficeIconShape.Polyline(3f, 19f, 5.5f, 16.5f, 8f, 19f, 10.5f, 16.5f, 13f, 19f, 15.5f, 16.5f, 18f, 19f, 20.5f, 16.5f)
+        ],
+
+        OfficeIcon.ZoomIn =>
+        [
+            OfficeIconShape.Circle(10.5f, 10.5f, 6.5f),
+            OfficeIconShape.Line(15.5f, 15.5f, 20f, 20f),
+            OfficeIconShape.Line(7.5f, 10.5f, 13.5f, 10.5f),
+            OfficeIconShape.Line(10.5f, 7.5f, 10.5f, 13.5f)
+        ],
+
+        OfficeIcon.ZoomOut =>
+        [
+            OfficeIconShape.Circle(10.5f, 10.5f, 6.5f),
+            OfficeIconShape.Line(15.5f, 15.5f, 20f, 20f),
+            OfficeIconShape.Line(7.5f, 10.5f, 13.5f, 10.5f)
+        ],
+
+        // The page, and two arrows pushing out to its edges.
+        OfficeIcon.FitWidth =>
+        [
+            OfficeIconShape.Rectangle(7f, 4f, 10f, 16f, 1f),
+            OfficeIconShape.Line(2f, 12f, 5f, 12f),
+            OfficeIconShape.Polyline(4f, 10f, 2f, 12f, 4f, 14f),
+            OfficeIconShape.Line(19f, 12f, 22f, 12f),
+            OfficeIconShape.Polyline(20f, 10f, 22f, 12f, 20f, 14f)
+        ],
+
+        OfficeIcon.Header =>
+        [
+            OfficeIconShape.Rectangle(5f, 3f, 14f, 18f, 1f),
+            // Stroked, not filled: a filled figure cannot be tinted the way the rest of the set is,
+            // which is why the highlight bar is the only one in the whole set that is.
+            OfficeIconShape.Rectangle(7f, 5f, 10f, 3f, 0.5f),
+            OfficeIconShape.Line(7f, 12f, 17f, 12f),
+            OfficeIconShape.Line(7f, 15.5f, 17f, 15.5f)
+        ],
+
+        OfficeIcon.Footer =>
+        [
+            OfficeIconShape.Rectangle(5f, 3f, 14f, 18f, 1f),
+            OfficeIconShape.Line(7f, 8.5f, 17f, 8.5f),
+            OfficeIconShape.Line(7f, 12f, 17f, 12f),
+            OfficeIconShape.Rectangle(7f, 16f, 10f, 3f, 0.5f)
+        ],
+
+        OfficeIcon.PageNumber =>
+        [
+            OfficeIconShape.Rectangle(5f, 3f, 14f, 18f, 1f),
+
+            // A hash, which is the mark for "number" wherever a numeral itself would be a lie - the
+            // field shows a different one on every page.
+            OfficeIconShape.Line(10f, 9f, 9f, 16f),
+            OfficeIconShape.Line(14f, 9f, 13f, 16f),
+            OfficeIconShape.Line(8.5f, 11.5f, 15f, 11.5f),
+            OfficeIconShape.Line(8f, 14f, 14.5f, 14f)
+        ],
+
+        // Two page edges parted by the break. Dashes are drawn as separate segments because an icon
+        // shape carries no dash pattern.
+        OfficeIcon.PageBreak =>
+        [
+            OfficeIconShape.Path(
+                new OfficeIconVertex(OfficeIconVerb.Move, 6f, 9f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 6f, 4f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 18f, 4f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 18f, 9f)),
+
+            OfficeIconShape.Line(4f, 12f, 7f, 12f),
+            OfficeIconShape.Line(10f, 12f, 14f, 12f),
+            OfficeIconShape.Line(17f, 12f, 20f, 12f),
+
+            OfficeIconShape.Path(
+                new OfficeIconVertex(OfficeIconVerb.Move, 6f, 15f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 6f, 20f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 18f, 20f),
+                new OfficeIconVertex(OfficeIconVerb.Line, 18f, 15f))
+        ],
+
+        // Two sheets, the second behind the first: paper, as against one continuous column.
+        OfficeIcon.PrintLayout =>
+        [
+            OfficeIconShape.Rectangle(4f, 3f, 11f, 14f, 1f),
+            OfficeIconShape.Rectangle(9f, 7f, 11f, 14f, 1f)
+        ],
+
+        OfficeIcon.Portrait => [OfficeIconShape.Rectangle(7f, 3f, 10f, 18f, 1f)],
+        OfficeIcon.Landscape => [OfficeIconShape.Rectangle(3f, 7f, 18f, 10f, 1f)],
+
+        // The page, with a diagonal band across it - the shape a DRAFT stamp makes.
+        OfficeIcon.Watermark =>
+        [
+            OfficeIconShape.Rectangle(5f, 3f, 14f, 18f, 1f),
+            OfficeIconShape.Line(7.5f, 15.5f, 16.5f, 8.5f),
+            OfficeIconShape.Line(7.5f, 12f, 13f, 6.5f),
+            OfficeIconShape.Line(11f, 17.5f, 16.5f, 12f)
+        ],
+
+        // The four presets, each drawn as the page with its own text block inset. Labels were the
+        // first attempt and they ate the bar: four buttons captioned Normal/Narrow/Moderate/Wide are
+        // most of a phone's width, which pushed everything after them off the edge. The inset is the
+        // whole difference between them, so drawing it is both smaller and more direct than saying it.
+        OfficeIcon.MarginsNarrow => MarginsIcon(1.5f),
+        OfficeIcon.MarginsNormal => MarginsIcon(3f),
+        OfficeIcon.MarginsModerate => MarginsIcon(4.5f),
+        OfficeIcon.MarginsWide => MarginsIcon(6f),
+
         _ => []
     };
+
+
+    /// <summary>A sheet with its text block inset by <paramref name="inset"/> on every side.</summary>
+    static OfficeIconShape[] MarginsIcon(float inset) =>
+    [
+        OfficeIconShape.Rectangle(5f, 3f, 14f, 18f, 1f),
+        OfficeIconShape.Rectangle(5f + inset, 3f + inset, 14f - (inset * 2), 18f - (inset * 2))
+    ];
 
 
     /// <summary>
@@ -395,6 +697,22 @@ public static class OfficeIcons
         OfficeIconShape.Line(9f, 6f, 20.5f, 6f),
         OfficeIconShape.Line(9f, 12f, 20.5f, 12f),
         OfficeIconShape.Line(9f, 18f, 20.5f, 18f)
+    ];
+
+
+    /// <summary>The open eye the hide and unhide icons are both built from.</summary>
+    /// <remarks>
+    /// Two symmetric curves rather than an ellipse, because an ellipse with a dot in it is a target
+    /// rather than an eye - the pointed corners are the whole read.
+    /// </remarks>
+    static OfficeIconShape[] Eye() =>
+    [
+        OfficeIconShape.Path(
+            OfficeIconVertex.MoveTo(3.5f, 12f),
+            OfficeIconVertex.CurveTo(7f, 6.6f, 17f, 6.6f, 20.5f, 12f),
+            OfficeIconVertex.CurveTo(17f, 17.4f, 7f, 17.4f, 3.5f, 12f),
+            OfficeIconVertex.Close),
+        OfficeIconShape.Circle(12f, 12f, 2.4f)
     ];
 
 

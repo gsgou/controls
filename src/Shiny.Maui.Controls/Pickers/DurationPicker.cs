@@ -265,7 +265,7 @@ public class DurationPicker : ContentView
         {
             Text = "Done",
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.Neutralize();
 
         doneButton.Clicked += (_, _) =>
         {
@@ -285,7 +285,7 @@ public class DurationPicker : ContentView
         {
             Text = "Cancel",
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.Neutralize();
         cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
         cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         cancelButton.Clicked += (_, _) => panel!.IsOpen = false;

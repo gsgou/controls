@@ -1,6 +1,7 @@
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Shiny.Maui.Controls.Cells;
+using Shiny.Maui.Controls.Themes;
 using TvTableView = Shiny.Maui.Controls.TableView;
 using TvTableSection = Shiny.Maui.Controls.Sections.TableSection;
 
@@ -64,7 +65,7 @@ static class SectionRenderer
         var textColor = section.HeaderTextColor ?? tableView.HeaderTextColor;
         var fontSize = section.HeaderFontSize >= 0 ? section.HeaderFontSize
             : tableView.HeaderFontSize >= 0 ? tableView.HeaderFontSize
-            : 14;
+            : ThemeTokens.Unset;
         var fontFamily = section.HeaderFontFamily ?? tableView.HeaderFontFamily;
         var fontAttributes = section.HeaderFontAttributes ?? tableView.HeaderFontAttributes;
 
@@ -72,11 +73,8 @@ static class SectionRenderer
             : tableView.HeaderHeight >= 0 ? tableView.HeaderHeight
             : -1;
 
-        var headerContainer = new ContentView
-        {
-            Padding = tableView.HeaderPadding,
-            BackgroundColor = headerColor ?? GetDefaultHeaderBackgroundColor()
-        };
+        var headerContainer = new ContentView { Padding = tableView.HeaderPadding };
+        ApplyColor(headerContainer, VisualElement.BackgroundColorProperty, headerColor, ShinyThemeKeys.Color.SurfaceContainer);
 
         if (headerHeight >= 0)
             headerContainer.HeightRequest = headerHeight;
@@ -88,11 +86,15 @@ static class SectionRenderer
         var headerLabel = new Label
         {
             Text = section.Title,
-            FontSize = fontSize,
             FontAttributes = fontAttributes,
-            TextColor = textColor ?? GetDefaultHeaderTextColor(),
-            VerticalOptions = verticalAlign
+            VerticalOptions = verticalAlign,
+            // Drawn uppercase, not stored uppercase: Title keeps whatever was bound to it.
+            TextTransform = tableView.HeaderTextTransform,
+            CharacterSpacing = tableView.HeaderCharacterSpacing
         };
+
+        headerLabel.SetTokenOrValue(Label.FontSizeProperty, fontSize, ShinyThemeKeys.Type.BodySmallSize);
+        ApplyColor(headerLabel, Label.TextColorProperty, textColor, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         if (fontFamily != null)
             headerLabel.FontFamily = fontFamily;
@@ -119,7 +121,7 @@ static class SectionRenderer
         var textColor = section.FooterTextColor ?? tableView.FooterTextColor;
         var fontSize = section.FooterFontSize >= 0 ? section.FooterFontSize
             : tableView.FooterFontSize >= 0 ? tableView.FooterFontSize
-            : 12;
+            : ThemeTokens.Unset;
         var fontFamily = section.FooterFontFamily ?? tableView.FooterFontFamily;
         var fontAttributes = section.FooterFontAttributes ?? tableView.FooterFontAttributes;
 
@@ -133,10 +135,11 @@ static class SectionRenderer
         var footerLabel = new Label
         {
             Text = section.FooterText,
-            FontSize = fontSize,
-            FontAttributes = fontAttributes,
-            TextColor = textColor ?? GetDefaultHeaderTextColor()
+            FontAttributes = fontAttributes
         };
+
+        footerLabel.SetTokenOrValue(Label.FontSizeProperty, fontSize, ShinyThemeKeys.Type.BodySmallSize);
+        ApplyColor(footerLabel, Label.TextColorProperty, textColor, ShinyThemeKeys.Color.OnSurfaceVariant);
 
         if (fontFamily != null)
             footerLabel.FontFamily = fontFamily;
@@ -145,44 +148,36 @@ static class SectionRenderer
         layout.Children.Add(footerContainer);
     }
 
-    // iOS system separator colors
-    // Light: rgba(60, 60, 67, 0.29)  Dark: rgba(84, 84, 88, 0.6)
-    static Color GetDefaultSeparatorColor()
+    /// <summary>
+    /// Applies the consumer's colour, or binds the property to a theme token when they gave none.
+    /// </summary>
+    /// <remarks>
+    /// These used to be literal iOS system greys picked from <c>Application.Current.RequestedTheme</c>
+    /// at render time, which was wrong twice over. A theme pack restyled every other part of the
+    /// table and left the section headers in iOS grey; and because the colour was read once while the
+    /// section was being built, a theme swap - or an appearance flip arriving after the first render -
+    /// left the old value on screen, so headers drifted out of step with the rows under them. A
+    /// dynamic resource re-resolves on both.
+    /// </remarks>
+    static void ApplyColor(VisualElement element, BindableProperty property, Color? explicitColor, string themeKey)
     {
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        return isDark
-            ? Color.FromRgba(84, 84, 88, 153)
-            : Color.FromRgba(60, 60, 67, 74);
-    }
-
-    // iOS secondary label color (used for section header/footer text)
-    // Light: rgba(60, 60, 67, 0.6)  Dark: rgba(235, 235, 245, 0.6)
-    static Color GetDefaultHeaderTextColor()
-    {
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        return isDark
-            ? Color.FromRgba(235, 235, 245, 153)
-            : Color.FromRgba(60, 60, 67, 153);
-    }
-
-    // iOS grouped table header background
-    // Light: #F2F2F7  Dark: #1C1C1E
-    static Color GetDefaultHeaderBackgroundColor()
-    {
-        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
-        return isDark
-            ? Color.FromRgb(28, 28, 30)
-            : Color.FromRgb(242, 242, 247);
+        if (explicitColor is not null)
+            element.SetValue(property, explicitColor);
+        else
+            element.SetDynamicResource(property, themeKey);
     }
 
     static BoxView CreateSeparator(TvTableView tableView)
     {
-        return new BoxView
+        var separator = new BoxView
         {
             HeightRequest = tableView.SeparatorHeight >= 0 ? tableView.SeparatorHeight : 0.5,
-            Margin = new Thickness(tableView.SeparatorPadding >= 0 ? tableView.SeparatorPadding : 16, 0, 0, 0),
-            Color = tableView.SeparatorColor ?? GetDefaultSeparatorColor()
+            Margin = new Thickness(tableView.SeparatorPadding >= 0 ? tableView.SeparatorPadding : 16, 0, 0, 0)
         };
+
+        // BoxView paints from Color, not BackgroundColor - see the AppKit note in styling.md.
+        ApplyColor(separator, BoxView.ColorProperty, tableView.SeparatorColor, ShinyThemeKeys.Color.OutlineVariant);
+        return separator;
     }
 
     static LayoutOptions ToLayoutOptions(LayoutAlignment alignment) => alignment switch

@@ -69,7 +69,9 @@ public partial class DocumentEditorPage : ContentPage
     void OnToggleTheme(object? sender, EventArgs e)
     {
         this.dark = !this.dark;
-        this.Editor.Theme = this.dark ? DocumentTheme.Dark : DocumentTheme.Light;
+        // null, not DocumentTheme.Light: unset means "follow the app appearance", which is the
+        // behaviour worth demoing. Passing Light would pin it and hide that.
+        this.Editor.Theme = this.dark ? DocumentTheme.Dark : null;
     }
 
     void OnToggleSpelling(object? sender, EventArgs e)

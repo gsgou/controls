@@ -14,7 +14,7 @@
 
 <div class="toolbar">
     <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>
-    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@Status</span>
 </div>
 
@@ -23,14 +23,14 @@
     {
         <SlideEditorView Deck="deck"
                          @bind-SlideIndex="index"
-                         Theme="@(dark ? SlideTheme.Dark : SlideTheme.Light)"
+                         Theme="@(dark ? SlideTheme.Dark : null)"
                          DeckChanged="OnChanged" />
     }
     else
     {
         <SlideEditor Deck="deck"
                      @bind-SlideIndex="index"
-                     Theme="@(dark ? SlideTheme.Dark : SlideTheme.Light)"
+                     Theme="@(dark ? SlideTheme.Dark : null)"
                      DeckChanged="OnChanged" />
     }
 </div>

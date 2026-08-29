@@ -1,7 +1,5 @@
-// The ribbon is surfaced under the same namespace URI as the core controls, so a XAML author writes
-// `shiny:Ribbon` beside `shiny:TextEntry` and never has to know there are two assemblies involved.
-// Docking, the tray icon and quick entry's hotkeys are API rather than markup and are not mapped.
-[assembly: Microsoft.Maui.Controls.XmlnsDefinition(
-    "http://shiny.net/maui/controls",
-    "Shiny.Maui.Controls.Desktop.Ribbons"
-)]
+// Docking, the tray icon and quick entry's hotkeys are API rather than markup, so this package maps
+// no XAML namespaces of its own. The ribbon used to live here and was mapped from this file; it moved
+// into the core package so that ImageEditor - which targets iOS and Android, where this package does
+// not build - could use it, and core's GlobalXmlns maps it now. The URI never changed, so a XAML
+// author still writes `shiny:Ribbon` and nothing in markup moved.

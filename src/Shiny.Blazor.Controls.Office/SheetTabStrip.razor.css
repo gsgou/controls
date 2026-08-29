@@ -54,7 +54,7 @@
     cursor: pointer;
 }
 
-.sheet-tab:hover { background: rgba(0, 0, 0, 0.05); }
+.sheet-tab:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 
 /* The current tab reads as continuous with the grid above it, which is what the flat bottom edge and
    the matching background are doing - not decoration. */
@@ -73,7 +73,7 @@
     font-size: 14px;
 }
 
-.sheet-action:hover { background: rgba(0, 0, 0, 0.05); }
+.sheet-action:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 
 .sheet-rename {
     min-width: 60px;
@@ -132,7 +132,7 @@
     cursor: pointer;
 }
 
-.sheet-menu button:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
+.sheet-menu button:hover:not(:disabled) { background: color-mix(in srgb, currentColor 10%, transparent); }
 .sheet-menu button:disabled { opacity: 0.35; cursor: default; }
 
 .sheet-menu-danger { color: var(--shiny-color-error, #b91c1c); }

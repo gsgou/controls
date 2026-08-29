@@ -1,5 +1,6 @@
 using Shiny.Controls.Office.Editing;
 using Shiny.Controls.Office.Spreadsheet.Commands;
+using Shiny.Controls.Office.View;
 
 namespace Shiny.Controls.Office.Spreadsheet.View;
 
@@ -38,6 +39,14 @@ public sealed class SpreadsheetController
     double resizeOrigin;
     double resizeStartSize;
 
+    SelectionHandle handle;
+    double panOriginX;
+    double panOriginY;
+    double panScrollX;
+    double panScrollY;
+    CellRef? tapCandidate;
+    bool panMoved;
+
     /// <summary>What a sheet looked like when it was last showing.</summary>
     sealed record SheetViewState(GridMetrics Metrics, double ScrollX, double ScrollY, CellRef Anchor, CellRef Active);
 
@@ -48,8 +57,23 @@ public sealed class SpreadsheetController
         SelectingColumns,
         SelectingRows,
         ResizingColumn,
-        ResizingRow
+        ResizingRow,
+
+        /// <summary>A finger dragging the sheet under itself.</summary>
+        Panning,
+
+        /// <summary>A finger dragging one of the selection's grab handles.</summary>
+        ExtendingFromHandle
     }
+
+    /// <summary>
+    /// How far a finger may travel before a press stops being a tap.
+    /// </summary>
+    /// <remarks>
+    /// Not zero: a finger never lands and lifts on the same pixel, so without some slack every tap
+    /// would register as a one-pixel pan and select nothing.
+    /// </remarks>
+    const double TapSlop = 6;
 
     public SpreadsheetController(Workbook workbook, Worksheet sheet)
     {
@@ -220,9 +244,25 @@ public sealed class SpreadsheetController
 
     // ---- pointer ----
 
-    public void PointerDown(double x, double y, bool extend = false)
+    /// <summary>True once a finger has been seen, so the surface should draw touch affordances.</summary>
+    /// <remarks>
+    /// Tracked rather than asked of the platform because both kinds turn up in one session — an iPad
+    /// with a keyboard, a Windows laptop with a touchscreen — and the handles are only useful to
+    /// whichever one is actually in the user's hand right now.
+    /// </remarks>
+    public bool UsesTouch { get; private set; }
+
+    public void PointerDown(double x, double y, bool extend = false, PointerKind kind = PointerKind.Mouse)
     {
         this.CommitEdit(EditCommitDirection.None);
+
+        if (kind == PointerKind.Touch)
+        {
+            this.UsesTouch = true;
+
+            if (this.BeginTouchDrag(x, y))
+                return;
+        }
 
         var hit = this.Viewport.HitTest(x, y);
         switch (hit.Target)
@@ -266,10 +306,82 @@ public sealed class SpreadsheetController
         }
     }
 
+    /// <summary>
+    /// Decides what a finger landing on the grid begins. Returns false to fall through to the mouse
+    /// behaviour.
+    /// </summary>
+    /// <remarks>
+    /// Only the content area changes under touch. A tap on a header is a deliberate grab at a specific
+    /// control — it selects the column or row, or resizes it — and turning those into a pan as well
+    /// would take the row and column selection away from touch entirely, which is what cut, copy and
+    /// insert operate on.
+    /// </remarks>
+    bool BeginTouchDrag(double x, double y)
+    {
+        if (this.Viewport.SelectionHandleAt(this.Selection.Range, x, y) is { } grabbed)
+        {
+            this.drag = DragMode.ExtendingFromHandle;
+            this.handle = grabbed;
+            return true;
+        }
+
+        var hit = this.Viewport.HitTest(x, y);
+        if (hit.Target is not (HitTarget.Cell or HitTarget.None))
+            return false;
+
+        this.drag = DragMode.Panning;
+        this.panOriginX = x;
+        this.panOriginY = y;
+        this.panScrollX = this.Viewport.ScrollX;
+        this.panScrollY = this.Viewport.ScrollY;
+
+        // Held rather than applied: the press only becomes a selection if the finger lifts without
+        // travelling, and applying it now would move the selection on every fling.
+        this.tapCandidate = hit.IsCell ? hit.Cell : null;
+        this.panMoved = false;
+        return true;
+    }
+
     public void PointerMove(double x, double y)
     {
         switch (this.drag)
         {
+            case DragMode.Panning:
+            {
+                var dx = this.panOriginX - x;
+                var dy = this.panOriginY - y;
+
+                if (!this.panMoved && Math.Abs(dx) <= TapSlop && Math.Abs(dy) <= TapSlop)
+                    return;
+
+                this.panMoved = true;
+                this.ApplyScrollLimits();
+                this.Viewport.ScrollTo(this.panScrollX + dx, this.panScrollY + dy);
+                this.RaiseChanged();
+                return;
+            }
+
+            case DragMode.ExtendingFromHandle:
+            {
+                var grabbed = this.Viewport.HitTest(x, y);
+                if (grabbed.IsCell)
+                {
+                    // The handle being dragged moves; the corner opposite it stays put. Selecting the
+                    // range from the fixed corner is what lets a drag past it flip the selection
+                    // rather than collapsing it to nothing.
+                    var range = this.Selection.Range;
+                    var fixedCorner = this.handle == SelectionHandle.End
+                        ? new CellRef(range.Left, range.Top)
+                        : new CellRef(range.Right, range.Bottom);
+
+                    this.Selection.SelectRange(new CellRange(fixedCorner, grabbed.Cell));
+                    this.Viewport.ScrollIntoView(grabbed.Cell);
+                    this.RaiseChanged();
+                }
+
+                return;
+            }
+
             case DragMode.None:
                 return;
 
@@ -307,6 +419,26 @@ public sealed class SpreadsheetController
 
     public void PointerUp()
     {
+        if (this.drag is DragMode.Panning or DragMode.ExtendingFromHandle)
+        {
+            var wasPan = this.drag == DragMode.Panning;
+            var candidate = this.tapCandidate;
+            var moved = this.panMoved;
+
+            this.drag = DragMode.None;
+            this.tapCandidate = null;
+            this.panMoved = false;
+
+            // A press that went nowhere was a tap, and a tap selects.
+            if (wasPan && !moved && candidate is { } cell)
+            {
+                this.Selection.MoveTo(cell);
+                this.RaiseChanged();
+            }
+
+            return;
+        }
+
         // A resize drag only moved the in-memory metrics. Recording it here is what makes a column the
         // user widened still be that width after a save and reopen.
         if (this.resizeIndex >= 0)
@@ -341,8 +473,38 @@ public sealed class SpreadsheetController
 
     public void Scroll(double dx, double dy)
     {
+        this.ApplyScrollLimits();
         this.Viewport.ScrollBy(dx, dy);
         this.RaiseChanged();
+    }
+
+    /// <summary>
+    /// Sets how far the sheet may be scrolled, from what is actually in it.
+    /// </summary>
+    /// <remarks>
+    /// Recomputed per gesture rather than cached: the used range grows as cells are typed and the
+    /// viewport is resized by the host without telling anyone, so a limit worked out once is wrong by
+    /// the next rotation. It is two offset lookups, which is nothing beside the repaint that follows.
+    /// The slack past the last used cell is one screen — enough to type below or to the right of the
+    /// data, which is how a sheet grows, without the sheet being able to scroll into nowhere.
+    /// </remarks>
+    void ApplyScrollLimits()
+    {
+        var viewWidth = Math.Max(0, this.Viewport.Width - this.Viewport.ContentOriginX);
+        var viewHeight = Math.Max(0, this.Viewport.Height - this.Viewport.ContentOriginY);
+
+        if (this.sheet.UsedRange is not { } used)
+        {
+            this.Viewport.MaxScrollX = viewWidth;
+            this.Viewport.MaxScrollY = viewHeight;
+            return;
+        }
+
+        var contentWidth = this.Metrics.Columns.SizeOfRange(this.Metrics.FrozenPane.Column, used.Right + 1);
+        var contentHeight = this.Metrics.Rows.SizeOfRange(this.Metrics.FrozenPane.Row, used.Bottom + 1);
+
+        this.Viewport.MaxScrollX = Math.Max(0, contentWidth - viewWidth) + viewWidth;
+        this.Viewport.MaxScrollY = Math.Max(0, contentHeight - viewHeight) + viewHeight;
     }
 
     // ---- keyboard ----
@@ -371,6 +533,220 @@ public sealed class SpreadsheetController
     public void ClearSelection()
     {
         this.Workbook.Execute(new ClearRangeCommand(this.sheet.Name, this.Selection.Range));
+        this.SetClipboard(null);
+        this.RaiseChanged();
+    }
+
+    // ---- clipboard ----
+    //
+    // This is the control's own clipboard, not the operating system's: nothing here reaches another
+    // application and nothing another application copied reaches here. It holds a snapshot rather than
+    // a live reference to the source range, because a cut has to survive its own source being cleared,
+    // and because pasting the same block twice must produce the same thing both times.
+
+    SpreadsheetClipboardContent? clipboard;
+
+    /// <summary>What was last cut or copied, or null when nothing is pending.</summary>
+    public SpreadsheetClipboardContent? Clipboard => this.clipboard;
+
+    /// <summary>True when <see cref="Paste"/> would do something — what a paste button enables on.</summary>
+    public bool CanPaste => this.clipboard is not null;
+
+    /// <summary>
+    /// The range the marching-ants border is drawn around.
+    /// </summary>
+    /// <remarks>
+    /// Null when nothing is pending, and also when the pending capture came from a different sheet:
+    /// the content is still there to paste, but the cells it was read from are not on screen, and
+    /// drawing the border over whatever happens to occupy those coordinates here would be a lie.
+    /// </remarks>
+    public CellRange? ClipboardRange
+        => this.clipboard is { } content && string.Equals(content.SheetName, this.sheet.Name, StringComparison.OrdinalIgnoreCase)
+            ? content.Source
+            : null;
+
+    /// <summary>Raised when the pending cut or copy changes, including when it is abandoned.</summary>
+    /// <remarks>
+    /// Separate from <see cref="Changed"/> so a host can start and stop the border's animation on it
+    /// rather than restarting a timer on every keystroke.
+    /// </remarks>
+    public event EventHandler? ClipboardChanged;
+
+    /// <summary>Takes a copy of the selection, leaving it where it is.</summary>
+    public void Copy() => this.Capture(SpreadsheetClipboardOperation.Copy);
+
+    /// <summary>
+    /// Marks the selection to be moved by the next paste.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is removed here, which is Excel's behaviour and not an omission: the source is cleared
+    /// by the paste, in the same undo step, so a cut that is never pasted leaves the sheet untouched.
+    /// </remarks>
+    public void Cut() => this.Capture(SpreadsheetClipboardOperation.Cut);
+
+    void Capture(SpreadsheetClipboardOperation operation)
+    {
+        this.CommitEdit(EditCommitDirection.None);
+        this.SetClipboard(SpreadsheetClipboardContent.Capture(this.sheet, this.Selection.Range, operation));
+    }
+
+    /// <summary>
+    /// Writes the pending cut or copy at the selection, as one undo step.
+    /// </summary>
+    /// <remarks>
+    /// A whole-row or whole-column capture lands on whole rows or columns — only the row of the
+    /// selection is read for the former and only its column for the latter, because a row put down
+    /// three columns to the right would no longer be that row.
+    /// </remarks>
+    /// <returns>False when there was nothing on the clipboard, in which case nothing was written.</returns>
+    public bool Paste()
+    {
+        if (this.clipboard is not { } content)
+            return false;
+
+        var target = this.Selection.Range.TopLeft;
+
+        this.Begin();
+        this.Workbook.Execute(new PasteClipboardCommand(content, this.sheet.Name, target));
+
+        this.SyncBandMetrics(content, target);
+        this.Selection.SelectRange(PastedRange(content, target));
+
+        // A copy stays on the clipboard so it can be pasted again, the way Excel keeps its marquee up
+        // after Ctrl+V. A cut has been spent — its source is now empty, and pasting it a second time
+        // would move cells that are no longer there.
+        if (content.Operation == SpreadsheetClipboardOperation.Cut)
+            this.SetClipboard(null);
+
+        this.RaiseChanged();
+        return true;
+    }
+
+    /// <summary>Abandons the pending cut or copy, taking the marching-ants border with it.</summary>
+    public void ClearClipboard() => this.SetClipboard(null);
+
+    /// <summary>Where a paste lands, so the selection can be moved onto it the way Excel does.</summary>
+    static CellRange PastedRange(SpreadsheetClipboardContent content, CellRef target) => content.Kind switch
+    {
+        SpreadsheetClipboardKind.Rows => new CellRange(
+            new CellRef(0, target.Row),
+            new CellRef(CellRef.MaxColumn, Math.Min(CellRef.MaxRow, target.Row + content.RowCount - 1))),
+
+        SpreadsheetClipboardKind.Columns => new CellRange(
+            new CellRef(target.Column, 0),
+            new CellRef(Math.Min(CellRef.MaxColumn, target.Column + content.ColumnCount - 1), CellRef.MaxRow)),
+
+        _ => new CellRange(
+            target,
+            new CellRef(
+                Math.Min(CellRef.MaxColumn, target.Column + content.ColumnCount - 1),
+                Math.Min(CellRef.MaxRow, target.Row + content.RowCount - 1)))
+    };
+
+    /// <summary>
+    /// Re-reads the heights or widths a band paste just wrote into the file.
+    /// </summary>
+    /// <remarks>
+    /// The metrics are the grid's own copy of that geometry and nothing else updates them, so without
+    /// this a pasted row keeps the height of the row it replaced and every row below it is drawn at
+    /// an offset the file no longer agrees with.
+    /// </remarks>
+    void SyncBandMetrics(SpreadsheetClipboardContent content, CellRef target)
+    {
+        foreach (var band in content.Bands)
+        {
+            switch (content.Kind)
+            {
+                case SpreadsheetClipboardKind.Rows:
+                    var row = target.Row + band.Offset;
+                    if (row > CellRef.MaxRow)
+                        continue;
+
+                    if (this.sheet.GetRowHeight(row) is { } points)
+                        this.Metrics.Rows.SetSize(row, GridMetrics.PointsToPixels(points));
+                    else
+                        this.Metrics.Rows.ResetSize(row);
+
+                    break;
+
+                case SpreadsheetClipboardKind.Columns:
+                    var column = target.Column + band.Offset;
+                    if (column > CellRef.MaxColumn)
+                        continue;
+
+                    if (this.sheet.GetColumnWidth(column) is { } characters)
+                        this.Metrics.Columns.SetSize(column, GridMetrics.WidthToPixels(characters));
+                    else
+                        this.Metrics.Columns.ResetSize(column);
+
+                    break;
+            }
+        }
+    }
+
+    void SetClipboard(SpreadsheetClipboardContent? content)
+    {
+        if (ReferenceEquals(this.clipboard, content))
+            return;
+
+        this.clipboard = content;
+        this.ClipboardChanged?.Invoke(this, EventArgs.Empty);
+        this.RaiseChanged();
+    }
+
+    // ---- inserting and removing rows and columns ----
+    //
+    // Each of these is two things that have to happen together: the command, which moves the cells and
+    // repoints every formula in the workbook that named them, and the metrics shift, which moves the
+    // grid's own record of the heights and widths so it still describes the sheet it is painting.
+
+    /// <summary>Inserts blank rows above the selection, pushing everything below them down.</summary>
+    public void InsertRows(int count = 1) => this.EditBand(rows: true, count, inserting: true);
+
+    /// <summary>Inserts blank columns to the left of the selection, pushing everything right.</summary>
+    public void InsertColumns(int count = 1) => this.EditBand(rows: false, count, inserting: true);
+
+    /// <summary>
+    /// Removes rows from the top of the selection down, closing the gap.
+    /// </summary>
+    /// <remarks>
+    /// A formula that pointed into the removed rows becomes <c>#REF!</c>, as it does in Excel — the
+    /// cells are gone rather than moved, and there is nothing left for it to follow. Undo puts both
+    /// the rows and those formulas back.
+    /// </remarks>
+    public void DeleteRows(int count = 1) => this.EditBand(rows: true, count, inserting: false);
+
+    /// <summary>Removes columns from the left of the selection across, closing the gap.</summary>
+    public void DeleteColumns(int count = 1) => this.EditBand(rows: false, count, inserting: false);
+
+    void EditBand(bool rows, int count, bool inserting)
+    {
+        if (count < 1)
+            return;
+
+        var at = rows ? this.Selection.Range.Top : this.Selection.Range.Left;
+        var limit = (rows ? CellRef.MaxRow : CellRef.MaxColumn) + 1;
+        count = Math.Min(count, limit - at);
+
+        if (count < 1)
+            return;
+
+        this.Begin();
+
+        this.Workbook.Execute((rows, inserting) switch
+        {
+            (true, true) => new InsertRowsCommand(this.sheet.Name, at, count),
+            (true, false) => new DeleteRowsCommand(this.sheet.Name, at, count),
+            (false, true) => new InsertColumnsCommand(this.sheet.Name, at, count),
+            _ => (IEditCommand<Workbook>)new DeleteColumnsCommand(this.sheet.Name, at, count)
+        });
+
+        var axis = rows ? this.Metrics.Rows : this.Metrics.Columns;
+        axis.Shift(at, inserting ? count : -count);
+
+        // The capture's coordinates describe a sheet that no longer exists at those addresses, so
+        // keeping it would let a later paste put the cells back in the wrong place.
+        this.SetClipboard(null);
         this.RaiseChanged();
     }
 
@@ -921,6 +1297,10 @@ public sealed class SpreadsheetController
     void Apply(CellRef cell, string text)
     {
         var sheetName = this.sheet.Name;
+
+        // Typing supersedes a pending cut or copy, the way it does in Excel. Leaving the border up
+        // over a sheet the user has moved on from is the part that reads as a bug.
+        this.SetClipboard(null);
 
         if (text.Length == 0)
         {

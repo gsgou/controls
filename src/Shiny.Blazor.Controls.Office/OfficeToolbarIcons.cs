@@ -49,8 +49,21 @@ internal static class OfficeToolbarIcons
     public static MarkupString Get(OfficeIcon icon, int size)
         => size == Size ? Get(icon) : new MarkupString(Build(icon, size));
 
+    /// <summary>
+    /// Renders artwork that has no <see cref="OfficeIcon"/> of its own — the shapes gallery, whose
+    /// icons are built from the geometry rather than enumerated.
+    /// </summary>
+    /// <remarks>
+    /// Uncached, deliberately: the caller holds the shape list, so caching here would key on a
+    /// reference and grow one entry per render rather than per icon.
+    /// </remarks>
+    public static MarkupString Get(IReadOnlyList<OfficeIconShape> shapes, int size = Size)
+        => new(Build(shapes, size));
 
-    static string Build(OfficeIcon icon, int size)
+
+    static string Build(OfficeIcon icon, int size) => Build(OfficeIcons.Shapes(icon), size);
+
+    static string Build(IReadOnlyList<OfficeIconShape> shapes, int size)
     {
         var svg = new StringBuilder(256);
 
@@ -58,7 +71,7 @@ internal static class OfficeToolbarIcons
         // it carries no CSS-isolation scope attribute and a scoped `... svg` rule would not match it.
         svg.Append(CultureInfo.InvariantCulture, $"""<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{N(OfficeIcons.StrokeWidth)}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">""");
 
-        foreach (var shape in OfficeIcons.Shapes(icon))
+        foreach (var shape in shapes)
             Append(svg, shape);
 
         svg.Append("</svg>");

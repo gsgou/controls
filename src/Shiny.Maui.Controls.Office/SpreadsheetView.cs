@@ -30,6 +30,8 @@ public class SpreadsheetView : ContentView, IDisposable
     readonly SpreadsheetPainter painter = new();
 
     SpreadsheetController? controller;
+    IDispatcherTimer? marching;
+    float dashPhase;
     bool suppressEditorEvents;
     bool disposed;
 
@@ -56,6 +58,9 @@ public class SpreadsheetView : ContentView, IDisposable
         AbsoluteLayout.SetLayoutBounds(this.canvas, new Rect(0, 0, 1, 1));
         this.root.Add(this.editor);
 
+        // Repaint when the OS appearance flips, so an unset Theme keeps up with it.
+        this.FollowAppTheme(static v => v.Invalidate());
+
         this.sheetTabs = new SheetTabStrip();
         this.sheetTabs.Changed += this.OnSheetTabsChanged;
 
@@ -64,6 +69,11 @@ public class SpreadsheetView : ContentView, IDisposable
 
         this.toolbar = new SpreadsheetToolbar();
         this.toolbar.Changed += this.OnSheetTabsChanged;
+        this.toolbar.WatermarkPicked += (_, mark) =>
+        {
+            this.Watermark = mark;
+            this.toolbar.HasWatermark = mark is not null;
+        };
 
         this.layout = new Grid
         {
@@ -105,13 +115,14 @@ public class SpreadsheetView : ContentView, IDisposable
         nameof(Theme),
         typeof(SpreadsheetTheme),
         typeof(SpreadsheetView),
-        SpreadsheetTheme.Light,
+        null,
         propertyChanged: (b, _, value) =>
         {
             var view = (SpreadsheetView)b;
-            view.sheetTabs.Theme = (SpreadsheetTheme)value;
-            view.formulaBar.Theme = (SpreadsheetTheme)value;
-            view.toolbar.Theme = (SpreadsheetTheme)value;
+            var theme = (SpreadsheetTheme?)value;
+            view.sheetTabs.Theme = theme;
+            view.formulaBar.Theme = theme;
+            view.toolbar.Theme = theme;
             view.Invalidate();
         });
 
@@ -162,11 +173,20 @@ public class SpreadsheetView : ContentView, IDisposable
         set => this.SetValue(SheetNameProperty, value);
     }
 
-    public SpreadsheetTheme Theme
+    /// <summary>
+    /// Grid chrome colours. Left unset the control follows the app's light/dark appearance, so a
+    /// workbook in a dark app is dark without the host wiring anything up. Setting it pins the
+    /// choice - including to <see cref="SpreadsheetTheme.Light"/>, which is how a host asks for a
+    /// paper-white grid whatever the app around it is doing.
+    /// </summary>
+    public SpreadsheetTheme? Theme
     {
-        get => (SpreadsheetTheme)this.GetValue(ThemeProperty);
+        get => (SpreadsheetTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    /// <summary>The theme actually painted: <see cref="Theme"/> when set, otherwise the app's.</summary>
+    SpreadsheetTheme EffectiveTheme => this.Theme ?? OfficeScheme.Default;
 
     /// <summary>
     /// Whether to show the strip of sheet tabs under the grid. On by default: a workbook with no way
@@ -288,6 +308,7 @@ public class SpreadsheetView : ContentView, IDisposable
         this.controller.Changed += this.OnControllerChanged;
         this.controller.EditingChanged += this.OnEditingChanged;
         this.controller.ActiveSheetChanged += this.OnActiveSheetChanged;
+        this.controller.ClipboardChanged += this.OnClipboardChanged;
         this.controller.Resize(
             this.canvas.Width > 0 ? this.canvas.Width : 800,
             this.canvas.Height > 0 ? this.canvas.Height : 600);
@@ -335,7 +356,7 @@ public class SpreadsheetView : ContentView, IDisposable
 
     void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         if (this.controller is null)
         {
             e.Surface.Canvas.Clear(new SKColor(theme.Background.R, theme.Background.G, theme.Background.B));
@@ -347,15 +368,27 @@ public class SpreadsheetView : ContentView, IDisposable
 
         this.painter.Paint(e.Surface.Canvas, new SpreadsheetPaintRequest
         {
+            Watermark = this.Watermark,
             Workbook = this.controller.Workbook,
             Sheet = this.controller.Sheet,
             Viewport = this.controller.Viewport,
             Selection = this.controller.Selection,
             Theme = theme,
             Scale = scale,
-            EditingCell = this.controller.EditingCell
+            EditingCell = this.controller.EditingCell,
+            ClipboardRange = this.controller.ClipboardRange,
+            ClipboardDashPhase = this.dashPhase,
+            ShowTouchHandles = this.controller.UsesTouch
         });
     }
+
+    static PointerKind KindOf(SKTouchDeviceType device)
+        => device switch
+        {
+            SKTouchDeviceType.Touch => PointerKind.Touch,
+            SKTouchDeviceType.Pen => PointerKind.Pen,
+            _ => PointerKind.Mouse
+        };
 
     void OnTouch(object? sender, SKTouchEventArgs e)
     {
@@ -373,7 +406,9 @@ public class SpreadsheetView : ContentView, IDisposable
         switch (e.ActionType)
         {
             case SKTouchAction.Pressed:
-                this.controller.PointerDown(x, y);
+                // Any touch on the grid ends an edit in the bar above it. See FormulaBar.EndEditing.
+                this.formulaBar.EndEditing();
+                this.controller.PointerDown(x, y, kind: KindOf(e.DeviceType));
                 break;
 
             case SKTouchAction.Moved:
@@ -389,6 +424,8 @@ public class SpreadsheetView : ContentView, IDisposable
 
             case SKTouchAction.WheelChanged:
                 // A wheel notch is reported in platform units; treat it as a vertical scroll.
+                // SKTouchEventArgs carries no second axis and no modifier state, so a horizontal
+                // wheel is not reachable from here - ScrollBy is what a desktop host drives instead.
                 this.controller.Scroll(0, -e.WheelDelta);
                 break;
         }
@@ -452,6 +489,16 @@ public class SpreadsheetView : ContentView, IDisposable
     public void Move(MoveDirection direction, bool extend = false, bool toEdge = false)
         => this.controller?.Move(direction, extend, toEdge);
 
+    /// <summary>
+    /// Scrolls the grid by a delta in layout units, clamped to the sheet's content.
+    /// </summary>
+    /// <remarks>
+    /// Public because the wheel has only one axis: a host wanting a horizontal scrollbar, a trackpad's
+    /// sideways swipe or a "scroll right" command has nowhere else to send it.
+    /// </remarks>
+    public void ScrollBy(double dx, double dy)
+        => this.controller?.Scroll(dx, dy);
+
     public void ClearSelection() => this.controller?.ClearSelection();
 
     public void Undo() => this.controller?.Undo();
@@ -476,6 +523,81 @@ public class SpreadsheetView : ContentView, IDisposable
             current.SwitchSheet(target);
     }
 
+    /// <summary>Takes a copy of the selection, marking it with the marching-ants border.</summary>
+    public void Copy() => this.controller?.Copy();
+
+    /// <summary>Marks the selection to be moved by the next paste. Nothing is removed until then.</summary>
+    public void Cut() => this.controller?.Cut();
+
+    /// <summary>Writes the pending cut or copy at the selection, as one undo step.</summary>
+    public void Paste() => this.controller?.Paste();
+
+    /// <summary>Abandons the pending cut or copy, taking the marching-ants border with it.</summary>
+    public void ClearClipboard() => this.controller?.ClearClipboard();
+
+    /// <summary>Inserts blank rows above the selection.</summary>
+    public void InsertRows(int count = 1) => this.controller?.InsertRows(count);
+
+    /// <summary>Inserts blank columns to the left of the selection.</summary>
+    public void InsertColumns(int count = 1) => this.controller?.InsertColumns(count);
+
+    /// <summary>Removes rows from the top of the selection down, closing the gap.</summary>
+    public void DeleteRows(int count = 1) => this.controller?.DeleteRows(count);
+
+    /// <summary>Removes columns from the left of the selection across, closing the gap.</summary>
+    public void DeleteColumns(int count = 1) => this.controller?.DeleteColumns(count);
+
+    void OnClipboardChanged(object? sender, EventArgs e)
+    {
+        if (this.controller?.ClipboardRange is null)
+            this.StopMarching();
+        else
+            this.StartMarching();
+    }
+
+    /// <summary>
+    /// Walks the dash phase forward until the clipboard is abandoned.
+    /// </summary>
+    /// <remarks>
+    /// The border lives inside a Skia surface that only redraws when something invalidates it, so the
+    /// marching has to be driven by a clock rather than by an animation the platform owns. It runs
+    /// only while there is something on the clipboard: a permanent timer under a grid that is usually
+    /// idle is a repaint every frame for nothing, and on a phone that is battery.
+    /// </remarks>
+    void StartMarching()
+    {
+        if (this.marching is not null || this.Dispatcher is null)
+            return;
+
+        var timer = this.Dispatcher.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(120);
+        timer.IsRepeating = true;
+        timer.Tick += this.OnMarchingTick;
+        this.marching = timer;
+        timer.Start();
+    }
+
+    void OnMarchingTick(object? sender, EventArgs e)
+    {
+        // Two dashes' worth of travel per tick, so the phase never grows without bound.
+        this.dashPhase = (this.dashPhase + 2f) % 10f;
+        this.Invalidate();
+    }
+
+    void StopMarching()
+    {
+        var timer = this.marching;
+        this.marching = null;
+
+        if (timer is null)
+            return;
+
+        timer.Stop();
+        timer.Tick -= this.OnMarchingTick;
+        this.dashPhase = 0;
+        this.Invalidate();
+    }
+
     void DetachController()
     {
         if (this.controller is null)
@@ -484,6 +606,8 @@ public class SpreadsheetView : ContentView, IDisposable
         this.controller.Changed -= this.OnControllerChanged;
         this.controller.EditingChanged -= this.OnEditingChanged;
         this.controller.ActiveSheetChanged -= this.OnActiveSheetChanged;
+        this.controller.ClipboardChanged -= this.OnClipboardChanged;
+        this.StopMarching();
     }
 
     public void Dispose()
@@ -509,4 +633,27 @@ public class SpreadsheetView : ContentView, IDisposable
 
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// A picture drawn behind the content — a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    public static readonly BindableProperty WatermarkProperty = BindableProperty.Create(
+        nameof(Watermark),
+        typeof(OfficeWatermark),
+        typeof(SpreadsheetView),
+        null,
+        propertyChanged: (b, _, _) => ((SpreadsheetView)b).Invalidate());
+
+    /// <inheritdoc cref="WatermarkProperty"/>
+    public OfficeWatermark? Watermark
+    {
+        get => (OfficeWatermark?)this.GetValue(WatermarkProperty);
+        set => this.SetValue(WatermarkProperty, value);
+    }
+
 }

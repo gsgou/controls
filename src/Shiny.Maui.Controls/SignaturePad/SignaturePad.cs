@@ -38,7 +38,7 @@ public partial class SignaturePad : ContentView
             IsEnabled = false,
             CornerRadius = 8,
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.Neutralize();
         signButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         this.ApplySignButtonColor(this.SignButtonColor);
         signButton.Clicked += OnSignClicked;
@@ -48,7 +48,7 @@ public partial class SignaturePad : ContentView
             Text = "Cancel",
             CornerRadius = 8,
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.Neutralize();
         cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         this.ApplyCancelButtonColor(this.CancelButtonColor);
         cancelButton.Clicked += OnCancelClicked;
@@ -60,7 +60,7 @@ public partial class SignaturePad : ContentView
             HorizontalOptions = LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Padding = new Thickness(8, 2)
-        }.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         clearButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         clearButton.Clicked += OnClearClicked;
 

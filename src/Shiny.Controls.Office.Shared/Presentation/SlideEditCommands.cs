@@ -328,6 +328,120 @@ public sealed record FormatSlideParagraphsCommand(SlideTextRange Range, Action<D
 /// takes to undo and a drag produces a great many of these.
 /// </para>
 /// </remarks>
+/// <summary>
+/// Sets a shape's fill, or takes it away.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Inverted by putting the whole shape back rather than by describing the previous fill. A fill is not
+/// one value: it can be a gradient with any number of stops, a picture, a pattern, or absent entirely
+/// so the shape inherits from its style. Reconstructing the one that was there is a great deal of work
+/// to undo one colour, and getting it subtly wrong loses the author's artwork.
+/// </para>
+/// <para>
+/// Null clears to <c>a:noFill</c>, which is a real state — a transparent shape with a visible outline —
+/// and not the same as having no fill element at all, which means "use the style's".
+/// </para>
+/// </remarks>
+public sealed record SetShapeFillCommand(int Slide, int Shape, ArgbColor? Color) : SlideCommand
+{
+    public override string Name => "Shape fill";
+
+    public override IEditCommand<SlideDeck> Apply(SlideDeck context)
+    {
+        if (ShapeAt(context, this.Slide, this.Shape) is not { Element: { } element })
+            return new NoOpSlideCommand();
+
+        var inverse = CaptureShape(context, this.Slide, this.Shape);
+        if (Properties(element) is not { } properties)
+            return new NoOpSlideCommand();
+
+        // Every fill kind is a sibling in the same slot, so they all have to go before the new one
+        // lands - leaving a gradient behind would win over the solid colour just set.
+        RemoveFills(properties);
+
+        if (this.Color is { } color)
+        {
+            properties.Append(new D.SolidFill(new D.RgbColorModelHex { Val = Hex(color) }));
+        }
+        else
+        {
+            properties.Append(new D.NoFill());
+        }
+
+        context.Reproject(this.Slide);
+        return inverse;
+    }
+
+    internal static void RemoveFills(OpenXmlElement properties)
+    {
+        foreach (var fill in properties.ChildElements
+            .OfType<OpenXmlElement>()
+            .Where(x => x is D.SolidFill or D.NoFill or D.GradientFill or D.BlipFill or D.PatternFill or D.GroupFill)
+            .ToList())
+        {
+            fill.Remove();
+        }
+    }
+
+    /// <summary>The <c>spPr</c> the fill and line live on, whatever kind of shape this is.</summary>
+    internal static OpenXmlElement? Properties(OpenXmlElement element) => element switch
+    {
+        Shape shape => shape.ShapeProperties ??= new ShapeProperties(),
+        Picture picture => picture.ShapeProperties ??= new ShapeProperties(),
+        ConnectionShape connector => connector.ShapeProperties ??= new ShapeProperties(),
+        _ => null
+    };
+
+    internal static string Hex(ArgbColor color) => $"{color.R:X2}{color.G:X2}{color.B:X2}";
+}
+
+
+/// <summary>
+/// Sets a shape's outline colour and weight, or takes the outline away.
+/// </summary>
+/// <remarks>
+/// The line element carries the weight as well as the colour, so setting one without the other would
+/// silently reset it — a shape given a red border would come back hairline-thin. Both are written
+/// together, and the inverse is the whole shape for the same reason the fill's is.
+/// </remarks>
+public sealed record SetShapeOutlineCommand(int Slide, int Shape, ArgbColor? Color, double Width = 1) : SlideCommand
+{
+    public override string Name => "Shape outline";
+
+    public override IEditCommand<SlideDeck> Apply(SlideDeck context)
+    {
+        if (ShapeAt(context, this.Slide, this.Shape) is not { Element: { } element })
+            return new NoOpSlideCommand();
+
+        var inverse = CaptureShape(context, this.Slide, this.Shape);
+        if (SetShapeFillCommand.Properties(element) is not { } properties)
+            return new NoOpSlideCommand();
+
+        properties.GetFirstChild<D.Outline>()?.Remove();
+
+        var line = new D.Outline();
+
+        if (this.Color is { } color)
+        {
+            line.Width = (int)OoxmlUnits.PixelsToEmu(Math.Max(0.25, this.Width));
+            line.Append(new D.SolidFill(new D.RgbColorModelHex { Val = SetShapeFillCommand.Hex(color) }));
+        }
+        else
+        {
+            line.Append(new D.NoFill());
+        }
+
+        // a:ln comes after the fill in the sequence, and appending is only right because the fill is
+        // written first - the schema is ordered and PowerPoint refuses a file that is not.
+        properties.Append(line);
+
+        context.Reproject(this.Slide);
+        return inverse;
+    }
+}
+
+
 public sealed record SetShapeBoundsCommand(int Slide, int Shape, double X, double Y, double Width, double Height)
     : SlideCommand, IMergeableCommand<SlideDeck>
 {

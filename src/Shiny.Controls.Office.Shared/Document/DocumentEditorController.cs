@@ -300,6 +300,84 @@ public sealed class DocumentEditorController : DocumentController
         }
     }
 
+    /// <summary>
+    /// Moves the caret to the next misspelling after the current one, wrapping at the end.
+    /// </summary>
+    /// <returns>The error landed on, or null when the document has none.</returns>
+    /// <remarks>
+    /// <para>
+    /// Wrapping rather than stopping: a review pass starts wherever the caret happens to be, and a
+    /// "next" that goes quiet at the last paragraph looks identical to one that has finished the
+    /// document - the user has no way to tell whether the words above were checked.
+    /// </para>
+    /// <para>
+    /// The word is selected, not just landed on. The point of stepping to an error is to do something
+    /// about it, and every one of those things - accept a suggestion, ignore it, learn it - operates on
+    /// the word rather than on a caret inside it.
+    /// </para>
+    /// </remarks>
+    public async Task<SpellingError?> GoToNextSpellingErrorAsync(
+        bool backwards = false,
+        CancellationToken cancellationToken = default)
+    {
+        var blocks = this.Document.Blocks;
+        if (blocks.Count == 0)
+            return null;
+
+        var from = this.Selection.Focus;
+
+        // One full lap, so a document whose only error is the one already under the caret still finds
+        // it rather than reporting none.
+        for (var step = 0; step <= blocks.Count; step++)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return null;
+
+            var index = backwards
+                ? from.Block - step
+                : from.Block + step;
+
+            index = ((index % blocks.Count) + blocks.Count) % blocks.Count;
+
+            if (blocks.ElementAtOrDefault(index) is not DocumentParagraph paragraph)
+                continue;
+
+            // Checked here, one paragraph at a time, because the spelling pass only ever runs over
+            // what is on screen - nothing off screen can show a squiggle, so checking the whole
+            // document up front would stall a long one for no benefit. That makes the cache empty
+            // for every block below the fold, and a walk that only read it would step through a
+            // document full of misspellings and report that it had none.
+            await this.Spelling
+                .RefreshAsync(blocks, index, index, cancellationToken)
+                .ConfigureAwait(false);
+
+            var errors = this.Spelling.ErrorsFor(index, paragraph.PlainText);
+            if (errors.Count == 0)
+                continue;
+
+            // Only the block the search started in is partially consumed; every other one is taken
+            // whole, which is what makes the wrap come back round to the errors above the caret.
+            var candidates = step == 0
+                ? errors.Where(e => backwards ? e.End < from.Offset : e.Start > from.Offset)
+                : errors;
+
+            var found = backwards
+                ? candidates.LastOrDefault()
+                : candidates.FirstOrDefault();
+
+            if (found.Length == 0)
+                continue;
+
+            this.Selection.MoveTo(new DocumentPosition(index, found.Start));
+            this.Selection.ExtendTo(new DocumentPosition(index, found.End));
+            this.ScrollCaretIntoView();
+            this.RaiseChanged();
+            return found;
+        }
+
+        return null;
+    }
+
     /// <summary>The misspelling under a position, or null.</summary>
     public SpellingError? SpellingErrorAt(DocumentPosition position)
     {
@@ -848,6 +926,32 @@ public sealed class DocumentEditorController : DocumentController
     /// <param name="text">The header text, or null to remove the header entirely.</param>
     /// <param name="alignment">Where the text sits across the page.</param>
     /// <param name="kind">Which header — the default one, the first page's, or the even pages'.</param>
+    /// <summary>
+    /// The plain text of the running head or foot, or null when there is none.
+    /// </summary>
+    /// <remarks>
+    /// For seeding an editor with what is already there. Paragraphs are joined with newlines and any
+    /// page-number field reads as whatever it last resolved to — a lossy view of the part, and
+    /// deliberately so: it exists to be shown to someone about to retype the line, not to round-trip.
+    /// </remarks>
+    public string? ChromeText(bool header, DocumentPageKind kind = DocumentPageKind.Default)
+    {
+        var chrome = header
+            ? this.Document.HeadersFooters.Header(kind)
+            : this.Document.HeadersFooters.Footer(kind);
+
+        if (chrome is null || chrome.IsEmpty)
+            return null;
+
+        var lines = chrome.Blocks
+            .OfType<DocumentParagraph>()
+            .Select(x => x.PlainText)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
+
+        return lines.Count == 0 ? null : string.Join(Environment.NewLine, lines);
+    }
+
     public void SetHeaderText(string? text, PageNumberPosition alignment = PageNumberPosition.Left, DocumentPageKind kind = DocumentPageKind.Default)
         => this.SetChrome(header: true, text, alignment, kind);
 
@@ -897,6 +1001,19 @@ public sealed class DocumentEditorController : DocumentController
             return;
 
         this.document.Execute(new SetPageMarginsCommand(margins));
+        this.AfterPageSetupEdit();
+    }
+
+    /// <summary>The way round the paper currently is.</summary>
+    public PageOrientation PageOrientation => this.Document.Page.Orientation;
+
+    /// <summary>Turns the paper, swapping its two dimensions with it.</summary>
+    public void SetPageOrientation(PageOrientation orientation)
+    {
+        if (this.IsReadOnlyDocument || orientation == this.PageOrientation)
+            return;
+
+        this.document.Execute(new SetPageOrientationCommand(orientation));
         this.AfterPageSetupEdit();
     }
 
@@ -1627,6 +1744,92 @@ public sealed class DocumentEditorController : DocumentController
 
                 yield return new GridRectLike(start.X, paragraph.Y + line.Y, Math.Max(2, end.X - start.X), line.Height);
             }
+        }
+    }
+
+    // ---- touch ----
+
+    /// <summary>
+    /// How far from a handle's centre still counts as grabbing it.
+    /// </summary>
+    /// <remarks>
+    /// Larger than the handle is drawn. A caret is one pixel wide and its handle marks that edge
+    /// exactly, which is what makes it usable for placing a selection boundary between two letters -
+    /// but it is also the hardest thing on the page to land a fingertip on, and under touch a miss
+    /// pans the page out from under the selection being adjusted.
+    /// </remarks>
+    public const double TouchHandleGripPixels = 22;
+
+    /// <summary>True once a finger has been seen, so the surface should draw touch affordances.</summary>
+    /// <remarks>
+    /// Both kinds of pointer turn up in one session - an iPad with a keyboard, a laptop with a
+    /// touchscreen - so this follows whatever was used last rather than being decided per platform.
+    /// </remarks>
+    public bool UsesTouch { get; set; }
+
+    /// <summary>
+    /// The grab handles for the current selection, in flow coordinates. Empty when nothing is selected.
+    /// </summary>
+    /// <remarks>
+    /// One per end, sitting under the caret that marks it, which is where a text handle goes on both
+    /// mobile platforms - over the text it would cover the letters the user is trying to select up to.
+    /// </remarks>
+    public IReadOnlyList<GridRectLike> TouchHandleRects()
+    {
+        if (this.Selection.IsEmpty)
+            return [];
+
+        return
+        [
+            HandleAt(this.CaretRect(this.Selection.Anchor)),
+            HandleAt(this.CaretRect(this.Selection.Focus))
+        ];
+
+        static GridRectLike HandleAt(GridRectLike caret)
+            => new(
+                caret.X - (TouchHandleGripPixels / 2),
+                caret.Bottom - (TouchHandleGripPixels / 2),
+                TouchHandleGripPixels,
+                TouchHandleGripPixels);
+    }
+
+    /// <summary>Which handle, if either, a control-space point grabs.</summary>
+    /// <remarks>
+    /// Focus is tested first: the two coincide while the selection is empty, and on a selection just
+    /// made by dragging it is the end the user was last moving.
+    /// </remarks>
+    public TextHandle? TouchHandleAt(double x, double y)
+    {
+        var handles = this.TouchHandleRects();
+        if (handles.Count != 2)
+            return null;
+
+        var (flowX, flowY) = this.ToFlow(x, y);
+
+        if (handles[1].Contains(flowX, flowY))
+            return TextHandle.Focus;
+
+        return handles[0].Contains(flowX, flowY) ? TextHandle.Anchor : null;
+    }
+
+    /// <summary>Moves one end of the selection to the position under a control-space point.</summary>
+    public void DragTouchHandle(TextHandle handle, double x, double y)
+    {
+        if (this.PositionAt(x, y) is not { } position)
+            return;
+
+        if (handle == TextHandle.Focus)
+        {
+            this.Selection.ExtendTo(position);
+        }
+        else
+        {
+            // Moving the anchor is the same operation with the ends swapped: re-anchor on the fixed
+            // end and extend back to the finger, which is also what lets a drag past the other end
+            // flip the selection rather than collapsing it.
+            var fixedEnd = this.Selection.Focus;
+            this.Selection.MoveTo(fixedEnd);
+            this.Selection.ExtendTo(position);
         }
     }
 

@@ -48,6 +48,13 @@ public readonly record struct DocumentRange(DocumentPosition Start, DocumentPosi
 /// Kept as anchor/focus rather than a normalised range because direction matters while extending —
 /// shift-arrow has to grow from where the selection started, and a range alone has forgotten that.
 /// </remarks>
+/// <summary>Which end of a text selection a touch handle moves.</summary>
+public enum TextHandle
+{
+    Anchor,
+    Focus
+}
+
 public sealed class DocumentSelection
 {
     public DocumentPosition Anchor { get; private set; } = DocumentPosition.Start;

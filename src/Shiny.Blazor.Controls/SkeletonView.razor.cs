@@ -36,7 +36,9 @@ public partial class SkeletonView
     [Parameter] public string BaseColor { get; set; } = "var(--shiny-color-surface-container-high, #e1e1e6)";
 
     /// <summary>Color of the sweeping shimmer highlight.</summary>
-    [Parameter] public string HighlightColor { get; set; } = "rgba(255, 255, 255, 0.6)";
+    // A flat white sweep blows out against a dark base; keyed off on-surface it stays a soft
+    // lift of whatever the base is in either scheme.
+    [Parameter] public string HighlightColor { get; set; } = "color-mix(in srgb, var(--shiny-color-on-surface, #FFFFFF) 22%, transparent)";
 
     /// <summary>Duration in seconds of a single shimmer sweep.</summary>
     [Parameter] public double AnimationDuration { get; set; } = 1.4;

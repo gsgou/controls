@@ -2,7 +2,7 @@ using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 public partial class Ribbon
 {

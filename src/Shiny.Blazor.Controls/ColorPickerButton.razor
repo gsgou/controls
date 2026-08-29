@@ -11,7 +11,7 @@
     like nothing else in the app, cannot be themed, and on some platforms cannot express opacity at all.
 *@
 
-<div class="shiny-colorpickerbutton @Class" style="@Style">
+<div class="shiny-colorpickerbutton @Class" style="@Style" data-popover-host>
     <button type="button"
             class="shiny-colorpickerbutton-trigger"
             title="@Text"
@@ -33,7 +33,13 @@
     {
         <div class="shiny-colorpickerbutton-backdrop" @onclick="Close"></div>
 
-        <div class="shiny-colorpickerbutton-popover">
+        @*
+            popover + the marker so a host that clips - a ribbon body scrolls horizontally, and CSS
+            makes that a clipping context on both axes - can raise this into the top layer and place it
+            itself. Inert everywhere else: without someone calling showPopover the attribute does
+            nothing, so the panel still lays out under the trigger exactly as before.
+        *@
+        <div class="shiny-colorpickerbutton-popover" popover="manual" data-popover>
             <ColorPicker SelectedColor="@SelectedColor"
                          ShowOpacity="ShowOpacity"
                          SelectedColorChanged="OnPicked" />

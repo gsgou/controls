@@ -32,6 +32,9 @@
 	<string>This app uses the microphone for speech recognition</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app uses the camera for the CameraView preview, capture and frame analysis demos</string>
+	<!-- Inserting a picture into a document or a slide offers the photo library as well as the camera. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app can insert a photo from your library into a document or a slide</string>
 	<!-- Required for the MediaElement background-playback and Picture-in-Picture demos: without it iOS
 	     silences the session the moment the app leaves the foreground. -->
 	<key>UIBackgroundModes</key>

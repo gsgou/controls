@@ -72,13 +72,16 @@ public class FormulaBar : ContentView
 
         this.frame = new Border { StrokeThickness = 0, Padding = 0, Content = row };
         this.Content = this.frame;
+
+        // An unset Theme tracks the app's appearance, so a flip has to redraw.
+        this.FollowAppTheme(static v => v.Refresh());
     }
 
     public static readonly BindableProperty ThemeProperty = BindableProperty.Create(
         nameof(Theme),
         typeof(SpreadsheetTheme),
         typeof(FormulaBar),
-        SpreadsheetTheme.Light,
+        null,
         propertyChanged: (b, _, _) => ((FormulaBar)b).Refresh());
 
     public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(
@@ -88,11 +91,17 @@ public class FormulaBar : ContentView
         false,
         propertyChanged: (b, _, _) => ((FormulaBar)b).Refresh());
 
-    public SpreadsheetTheme Theme
+    /// <summary>
+    /// Chrome colours. Left unset the bar follows the app's light/dark appearance; setting it pins
+    /// the choice. <see cref="SpreadsheetView"/> pushes its own value down here.
+    /// </summary>
+    public SpreadsheetTheme? Theme
     {
-        get => (SpreadsheetTheme)this.GetValue(ThemeProperty);
+        get => (SpreadsheetTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    SpreadsheetTheme EffectiveTheme => this.Theme ?? OfficeScheme.Default;
 
     /// <summary>Shows the content but refuses edits.</summary>
     public bool IsReadOnly
@@ -136,7 +145,7 @@ public class FormulaBar : ContentView
     /// <summary>Redraws both boxes from the controller.</summary>
     public void Refresh()
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         this.frame.BackgroundColor = Color.FromRgba(theme.Background.R, theme.Background.G, theme.Background.B, theme.Background.A);
 
         this.IsVisible = this.controller is not null;
@@ -148,6 +157,33 @@ public class FormulaBar : ContentView
         this.nameBox.Text = this.controller?.ActiveCellAddress ?? string.Empty;
         this.field.Text = this.controller?.ActiveCellText ?? string.Empty;
         this.suppress = false;
+    }
+
+    /// <summary>
+    /// Ends any edit in progress, committing what was typed.
+    /// </summary>
+    /// <remarks>
+    /// The grid calls this when it is touched. Nothing else would: a canvas is not focusable, so on
+    /// iOS the field keeps first responder when a cell is tapped and no <c>Unfocused</c> ever arrives.
+    /// The bar then sits on <see cref="editingCell"/> forever, and because that is exactly the flag
+    /// that stops a controller change from overwriting a half-typed formula, every later selection is
+    /// ignored - the grid moves, the address and the contents do not. It reads as a formula bar that
+    /// has simply stopped working, with nothing to say why.
+    /// </remarks>
+    public void EndEditing()
+    {
+        if (this.controller is null)
+            return;
+
+        // Unfocus raises Unfocused, which commits; the call below is for a platform that does not
+        // raise it, and is a no-op once editingCell has been cleared.
+        if (this.field.IsFocused)
+            this.field.Unfocus();
+
+        if (this.nameBox.IsFocused)
+            this.nameBox.Unfocus();
+
+        this.Commit(advance: false);
     }
 
     void OnFieldFocused(object? sender, FocusEventArgs e)

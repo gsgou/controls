@@ -8,7 +8,7 @@
     it names, which makes the current font readable without opening anything.
 *@
 
-<div class="shiny-fontpickerbutton @Class" style="@Style">
+<div class="shiny-fontpickerbutton @Class" style="@Style" data-popover-host>
     <button type="button"
             class="shiny-fontpickerbutton-trigger"
             title="@Placeholder"
@@ -31,7 +31,13 @@
         *@
         <div class="shiny-fontpickerbutton-backdrop" @onclick="Close"></div>
 
-        <div class="shiny-fontpickerbutton-popover">
+        @*
+            popover + the marker so a host that clips - a ribbon body scrolls horizontally, and CSS
+            makes that a clipping context on both axes - can raise this into the top layer and place it
+            itself. Inert everywhere else: without someone calling showPopover the attribute does
+            nothing, so the panel still lays out under the trigger exactly as before.
+        *@
+        <div class="shiny-fontpickerbutton-popover" popover="manual" data-popover>
             <FontPicker AvailableFonts="AvailableFonts"
                         SelectedFont="@SelectedFont"
                         PreviewText="@PreviewText"

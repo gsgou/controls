@@ -86,3 +86,13 @@ public class MyEventProvider : ISchedulerEventProvider
 `CanChangeEvent` defaults to `false`, so a provider that ignores drag/drop can never have its events moved even if an app sets `AllowEventDrag` - the opt-in is required on both the view and the provider. `SchedulerEventChange` carries the event, its original `Start`/`End`, the proposed (already snapped) `NewStart`/`NewEnd`, and a `Kind` of `Move` / `ResizeStart` / `ResizeEnd`. Returning `false` from `OnEventChanged` reverts; throwing reverts and raises `EventChangeFailed` on the view.
 
 On Blazor, events are matched across the JS boundary by `SchedulerEvent.Identifier` (a `Guid` by default) - duplicate identifiers make a drag a no-op rather than move the wrong event. Blazor also has `DragValidationMode`: `OnCommit` (default, no interop while the pointer moves) or `PerPosition` (`CanChangeEventTo` per snap boundary, which is visibly slower on WASM).
+
+## Dark mode
+
+`CalendarCellColor`, `CalendarCellSelectedColor`, `CurrentDayColor` and the day-header colours default
+to theme tokens rather than literals, so the month grid follows the app's scheme.
+
+Event chips are the exception: their background is a colour the app picks per event, so no single ink
+works for all of them — a fixed white disappears on a pale amber and a fixed near-black disappears on
+a deep indigo. The label colour is derived from each chip's own colour instead, which holds in both
+schemes. See [Styling & theming](styling.md#dark-mode).

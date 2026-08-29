@@ -89,3 +89,71 @@ nothing is approximated here.
 
 ⚠️ Not implemented, deliberately: soft line breaks, editing table cells or grouped shapes, adding or
 reordering slides, and rotation handles.
+
+## Dark mode
+
+`Theme` is nullable and **unset means follow the host** — the app's light/dark appearance on MAUI,
+the page's `color-scheme` on Blazor — and it keeps up live when that flips. Pass `SlideTheme.Light`
+or `SlideTheme.Dark` only to pin one regardless of the app around it. See
+[Styling & theming](styling.md#dark-mode).
+
+## The toolbar is a Ribbon
+
+The formatting bar is a [Ribbon](ribbon.md) on both hosts, replacing the single scrolling strip of
+icons it used to be. Slide, Font, Paragraph and Insert, each titled — slide navigation leads, because which slide you are on is navigation rather than formatting.
+
+Two things the strip could not do:
+
+- **The ad-hoc dropdowns became real ribbon items.** Insert is a hosted menu component in its own group. That deleted a hand-written backdrop
+  div, an absolutely-positioned panel and a `bool …Open` field per menu on Blazor, and an action sheet
+  per menu on MAUI — along with their dismissal, keyboard and edge-flipping behaviour, which the
+  ribbon already has.
+- **Commands are grouped and captioned** instead of separated by anonymous hairlines.
+
+Undo and redo sit in the ribbon's quick access row, outside the tabs, so they never move or disappear.
+
+**The tab strip is off by default** (`ShowRibbonTabs`). This is a bar a host drops above a surface, not
+an application's whole chrome, and a strip carrying a single "Home" is noise — the groups do the
+organising. Turn it on when the editor *is* the application, and you get the tab strip and the
+collapse chevron with it.
+
+**Below 600px wide the bar runs in `Simplified` mode** — one dense row, every item small, group titles
+dropped. Group collapsing is the wrong answer at phone width: it folds groups into dropdowns
+worst-first, which is right when a window is a little too narrow, but on a phone there is room for no
+group at all and every command ends up behind a dropdown. See [Ribbon](ribbon.md).
+
+## The toolbar
+
+Two tabs. **Home** is the slide you are on and the text on it — Slide (previous / counter / next), Font
+and Paragraph. **Insert** is what goes on it — a text box, a shape, a table, a picture, and, behind a
+rule, the way to remove the selected one.
+
+The split is only worth making because the second tab holds a real bar rather than a token button. The
+deck has no Layout or Zoom tab for the same reason there is nothing to put on one: a slide is a fixed
+artboard that is always scaled to fit the viewport, so unlike a document page it is never clipped and
+there is nothing to pan to or zoom in on.
+
+## Inserting a picture
+
+Same as the document editor. On iOS and Android the button asks — **Take Photo**, **Photo Library**,
+**Browse Files** — with the camera offered only where the platform reports one. Every desktop head
+opens its own file dialog filtered to exactly the formats a deck can embed. See
+[Document Editor](document-editor.md#inserting-a-picture).
+
+## Shapes are a tab, not a dropdown
+
+The same **Shapes** tab the document editor has — Rectangles / Basic / Arrows, each button drawn as
+the shape it inserts. One gallery, shared by both editors and both hosts. See
+[Document Editor](document-editor.md#shapes-are-a-tab-not-a-dropdown).
+
+## Accent
+
+The bar wears PowerPoint red (`#C43E1C`) by default — see
+[Document Editor ▸ Accent](document-editor.md#accent).
+
+## Watermarks
+
+`Watermark` draws a picture behind the content, on the viewer as well as the editor. The button picks
+one through the same path as inserting a picture. See
+[Document Editor ▸ Watermarks](document-editor.md#watermarks) — including why it is a display
+watermark rather than one written into the file.

@@ -3,6 +3,7 @@ using Shiny.Controls.Office.Shapes;
 using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Text;
 using SkiaSharp;
+using Shiny.Controls.Office.Theming;
 
 namespace Shiny.Controls.Office.Skia;
 
@@ -33,6 +34,9 @@ public sealed record SlideTheme
 
 public sealed record SlidePaintRequest
 {
+    /// <summary>A picture drawn behind the slide, under everything on it.</summary>
+    public OfficeWatermark? Watermark { get; init; }
+
     public required Slide Slide { get; init; }
 
     /// <summary>Slide dimensions in slide coordinates, before fitting.</summary>
@@ -200,11 +204,18 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
         canvas.DrawRect(bounds, this.fill);
 
         if (request.Slide.Background.IsEmpty)
+        {
+            // Under the shapes, over the slide's own ground: a watermark marks the slide, and anything
+            // authored on it belongs in front.
+            WatermarkPainter.Draw(canvas, bounds, request.Watermark);
             return;
+        }
 
         ShapePainting.ApplyFill(this.fill, request.Slide.Background, bounds);
         canvas.DrawRect(bounds, this.fill);
         this.fill.Shader = null;
+
+        WatermarkPainter.Draw(canvas, bounds, request.Watermark);
     }
 
     void PaintShape(SKCanvas canvas, SlideShape shape, SlideTheme theme)

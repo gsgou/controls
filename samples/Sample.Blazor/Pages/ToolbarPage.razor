@@ -138,8 +138,8 @@
                 <div class="fake-row">Photo @i</div>
             }
         </div>
+        @* No BackgroundColor/TextColor: the bar follows the theme like the rest of the chrome. *@
         <ShinyToolbar Dock="ToolbarDock.Bottom"
-                      BackgroundColor="#FFFFFF"
                       ShowItemLabels="true"
                       Items="@bottomItems"
                       ItemClicked="OnItemClicked" />
@@ -265,9 +265,9 @@
         position: relative;
         height: 320px;
         overflow-y: auto;
-        border: 1px solid #E5E7EB;
+        border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
         border-radius: 14px;
-        background: #F8FAFC;
+        background: var(--shiny-color-surface-container, #F8FAFC);
     }
 
     .scroll-demo--resizable {
@@ -289,17 +289,20 @@
         background: linear-gradient(135deg, #6366F1 0%, #EC4899 45%, #F59E0B 100%);
     }
 
+    /* the photo backdrop is a fixed bright gradient in both schemes, so its rows stay light-on-light
+       rather than following the theme into something unreadable against it */
     .scroll-body--photo .fake-row {
         background: rgba(255, 255, 255, 0.82);
+        color: #1E293B;
     }
 
     .fake-row {
-        background: #FFFFFF;
-        border: 1px solid #E5E7EB;
+        background: var(--shiny-color-surface-container-high, #FFFFFF);
+        border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
         border-radius: 10px;
         padding: 16px 14px;
         font-weight: 500;
-        color: #1E293B;
+        color: var(--shiny-color-on-surface, #1E293B);
     }
 
     .ghost-btn {

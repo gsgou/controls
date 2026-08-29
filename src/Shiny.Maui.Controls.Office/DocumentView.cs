@@ -32,6 +32,9 @@ public class DocumentView : ContentView, IDisposable
         this.canvas.Touch += this.OnTouch;
 
         this.Content = this.canvas;
+
+        // An unset Theme tracks the app's appearance, so a flip has to redraw.
+        this.FollowAppTheme(static v => v.Invalidate());
     }
 
     public static readonly BindableProperty DocumentProperty = BindableProperty.Create(
@@ -44,7 +47,7 @@ public class DocumentView : ContentView, IDisposable
         nameof(Theme),
         typeof(DocumentTheme),
         typeof(DocumentView),
-        DocumentTheme.Light,
+        null,
         propertyChanged: (b, _, _) => ((DocumentView)b).Invalidate());
 
     /// <summary>
@@ -83,11 +86,17 @@ public class DocumentView : ContentView, IDisposable
         set => this.SetValue(DocumentProperty, value);
     }
 
-    public DocumentTheme Theme
+    /// <summary>
+    /// Chrome colours. Left unset the control follows the app's light/dark appearance; setting it
+    /// pins the choice, including to <see cref="DocumentTheme.Light"/>.
+    /// </summary>
+    public DocumentTheme? Theme
     {
-        get => (DocumentTheme)this.GetValue(ThemeProperty);
+        get => (DocumentTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    DocumentTheme EffectiveTheme => this.Theme ?? OfficeScheme.DefaultDocument;
 
     public double Zoom
     {
@@ -143,7 +152,7 @@ public class DocumentView : ContentView, IDisposable
 
     void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         if (this.controller is null)
         {
             e.Surface.Canvas.Clear(new SKColor(theme.SurroundBackground.R, theme.SurroundBackground.G, theme.SurroundBackground.B));
@@ -158,6 +167,7 @@ public class DocumentView : ContentView, IDisposable
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
+            Watermark = this.Watermark,
             Blocks = this.controller.Blocks,
             Viewport = this.controller.Viewport,
             Theme = theme,
@@ -219,4 +229,27 @@ public class DocumentView : ContentView, IDisposable
 
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// A picture drawn behind the content — a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    public static readonly BindableProperty WatermarkProperty = BindableProperty.Create(
+        nameof(Watermark),
+        typeof(OfficeWatermark),
+        typeof(DocumentView),
+        null,
+        propertyChanged: (b, _, _) => ((DocumentView)b).Invalidate());
+
+    /// <inheritdoc cref="WatermarkProperty"/>
+    public OfficeWatermark? Watermark
+    {
+        get => (OfficeWatermark?)this.GetValue(WatermarkProperty);
+        set => this.SetValue(WatermarkProperty, value);
+    }
+
 }

@@ -192,7 +192,7 @@ public class DurationPickerCell : CellBase
         minuteUnit.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         pickerGrid.Add(minuteUnit, 3);
 
-        var doneButton = new Button { Text = "Done", HorizontalOptions = LayoutOptions.Fill };
+        var doneButton = new Button { Text = "Done", HorizontalOptions = LayoutOptions.Fill }.Neutralize();
         doneButton.Clicked += (_, _) =>
         {
             var hours = hourPicker.SelectedIndex >= 0 ? hourPicker.SelectedIndex : 0;
@@ -214,7 +214,7 @@ public class DurationPickerCell : CellBase
         {
             Text = "Cancel",
             HorizontalOptions = LayoutOptions.Fill
-        };
+        }.Neutralize();
         cancelButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
         cancelButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
         cancelButton.Clicked += (_, _) => panel!.IsOpen = false;

@@ -1,7 +1,7 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// The button drawn for one <see cref="RibbonItem"/>.
@@ -81,8 +81,12 @@ class RibbonItemView : Grid
             this.Add(this.chevronCell);
         }
 
+        // On the face, not on this grid. The tap recognizer lives on the face, so an id on the wrapper
+        // named an element that could be found and not pressed. Putting it on both is worse: MAUI
+        // de-duplicates a repeated id by suffixing one of them, so the tappable element ends up with a
+        // name no test can predict.
         if (!string.IsNullOrWhiteSpace(item.AutomationId))
-            this.AutomationId = item.AutomationId;
+            this.face.AutomationId = item.AutomationId;
 
         SemanticProperties.SetDescription(this, item.Tooltip ?? item.Text);
 
@@ -319,6 +323,21 @@ class RibbonItemView : Grid
                     ? ShinyThemeKeys.Color.SurfaceContainerHighest
                     : null
         );
+
+        // A ring as well as the fill. SecondaryContainer is a near-neighbour of the bar's own surface
+        // in a dark scheme - it is there, but it does not read as "this one is on" at a glance, which
+        // for a tool palette is the whole job of the checked state.
+        if (isChecked)
+        {
+            this.face.StrokeThickness = 1;
+            this.face.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.Secondary);
+        }
+        else
+        {
+            this.face.RemoveDynamicResource(Border.StrokeProperty);
+            this.face.StrokeThickness = 0;
+            this.face.Stroke = null;
+        }
 
         if (this.chevronCell is not null)
         {

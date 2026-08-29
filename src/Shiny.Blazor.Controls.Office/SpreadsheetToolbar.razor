@@ -9,166 +9,214 @@
 @*
     The formatting bar above a SpreadsheetView.
 
-    Two halves. The left is what any editor has - font, size, bold, colour, alignment - and the right
-    is what only a spreadsheet has: number formats, decimal places, AutoSum and column fitting. The
-    second half is why this is its own control rather than a copy of the document toolbar.
+    Two tabs. Home is what any editor has - clipboard, font, alignment, number formats and the editing
+    commands - and Data is what only a spreadsheet has: rows and columns in and out, column widths and
+    visibility, and the function library. The second tab is why this is its own control rather than a
+    copy of the document toolbar.
+
+    The split is by what a command changes, not by how often it is reached: Home changes how a cell
+    looks, Data changes the shape of the sheet under it.
 
     Everything goes through SpreadsheetController, so a button here raises the same undoable command a
     keyboard shortcut would - not a second path into the workbook. It also means the bar works on its
     own: hand it `view.Controller` and put it wherever the app's chrome belongs.
 *@
+@*
+    The wrapper is not decoration. This file's scoped rules are written `.sheet-toolbar ::deep .x`,
+    which compiles to `.sheet-toolbar[scope-of-this-file] .x` - so the class has to sit on an element
+    declared *here*. Passing it to the ribbon as CssClass puts it on the ribbon's own root, which
+    carries the ribbon's scope id instead, and every rule in this stylesheet silently stops matching:
+    the buttons then fell through to whatever the host app styles a bare <button> as.
+*@
 <div class="sheet-toolbar @Class" style="@Style">
+<Ribbon ShowTabStrip="ShowTabs"
+        HeaderBackgroundColor="@AccentBackground"
+        HeaderForegroundColor="@AccentInk"
+        AccentColor="@AccentInk"
+        AllowCollapse="ShowTabs"
+        SmallItemRows="2">
+    <QuickAccess>
+        @* Undo and redo apply whatever the selection is, so they sit outside the groups. *@
+        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Undo" Icon="@Ico(OfficeIcon.Undo)"
+                      Disabled="@(Disabled || !(Controller?.CanUndo ?? false))" Clicked="() => Run(c => c.Undo())" />
+        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Redo" Icon="@Ico(OfficeIcon.Redo)"
+                      Disabled="@(Disabled || !(Controller?.CanRedo ?? false))" Clicked="() => Run(c => c.Redo())" />
+    </QuickAccess>
 
-    <FontPickerButton AvailableFonts="FontFamilies"
-                      SelectedFont="@Format.FontName"
-                      Disabled="Disabled"
-                      SelectedFontChanged="OnFontChanged" />
+    <ChildContent>
+        <RibbonTab Title="Home" Key="home">
 
-    <FontSizePickerButton AvailableFontSizes="FontSizes"
-                          SelectedFontSize="Format.FontSize"
-                          Disabled="Disabled"
-                          SelectedFontSizeChanged="OnSizeChanged" />
+            @* Clipboard leads, as it does in Excel: cut/copy/paste apply to whatever is selected and
+               are reached far more often than any formatting command. *@
+            <RibbonGroup Title="Clipboard" Priority="110">
+                <RibbonButton Size="RibbonItemSize.Small" Text="Paste" Tooltip="Paste"
+                              Icon="@Ico(OfficeIcon.Paste)"
+                              Disabled="@(Disabled || !(Controller?.CanPaste ?? false))"
+                              Clicked="() => Run(c => c.Paste())" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Cut" Icon="@Ico(OfficeIcon.Cut)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.Cut())" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Copy" Icon="@Ico(OfficeIcon.Copy)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.Copy())" />
+            </RibbonGroup>
 
-    <span class="sheet-sep"></span>
+            <RibbonGroup Title="Font" Priority="100">
+                @* One row each, not a block spanning both. Hosted content that spans the rows is
+                   centred across them, so a 30px picker floated in the middle of a 76px column while
+                   the buttons beside it sat on the rows - three different vertical alignments in one
+                   group. A row each puts the pickers on the same two lines as everything else, which
+                   is also how Excel's Font group is arranged. *@
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <FontPickerButton AvailableFonts="FontFamilies"
+                                      SelectedFont="@Format.FontName"
+                                      Disabled="Disabled"
+                                      SelectedFontChanged="OnFontChanged" />
+                </RibbonContent>
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <FontSizePickerButton AvailableFontSizes="FontSizes"
+                                          SelectedFontSize="Format.FontSize"
+                                          Disabled="Disabled"
+                                          SelectedFontSizeChanged="OnSizeChanged" />
+                </RibbonContent>
 
-    <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold" Toggle="true" Active="Format.Bold" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleBold())" />
-    <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic" Toggle="true" Active="Format.Italic" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleItalic())" />
-    <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline" Toggle="true" Active="Format.Underline" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleUnderline())" />
-    <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle="true" Active="Format.Strike" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleStrikethrough())" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Bold" Icon="@Ico(OfficeIcon.Bold)"
+                                    Checked="Format.Bold" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleBold())" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Italic" Icon="@Ico(OfficeIcon.Italic)"
+                                    Checked="Format.Italic" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleItalic())" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Underline" Icon="@Ico(OfficeIcon.Underline)"
+                                    Checked="Format.Underline" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleUnderline())" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Strikethrough" Icon="@Ico(OfficeIcon.Strikethrough)"
+                                    Checked="Format.Strike" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleStrikethrough())" />
 
-    <span class="sheet-sep"></span>
+                @* Both are pickers with their own popup, so they are hosted rather than made into
+                   ribbon buttons - a ribbon button cannot own a colour surface. *@
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <ColorPickerButton Text="Text colour"
+                                       SelectedColor="@ColorHex"
+                                       ShowOpacity="false"
+                                       Disabled="Disabled"
+                                       SelectedColorChanged="OnColorChanged" />
+                </RibbonContent>
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <SpreadsheetFillButton Current="FillOrNull"
+                                           Disabled="Disabled"
+                                           ShowTooltips="ShowTooltips"
+                                           Picked="OnFillPicked" />
+                </RibbonContent>
+            </RibbonGroup>
 
-    <ColorPickerButton Text="Text colour"
-                       SelectedColor="@ColorHex"
-                       ShowOpacity="false"
-                       Disabled="Disabled"
-                       SelectedColorChanged="OnColorChanged" />
+            <RibbonGroup Title="Alignment" Priority="90">
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align left" Icon="@Ico(OfficeIcon.AlignLeft)"
+                                    Checked="@(Format.HorizontalAlignment == CellHorizontalAlignment.Left)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetAlignment(CellHorizontalAlignment.Left))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Centre" Icon="@Ico(OfficeIcon.AlignCenter)"
+                                    Checked="@(Format.HorizontalAlignment == CellHorizontalAlignment.Center)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetAlignment(CellHorizontalAlignment.Center))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align right" Icon="@Ico(OfficeIcon.AlignRight)"
+                                    Checked="@(Format.HorizontalAlignment == CellHorizontalAlignment.Right)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetAlignment(CellHorizontalAlignment.Right))" />
 
-    <SpreadsheetFillButton Current="FillOrNull"
-                           Disabled="Disabled"
-                           ShowTooltips="ShowTooltips"
-                           Picked="OnFillPicked" />
+                @* The two axes are separated for the same reason they always were: side by side and
+                   unbroken, the six read as one run of six horizontal alignments. *@
+                <RibbonSeparator />
 
-    <span class="sheet-sep"></span>
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align top" Icon="@Ico(OfficeIcon.AlignTop)"
+                                    Checked="@(Format.VerticalAlignment == CellVerticalAlignment.Top)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Top))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align middle" Icon="@Ico(OfficeIcon.AlignMiddle)"
+                                    Checked="@(Format.VerticalAlignment == CellVerticalAlignment.Center)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Center))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align bottom" Icon="@Ico(OfficeIcon.AlignBottom)"
+                                    Checked="@(Format.VerticalAlignment == CellVerticalAlignment.Bottom)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Bottom))" />
 
-    <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Left" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Left))" />
-    <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Center" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Center))" />
-    <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle="true" Active="Format.HorizontalAlignment == CellHorizontalAlignment.Right" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetAlignment(CellHorizontalAlignment.Right))" />
+                @* The indent pair moves text inside the cell it is already aligned in, which is a
+                   third thing again - and the two arrows are close enough to the alignment marks to
+                   need the break. *@
+                <RibbonSeparator />
 
-    @*
-        A separator between the two axes, not decoration: both sets are rules on a grid, and side by
-        side without a break the six of them read as one run of six horizontal alignments.
-    *@
-    <span class="sheet-sep"></span>
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Decrease indent" Icon="@Ico(OfficeIcon.Outdent)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.AdjustIndent(-1))" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Increase indent" Icon="@Ico(OfficeIcon.Indent)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.AdjustIndent(1))" />
 
-    <OfficeToolbarButton Icon="OfficeIcon.AlignTop" Hint="Align top" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Top" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Top))" />
-    <OfficeToolbarButton Icon="OfficeIcon.AlignMiddle" Hint="Align middle" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Center" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Center))" />
-    <OfficeToolbarButton Icon="OfficeIcon.AlignBottom" Hint="Align bottom" Toggle="true" Active="Format.VerticalAlignment == CellVerticalAlignment.Bottom" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetVerticalAlignment(CellVerticalAlignment.Bottom))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Wrap text" Icon="@Ico(OfficeIcon.WrapText)"
+                                    Checked="Format.WrapText" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleWrapText())" />
+            </RibbonGroup>
 
-    <OfficeToolbarButton Icon="OfficeIcon.WrapText" Hint="Wrap text" Toggle="true" Active="Format.WrapText" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ToggleWrapText())" />
+            <RibbonGroup Title="Number" Priority="80">
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Currency" Icon="@Ico(OfficeIcon.Currency)"
+                                    Checked="@(Preset == NumberFormatPreset.Currency)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetNumberFormat(NumberFormatPreset.Currency))" />
+                <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Percent" Icon="@Ico(OfficeIcon.Percent)"
+                                    Checked="@(Preset == NumberFormatPreset.Percent)" Disabled="Disabled"
+                                    Clicked="_ => Run(c => c.SetNumberFormat(NumberFormatPreset.Percent))" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Fewer decimal places" Icon="@Ico(OfficeIcon.DecimalDecrease)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.AdjustDecimals(-1))" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="More decimal places" Icon="@Ico(OfficeIcon.DecimalIncrease)"
+                              Disabled="Disabled" Clicked="() => Run(c => c.AdjustDecimals(1))" />
 
-    <span class="sheet-sep"></span>
+                @* Was a hand-rolled chevron button over a backdrop and an absolutely positioned panel.
+                   A ribbon menu button is the same thing with the dismissal, keyboard and flipping
+                   already handled. *@
+                @* No icon, deliberately: the only mark that fits is the currency one already sitting
+                   two buttons to the left, and the same glyph twice in one group reads as a
+                   duplicated command. The label and the chevron say what it is. *@
+                <RibbonMenuButton Size="RibbonItemSize.Small" Text="Formats" Tooltip="More number formats"
+                                  Disabled="Disabled" Menu="FormatMenu" />
+            </RibbonGroup>
 
-    <OfficeToolbarButton Icon="OfficeIcon.Currency" Hint="Currency" Toggle="true" Active="Preset == NumberFormatPreset.Currency" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetNumberFormat(NumberFormatPreset.Currency))" />
-    <OfficeToolbarButton Icon="OfficeIcon.Percent" Hint="Percent" Toggle="true" Active="Preset == NumberFormatPreset.Percent" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.SetNumberFormat(NumberFormatPreset.Percent))" />
-    <OfficeToolbarButton Icon="OfficeIcon.DecimalDecrease" Hint="Fewer decimal places" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AdjustDecimals(-1))" />
-    <OfficeToolbarButton Icon="OfficeIcon.DecimalIncrease" Hint="More decimal places" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AdjustDecimals(1))" />
+            <RibbonGroup Title="Editing" Priority="70">
+                @* AutoSum stays a split button: totalling a column is the common case by a wide margin,
+                   and making it a menu choice would put a click in front of it every time. It is on
+                   both tabs, as it is in Excel - the face of this group and the head of the Data tab's
+                   function library. It is the one command here reached often enough that a tab switch
+                   in front of it would be felt. *@
+                <RibbonSplitButton Size="RibbonItemSize.Small" Text="AutoSum" Tooltip="AutoSum"
+                                   Icon="@Ico(OfficeIcon.Sum)" Disabled="Disabled"
+                                   Clicked="() => Run(c => c.ApplyAutoFunction(AutoFunction.Sum))"
+                                   Menu="FunctionMenu" />
 
-    <div class="shiny-office-picker">
-        <Tooltip Text="More number formats" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
-            <button type="button"
-                    class="shiny-office-btn shiny-office-btn-chevron"
-                    aria-label="More number formats"
-                    title="@(ShowTooltips ? null : "More number formats")"
-                    aria-haspopup="true"
-                    aria-expanded="@formatsOpen"
-                    disabled="@Disabled"
-                    @onclick="() => formatsOpen = !formatsOpen">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 16)</button>
-        </Tooltip>
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Clear contents"
+                              Icon="@Ico(OfficeIcon.Delete)" Disabled="Disabled" Clicked="() => Run(c => c.ClearSelection())" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Clear formatting"
+                              Icon="@Ico(OfficeIcon.ClearFormat)" Disabled="Disabled" Clicked="() => Run(c => c.ClearFormatting())" />
+            </RibbonGroup>
 
-        @if (formatsOpen)
+            @if (ToolbarContent != null)
+            {
+                @* Never folds into an overflow button: whatever the host added is theirs, and it is
+                   not for this control to decide it is the least important thing on the bar. It goes
+                   on Home rather than a tab of its own, so a host's commands are on the tab that
+                   opens. *@
+                <RibbonGroup Title="@ToolbarContentTitle" Priority="200" CanCollapse="false">
+                    <RibbonContent>@ToolbarContent</RibbonContent>
+                </RibbonGroup>
+            }
+
+            @if (!ShowTabs)
+            {
+                @* With the strip hidden there is only ever the first tab, so the structural groups
+                   come back onto it rather than becoming unreachable. The ribbon folds groups into
+                   overflow buttons worst-first when the bar runs out of room, which is what makes one
+                   crowded tab survivable and a second unreachable one not. *@
+                @DataGroups
+            }
+        </RibbonTab>
+
+        @if (ShowTabs)
         {
-            @* A click anywhere else closes it, without a document-level listener. *@
-            <div class="shiny-office-backdrop" @onclick="() => formatsOpen = false"></div>
-
-            <div class="shiny-office-panel sheet-menu" role="menu" aria-label="Number formats">
-                @foreach (var preset in Presets)
-                {
-                    <button type="button"
-                            role="menuitem"
-                            class="@(Preset == preset ? "sheet-menu-item on" : "sheet-menu-item")"
-                            @onclick="() => PickFormatAsync(preset)">
-                        <span class="sheet-menu-name">@NumberFormats.DisplayName(preset)</span>
-                        <span class="sheet-menu-sample">@SampleOf(preset)</span>
-                    </button>
-                }
-            </div>
+            @* Everything that changes the shape of the sheet rather than the look of a cell. All of it
+               was on Home, where insert-row sat between clear-formatting and a colour picker; with one
+               tab the structural commands could never grow past the two that fitted. *@
+            <RibbonTab Title="Data" Key="data">
+                @DataGroups
+            </RibbonTab>
         }
-    </div>
-
-    <span class="sheet-sep"></span>
-
-    @*
-        AutoSum is a split button for the same reason the highlight is: totalling a column is the
-        common case by a wide margin, and making it a menu choice would put a click in front of it
-        every single time.
-    *@
-    <div class="shiny-office-picker">
-        <Tooltip Text="AutoSum" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
-            <button type="button"
-                    class="shiny-office-btn"
-                    aria-label="AutoSum"
-                    title="@(ShowTooltips ? null : "AutoSum")"
-                    disabled="@Disabled"
-                    @onclick="() => Run(c => c.ApplyAutoFunction(AutoFunction.Sum))">@OfficeToolbarIcons.Get(OfficeIcon.Sum)</button>
-        </Tooltip>
-
-        <Tooltip Text="More auto functions" Placement="TooltipPlacement.Bottom" Trigger="@TooltipMode">
-            <button type="button"
-                    class="shiny-office-btn shiny-office-btn-chevron"
-                    aria-label="More auto functions"
-                    title="@(ShowTooltips ? null : "More auto functions")"
-                    aria-haspopup="true"
-                    aria-expanded="@functionsOpen"
-                    disabled="@Disabled"
-                    @onclick="() => functionsOpen = !functionsOpen">@OfficeToolbarIcons.Get(OfficeIcon.Chevron, 16)</button>
-        </Tooltip>
-
-        @if (functionsOpen)
-        {
-            <div class="shiny-office-backdrop" @onclick="() => functionsOpen = false"></div>
-
-            <div class="shiny-office-panel sheet-menu" role="menu" aria-label="Auto functions">
-                @foreach (var function in Functions)
-                {
-                    <button type="button"
-                            role="menuitem"
-                            class="sheet-menu-item"
-                            @onclick="() => PickFunctionAsync(function)">
-                        <span class="sheet-menu-name">@AutoFunctions.DisplayName(function)</span>
-                        <span class="sheet-menu-sample">@AutoFunctions.NameOf(function)</span>
-                    </button>
-                }
-            </div>
-        }
-    </div>
-
-    <span class="sheet-sep"></span>
-
-    <OfficeToolbarButton Icon="OfficeIcon.ColumnWidth" Hint="Fit column to contents" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.AutoFitColumns())" />
-    <OfficeToolbarButton Icon="OfficeIcon.ClearFormat" Hint="Clear formatting" Disabled="Disabled" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.ClearFormatting())" />
-
-    <span class="sheet-sep"></span>
-
-    <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo" Disabled="@(Disabled || !(Controller?.CanUndo ?? false))" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.Undo())" />
-    <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo" Disabled="@(Disabled || !(Controller?.CanRedo ?? false))" ShowTooltip="ShowTooltips" Clicked="() => Run(c => c.Redo())" />
-
-    @ToolbarContent
+    </ChildContent>
+</Ribbon>
 </div>
 
 @code {
-    bool formatsOpen;
-    bool functionsOpen;
     SpreadsheetController? attached;
 
     /// <summary>The presets on offer, in the order the MAUI toolbar's action sheet lists them.</summary>
@@ -221,6 +269,26 @@
     /// <summary>Extra items appended after the built-in controls.</summary>
     [Parameter] public RenderFragment? ToolbarContent { get; set; }
 
+    /// <summary>Group title for <see cref="ToolbarContent"/>.</summary>
+    [Parameter] public string ToolbarContentTitle { get; set; } = "Actions";
+
+    /// <summary>
+    /// Whether the bar shows the ribbon's tab strip, and with it the collapse chevron.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// On by default, which is a change: it was off while there was a single "Home" to show, and a
+    /// strip carrying one tab is noise. There are two now, and the strip is the only way to reach the
+    /// second.
+    /// </para>
+    /// <para>
+    /// Turning it off does not hide the Data tab's commands - it folds them back onto the one tab,
+    /// where the ribbon's own group collapsing deals with the width. A hidden strip that also hid a
+    /// third of the bar would be a setting that quietly removes commands.
+    /// </para>
+    /// </remarks>
+    [Parameter] public bool ShowTabs { get; set; } = true;
+
     [Parameter] public string? Class { get; set; }
 
     [Parameter] public string? Style { get; set; }
@@ -241,6 +309,11 @@
     ArgbColor? FillOrNull => this.Format.Background.IsTransparent ? null : this.Format.Background;
 
     TooltipTrigger TooltipMode => this.ShowTooltips ? TooltipTrigger.HoverOrFocus : TooltipTrigger.Manual;
+
+    /// <summary>
+    /// A shared-set icon as the ribbon takes it - inline SVG markup rather than a MarkupString.
+    /// </summary>
+    static string Ico(OfficeIcon icon) => OfficeToolbarIcons.Get(icon).Value;
 
     protected override void OnParametersSet()
     {
@@ -279,17 +352,111 @@
 
     Task OnFillPicked(ArgbColor? color) => this.Run(c => c.SetFillColor(color));
 
-    Task PickFormatAsync(NumberFormatPreset preset)
-    {
-        this.formatsOpen = false;
-        return this.Run(c => c.SetNumberFormat(preset));
-    }
+    /// <summary>The number-format presets, as ribbon menu lines with a live sample of each.</summary>
+    List<RibbonMenuEntry> FormatMenu => Presets
+        .Select(preset => new RibbonMenuEntry
+        {
+            Text = $"{NumberFormats.DisplayName(preset)}   {this.SampleOf(preset)}",
+            IsChecked = this.Preset == preset,
+            IsDisabled = this.Disabled,
+            OnClick = EventCallback.Factory.Create(this, () => this.Run(c => c.SetNumberFormat(preset)))
+        })
+        .ToList();
 
-    Task PickFunctionAsync(AutoFunction function)
+    List<RibbonMenuEntry> FunctionMenu => Functions
+        .Select(function => new RibbonMenuEntry
+        {
+            Text = $"{AutoFunctions.DisplayName(function)}   {AutoFunctions.NameOf(function)}",
+            IsDisabled = this.Disabled,
+            OnClick = EventCallback.Factory.Create(this, () => this.Run(c => c.ApplyAutoFunction(function)))
+        })
+        .ToList();
+
+    /// <summary>The widths behind the fit-to-contents button, with what each one measures.</summary>
+    /// <remarks>
+    /// The pixel width is beside the name for the same reason the format menu carries a live sample:
+    /// "Wide" on its own is a promise the reader cannot check.
+    /// </remarks>
+    List<RibbonMenuEntry> WidthMenu => ColumnWidthPresets.All
+        .Select(preset => new RibbonMenuEntry
+        {
+            Text = $"{preset.Name}   {ColumnWidthPresets.PixelsOf(preset.Characters):0} px",
+            IsDisabled = this.Disabled,
+            OnClick = EventCallback.Factory.Create(this, () => this.Run(c => c.SetColumnWidth(ColumnWidthPresets.PixelsOf(preset.Characters))))
+        })
+        .ToList();
+
+    /// <summary>The mark for an aggregate. Sum's sigma is shared with the AutoSum split button.</summary>
+    static OfficeIcon IconOf(AutoFunction function) => function switch
     {
-        this.functionsOpen = false;
-        return this.Run(c => c.ApplyAutoFunction(function));
-    }
+        AutoFunction.Average => OfficeIcon.Average,
+        AutoFunction.Count => OfficeIcon.Count,
+        AutoFunction.Min => OfficeIcon.Min,
+        AutoFunction.Max => OfficeIcon.Max,
+        _ => OfficeIcon.Sum
+    };
+
+    /// <summary>
+    /// The structural half of the bar, which is the Data tab - or the tail of the only tab when the
+    /// strip is hidden. One definition, because two would drift.
+    /// </summary>
+    RenderFragment DataGroups => @<text>
+        @* A sheet has no page setup to put this beside, so it sits with the other things that are about
+   the sheet rather than about a cell. *@
+            <RibbonGroup Title="Sheet" Priority="76">
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <OfficeWatermarkButton Disabled="Disabled"
+                                           ShowTooltips="ShowTooltips"
+                                           HasWatermark="@(Watermark is not null)"
+                                           Picked="WatermarkChanged" />
+                </RibbonContent>
+            </RibbonGroup>
+
+            <RibbonGroup Title="Cells" Priority="60">
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Insert row above" Icon="@Ico(OfficeIcon.InsertRow)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.InsertRows())" />
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Insert column left" Icon="@Ico(OfficeIcon.InsertColumn)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.InsertColumns())" />
+
+            @* Insert and delete are one gesture in two directions, and their icons say so - which is
+               why the break is here rather than between the row commands and the column ones. *@
+            <RibbonSeparator />
+
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Delete rows" Icon="@Ico(OfficeIcon.DeleteRow)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.DeleteRows())" />
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Delete columns" Icon="@Ico(OfficeIcon.DeleteColumn)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.DeleteColumns())" />
+        </RibbonGroup>
+
+        <RibbonGroup Title="Columns" Priority="50">
+            @* Fitting to contents is the common case, so it stays the face; the presets behind the
+               chevron are the only way back to a chosen width, which a fit cannot give you. *@
+            <RibbonSplitButton Size="RibbonItemSize.Small" Text="Width" Tooltip="Fit columns to contents"
+                               Icon="@Ico(OfficeIcon.ColumnWidth)" Disabled="Disabled"
+                               Clicked="() => Run(c => c.AutoFitColumns())"
+                               Menu="WidthMenu" />
+
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Hide columns" Icon="@Ico(OfficeIcon.Hide)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.SetColumnsHidden(true))" />
+            <RibbonButton Size="RibbonItemSize.Small" Tooltip="Unhide columns" Icon="@Ico(OfficeIcon.Unhide)"
+                          Disabled="Disabled" Clicked="() => Run(c => c.SetColumnsHidden(false))" />
+        </RibbonGroup>
+
+        @* Labelled, unlike the rest of the bar: five aggregates told apart by icon alone would be
+           five guesses. The label is the formula name rather than the friendly one, because the
+           button writes =AVERAGE(...) into a cell and that is the thing worth naming. *@
+        <RibbonGroup Title="Functions" Priority="40">
+            @foreach (var function in Functions)
+            {
+                <RibbonButton Size="RibbonItemSize.Small"
+                              Text="@AutoFunctions.NameOf(function)"
+                              Tooltip="@AutoFunctions.DisplayName(function)"
+                              Icon="@Ico(IconOf(function))"
+                              Disabled="Disabled"
+                              Clicked="() => Run(c => c.ApplyAutoFunction(function))" />
+            }
+        </RibbonGroup>
+    </text>;
 
     /// <summary>
     /// What a preset does to a number, so the menu shows the format rather than naming it.
@@ -338,4 +505,35 @@
     }
 
     public void Dispose() => this.Detach();
+
+    /// <summary>
+    /// The colour this control wears: its ribbon's header band and tab underline.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="OfficeAccent.Spreadsheet"/> - the colour Microsoft's own Excel wears,
+    /// because that is what a user reads as "a spreadsheet" before any label has been looked at. Set
+    /// it to take on the app's own brand instead, or to <c>null</c> to leave the bar on the theme's
+    /// neutrals like the rest of the chrome.
+    /// </remarks>
+    [Parameter] public OfficeAccent? Accent { get; set; } = OfficeAccent.Spreadsheet;
+
+    /// <summary>The mark currently drawn behind the grid, so the button can offer to take it off.</summary>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
+    /// <summary>
+    /// Raised when the button picks a picture, or clears the one already set.
+    /// </summary>
+    /// <remarks>
+    /// A callback rather than the bar owning it: a watermark is drawn by the grid, and the bar has no
+    /// grid - it has a controller, which is the workbook rather than the view of it.
+    /// </remarks>
+    [Parameter] public EventCallback<OfficeWatermark?> WatermarkChanged { get; set; }
+
+    string? AccentBackground => this.Accent is { } a ? Css(a.Color) : null;
+
+    string? AccentInk => this.Accent is { } a ? Css(a.Ink) : null;
+
+    static string Css(ArgbColor value)
+        => $"rgba({value.R},{value.G},{value.B},{(value.A / 255d).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)})";
+
 }

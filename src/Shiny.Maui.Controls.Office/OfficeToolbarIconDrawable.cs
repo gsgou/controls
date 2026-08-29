@@ -14,6 +14,16 @@ internal sealed class OfficeToolbarIconDrawable : IDrawable
 {
     public OfficeIcon Icon { get; set; }
 
+    /// <summary>
+    /// Artwork to draw instead of <see cref="Icon"/>'s.
+    /// </summary>
+    /// <remarks>
+    /// The shapes gallery needs an icon per geometry, and those are built rather than enumerated -
+    /// adding twenty members to <see cref="OfficeIcon"/> for them would put the drawing of a shape in
+    /// the same list as the mark for Bold.
+    /// </remarks>
+    public IReadOnlyList<OfficeIconShape>? Shapes { get; set; }
+
     public Color Color { get; set; } = Colors.Black;
 
     public float StrokeWidth { get; set; } = OfficeIcons.StrokeWidth;
@@ -37,7 +47,7 @@ internal sealed class OfficeToolbarIconDrawable : IDrawable
         canvas.StrokeLineCap = LineCap.Round;
         canvas.StrokeLineJoin = LineJoin.Round;
 
-        foreach (var shape in OfficeIcons.Shapes(this.Icon))
+        foreach (var shape in this.Shapes ?? OfficeIcons.Shapes(this.Icon))
             Draw(canvas, shape);
 
         canvas.RestoreState();

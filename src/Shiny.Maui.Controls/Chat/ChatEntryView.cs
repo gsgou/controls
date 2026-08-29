@@ -74,7 +74,7 @@ public partial class ChatEntryView : ContentView
             HeightRequest = 36,
             MinimumWidthRequest = 36,
             Padding = new Thickness(14, 0)
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         this.sendButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
         this.sendButton.SetDynamicResource(Button.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
         this.sendButton.Clicked += this.OnSendClicked;
@@ -88,7 +88,7 @@ public partial class ChatEntryView : ContentView
             HeightRequest = 36,
             Padding = 0,
             IsVisible = false
-        }.WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.TitleLargeSize);
         this.attachButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         this.attachButton.Clicked += (_, _) => this.AttachRequested?.Invoke(this, EventArgs.Empty);
 
@@ -101,7 +101,7 @@ public partial class ChatEntryView : ContentView
             HeightRequest = 36,
             Padding = 0,
             IsVisible = false
-        };
+        }.Neutralize();
         this.actionsButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         this.actionsButton.Clicked += (_, _) => this.ActionsRequested?.Invoke(this, EventArgs.Empty);
 
@@ -198,7 +198,7 @@ public partial class ChatEntryView : ContentView
             WidthRequest = 32,
             HeightRequest = 28,
             HorizontalOptions = LayoutOptions.End
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         editCancel.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         editCancel.Clicked += (_, _) => this.EditCancelled?.Invoke(this, EventArgs.Empty);
 
@@ -335,7 +335,7 @@ public partial class ChatEntryView : ContentView
             WidthRequest = 40,
             HeightRequest = 32,
             Padding = 0
-        }.WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
+        }.Neutralize().WithFontSize(ShinyThemeKeys.Type.BodyMediumSize);
         btn.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         btn.Clicked += (_, _) => action();
         return btn;

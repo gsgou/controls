@@ -12,7 +12,7 @@
     gap: var(--shiny-spacing-2, 8px);
     padding: var(--shiny-spacing-3, 12px);
     border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline);
-    border-radius: var(--shiny-radius-md, 10px);
+    border-radius: var(--shiny-shape-corner-medium, 10px);
     background-color: var(--shiny-captcha-surface);
     color: var(--shiny-captcha-on-surface);
     font-family: var(--shiny-type-font-family, inherit);
@@ -26,7 +26,7 @@
 
 .shiny-captcha-canvas {
     display: block;
-    border-radius: var(--shiny-radius-sm, 6px);
+    border-radius: var(--shiny-shape-corner-small, 6px);
     background-color: var(--shiny-captcha-well);
     /* the drawn characters are the point — do not let a long-press hand them to an OCR share sheet */
     user-select: none;
@@ -41,7 +41,7 @@
     justify-content: center;
     min-width: 120px;
     padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-4, 16px);
-    border-radius: var(--shiny-radius-sm, 6px);
+    border-radius: var(--shiny-shape-corner-small, 6px);
     background-color: var(--shiny-captcha-well);
     font-size: 1.5rem;
     font-weight: 600;
@@ -58,7 +58,7 @@
     height: 32px;
     padding: 0;
     border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline);
-    border-radius: var(--shiny-radius-sm, 6px);
+    border-radius: var(--shiny-shape-corner-small, 6px);
     background: transparent;
     color: var(--shiny-captcha-muted);
     cursor: pointer;
@@ -86,7 +86,7 @@
     min-width: 0;
     padding: var(--shiny-spacing-2, 8px) var(--shiny-spacing-3, 12px);
     border: var(--shiny-border-thin, 1px) solid var(--shiny-captcha-outline-strong);
-    border-radius: var(--shiny-radius-sm, 6px);
+    border-radius: var(--shiny-shape-corner-small, 6px);
     background-color: var(--shiny-captcha-surface);
     color: var(--shiny-captcha-on-surface);
     font-family: inherit;

@@ -24,135 +24,177 @@
 
     @if (ShowToolbar)
     {
-        <ShinyToolbar Dock="ToolbarDock.Top"
-                      Sticky="false"
-                      Height="@ToolbarHeight"
-                      BackgroundColor="@ToolbarBackground"
-                      TextColor="@ToolbarForeground"
-                      HasShadow="false"
-                      BorderColor="@ToolbarBorder"
-                      BorderThickness="1"
-                      OverflowEnabled="false"
-                      SafeArea="false"
-                      ZIndex="5">
-
+        @*
+            The class stays on a div declared here rather than the Ribbon's CssClass: this file's
+            scoped rules read `.slide-toolbar ::deep .x`, and the scope id belongs to whatever element
+            is declared in *this* file. On a child component's root it is that component's id instead,
+            and the stylesheet silently stops matching.
+        *@
         <div class="slide-toolbar">
+        <Ribbon ShowTabStrip="ShowRibbonTabs"
+                AllowCollapse="ShowRibbonTabs"
+                SmallItemRows="2"
+                HeaderBackgroundColor="@(AccentBackground ?? ToolbarBackground)"
+                HeaderForegroundColor="@AccentInk"
+                AccentColor="@AccentInk"
+                BodyBackgroundColor="@ToolbarBackground">
+            <QuickAccess>
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Undo (Ctrl+Z)" Icon="@Ico(OfficeIcon.Undo)"
+                              Disabled="@(Disabled || !(Controller?.CanUndo ?? false))"
+                              Clicked="() => Run(c => c.Undo())" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Redo (Ctrl+Shift+Z)" Icon="@Ico(OfficeIcon.Redo)"
+                              Disabled="@(Disabled || !(Controller?.CanRedo ?? false))"
+                              Clicked="() => Run(c => c.Redo())" />
+            </QuickAccess>
 
-            <OfficeToolbarButton Icon="OfficeIcon.Previous" Hint="Previous slide" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!CanPrevious)" Clicked="() => Run(c => c.Previous())" />
+            <ChildContent>
+                <RibbonTab Title="Home" Key="home">
 
-            <span class="slide-count">@(Controller is null ? "—" : $"{Controller.Index + 1}/{Controller.Count}")</span>
+                    @* Which slide you are on is navigation, not formatting, so it leads rather than
+                       sitting among the text commands. *@
+                    <RibbonGroup Title="Slide" Priority="110">
+                        @*
+                            One hosted strip rather than three items. As separate items the ribbon's
+                            column flow stacked the two arrows on top of each other and left the
+                            counter alone in the next column - three parts of one control, laid out
+                            as though they were unrelated. Large, so the strip centres across the
+                            group's rows the way a single tall control should.
+                        *@
+                        <RibbonContent Size="RibbonItemSize.Large">
+                            <div class="slide-nav">
+                                <button type="button" class="shiny-office-btn" title="Previous slide"
+                                        aria-label="Previous slide"
+                                        disabled="@(!CanPrevious)"
+                                        @onclick="() => Run(c => c.Previous())">@OfficeToolbarIcons.Get(OfficeIcon.Previous)</button>
+                                <span class="slide-count">@(Controller is null ? "—" : $"{Controller.Index + 1}/{Controller.Count}")</span>
+                                <button type="button" class="shiny-office-btn" title="Next slide"
+                                        aria-label="Next slide"
+                                        disabled="@(!CanNext)"
+                                        @onclick="() => Run(c => c.Next())">@OfficeToolbarIcons.Get(OfficeIcon.Next)</button>
+                            </div>
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.Next" Hint="Next slide" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!CanNext)" Clicked="() => Run(c => c.Next())" />
+                    <RibbonGroup Title="Font" Priority="100">
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <FontPickerButton AvailableFonts="FontFamilies"
+                                              SelectedFont="@Format.FontFamily"
+                                              Disabled="@(!HasText)"
+                                              SelectedFontChanged="OnFontChanged" />
+                        </RibbonContent>
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <FontSizePickerButton AvailableFontSizes="FontSizes"
+                                                  SelectedFontSize="Format.FontSize"
+                                                  Disabled="@(!HasText)"
+                                                  SelectedFontSizeChanged="OnSizeChanged" />
+                        </RibbonContent>
 
-            <span class="slide-sep"></span>
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Bold (Ctrl+B)" Icon="@Ico(OfficeIcon.Bold)"
+                                            Checked="Format.Bold" Disabled="@(!HasText)" Clicked="_ => Run(c => c.ToggleBold())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Italic (Ctrl+I)" Icon="@Ico(OfficeIcon.Italic)"
+                                            Checked="Format.Italic" Disabled="@(!HasText)" Clicked="_ => Run(c => c.ToggleItalic())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Underline (Ctrl+U)" Icon="@Ico(OfficeIcon.Underline)"
+                                            Checked="Format.Underline" Disabled="@(!HasText)" Clicked="_ => Run(c => c.ToggleUnderline())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Strikethrough" Icon="@Ico(OfficeIcon.Strikethrough)"
+                                            Checked="Format.Strike" Disabled="@(!HasText)" Clicked="_ => Run(c => c.ToggleStrikethrough())" />
 
-            <FontPickerButton AvailableFonts="FontFamilies"
-                              SelectedFont="@Format.FontFamily"
-                              Disabled="@(!HasText)"
-                              SelectedFontChanged="OnFontChanged" />
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <ColorPickerButton Text="Text colour"
+                                               SelectedColor="@ColorHex"
+                                               ShowOpacity="false"
+                                               Disabled="@(!HasText)"
+                                               SelectedColorChanged="OnColorChanged" />
+                        </RibbonContent>
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeHighlightButton Current="Format.Highlight"
+                                                   Disabled="@(!HasText)"
+                                                   ShowTooltips="ShowToolbarTooltips"
+                                                   Picked="OnHighlightPicked" />
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <FontSizePickerButton AvailableFontSizes="FontSizes"
-                                  SelectedFontSize="Format.FontSize"
-                                  Disabled="@(!HasText)"
-                                  SelectedFontSizeChanged="OnSizeChanged" />
+                    <RibbonGroup Title="Paragraph" Priority="90">
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align left" Icon="@Ico(OfficeIcon.AlignLeft)"
+                                            Checked="@(Format.Alignment == TextAlignment.Left)" Disabled="@(!HasText)"
+                                            Clicked="_ => Align(TextAlignment.Left)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Centre" Icon="@Ico(OfficeIcon.AlignCenter)"
+                                            Checked="@(Format.Alignment == TextAlignment.Center)" Disabled="@(!HasText)"
+                                            Clicked="_ => Align(TextAlignment.Center)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align right" Icon="@Ico(OfficeIcon.AlignRight)"
+                                            Checked="@(Format.Alignment == TextAlignment.Right)" Disabled="@(!HasText)"
+                                            Clicked="_ => Align(TextAlignment.Right)" />
 
-            <span class="slide-sep"></span>
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeWatermarkButton Disabled="Disabled"
+                                                   ShowTooltips="ShowToolbarTooltips"
+                                                   HasWatermark="@(Watermark is not null)"
+                                                   Picked="OnWatermarkPicked"
+                                                   Rejected="DropRejected" />
+                        </RibbonContent>
 
-            <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold (Ctrl+B)" Toggle
-                                 Active="Format.Bold" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleBold())" />
+                        <RibbonSeparator />
 
-            <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic (Ctrl+I)" Toggle
-                                 Active="Format.Italic" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleItalic())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Bulleted list" Icon="@Ico(OfficeIcon.BulletList)"
+                                            Checked="@(Format.List == ListStyle.Bullet)" Disabled="@(!HasText)"
+                                            Clicked="_ => Run(c => c.ToggleBulletList())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Numbered list" Icon="@Ico(OfficeIcon.NumberedList)"
+                                            Checked="@(Format.List == ListStyle.Numbered)" Disabled="@(!HasText)"
+                                            Clicked="_ => Run(c => c.ToggleNumberedList())" />
 
-            <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline (Ctrl+U)" Toggle
-                                 Active="Format.Underline" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleUnderline())" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Outdent (Shift+Tab)" Icon="@Ico(OfficeIcon.Outdent)"
+                                      Disabled="@(!HasText || Format.Level == 0)" Clicked="() => Run(c => c.ShiftLevel(-1))" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Indent (Tab)" Icon="@Ico(OfficeIcon.Indent)"
+                                      Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(1))" />
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle
-                                 Active="Format.Strike" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleStrikethrough())" />
+                    @* Whatever the host added stays on Home: it is the tab that is showing. *@
+                    @if (ToolbarContent != null)
+                    {
+                        <RibbonGroup Title="@ToolbarContentTitle" Priority="200" CanCollapse="false">
+                            <RibbonContent>@ToolbarContent</RibbonContent>
+                        </RibbonGroup>
+                    }
+                </RibbonTab>
 
-            <ColorPickerButton Text="Text colour"
-                               SelectedColor="@ColorHex"
-                               ShowOpacity="false"
-                               Disabled="@(!HasText)"
-                               SelectedColorChanged="OnColorChanged" />
+                @*
+                    Two tabs. Home is the slide you are on and the text on it; Insert is what goes on
+                    it. The split is only worth making because the second tab holds a real bar - a text
+                    box, three ways to place an object and the way to remove one - not a token button.
+                *@
+                <RibbonTab Title="Insert" Key="insert">
+                    <RibbonGroup Title="Insert" Priority="100">
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Add a text box" Icon="@Ico(OfficeIcon.TextBox)"
+                                      Disabled="Disabled" Clicked="AddTextBox" />
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeInsertMenu Disabled="Disabled"
+                                              ShowTooltips="ShowToolbarTooltips"
+                                              ShowShapes="false"
+                                              ShapePicked="OnShapePicked"
+                                              TablePicked="OnTablePicked"
+                                              ImagePicked="OnImagePicked"
+                                              ImageRejected="DropRejected" />
+                        </RibbonContent>
 
-            <OfficeHighlightButton Current="Format.Highlight"
-                                   Disabled="@(!HasText)"
-                                   ShowTooltips="ShowToolbarTooltips"
-                                   Picked="OnHighlightPicked" />
+                        <RibbonSeparator />
 
-            <span class="slide-sep"></span>
+                        @* Removing is the opposite of the four beside it, and destructive where they
+                           are not - hence the rule in front of it. *@
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Delete the selected shape" Icon="@Ico(OfficeIcon.Delete)"
+                                      Disabled="@(!HasSelection)" Clicked="() => Run(c => c.DeleteSelectedShape())" />
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle
-                                 Active="Format.Alignment == TextAlignment.Left" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Left)" />
+                </RibbonTab>
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle
-                                 Active="Format.Alignment == TextAlignment.Center" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Center)" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle
-                                 Active="Format.Alignment == TextAlignment.Right" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Right)" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.BulletList" Hint="Bulleted list" Toggle
-                                 Active="Format.List == ListStyle.Bullet" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleBulletList())" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.NumberedList" Hint="Numbered list" Toggle
-                                 Active="Format.List == ListStyle.Numbered" Disabled="@(!HasText)" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleNumberedList())" />
-
-            @*
-                Always enabled while text is being edited, unlike the document toolbar's pair: every
-                paragraph in a shape carries an outline level whether or not it draws a bullet, so
-                there is no "not in a list" state to grey them out for.
-            *@
-            <OfficeToolbarButton Icon="OfficeIcon.Outdent" Hint="Outdent (Shift+Tab)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!HasText || Format.Level == 0)" Clicked="() => Run(c => c.ShiftLevel(-1))" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.Indent" Hint="Indent (Tab)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(1))" />
-
-            <span class="slide-sep"></span>
-
-            <OfficeToolbarButton Icon="OfficeIcon.TextBox" Hint="Add a text box" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="Disabled" Clicked="AddTextBox" />
-
-            <OfficeInsertMenu Disabled="Disabled"
-                              ShowTooltips="ShowToolbarTooltips"
-                              ShapePicked="OnShapePicked"
-                              TablePicked="OnTablePicked"
-                              ImagePicked="OnImagePicked"
-                              ImageRejected="DropRejected" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.Delete" Hint="Delete the selected shape" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(!HasSelection)" Clicked="() => Run(c => c.DeleteSelectedShape())" />
-
-            <span class="slide-sep"></span>
-
-            <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo (Ctrl+Z)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || !(Controller?.CanUndo ?? false))"
-                                 Clicked="() => Run(c => c.Undo())" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo (Ctrl+Shift+Z)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || !(Controller?.CanRedo ?? false))"
-                                 Clicked="() => Run(c => c.Redo())" />
-
-            @ToolbarContent
+                <OfficeShapesTab Disabled="Disabled" Picked="OnShapePicked" />
+            </ChildContent>
+        </Ribbon>
         </div>
-        </ShinyToolbar>
     }
 
     <div class="slide-surface">
         <SlideEditor @ref="editor"
                      Deck="Deck"
+                     Watermark="Watermark"
                      Theme="Theme"
                      SlideIndex="SlideIndex"
                      SlideIndexChanged="OnSlideIndexChanged"
@@ -184,7 +226,8 @@
     /// <summary>The deck to edit. Must have been opened with <c>editable: true</c>.</summary>
     [Parameter] public SlideDeck? Deck { get; set; }
 
-    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+    /// <summary>Forwarded to the surface. Unset there means "follow the page's scheme".</summary>
+    [Parameter] public SlideTheme? Theme { get; set; }
 
     [Parameter] public int SlideIndex { get; set; }
 
@@ -216,6 +259,23 @@
     /// <summary>Extra items appended to the toolbar, after the built-in controls.</summary>
     [Parameter] public RenderFragment? ToolbarContent { get; set; }
 
+    /// <summary>Group title for <see cref="ToolbarContent"/>.</summary>
+    [Parameter] public string ToolbarContentTitle { get; set; } = "Actions";
+
+    /// <summary>Whether the bar shows the ribbon's tab strip, and with it the collapse chevron.</summary>
+    /// <remarks>Off by default - one tab in a strip is noise for a bar wrapped around an editor.</remarks>
+    /// <summary>
+    /// Draw the tab strip. On here, since the bar has Home and Insert.
+    /// </summary>
+    /// <remarks>
+    /// A strip carrying a single "Home" is noise, which is why the spreadsheet bar leaves it off. With
+    /// it off here the Insert tab is simply unreachable.
+    /// </remarks>
+    [Parameter] public bool ShowRibbonTabs { get; set; } = true;
+
+    /// <summary>A shared-set icon as the ribbon takes it: inline SVG markup, not a MarkupString.</summary>
+    static string Ico(OfficeIcon icon) => OfficeToolbarIcons.Get(icon).Value;
+
     [Parameter] public IReadOnlyList<string> FontFamilies { get; set; } =
     [
         "Calibri", "Cambria", "Arial", "Times New Roman", "Georgia", "Verdana", "Courier New"
@@ -239,9 +299,12 @@
     [Parameter] public double PictureWidth { get; set; } = 400;
 
     [Parameter] public double ToolbarHeight { get; set; } = 44;
-    [Parameter] public string ToolbarBackground { get; set; } = "#FFFFFF";
-    [Parameter] public string ToolbarForeground { get; set; } = "#1F2937";
-    [Parameter] public string ToolbarBorder { get; set; } = "#E5E7EB";
+    // Theme tokens rather than literals: the bar sits in the app's chrome, not on the page the
+    // editor is drawing, so it has to follow light/dark with everything else. A literal white
+    // default left a stark white bar wrapped around a dark editor in dark mode.
+    [Parameter] public string ToolbarBackground { get; set; } = "var(--shiny-color-surface-container-low, #FFFFFF)";
+    [Parameter] public string ToolbarForeground { get; set; } = "var(--shiny-color-on-surface, #1F2937)";
+    [Parameter] public string ToolbarBorder { get; set; } = "var(--shiny-color-outline-variant, #E5E7EB)";
 
     [Parameter] public string? Class { get; set; }
     [Parameter] public string? Style { get; set; }
@@ -370,4 +433,34 @@
         if (this.DeckChanged.HasDelegate)
             await this.DeckChanged.InvokeAsync();
     }
+
+    /// <summary>
+    /// The colour this control wears: its ribbon's header band and tab underline.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="OfficeAccent.Presentation"/> - the colour Microsoft's own PowerPoint wears,
+    /// because that is what a user reads as "slides" before any label has been looked at. Set it to
+    /// take on the app's own brand instead, or to <c>null</c> to leave the bar on the theme's neutrals
+    /// like the rest of the chrome.
+    /// </remarks>
+    [Parameter] public OfficeAccent? Accent { get; set; } = OfficeAccent.Presentation;
+
+    string? AccentBackground => this.Accent is { } a ? Css(a.Color) : null;
+
+    string? AccentInk => this.Accent is { } a ? Css(a.Ink) : null;
+
+    static string Css(ArgbColor value)
+        => $"rgba({value.R},{value.G},{value.B},{(value.A / 255d).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)})";
+
+
+    /// <summary>A picture drawn behind the slide. Forwarded to the surface.</summary>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
+    Task OnWatermarkPicked(OfficeWatermark? mark)
+    {
+        this.Watermark = mark;
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    }
+
 }

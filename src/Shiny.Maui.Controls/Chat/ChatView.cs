@@ -157,7 +157,7 @@ public partial class ChatView : ContentView
             HorizontalTextAlignment = TextAlignment.Center,
             Margin = new Thickness(24, 0)
         };
-        var errorRetry = new Button { Text = "Retry" };
+        var errorRetry = new Button { Text = "Retry" }.Neutralize();
         errorRetry.Clicked += (_, _) => this.ReloadSession();
         this.errorOverlay = new VerticalStackLayout
         {

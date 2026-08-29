@@ -1,9 +1,9 @@
 using Microsoft.Maui.Controls;
-using Shiny.Maui.Controls.Desktop.Ribbons;
+using Shiny.Maui.Controls.Ribbons;
 using Shouldly;
 using Xunit;
 
-namespace Shiny.Maui.Controls.Desktop.Tests;
+namespace Shiny.Maui.Controls.Tests;
 
 /// <summary>
 /// Everything about the ribbon that is not pixels: which tab it lands on, what happens when the tab it
@@ -14,6 +14,11 @@ namespace Shiny.Maui.Controls.Desktop.Tests;
 /// point of that method existing: a <c>TapGestureRecognizer</c> cannot be raised from a test, and a
 /// drawn button and a keyboard shortcut should go down one path anyway.
 /// </remarks>
+// No Application is created here (see Build), but Application.Current is process-wide and these
+// tests now live alongside the ones that install implicit styles into it. Joining their collection
+// serializes against those rather than racing them - without it, an unrelated control's animation
+// probe failed intermittently depending on interleaving.
+[Collection(ApplicationResourcesCollection.Name)]
 public class RibbonTests
 {
     static RibbonButton Button(string text, Action? onClick = null)

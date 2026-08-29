@@ -58,9 +58,11 @@
     /// <summary>When true (default) the bar is pinned to the viewport via position:fixed.</summary>
     [Parameter] public bool Fixed { get; set; } = true;
 
-    [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
-    [Parameter] public string ActiveColor { get; set; } = "#2196F3";
-    [Parameter] public string InactiveColor { get; set; } = "#9CA3AF";
+    // Tokens, not literals: a tab bar is app chrome and a white default painted straight through
+    // dark mode (inline styles beat the stylesheet, so no theme could correct it).
+    [Parameter] public string BackgroundColor { get; set; } = "var(--shiny-color-surface-container-low, #FFFFFF)";
+    [Parameter] public string ActiveColor { get; set; } = "var(--shiny-color-primary, #2196F3)";
+    [Parameter] public string InactiveColor { get; set; } = "var(--shiny-color-on-surface-variant, #9CA3AF)";
 
     [Parameter] public bool ShowLabels { get; set; } = true;
     [Parameter] public double Height { get; set; } = 56;
@@ -69,7 +71,7 @@
     // frosted glass
     [Parameter] public bool Frosted { get; set; }
     [Parameter] public double BlurRadius { get; set; } = 20;
-    [Parameter] public string TintColor { get; set; } = "rgba(255, 255, 255, 0.7)";
+    [Parameter] public string TintColor { get; set; } = "color-mix(in srgb, var(--shiny-color-surface-container-low, #FFFFFF) 70%, transparent)";
 
     [Parameter] public bool HasShadow { get; set; } = true;
     [Parameter] public string? BorderColor { get; set; }

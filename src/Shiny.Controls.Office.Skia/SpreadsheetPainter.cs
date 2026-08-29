@@ -2,6 +2,7 @@ using Shiny.Controls.Office.Spreadsheet;
 using Shiny.Controls.Office.Spreadsheet.View;
 using Shiny.Controls.Office.Text;
 using SkiaSharp;
+using Shiny.Controls.Office.Theming;
 
 namespace Shiny.Controls.Office.Skia;
 
@@ -21,6 +22,37 @@ public sealed record SpreadsheetPaintRequest
 
     /// <summary>Hides the active cell's content while an editor is overlaid on it.</summary>
     public CellRef? EditingCell { get; init; }
+
+    /// <summary>
+    /// The range a pending cut or copy was taken from, drawn with a dashed marching-ants border.
+    /// </summary>
+    /// <remarks>
+    /// Comes from <c>SpreadsheetController.ClipboardRange</c>, which is already null when the capture
+    /// belongs to another sheet — the painter draws whatever it is handed and does not check.
+    /// </remarks>
+    public CellRange? ClipboardRange { get; init; }
+
+    /// <summary>
+    /// Draw the selection's grab handles, which are how a touch user extends a selection.
+    /// </summary>
+    /// <remarks>
+    /// Off for a mouse, where dragging across the grid already extends and a pair of round handles on
+    /// the corners would be two targets that do nothing a drag does not.
+    /// </remarks>
+    public bool ShowTouchHandles { get; init; }
+
+    /// <summary>A picture drawn behind the grid, under the cells and the rules.</summary>
+    public OfficeWatermark? Watermark { get; init; }
+
+    /// <summary>
+    /// How far the dashes have marched, in pixels.
+    /// </summary>
+    /// <remarks>
+    /// The border is what makes a clipboard visible, and a static dashed rectangle is easy to mistake
+    /// for a style of selection. Animation is left to the host because only the host has a frame clock:
+    /// it advances this and repaints, and the painter stays a pure function of the request.
+    /// </remarks>
+    public float ClipboardDashPhase { get; init; }
 }
 
 /// <summary>
@@ -71,6 +103,13 @@ public sealed class SpreadsheetPainter : IDisposable
         var theme = request.Theme;
 
         canvas.Clear(ToSk(theme.Background));
+
+        // Behind the cells, and behind the headers too: Excel has no watermark of its own, and the one
+        // people mean is a mark on the sheet rather than a mark on the data.
+        WatermarkPainter.Draw(
+            canvas,
+            new SKRect(0, 0, (float)viewport.Width, (float)viewport.Height),
+            request.Watermark);
 
         var (firstColumn, lastColumn) = viewport.VisibleColumns();
         var (firstRow, lastRow) = viewport.VisibleRows();
@@ -126,6 +165,7 @@ public sealed class SpreadsheetPainter : IDisposable
         this.PaintCells(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
         this.PaintGridLines(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
         this.PaintSelection(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
+        this.PaintClipboardMarquee(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
 
         canvas.Restore();
     }
@@ -260,10 +300,101 @@ public sealed class SpreadsheetPainter : IDisposable
         canvas.DrawRect(rect, this.stroke);
         this.stroke.StrokeWidth = 1;
 
+        if (request.ShowTouchHandles)
+        {
+            this.PaintTouchHandles(canvas, request, rect);
+            return;
+        }
+
         // The fill handle sits on the outside corner, the way Excel draws it.
         var handle = (float)theme.FillHandleSize;
         this.fill.Color = ToSk(theme.SelectionBorder);
         canvas.DrawRect(new SKRect(rect.Right - handle / 2, rect.Bottom - handle / 2, rect.Right + handle / 2, rect.Bottom + handle / 2), this.fill);
+    }
+
+    /// <summary>
+    /// Draws the two round handles a finger drags to extend the selection.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Round, and larger than the square fill handle they replace, because they are the only way to
+    /// select a range with a finger — under touch a drag pans the sheet — so they have to read as
+    /// something to grab rather than as a corner mark. The white ring is what keeps them visible on
+    /// top of a dark cell, a filled cell and the grid lines alike.
+    /// </para>
+    /// <para>
+    /// Drawn at <see cref="SpreadsheetTheme.TouchHandleRadius"/>, which is smaller than
+    /// <see cref="GridViewport.HandleGripPixels"/> — the grab area is deliberately more forgiving than
+    /// the mark, since missing it pans the sheet instead.
+    /// </para>
+    /// </remarks>
+    void PaintTouchHandles(SKCanvas canvas, SpreadsheetPaintRequest request, SKRect rect)
+    {
+        var theme = request.Theme;
+        var radius = (float)theme.TouchHandleRadius;
+
+        this.fill.Color = ToSk(theme.SelectionBorder);
+        this.stroke.Color = ToSk(theme.TouchHandleRing);
+        this.stroke.StrokeWidth = (float)theme.TouchHandleRingWidth;
+
+        foreach (var (cx, cy) in new[] { (rect.Left, rect.Top), (rect.Right, rect.Bottom) })
+        {
+            canvas.DrawCircle(cx, cy, radius, this.fill);
+            canvas.DrawCircle(cx, cy, radius, this.stroke);
+        }
+
+        this.stroke.StrokeWidth = 1;
+    }
+
+    /// <summary>
+    /// Draws the dashed border around whatever is on the clipboard.
+    /// </summary>
+    /// <remarks>
+    /// Drawn after the selection rather than before it so that copying a range and leaving the
+    /// selection on it shows the dashes, not a solid border sitting on top of them.
+    /// </remarks>
+    void PaintClipboardMarquee(SKCanvas canvas, SpreadsheetPaintRequest request, int columnStart, int columnEnd, int rowStart, int rowEnd)
+    {
+        if (request.ClipboardRange is not { } range)
+            return;
+
+        if (range.Left > columnEnd || range.Right < columnStart || range.Top > rowEnd || range.Bottom < rowStart)
+            return;
+
+        var viewport = request.Viewport;
+        var theme = request.Theme;
+
+        // A row-header copy spans 16,384 columns and a column copy 1,048,576 rows, which is millions of
+        // pixels of rectangle. The dash effect walks the outline, so an unclamped rect would spend that
+        // walk off screen and lose all precision by the time it came back; clipping the geometry to a
+        // little beyond the viewport keeps the visible dashes exact and the off-screen edges outside it.
+        var bounds = viewport.RangeRect(range);
+        var margin = 64f;
+        var rect = new SKRect(
+            (float)Math.Max(bounds.X, -margin),
+            (float)Math.Max(bounds.Y, -margin),
+            (float)Math.Min(bounds.Right, viewport.Width + margin),
+            (float)Math.Min(bounds.Bottom, viewport.Height + margin));
+
+        if (rect.Right <= rect.Left || rect.Bottom <= rect.Top)
+            return;
+
+        var dash = (float)Math.Max(1, theme.ClipboardDashLength);
+
+        using var effect = SKPathEffect.CreateDash([dash, dash], request.ClipboardDashPhase);
+
+        this.stroke.Color = ToSk(theme.ClipboardBorder);
+        this.stroke.StrokeWidth = (float)theme.ClipboardBorderWidth;
+        this.stroke.PathEffect = effect;
+        this.stroke.IsAntialias = true;
+
+        canvas.DrawRect(rect, this.stroke);
+
+        // The stroke paint is shared with the grid lines and the headers, both of which draw solid
+        // hairlines; leaving the dash on it would turn every one of them into a dotted line.
+        this.stroke.PathEffect = null;
+        this.stroke.IsAntialias = false;
+        this.stroke.StrokeWidth = 1;
     }
 
     void PaintHeaders(SKCanvas canvas, SpreadsheetPaintRequest request, int firstColumn, int lastColumn, int firstRow, int lastRow)

@@ -23,6 +23,10 @@
 }
 
 .shiny-office-panel {
+    /* Load-bearing, not cosmetic: the panel carries `popover` so a clipping host can raise it into the
+       top layer, and the UA stylesheet gives every [popover] `display: none` until it is shown. Without
+       an explicit display here the panel is invisible anywhere it is NOT inside such a host. */
+    display: block;
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
@@ -76,7 +80,7 @@
     padding: 0;
     cursor: pointer;
     border-radius: 3px;
-    border: 1px solid rgb(0 0 0 / 22%);
+    border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .fill-swatch.on {

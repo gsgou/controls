@@ -78,8 +78,9 @@
     [Parameter] public RenderFragment? HeaderTemplate { get; set; }
     [Parameter] public bool ShowHeaderWhenMinimized { get; set; }
     [Parameter] public IList<DetentValue>? Detents { get; set; }
-    [Parameter] public string SheetBackgroundColor { get; set; } = "#FFFFFF";
-    [Parameter] public string HandleColor { get; set; } = "#9CA3AF";
+    // Inline styles, so a literal default cannot be themed away - see ShinyToolbar for the same note.
+    [Parameter] public string SheetBackgroundColor { get; set; } = "var(--shiny-color-surface-container-low, #FFFFFF)";
+    [Parameter] public string HandleColor { get; set; } = "var(--shiny-color-outline, #9CA3AF)";
     [Parameter] public double SheetCornerRadius { get; set; } = 16;
     [Parameter] public bool HasBackdrop { get; set; } = true;
     [Parameter] public bool CloseOnBackdropTap { get; set; } = true;

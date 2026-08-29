@@ -55,7 +55,7 @@
 }
 
 .shiny-vgrid-loadmore-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--shiny-color-surface-container-high, rgba(0, 0, 0, 0.05));
 }
 
 .shiny-vgrid-loading {

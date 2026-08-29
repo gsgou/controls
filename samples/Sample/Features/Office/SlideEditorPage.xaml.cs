@@ -52,7 +52,9 @@ public partial class SlideEditorPage : ContentPage
     void OnToggleTheme(object? sender, EventArgs e)
     {
         this.dark = !this.dark;
-        this.Editor.Theme = this.dark ? SlideTheme.Dark : SlideTheme.Light;
+        // null, not SlideTheme.Light: unset means "follow the app appearance", which is the
+        // behaviour worth demoing. Passing Light would pin it and hide that.
+        this.Editor.Theme = this.dark ? SlideTheme.Dark : null;
     }
 
     /// <summary>A dropped file the editor would not take, said out loud rather than swallowed.</summary>

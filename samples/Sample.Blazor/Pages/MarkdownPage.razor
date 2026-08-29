@@ -15,7 +15,7 @@
     </div>
     <div class="md-preview">
         <MarkdownView Markdown="@source"
-                      Theme="@(dark ? MarkdownTheme.Dark : MarkdownTheme.Light)"
+                      Theme="@(dark ? MarkdownTheme.Dark : null)"
                       LinkTapped="OnLinkTapped" />
         <p class="last-link">Last link tapped: <strong>@lastLink</strong></p>
     </div>

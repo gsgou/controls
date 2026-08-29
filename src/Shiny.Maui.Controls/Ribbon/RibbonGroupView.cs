@@ -1,7 +1,7 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Themes;
 
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// The box drawn for one <see cref="RibbonGroup"/> — its items, its caption, and the single button it
@@ -168,6 +168,20 @@ class RibbonGroupView : Grid
             return created;
         }
 
+        // Pins the row rather than letting the item size it. Without this each group sizes its rows to
+        // its own tallest item, so a group with a picker in it puts its buttons on a different line
+        // from the group beside it - see Ribbon.SmallItemRowHeight.
+        void AddRow(View child)
+        {
+            if (this.owner.SmallItemRowHeight > 0)
+            {
+                child.HeightRequest = this.owner.SmallItemRowHeight;
+                child.VerticalOptions = LayoutOptions.Center;
+            }
+
+            Column().Children.Add(child);
+        }
+
         foreach (var item in this.group.VisibleItems)
         {
             var size = this.simplified ? RibbonItemSize.Small : item.Size;
@@ -187,7 +201,7 @@ class RibbonGroupView : Grid
 
                     if (size == RibbonItemSize.Small)
                     {
-                        Column().Children.Add(content);
+                        AddRow(content);
                     }
                     else
                     {
@@ -219,7 +233,7 @@ class RibbonGroupView : Grid
             }
             else
             {
-                Column().Children.Add(view);
+                AddRow(view);
             }
         }
 

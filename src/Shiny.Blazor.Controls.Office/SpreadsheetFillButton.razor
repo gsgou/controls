@@ -15,7 +15,7 @@
     to read numbers through, which is exactly what that set is. A full spectrum would mostly offer
     ways to make your own sheet unreadable.
 *@
-<div class="shiny-office-picker">
+<div class="shiny-office-picker" data-popover-host>
     <Tooltip Text="@($"Fill colour ({this.NameOf(this.selected)})")" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
         <button type="button"
                 class="@(this.Current is not null ? "shiny-office-btn on" : "shiny-office-btn")"
@@ -49,7 +49,7 @@
         *@
         <div class="shiny-office-backdrop" @onclick="() => this.open = false"></div>
 
-        <div class="shiny-office-panel" role="dialog" aria-label="Fill colours">
+        <div class="shiny-office-panel" popover="manual" data-popover role="dialog" aria-label="Fill colours">
             <div class="fill-grid">
                 @foreach (var swatch in HighlightPalette.Swatches)
                 {

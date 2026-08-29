@@ -3,8 +3,8 @@
         @foreach (var (key, value) in props)
         {
             <tr>
-                <td style="padding:4px 8px;color:#6b7280;border-bottom:1px solid #f3f4f6;">@key</td>
-                <td style="padding:4px 8px;border-bottom:1px solid #f3f4f6;">@value</td>
+                <td style="padding:4px 8px;color:var(--shiny-color-on-surface-variant, #6b7280);border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@key</td>
+                <td style="padding:4px 8px;border-bottom:1px solid var(--shiny-color-outline-variant, #f3f4f6);">@value</td>
             </tr>
         }
     </table>

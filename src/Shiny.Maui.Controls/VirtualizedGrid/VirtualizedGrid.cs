@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Collections;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.VirtualizedGrid;
 
@@ -215,7 +216,7 @@ public class VirtualizedGrid : CollectionControlBase
             Text = "Load More",
             HorizontalOptions = LayoutOptions.Center,
             Margin = new Thickness(0, 8)
-        };
+        }.Neutralize();
         button.Clicked += (_, _) =>
         {
             IsLoadingMore = true;

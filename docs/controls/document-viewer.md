@@ -51,3 +51,10 @@ var collector = new UnsupportedFeatureCollector();
 using var document = await WordDocument.OpenAsync(path, collector);
 // charts, SmartArt, footnotes, comments, headers/footers, custom geometry...
 ```
+
+## Dark mode
+
+`Theme` is nullable and **unset means follow the host** — the app's light/dark appearance on MAUI,
+the page's `color-scheme` on Blazor — and it keeps up live when that flips. Pass `DocumentTheme.Light`
+or `DocumentTheme.Dark` only to pin one regardless of the app around it. See
+[Styling & theming](styling.md#dark-mode).

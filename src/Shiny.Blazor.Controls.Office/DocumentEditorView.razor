@@ -27,146 +27,293 @@
 
     @if (ShowToolbar)
     {
-        <ShinyToolbar Dock="ToolbarDock.Top"
-                      Sticky="false"
-                      Height="@ToolbarHeight"
-                      BackgroundColor="@ToolbarBackground"
-                      TextColor="@ToolbarForeground"
-                      HasShadow="false"
-                      BorderColor="@ToolbarBorder"
-                      BorderThickness="1"
-                      OverflowEnabled="false"
-                      SafeArea="false"
-                      ZIndex="5">
-
+        @*
+            The class stays on a div declared here, not on the Ribbon's CssClass. This file's scoped
+            rules read `.doc-toolbar ::deep .x`, which compiles to `.doc-toolbar[scope-of-this-file] .x`
+            - put the class on a child component's root and it carries that component's scope id
+            instead, and every rule in this stylesheet silently stops matching.
+        *@
         <div class="doc-toolbar">
+        <Ribbon ShowTabStrip="ShowRibbonTabs"
+                AllowCollapse="ShowRibbonTabs"
+                SmallItemRows="2"
+                HeaderBackgroundColor="@(AccentBackground ?? ToolbarBackground)"
+                HeaderForegroundColor="@AccentInk"
+                AccentColor="@AccentInk"
+                BodyBackgroundColor="@ToolbarBackground">
+            <QuickAccess>
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Undo (Ctrl+Z)" Icon="@Ico(OfficeIcon.Undo)"
+                              Disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))"
+                              Clicked="() => Run(c => c.Undo())" />
+                <RibbonButton Size="RibbonItemSize.Small" Tooltip="Redo (Ctrl+Shift+Z)" Icon="@Ico(OfficeIcon.Redo)"
+                              Disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))"
+                              Clicked="() => Run(c => c.Redo())" />
+            </QuickAccess>
 
-            <FontPickerButton AvailableFonts="FontFamilies"
-                              SelectedFont="@Format.FontFamily"
-                              Disabled="Disabled"
-                              SelectedFontChanged="OnFontChanged" />
+            <ChildContent>
+                <RibbonTab Title="Home" Key="home">
 
-            <FontSizePickerButton AvailableFontSizes="FontSizes"
-                                  SelectedFontSize="Format.FontSize"
-                                  Disabled="Disabled"
-                                  SelectedFontSizeChanged="OnSizeChanged" />
+                    <RibbonGroup Title="Font" Priority="100">
+                        @* A row each rather than one block spanning both: a row-spanning host is
+                           centred across the rows, so a 30px picker floats while the buttons beside
+                           it sit on the rows. *@
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <FontPickerButton AvailableFonts="FontFamilies"
+                                              SelectedFont="@Format.FontFamily"
+                                              Disabled="Disabled"
+                                              SelectedFontChanged="OnFontChanged" />
+                        </RibbonContent>
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <FontSizePickerButton AvailableFontSizes="FontSizes"
+                                                  SelectedFontSize="Format.FontSize"
+                                                  Disabled="Disabled"
+                                                  SelectedFontSizeChanged="OnSizeChanged" />
+                        </RibbonContent>
 
-            <span class="doc-sep"></span>
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Bold (Ctrl+B)" Icon="@Ico(OfficeIcon.Bold)"
+                                            Checked="Format.Bold" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleBold())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Italic (Ctrl+I)" Icon="@Ico(OfficeIcon.Italic)"
+                                            Checked="Format.Italic" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleItalic())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Underline (Ctrl+U)" Icon="@Ico(OfficeIcon.Underline)"
+                                            Checked="Format.Underline" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleUnderline())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Strikethrough" Icon="@Ico(OfficeIcon.Strikethrough)"
+                                            Checked="Format.Strike" Disabled="Disabled" Clicked="_ => Run(c => c.ToggleStrikethrough())" />
 
-            <OfficeToolbarButton Icon="OfficeIcon.Bold" Hint="Bold (Ctrl+B)" Toggle
-                                 Active="Format.Bold" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleBold())" />
+                        @* Pickers with their own popup surface, which a ribbon button cannot be. *@
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <ColorPickerButton Text="Text colour"
+                                               SelectedColor="@ColorHex"
+                                               ShowOpacity="false"
+                                               Disabled="Disabled"
+                                               SelectedColorChanged="OnColorChanged" />
+                        </RibbonContent>
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeHighlightButton Current="Format.Highlight"
+                                                   Disabled="Disabled"
+                                                   ShowTooltips="ShowToolbarTooltips"
+                                                   Picked="OnHighlightPicked" />
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.Italic" Hint="Italic (Ctrl+I)" Toggle
-                                 Active="Format.Italic" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleItalic())" />
+                    <RibbonGroup Title="Paragraph" Priority="90">
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align left" Icon="@Ico(OfficeIcon.AlignLeft)"
+                                            Checked="@(Format.Alignment == TextAlignment.Left)" Disabled="Disabled"
+                                            Clicked="_ => Align(TextAlignment.Left)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Centre" Icon="@Ico(OfficeIcon.AlignCenter)"
+                                            Checked="@(Format.Alignment == TextAlignment.Center)" Disabled="Disabled"
+                                            Clicked="_ => Align(TextAlignment.Center)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Align right" Icon="@Ico(OfficeIcon.AlignRight)"
+                                            Checked="@(Format.Alignment == TextAlignment.Right)" Disabled="Disabled"
+                                            Clicked="_ => Align(TextAlignment.Right)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Justify" Icon="@Ico(OfficeIcon.AlignJustify)"
+                                            Checked="@(Format.Alignment == TextAlignment.Justify)" Disabled="Disabled"
+                                            Clicked="_ => Align(TextAlignment.Justify)" />
 
-            <OfficeToolbarButton Icon="OfficeIcon.Underline" Hint="Underline (Ctrl+U)" Toggle
-                                 Active="Format.Underline" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleUnderline())" />
+                        <RibbonSeparator />
 
-            <OfficeToolbarButton Icon="OfficeIcon.Strikethrough" Hint="Strikethrough" Toggle
-                                 Active="Format.Strike" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleStrikethrough())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Bulleted list" Icon="@Ico(OfficeIcon.BulletList)"
+                                            Checked="@(Format.List == ListStyle.Bullet)" Disabled="Disabled"
+                                            Clicked="_ => Run(c => c.ToggleBulletList())" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Numbered list" Icon="@Ico(OfficeIcon.NumberedList)"
+                                            Checked="@(Format.List == ListStyle.Numbered)" Disabled="Disabled"
+                                            Clicked="_ => Run(c => c.ToggleNumberedList())" />
 
-            <span class="doc-sep"></span>
+                        @* Enabled only inside a list, because that is the only thing they move. Word
+                           greys them out the same way rather than repurposing them as paragraph
+                           indent, which would make one button mean two things by caret position. *@
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Outdent (Shift+Tab)" Icon="@Ico(OfficeIcon.Outdent)"
+                                      Disabled="@(Disabled || Format.List == ListStyle.None || Format.ListLevel == 0)"
+                                      Clicked="() => Run(c => c.ChangeListLevel(-1))" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Indent (Tab)" Icon="@Ico(OfficeIcon.Indent)"
+                                      Disabled="@(Disabled || Format.List == ListStyle.None)"
+                                      Clicked="() => Run(c => c.ChangeListLevel(1))" />
+                    </RibbonGroup>
 
-            <ColorPickerButton Text="Text colour"
-                               SelectedColor="@ColorHex"
-                               ShowOpacity="false"
-                               Disabled="Disabled"
-                               SelectedColorChanged="OnColorChanged" />
+                    @*
+                        Proofing rides on Home rather than a Review tab of its own. Spelling is
+                        something you do while writing, not a separate pass, and a tab holding three
+                        buttons costs a click to reach and leaves most of a bar empty when you arrive.
+                    *@
+                    <RibbonGroup Title="Proofing" Priority="70">
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Check spelling"
+                                            Icon="@Ico(OfficeIcon.SpellCheck)"
+                                            Checked="@SpellCheckOn" Disabled="Disabled"
+                                            Clicked="_ => ToggleSpellCheck()" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Previous misspelling"
+                                      Icon="@Ico(OfficeIcon.Previous)"
+                                      Disabled="@(Disabled || !SpellCheckOn)"
+                                      Clicked="() => GoToSpellingError(backwards: true)" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Next misspelling"
+                                      Icon="@Ico(OfficeIcon.Next)"
+                                      Disabled="@(Disabled || !SpellCheckOn)"
+                                      Clicked="() => GoToSpellingError(backwards: false)" />
+                    </RibbonGroup>
 
-            <OfficeHighlightButton Current="Format.Highlight"
-                                   Disabled="Disabled"
-                                   ShowTooltips="ShowToolbarTooltips"
-                                   Picked="OnHighlightPicked" />
+                    @if (ToolbarContent != null)
+                    {
+                        @* Never folds into an overflow button: whatever the host added is theirs. *@
+                        <RibbonGroup Title="@ToolbarContentTitle" Priority="200" CanCollapse="false">
+                            <RibbonContent>@ToolbarContent</RibbonContent>
+                        </RibbonGroup>
+                    }
+                </RibbonTab>
 
-            <span class="doc-sep"></span>
+                @*
+                    Two tabs, not four. Home is what you do to the text under the caret; Layout is what
+                    you do to the page it sits on. Splitting further gave Insert and Layout one group
+                    each, which is a click to reach a bar with a single button on it.
+                *@
+                <RibbonTab Title="Layout" Key="layout">
+                    <RibbonGroup Title="Page Setup" Priority="100">
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficePageMarginsMenu Disabled="Disabled"
+                                                   ShowTooltips="ShowToolbarTooltips"
+                                                   Current="@Margins"
+                                                   MarginsPicked="OnMarginsPicked" />
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <OfficeInsertMenu Disabled="Disabled"
-                              ShowTooltips="ShowToolbarTooltips"
-                              ShapePicked="OnShapePicked"
-                              TablePicked="OnTablePicked"
-                              ImagePicked="OnImagePicked"
-                              ImageRejected="DropRejected" />
+                    @*
+                        Print layout is a way of looking at the document, so it is a toggle rather than
+                        two buttons: the pressed state is what says which of the two you are in.
+                    *@
+                    <RibbonGroup Title="Page" Priority="90">
+                        @* Two toggles rather than one, because a page is one of two things rather than
+                           on or off - a single "Landscape" button leaves the user reading its pressed
+                           state backwards to work out what portrait would be. *@
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Portrait"
+                                            Icon="@Ico(OfficeIcon.Portrait)"
+                                            Checked="@(Orientation == PageOrientation.Portrait)"
+                                            Disabled="Disabled"
+                                            Clicked="_ => Run(c => c.SetPageOrientation(PageOrientation.Portrait))" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Landscape"
+                                            Icon="@Ico(OfficeIcon.Landscape)"
+                                            Checked="@(Orientation == PageOrientation.Landscape)"
+                                            Disabled="Disabled"
+                                            Clicked="_ => Run(c => c.SetPageOrientation(PageOrientation.Landscape))" />
 
-            <span class="doc-sep"></span>
+                        <RibbonSeparator />
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignLeft" Hint="Align left" Toggle
-                                 Active="Format.Alignment == TextAlignment.Left" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Left)" />
+                        <RibbonToggleButton Size="RibbonItemSize.Small" Tooltip="Print layout"
+                                            Icon="@Ico(OfficeIcon.PrintLayout)"
+                                            Checked="@(LayoutMode == DocumentPageLayout.Print)"
+                                            Clicked="_ => TogglePrintLayout()" />
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignCenter" Hint="Centre" Toggle
-                                 Active="Format.Alignment == TextAlignment.Center" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Center)" />
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeWatermarkButton Disabled="Disabled"
+                                                   ShowTooltips="ShowToolbarTooltips"
+                                                   HasWatermark="@(Watermark is not null)"
+                                                   Picked="OnWatermarkPicked"
+                                                   Rejected="DropRejected" />
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignRight" Hint="Align right" Toggle
-                                 Active="Format.Alignment == TextAlignment.Right" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Right)" />
+                    <RibbonGroup Title="Zoom" Priority="80">
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Zoom out"
+                                      Icon="@Ico(OfficeIcon.ZoomOut)"
+                                      Disabled="@(!CanZoomOut)" Clicked="() => StepZoom(-1)" />
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <span class="zoom-readout">@($"{ZoomLevel * 100:0}%")</span>
+                        </RibbonContent>
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Zoom in"
+                                      Icon="@Ico(OfficeIcon.ZoomIn)"
+                                      Disabled="@(!CanZoomIn)" Clicked="() => StepZoom(1)" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Fit the page to the window"
+                                      Icon="@Ico(OfficeIcon.FitWidth)"
+                                      Clicked="FitToWidth" />
+                    </RibbonGroup>
+                </RibbonTab>
 
-            <OfficeToolbarButton Icon="OfficeIcon.AlignJustify" Hint="Justify" Toggle
-                                 Active="Format.Alignment == TextAlignment.Justify" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Align(TextAlignment.Justify)" />
+                @*
+                    Insert stands on its own now that it has something to hold: what goes *in* the
+                    document (a table, a picture) and what goes *around* it (the running head and foot,
+                    the number on every page, and the break between two of them).
+                *@
+                <RibbonTab Title="Insert" Key="insert">
+                    <RibbonGroup Title="Objects" Priority="100">
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeInsertMenu Disabled="Disabled"
+                                              ShowTooltips="ShowToolbarTooltips"
+                                              ShowShapes="false"
+                                              ShapePicked="OnShapePicked"
+                                              TablePicked="OnTablePicked"
+                                              ImagePicked="OnImagePicked"
+                                              ImageRejected="DropRejected" />
+                        </RibbonContent>
+                    </RibbonGroup>
 
-            <span class="doc-sep"></span>
+                    <RibbonGroup Title="Header &amp; Footer" Priority="90">
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Header"
+                                      Icon="@Ico(OfficeIcon.Header)"
+                                      Disabled="Disabled" Clicked="() => OpenChrome(header: true)" />
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Footer"
+                                      Icon="@Ico(OfficeIcon.Footer)"
+                                      Disabled="Disabled" Clicked="() => OpenChrome(header: false)" />
 
-            <OfficeToolbarButton Icon="OfficeIcon.BulletList" Hint="Bulleted list" Toggle
-                                 Active="Format.List == ListStyle.Bullet" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleBulletList())" />
+                        @* A menu, not a button: a page number has a place and a form, and picking them
+                           afterwards means finding the header you just wrote into. *@
+                        <RibbonMenuButton Size="RibbonItemSize.Small" Tooltip="Page number"
+                                          Icon="@Ico(OfficeIcon.PageNumber)"
+                                          Disabled="Disabled" Menu="PageNumberMenu" />
+                    </RibbonGroup>
 
-            <OfficeToolbarButton Icon="OfficeIcon.NumberedList" Hint="Numbered list" Toggle
-                                 Active="Format.List == ListStyle.Numbered" Disabled="Disabled" ShowTooltip="ShowToolbarTooltips"
-                                 Clicked="() => Run(c => c.ToggleNumberedList())" />
+                    <RibbonGroup Title="Breaks" Priority="80">
+                        <RibbonButton Size="RibbonItemSize.Small" Tooltip="Page break (Ctrl+Enter)"
+                                      Icon="@Ico(OfficeIcon.PageBreak)"
+                                      Disabled="Disabled" Clicked="() => Run(c => c.InsertPageBreak())" />
+                    </RibbonGroup>
+                </RibbonTab>
 
-            @*
-                Only enabled inside a list, because that is the only thing they move. Word greys them
-                out the same way rather than repurposing them as paragraph indent, which would make
-                one button mean two things depending on where the caret happens to be.
-            *@
-            <OfficeToolbarButton Icon="OfficeIcon.Outdent" Hint="Outdent (Shift+Tab)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || Format.List == ListStyle.None || Format.ListLevel == 0)"
-                                 Clicked="() => Run(c => c.ChangeListLevel(-1))" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.Indent" Hint="Indent (Tab)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || Format.List == ListStyle.None)"
-                                 Clicked="() => Run(c => c.ChangeListLevel(1))" />
-
-            <span class="doc-sep"></span>
-
-            <OfficePageMarginsMenu Disabled="Disabled"
-                                   ShowTooltips="ShowToolbarTooltips"
-                                   Current="@Margins"
-                                   MarginsPicked="OnMarginsPicked" />
-
-            <span class="doc-sep"></span>
-
-            <OfficeToolbarButton Icon="OfficeIcon.Undo" Hint="Undo (Ctrl+Z)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || !(editor?.Controller?.CanUndo ?? false))"
-                                 Clicked="() => Run(c => c.Undo())" />
-
-            <OfficeToolbarButton Icon="OfficeIcon.Redo" Hint="Redo (Ctrl+Shift+Z)" ShowTooltip="ShowToolbarTooltips"
-                                 Disabled="@(Disabled || !(editor?.Controller?.CanRedo ?? false))"
-                                 Clicked="() => Run(c => c.Redo())" />
-
-            @ToolbarContent
+                <OfficeShapesTab Disabled="Disabled" Picked="OnShapePicked" />
+            </ChildContent>
+        </Ribbon>
         </div>
-        </ShinyToolbar>
     }
 
     <div class="doc-surface">
         <DocumentEditor @ref="editor"
                         Document="Document"
                         Theme="Theme"
-                        Zoom="Zoom"
-                        PageLayout="PageLayout"
+                        Zoom="ZoomLevel"
+                        Watermark="Watermark"
+                        PageLayout="LayoutMode"
                         ReadOnly="ReadOnly"
                         SpellChecker="SpellChecker"
-                        SpellCheckEnabled="SpellCheckEnabled"
+                        SpellCheckEnabled="SpellCheckOn"
                         AllowFileDrop="AllowFileDrop"
                         DropRejected="DropRejected"
                         SelectionChanged="StateHasChanged"
                         DocumentChanged="OnDocumentChanged" />
+
+    @*
+        A small prompt rather than editing the head in place on the page. Header and footer are
+        separate stories in the document - their own parts, laid out per page and repeated - so making
+        them editable in the canvas means a second caret, a second selection and a way in and out of
+        them. Asking for the line is the whole of what most documents need, and it is undoable like any
+        other command.
+    *@
+    @if (this.chrome is { } editing)
+    {
+        <div class="chrome-backdrop" @onclick="() => this.chrome = null"></div>
+
+        <div class="chrome-prompt" role="dialog"
+             aria-label="@(editing.Header ? "Header" : "Footer")">
+            <label class="chrome-label" for="chrome-text">
+                @(editing.Header ? "Shown at the top of every page" : "Shown at the bottom of every page")
+            </label>
+
+            <input id="chrome-text"
+                   class="chrome-input"
+                   value="@editing.Text"
+                   @oninput="e => this.chrome = (editing.Header, e.Value?.ToString() ?? string.Empty)"
+                   @onkeydown="OnChromeKeyDown" />
+
+            <div class="chrome-actions">
+                <button type="button" @onclick="() => this.chrome = null">Cancel</button>
+                <button type="button" class="chrome-primary" @onclick="CommitChrome">Set</button>
+            </div>
+        </div>
+    }
     </div>
 </div>
 
@@ -175,9 +322,13 @@
 
     [Parameter] public WordDocument? Document { get; set; }
 
-    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+    /// <summary>Forwarded to the surface. Unset there means "follow the page's scheme".</summary>
+    [Parameter] public DocumentTheme? Theme { get; set; }
 
     [Parameter] public double Zoom { get; set; } = 1.0;
+
+    /// <summary>Raised when the Layout tab's zoom controls are used, so a host can `@bind` to it.</summary>
+    [Parameter] public EventCallback<double> ZoomChanged { get; set; }
 
     /// <summary>
     /// Continuous column, or sheets of paper with the document's own headers and footers. Print by
@@ -185,12 +336,18 @@
     /// </summary>
     [Parameter] public DocumentPageLayout PageLayout { get; set; } = DocumentPageLayout.Print;
 
+    /// <summary>Raised when the Layout tab's print-layout toggle is used, so a host can `@bind`.</summary>
+    [Parameter] public EventCallback<DocumentPageLayout> PageLayoutChanged { get; set; }
+
     [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Passed straight through to the inner <see cref="DocumentEditor"/>.</summary>
     [Parameter] public ISpellChecker? SpellChecker { get; set; }
 
     [Parameter] public bool SpellCheckEnabled { get; set; } = true;
+
+    /// <summary>Raised when the Review tab's toggle is used, so a host can `@bind` to it.</summary>
+    [Parameter] public EventCallback<bool> SpellCheckEnabledChanged { get; set; }
 
     [Parameter] public bool ShowToolbar { get; set; } = true;
 
@@ -235,10 +392,37 @@
         8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72
     ];
 
+    /// <summary>Group title for <see cref="ToolbarContent"/>.</summary>
+    [Parameter] public string ToolbarContentTitle { get; set; } = "Actions";
+
+    /// <summary>
+    /// Whether the bar shows the ribbon's tab strip, and with it the collapse chevron.
+    /// </summary>
+    /// <remarks>
+    /// Off by default. This is a formatting bar wrapped around an editor, not an application's whole
+    /// chrome, and there is one tab to show - a strip carrying a single "Home" is noise. Turn it on
+    /// when the editor is the application rather than a component in one.
+    /// </remarks>
+    /// <summary>
+    /// Draw the tab strip. On here, unlike the other two bars.
+    /// </summary>
+    /// <remarks>
+    /// A strip carrying a single "Home" is noise, which is why the spreadsheet and slide bars leave it
+    /// off. This one has Home, Insert, Layout and Review — with it off, three of the four are simply
+    /// unreachable.
+    /// </remarks>
+    [Parameter] public bool ShowRibbonTabs { get; set; } = true;
+
+    /// <summary>A shared-set icon as the ribbon takes it: inline SVG markup, not a MarkupString.</summary>
+    static string Ico(OfficeIcon icon) => OfficeToolbarIcons.Get(icon).Value;
+
     [Parameter] public double ToolbarHeight { get; set; } = 44;
-    [Parameter] public string ToolbarBackground { get; set; } = "#FFFFFF";
-    [Parameter] public string ToolbarForeground { get; set; } = "#1F2937";
-    [Parameter] public string ToolbarBorder { get; set; } = "#E5E7EB";
+    // Theme tokens rather than literals: the bar sits in the app's chrome, not on the page the
+    // editor is drawing, so it has to follow light/dark with everything else. A literal white
+    // default left a stark white bar wrapped around a dark editor in dark mode.
+    [Parameter] public string ToolbarBackground { get; set; } = "var(--shiny-color-surface-container-low, #FFFFFF)";
+    [Parameter] public string ToolbarForeground { get; set; } = "var(--shiny-color-on-surface, #1F2937)";
+    [Parameter] public string ToolbarBorder { get; set; } = "var(--shiny-color-outline-variant, #E5E7EB)";
 
     [Parameter] public string? Class { get; set; }
     [Parameter] public string? Style { get; set; }
@@ -254,8 +438,189 @@
 
     CaretFormat Format => this.editor?.Controller?.CaretFormat ?? CaretFormat.Default;
 
+    /// <summary>
+    /// Whether the spelling pass is running: the toolbar's own choice, or the host's if it has not
+    /// been overridden here.
+    /// </summary>
+    /// <remarks>
+    /// The override exists so the Review tab's toggle works in a host that passed
+    /// <c>SpellCheckEnabled</c> one-way. Writing the parameter itself would be undone by the next
+    /// render; a host that binds gets its value back through <c>SpellCheckEnabledChanged</c> and the
+    /// override then agrees with it.
+    /// </remarks>
+    bool SpellCheckOn => this.spellCheckOverride ?? this.SpellCheckEnabled;
+
+    bool? spellCheckOverride;
+
+    DocumentPageLayout? layoutOverride;
+
+    /// <summary>
+    /// The layout in force: the toolbar's own choice, or the host's if it has not been overridden.
+    /// </summary>
+    /// <remarks>Same shape as the spelling toggle and the zoom, and for the same reason.</remarks>
+    DocumentPageLayout LayoutMode => this.layoutOverride ?? this.PageLayout;
+
+    async Task TogglePrintLayout()
+    {
+        var next = this.LayoutMode == DocumentPageLayout.Print
+            ? DocumentPageLayout.Reflow
+            : DocumentPageLayout.Print;
+
+        this.layoutOverride = next;
+
+        if (this.Controller is { } controller)
+            controller.PageLayout = next;
+
+        await this.PageLayoutChanged.InvokeAsync(next);
+    }
+
+    List<RibbonMenuEntry> PageNumberMenu =>
+    [
+        .. new[] { PageNumberPlacement.Footer, PageNumberPlacement.Header }
+            .SelectMany(placement => new[] { PageNumberPosition.Left, PageNumberPosition.Center, PageNumberPosition.Right }
+                .Select(position => new RibbonMenuEntry
+                {
+                    Text = $"{placement} — {position}",
+                    IsDisabled = this.Disabled,
+                    OnClick = EventCallback.Factory.Create(this, () => this.Run(c => c.InsertPageNumber(placement, position)))
+                }))
+    ];
+
+    /// <summary>The header or footer being written, or null when the prompt is closed.</summary>
+    (bool Header, string Text)? chrome;
+
+    void OpenChrome(bool header)
+    {
+        if (this.Controller is not { } controller || this.Disabled)
+            return;
+
+        this.chrome = (header, controller.ChromeText(header) ?? string.Empty);
+    }
+
+    /// <summary>Enter commits, Escape abandons — the two keys a one-field prompt owes the keyboard.</summary>
+    async Task OnChromeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await this.CommitChrome();
+        else if (e.Key == "Escape")
+            this.chrome = null;
+    }
+
+    async Task CommitChrome()
+    {
+        if (this.chrome is not { } editing || this.Controller is not { } controller)
+            return;
+
+        // An empty line removes it, which is the only way back out of having one.
+        var text = string.IsNullOrWhiteSpace(editing.Text) ? null : editing.Text;
+
+        if (editing.Header)
+            controller.SetHeaderText(text);
+        else
+            controller.SetFooterText(text);
+
+        this.chrome = null;
+        await this.DocumentChanged.InvokeAsync();
+    }
+
+    /// <summary>The zoom stops the buttons step through.</summary>
+    /// <remarks>
+    /// Fixed stops rather than a multiplier: a percentage that lands on 87% is a worse answer than one
+    /// that lands on 100%, and these are the ones a reader recognises from every other document app.
+    /// </remarks>
+    static readonly double[] ZoomStops = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
+
+    double? zoomOverride;
+
+    /// <summary>
+    /// The zoom in force: the toolbar's own, or the host's if it has not been overridden here.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as the spelling toggle, and for the same reason - writing the <c>Zoom</c> parameter
+    /// itself would be undone by the next render in a host that passed it one-way.
+    /// </remarks>
+    double ZoomLevel => this.zoomOverride ?? this.Zoom;
+
+    bool CanZoomIn => this.ZoomLevel < ZoomStops[^1] - 0.001;
+
+    bool CanZoomOut => this.ZoomLevel > ZoomStops[0] + 0.001;
+
+    async Task StepZoom(int direction)
+    {
+        var current = this.ZoomLevel;
+
+        var next = direction > 0
+            ? ZoomStops.FirstOrDefault(z => z > current + 0.001, ZoomStops[^1])
+            : ZoomStops.LastOrDefault(z => z < current - 0.001, ZoomStops[0]);
+
+        await this.SetZoomAsync(next);
+    }
+
+    /// <summary>
+    /// Sets the zoom so the page exactly spans the window.
+    /// </summary>
+    /// <remarks>
+    /// Only in print. Reflow already fits the window by construction - it re-wraps to the measure - so
+    /// there is nothing for this to do there.
+    /// </remarks>
+    async Task FitToWidth()
+    {
+        if (this.Controller is not { IsPaginated: true } controller)
+            return;
+
+        var page = controller.PageWidth;
+        var available = controller.Viewport.Width * controller.ViewScale;
+
+        if (page <= 0 || available <= 0)
+            return;
+
+        await this.SetZoomAsync(available / page);
+    }
+
+    async Task SetZoomAsync(double value)
+    {
+        this.zoomOverride = value;
+
+        if (this.Controller is { } controller)
+            controller.Zoom = value;
+
+        await this.ZoomChanged.InvokeAsync(value);
+    }
+
+    async Task ToggleSpellCheck()
+    {
+        var next = !this.SpellCheckOn;
+        this.spellCheckOverride = next;
+
+        if (this.Controller is { } controller)
+            controller.IsSpellCheckEnabled = next;
+
+        await this.SpellCheckEnabledChanged.InvokeAsync(next);
+    }
+
+    /// <summary>
+    /// Steps to the next misspelling and selects it, then offers what can be done about it.
+    /// </summary>
+    /// <remarks>
+    /// The menu is the point. Stepping to an error and stopping there leaves the user with a selected
+    /// word and the same problem they started with.
+    /// </remarks>
+    async Task GoToSpellingError(bool backwards)
+    {
+        if (this.Controller is not { } controller || this.Disabled)
+            return;
+
+        if (await controller.GoToNextSpellingErrorAsync(backwards) is null)
+            return;
+
+        if (this.editor is { } surface)
+            await surface.ShowSpellingMenuForCaretAsync();
+    }
+
     /// <summary>The document's current margins, for the gallery to mark. Null until one is open.</summary>
     PageMargins? Margins => this.editor?.Controller?.PageMargins;
+
+    PageOrientation Orientation => this.editor?.Controller?.PageOrientation ?? PageOrientation.Portrait;
 
     string ColorHex => OfficeColors.ToHex(this.Format.Color);
 
@@ -323,4 +688,34 @@
         if (this.DocumentChanged.HasDelegate)
             await this.DocumentChanged.InvokeAsync();
     }
+
+    /// <summary>
+    /// The colour this control wears: its ribbon's header band and tab underline.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see cref="OfficeAccent.Document"/> - the colour Microsoft's own Word wears,
+    /// because that is what a user reads as "a document" before any label has been looked at. Set it to
+    /// take on the app's own brand instead, or to <c>null</c> to leave the bar on the theme's neutrals
+    /// like the rest of the chrome.
+    /// </remarks>
+    [Parameter] public OfficeAccent? Accent { get; set; } = OfficeAccent.Document;
+
+    string? AccentBackground => this.Accent is { } a ? Css(a.Color) : null;
+
+    string? AccentInk => this.Accent is { } a ? Css(a.Ink) : null;
+
+    static string Css(ArgbColor value)
+        => $"rgba({value.R},{value.G},{value.B},{(value.A / 255d).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)})";
+
+
+    /// <summary>A picture drawn behind the page. Forwarded to the surface.</summary>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
+    Task OnWatermarkPicked(OfficeWatermark? mark)
+    {
+        this.Watermark = mark;
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    }
+
 }

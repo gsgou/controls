@@ -1,4 +1,4 @@
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// How much room an item asks for inside its <see cref="RibbonGroup"/>.

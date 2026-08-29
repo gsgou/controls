@@ -16,7 +16,11 @@
     corner to it, which is all the interaction the gesture actually needs, and it works from a
     keyboard and a screen reader as well as from a mouse.
 *@
-<div class="shiny-office-picker">
+<div class="shiny-office-picker" data-popover-host>
+    @* Off wherever a Shapes ribbon tab carries the gallery instead - the panel is the thing that tab
+       replaced, and leaving both would be two ways in to the same twenty shapes. *@
+    @if (this.ShowShapes)
+    {
     <Tooltip Text="Shapes" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
         <button type="button"
                 class="shiny-office-btn"
@@ -27,6 +31,7 @@
                 disabled="@this.Disabled"
                 @onclick="() => this.Toggle(Panel.Shapes)">@OfficeToolbarIcons.Get(OfficeIcon.Shape)</button>
     </Tooltip>
+    }
 
     <Tooltip Text="Table" Placement="TooltipPlacement.Bottom" Trigger="@this.TooltipTriggerMode">
         <button type="button"
@@ -59,7 +64,7 @@
 
     @if (this.panel == Panel.Shapes)
     {
-        <div class="shiny-office-panel" role="dialog" aria-label="Shapes">
+        <div class="shiny-office-panel" popover="manual" data-popover role="dialog" aria-label="Shapes">
             <div class="shape-grid">
                 @foreach (var (geometry, glyph, name) in Gallery)
                 {
@@ -75,7 +80,7 @@
 
     @if (this.panel == Panel.Table)
     {
-        <div class="shiny-office-panel" role="dialog" aria-label="Table size">
+        <div class="shiny-office-panel" popover="manual" data-popover role="dialog" aria-label="Table size">
             <div class="table-grid" @onpointerleave="() => this.Hover(0, 0)">
                 @for (var r = 1; r <= GridMax; r++)
                 {
@@ -161,6 +166,9 @@
 
     /// <summary>Whether the three icon-only triggers carry a tooltip. See the editor views.</summary>
     [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>Offer the shapes gallery. Off where a Shapes ribbon tab already carries it.</summary>
+    [Parameter] public bool ShowShapes { get; set; } = true;
 
     /// <summary>
     /// Muting the tooltip rather than leaving it out, because the alternative is writing each of

@@ -50,7 +50,9 @@ public partial class DocumentViewerPage : ContentPage
     void OnToggleTheme(object? sender, EventArgs e)
     {
         this.dark = !this.dark;
-        this.Viewer.Theme = this.dark ? DocumentTheme.Dark : DocumentTheme.Light;
+        // null, not DocumentTheme.Light: unset means "follow the app appearance", which is the
+        // behaviour worth demoing. Passing Light would pin it and hide that.
+        this.Viewer.Theme = this.dark ? DocumentTheme.Dark : null;
     }
 
     void OnScrollTop(object? sender, EventArgs e) => this.Viewer.Controller?.ScrollTo(0);

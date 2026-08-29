@@ -96,3 +96,25 @@ are not - their order lives in your collection, so move `Item` to `ToIndex` your
 The gesture is pan-driven on every platform (the platform `DragGestureRecognizer` is broken on Mac
 Catalyst and absent from the AppKit and GTK4 hosts, and reports no pointer position where it does
 work), with native hooks on iOS and Android that stop the enclosing scroller from stealing the drag.
+
+## Section headers
+
+A section title is drawn as a grouped-table header: uppercase, small, tracked, in
+`on-surface-variant` on a `surface-container` band, matching the Blazor `TableView`.
+
+| Property | Default | Notes |
+| --- | --- | --- |
+| `HeaderTextTransform` | `Uppercase` | MAUI only. `TextTransform`, so it changes how the title is **drawn** and never what `Title` holds — bindings, accessibility and tests still see the string you set. Set `None` for sentence case. |
+| `HeaderCharacterSpacing` | `0.5` | MAUI only. Uppercase small text needs a little air; Blazor applies the same tracking in CSS. |
+| `HeaderFontSize` | unset | Resolves to the theme's `BodySmallSize`. |
+| `HeaderBackgroundColor`, `HeaderTextColor`, `FooterTextColor`, `SeparatorColor`, `SectionSeparatorColor` | unset | Resolve from theme tokens and follow a theme swap or an appearance flip live. |
+
+**Why the colours changed.** These defaults used to be literal iOS system greys chosen from
+`Application.Current.RequestedTheme` at render time. That was wrong twice: a theme pack restyled
+every other part of the table and left the headers in iOS grey, and — because the colour was read
+once, while the section was being built — a theme swap or an appearance flip arriving after the
+first render left the old value on screen. The visible symptom was a near-black band sitting between
+the sections of a light table, or headers drifting out of step with the rows under them. They are
+bound to theme tokens now, which re-resolve on both.
+
+Setting any of them still pins it, as before. See [Styling & theming](styling.md#dark-mode).

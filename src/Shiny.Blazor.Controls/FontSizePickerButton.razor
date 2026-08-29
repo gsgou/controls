@@ -7,7 +7,7 @@
     not the set of legal ones, and 13pt has to be reachable without adding it to the list first.
 *@
 
-<div class="shiny-fontsizepickerbutton @Class" style="@Style">
+<div class="shiny-fontsizepickerbutton @Class" style="@Style" data-popover-host>
     <input class="shiny-fontsizepickerbutton-input"
            type="text"
            inputmode="decimal"
@@ -33,7 +33,13 @@
     {
         <div class="shiny-fontsizepickerbutton-backdrop" @onclick="Close"></div>
 
-        <div class="shiny-fontsizepickerbutton-popover">
+        @*
+            popover + the marker so a host that clips - a ribbon body scrolls horizontally, and CSS
+            makes that a clipping context on both axes - can raise this into the top layer and place it
+            itself. Inert everywhere else: without someone calling showPopover the attribute does
+            nothing, so the panel still lays out under the trigger exactly as before.
+        *@
+        <div class="shiny-fontsizepickerbutton-popover" popover="manual" data-popover>
             <FontSizePicker AvailableFontSizes="AvailableFontSizes"
                             SelectedFontSize="SelectedFontSize"
                             PreviewText="@PreviewText"

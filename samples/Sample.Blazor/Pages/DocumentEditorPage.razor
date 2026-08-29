@@ -21,7 +21,7 @@
 <div class="toolbar">
     <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>
     <label class="chk"><input type="checkbox" @bind="spellCheck" /> Spell check</label>
-    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@Status</span>
 </div>
 
@@ -55,7 +55,7 @@
     {
         <DocumentEditorView @ref="view"
                             Document="document"
-                            Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                            Theme="@(dark ? DocumentTheme.Dark : null)"
                             PageLayout="pageLayout"
                             Zoom="zoom"
                             SpellChecker="checker"
@@ -66,7 +66,7 @@
     {
         <DocumentEditor @ref="editor"
                         Document="document"
-                        Theme="@(dark ? DocumentTheme.Dark : DocumentTheme.Light)"
+                        Theme="@(dark ? DocumentTheme.Dark : null)"
                         PageLayout="pageLayout"
                         Zoom="zoom"
                         SpellChecker="checker"

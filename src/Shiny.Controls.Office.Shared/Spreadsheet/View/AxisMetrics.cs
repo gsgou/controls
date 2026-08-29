@@ -81,6 +81,58 @@ public sealed class AxisMetrics
         this.dirty = true;
     }
 
+    /// <summary>
+    /// Moves the sizes at or past <paramref name="at"/> along, so they stay with the rows or columns
+    /// a structural insert or delete moved.
+    /// </summary>
+    /// <remarks>
+    /// Without this the geometry stops describing the sheet: inserting a row above a tall one leaves
+    /// the height behind on the row that took its place, and the grid then paints that row at the
+    /// wrong height and every row below it at the wrong offset.
+    /// </remarks>
+    /// <param name="count">Positive to insert that many entries at <paramref name="at"/>, negative to delete.</param>
+    public void Shift(int at, int count)
+    {
+        if (count == 0)
+            return;
+
+        // Read out, clear, write back: entries move onto indexes the loop has not visited yet, so
+        // editing the maps in place would have a shifted entry overwrite one still waiting its turn.
+        var sizes = this.overrides.ToArray();
+        var hiddenIndexes = this.hidden.ToArray();
+
+        this.overrides.Clear();
+        this.hidden.Clear();
+
+        foreach (var (index, size) in sizes)
+        {
+            if (this.Moved(index, at, count) is { } moved)
+                this.overrides[moved] = size;
+        }
+
+        foreach (var index in hiddenIndexes)
+        {
+            if (this.Moved(index, at, count) is { } moved)
+                this.hidden.Add(moved);
+        }
+
+        this.dirty = true;
+    }
+
+    /// <summary>Where an index ends up, or null when the edit took it off the end of the axis.</summary>
+    int? Moved(int index, int at, int count)
+    {
+        if (index < at)
+            return index;
+
+        // A delete takes the band itself with it; there is no index left for those entries to be at.
+        if (count < 0 && index < at - count)
+            return null;
+
+        var shifted = index + count;
+        return shifted >= this.Count ? null : shifted;
+    }
+
     /// <summary>The distance from the origin to the leading edge of <paramref name="index"/>.</summary>
     public double OffsetOf(int index)
     {

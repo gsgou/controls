@@ -69,6 +69,7 @@
     /// component and leaves the old pixels on screen — the toggle appears to do nothing at all.
     /// </remarks>
     SlideTheme? paintedTheme;
+    ThemeSchemeWatcher scheme = null!;
 
     double dpr = 1;
 
@@ -77,7 +78,13 @@
     /// <summary>The deck to edit. Must have been opened with <c>editable: true</c>.</summary>
     [Parameter] public SlideDeck? Deck { get; set; }
 
-    [Parameter] public SlideTheme Theme { get; set; } = SlideTheme.Light;
+    /// <summary>
+    /// Chrome colours. Left unset the surface follows the page's light/dark scheme;
+    /// setting it pins the choice, including to <see cref="SlideTheme.Light"/>.
+    /// </summary>
+    [Parameter] public SlideTheme? Theme { get; set; }
+
+    SlideTheme EffectiveTheme => OfficeScheme.Resolve(this.scheme, this.Theme);
 
     [Parameter] public int SlideIndex { get; set; }
 
@@ -111,12 +118,21 @@
     /// <summary>The live controller — selection, caret, formatting commands, undo.</summary>
     public SlideEditorController? Controller => this.controller;
 
+    protected override void OnInitialized()
+        // The canvas only redraws when told to, so a scheme flip has to invalidate it explicitly.
+        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        {
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+
     protected override void OnParametersSet()
     {
         // First, before any of the early returns below, for the reason on paintedTheme.
-        if (this.paintedTheme != this.Theme)
+        if (this.paintedTheme != this.EffectiveTheme)
         {
-            this.paintedTheme = this.Theme;
+            this.paintedTheme = this.EffectiveTheme;
             this.canvas?.Invalidate();
         }
 
@@ -191,7 +207,7 @@
     void OnPaint(SKPaintSurfaceEventArgs e)
     {
         var info = e.Info;
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         var surface = e.Surface.Canvas;
 
         surface.Clear(new SKColor(theme.Surround.R, theme.Surround.G, theme.Surround.B));
@@ -216,6 +232,7 @@
 
         this.painter.Paint(surface, new SlidePaintRequest
         {
+            Watermark = this.Watermark,
             Slide = placement.Slide,
             SlideWidth = this.controller.Deck.SlideWidth,
             SlideHeight = this.controller.Deck.SlideHeight,
@@ -513,6 +530,10 @@
     {
         if (firstRender)
         {
+            // Before the DPR read: the canvas paints its first frame off this, and starting the
+            // watch second would flash a white page in a dark app.
+            await this.scheme.StartAsync(this.host);
+
             try
             {
                 this.dpr = await this.Js.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
@@ -652,6 +673,8 @@
             this.controller.Edited -= this.OnEdited;
         }
 
+        await this.scheme.DisposeAsync();
+
         try
         {
             if (this.inputModule is not null && this.inputHandle is not null)
@@ -675,4 +698,15 @@
         this.painter?.Dispose();
         this.measurer?.Dispose();
     }
+
+    /// <summary>
+    /// A picture drawn behind the content - a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
 }

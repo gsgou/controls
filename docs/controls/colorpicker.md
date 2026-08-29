@@ -54,3 +54,15 @@ Blazor pins the popover at `width: 320px`, capped at `calc(100vw - 16px)` so a n
 fits. The cap is deliberately viewport-relative: a percentage would resolve against the 30px trigger.
 MAUI gives the picker a `MinimumWidthRequest` of 320 rather than a `WidthRequest`, so it still fills a
 host that is wider.
+
+## Sizing the button
+
+On MAUI the trigger shrink-wraps its label, down to a minimum width, so a button dropped into a stack
+does not stretch across the row. Set a `WidthRequest` and the trigger fills it instead — which is what
+a toolbar sizing several controls to a common width wants. Without that it would draw at its minimum
+inside the width you asked for, and the remainder would show as a gap beside the button.
+
+```xml
+<shiny:ColorPickerButton WidthRequest="150" />
+```
+

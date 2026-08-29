@@ -80,6 +80,37 @@ public partial class ImageEditor : IAsyncDisposable
     [Parameter] public EventCallback<double> ZoomLevelChanged { get; set; }
     [Parameter] public bool AllowFontSelection { get; set; }
     [Parameter] public bool AllowFontSizeSelection { get; set; }
+    // The ribbon's selected tab, held here so a re-render (a colour pick, an undo) does not throw the
+    // user back to Home. Bound with @bind-SelectedKey.
+    string? ribbonTabKey = "home";
+
+    /// <summary>
+    /// Below this width the ribbon runs dense - one row, every item small, group titles dropped.
+    /// </summary>
+    /// <remarks>
+    /// An expanded ribbon is about a quarter of a phone screen, and this control's whole job is to show
+    /// the picture underneath it. The MAUI editor uses the same 600 and the same reasoning.
+    /// </remarks>
+    const double SimplifiedBreakpoint = 600;
+
+    /// <summary>
+    /// CSS decides this on the Blazor side rather than a measured width: a container query on the
+    /// editor is the same rule without a resize observer, and it cannot fall out of step with layout.
+    /// The parameter stays honest for a host that wants to pin one.
+    /// </summary>
+    [Parameter] public RibbonDisplayMode? ToolbarDisplayMode { get; set; }
+
+    // Two-way bound to the ribbon so the collapse chevron sticks: the editor re-renders on every tool
+    // change, and a one-way DisplayMode would push the old value straight back over the user's choice.
+    RibbonDisplayMode ribbonDisplayMode = RibbonDisplayMode.Expanded;
+
+    protected override void OnParametersSet()
+    {
+        // A host that pins a mode wins; otherwise the field holds whatever the user last chose.
+        if (this.ToolbarDisplayMode is { } pinned)
+            this.ribbonDisplayMode = pinned;
+    }
+
     [Parameter] public string DrawStrokeColor { get; set; } = "#ffffff";
     [Parameter] public double DrawStrokeWidth { get; set; } = 3;
     [Parameter] public double TextFontSize { get; set; } = 16;
@@ -89,7 +120,12 @@ public partial class ImageEditor : IAsyncDisposable
     [Parameter] public IEnumerable<double>? AvailableFontSizes { get; set; }
     [Parameter] public EventCallback<string> TextFontFamilyChanged { get; set; }
     [Parameter] public EventCallback<double> TextFontSizeChanged { get; set; }
-    [Parameter] public string ToolbarPosition { get; set; } = "bottom";
+    /// <summary>Where the toolbar sits: <c>"top"</c> (the default) or <c>"bottom"</c>.</summary>
+    /// <remarks>
+    /// Top, since the toolbar became a ribbon: a ribbon is top-of-window chrome, and read upside down -
+    /// tab strip above a body of groups, pinned to the floor - it stops looking like one.
+    /// </remarks>
+    [Parameter] public string ToolbarPosition { get; set; } = "top";
     [Parameter] public RenderFragment? ToolbarTemplate { get; set; }
     [Parameter] public EventCallback<bool> CanUndoChanged { get; set; }
     [Parameter] public EventCallback<bool> CanRedoChanged { get; set; }

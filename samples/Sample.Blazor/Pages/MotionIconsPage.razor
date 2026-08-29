@@ -109,10 +109,17 @@
 
 <section class="demo-section">
     <h2>The whole set</h2>
-    <p>Hover or click any of them. @MotionIconLibrary.Names.Count icons, each with its own motion.</p>
+    <p>
+        Hover or click any of them.
+        @(filtered.Count == names.Count
+            ? $"{names.Count} icons, each with its own motion."
+            : $"{filtered.Count} of {names.Count} icons.")
+    </p>
+
+    <input class="form-control mi-filter" placeholder="Filter icons" @bind="filter" @bind:event="oninput" />
 
     <div class="mi-gallery">
-        @foreach (var name in names)
+        @foreach (var name in filtered)
         {
             <div class="mi-cell">
                 <MotionIcon Icon="@name" Trigger="MotionTrigger.Hover | MotionTrigger.Press"
@@ -125,6 +132,13 @@
 
 @code {
     readonly List<string> names = MotionIconLibrary.Names.OrderBy(x => x, StringComparer.Ordinal).ToList();
+
+    // The set is well past a hundred icons now, so the gallery is filtered rather than scrolled.
+    string filter = "";
+
+    List<string> filtered => String.IsNullOrWhiteSpace(filter)
+        ? names
+        : names.Where(x => x.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
 
     MotionIcon? downloader;
     MotionPreset preset = MotionPreset.Default;

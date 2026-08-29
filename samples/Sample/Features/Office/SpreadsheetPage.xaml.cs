@@ -84,7 +84,9 @@ public partial class SpreadsheetPage : ContentPage
     void OnToggleTheme(object? sender, EventArgs e)
     {
         this.dark = !this.dark;
-        this.Sheet.Theme = this.dark ? SpreadsheetTheme.Dark : SpreadsheetTheme.Light;
+        // null, not SpreadsheetTheme.Light: unset means "follow the app appearance", which is the
+        // behaviour worth demoing. Passing Light would pin it and hide that.
+        this.Sheet.Theme = this.dark ? SpreadsheetTheme.Dark : null;
     }
 
     void OnCellChanged(object? sender, CellRef cell) => this.UpdateFormulaBar();

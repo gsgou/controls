@@ -1,9 +1,11 @@
+using System.Collections.ObjectModel;
 using Shiny.Controls.MotionIcons;
 
 namespace Sample.Features.MotionIcons;
 
 public partial class MotionIconsPage : ContentPage
 {
+    readonly IReadOnlyList<string> allIconNames;
     bool busy;
 
     public MotionIconsPage()
@@ -11,15 +13,37 @@ public partial class MotionIconsPage : ContentPage
         InitializeComponent();
         SampleSourceCode.Attach(this);
 
-        IconNames = MotionIconLibrary.Names.OrderBy(x => x, StringComparer.Ordinal).ToList();
+        this.allIconNames = MotionIconLibrary.Names.OrderBy(x => x, StringComparer.Ordinal).ToList();
+
+        IconNames = [.. this.allIconNames];
         PresetNames = Enum.GetNames<MotionPreset>().ToList();
 
         BindingContext = this;
     }
 
-    public IReadOnlyList<string> IconNames { get; }
+    // The set is well past a hundred icons now, so the gallery is filtered rather than scrolled.
+    public ObservableCollection<string> IconNames { get; }
 
     public IReadOnlyList<string> PresetNames { get; }
+
+    public string GalleryCaption => this.IconNames.Count == this.allIconNames.Count
+        ? $"Hover or tap any of them. {this.allIconNames.Count} icons, each with its own motion."
+        : $"{this.IconNames.Count} of {this.allIconNames.Count} icons.";
+
+    void OnFilterChanged(object? sender, TextChangedEventArgs e)
+    {
+        var filter = e.NewTextValue?.Trim();
+
+        this.IconNames.Clear();
+
+        foreach (var name in this.allIconNames)
+        {
+            if (String.IsNullOrEmpty(filter) || name.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                this.IconNames.Add(name);
+        }
+
+        this.OnPropertyChanged(nameof(this.GalleryCaption));
+    }
 
     void OnToggleBusy(object? sender, EventArgs e)
     {

@@ -65,3 +65,10 @@ out, or set `Accessory` to supply your own bar.
 - Full Markdig support: tables, task lists, strikethrough, fenced code blocks
 - Customizable themes with colors, font sizes, and spacing
 - Custom toolbar item support
+
+## Dark mode
+
+Left unset, `Theme` resolves to `MarkdownTheme.Themed` — every colour in it is a Shiny theme token,
+so the rendered markdown follows the app's scheme *and* its theme pack. `MarkdownTheme.Light` and
+`MarkdownTheme.Dark` stay literal palettes, for a preview that has to look the same whatever the app
+is doing. See [Styling & theming](styling.md#dark-mode).

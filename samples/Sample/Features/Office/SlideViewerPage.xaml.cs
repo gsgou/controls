@@ -41,7 +41,9 @@ public partial class SlideViewerPage : ContentPage
     void OnToggleTheme(object? sender, EventArgs e)
     {
         this.dark = !this.dark;
-        this.Viewer.Theme = this.dark ? SlideTheme.Dark : SlideTheme.Light;
+        // null, not SlideTheme.Light: unset means "follow the app appearance", which is the
+        // behaviour worth demoing. Passing Light would pin it and hide that.
+        this.Viewer.Theme = this.dark ? SlideTheme.Dark : null;
     }
 
     void OnSlideChanged(object? sender, int index) => this.Update();

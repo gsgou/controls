@@ -32,6 +32,9 @@ public class SlideView : ContentView, IDisposable
         this.canvas.Touch += this.OnTouch;
 
         this.Content = this.canvas;
+
+        // An unset Theme tracks the app's appearance, so a flip has to redraw.
+        this.FollowAppTheme(static v => v.Invalidate());
     }
 
     public static readonly BindableProperty DeckProperty = BindableProperty.Create(
@@ -44,7 +47,7 @@ public class SlideView : ContentView, IDisposable
         nameof(Theme),
         typeof(SlideTheme),
         typeof(SlideView),
-        SlideTheme.Light,
+        null,
         propertyChanged: (b, _, _) => ((SlideView)b).Invalidate());
 
     public static readonly BindableProperty ModeProperty = BindableProperty.Create(
@@ -76,11 +79,17 @@ public class SlideView : ContentView, IDisposable
         set => this.SetValue(DeckProperty, value);
     }
 
-    public SlideTheme Theme
+    /// <summary>
+    /// Chrome colours. Left unset the control follows the app's light/dark appearance; setting it
+    /// pins the choice, including to <see cref="SlideTheme.Light"/>.
+    /// </summary>
+    public SlideTheme? Theme
     {
-        get => (SlideTheme)this.GetValue(ThemeProperty);
+        get => (SlideTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    SlideTheme EffectiveTheme => this.Theme ?? OfficeScheme.DefaultSlide;
 
     public SlideViewMode Mode
     {
@@ -146,7 +155,7 @@ public class SlideView : ContentView, IDisposable
 
     void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         var canvasSurface = e.Surface.Canvas;
         canvasSurface.Clear(new SKColor(theme.Surround.R, theme.Surround.G, theme.Surround.B));
 
@@ -174,6 +183,7 @@ public class SlideView : ContentView, IDisposable
 
         this.painter.Paint(canvas, new SlidePaintRequest
         {
+            Watermark = this.Watermark,
             Slide = placement.Slide,
             SlideWidth = this.controller.Deck.SlideWidth,
             SlideHeight = this.controller.Deck.SlideHeight,
@@ -281,4 +291,27 @@ public class SlideView : ContentView, IDisposable
 
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// A picture drawn behind the content — a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    public static readonly BindableProperty WatermarkProperty = BindableProperty.Create(
+        nameof(Watermark),
+        typeof(OfficeWatermark),
+        typeof(SlideView),
+        null,
+        propertyChanged: (b, _, _) => ((SlideView)b).Invalidate());
+
+    /// <inheritdoc cref="WatermarkProperty"/>
+    public OfficeWatermark? Watermark
+    {
+        get => (OfficeWatermark?)this.GetValue(WatermarkProperty);
+        set => this.SetValue(WatermarkProperty, value);
+    }
+
 }

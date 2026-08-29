@@ -276,6 +276,135 @@ public sealed class Workbook : OfficeDocument
         this.AfterStructuralChange();
     }
 
+    // ---- structural row and column edits ----
+
+    /// <summary>
+    /// Inserts blank rows or columns into a sheet and repoints everything in the workbook that named
+    /// the cells they pushed out of the way.
+    /// </summary>
+    /// <remarks>
+    /// The repointing is the whole of it. Moving the cells is a renumbering the sheet can do on its
+    /// own; but a formula on <em>any</em> sheet may name this one, and one left reading <c>B5</c>
+    /// after the value moved to <c>B6</c> does not fail — it quietly computes from the blank row the
+    /// insert left behind, which is the kind of wrong nobody notices until the totals are published.
+    /// </remarks>
+    internal void InsertBand(string sheetName, bool rows, int at, int count)
+    {
+        var sheet = this[sheetName];
+
+        if (rows)
+            sheet.InsertRows(at, count);
+        else
+            sheet.InsertColumns(at, count);
+
+        this.ShiftReferences(sheet.Name, rows, at, count, inserting: true);
+        this.AfterCellsMoved();
+    }
+
+    /// <summary>
+    /// Removes rows or columns from a sheet, closing the gap and repointing every reference.
+    /// </summary>
+    /// <returns>
+    /// The formulas that survived the delete but had to be rewritten by it, at the addresses they held
+    /// beforehand — everything an undo needs to put back that re-inserting the band cannot.
+    /// </returns>
+    /// <remarks>
+    /// A formula pointing <em>into</em> the deleted band becomes <c>#REF!</c>, and that is not
+    /// reversible by shifting it back: the reference is gone, not moved. Handing the caller the
+    /// original text is what lets the inverse command restore it verbatim instead of leaving a sheet
+    /// full of <c>#REF!</c> after an undo that appeared to work.
+    /// </remarks>
+    internal IReadOnlyList<(string Sheet, CellRef Cell, string Formula)> DeleteBand(string sheetName, bool rows, int at, int count)
+    {
+        var sheet = this[sheetName];
+        var displaced = this.DisplacedFormulas(sheet.Name, rows, at, count);
+
+        if (rows)
+            sheet.DeleteRows(at, count);
+        else
+            sheet.DeleteColumns(at, count);
+
+        this.ShiftReferences(sheet.Name, rows, at, count, inserting: false);
+        this.AfterCellsMoved();
+
+        return displaced;
+    }
+
+    /// <summary>The formulas a pending delete would rewrite, read before it happens.</summary>
+    List<(string Sheet, CellRef Cell, string Formula)> DisplacedFormulas(string editedSheet, bool rows, int at, int count)
+    {
+        var displaced = new List<(string, CellRef, string)>();
+
+        foreach (var sheet in this.sheets)
+        {
+            var onEditedSheet = string.Equals(sheet.Name, editedSheet, StringComparison.OrdinalIgnoreCase);
+
+            foreach (var (cell, formula) in sheet.Formulas())
+            {
+                // Cells inside the band are deleted outright, and the inverse restores them from the
+                // snapshot it took of their contents rather than from here.
+                var index = rows ? cell.Row : cell.Column;
+                if (onEditedSheet && index >= at && index < at + count)
+                    continue;
+
+                var rewritten = rows
+                    ? FormulaReferenceShifter.ForDeletedRows(formula, sheet.Name, editedSheet, at, count)
+                    : FormulaReferenceShifter.ForDeletedColumns(formula, sheet.Name, editedSheet, at, count);
+
+                if (!string.Equals(rewritten, formula, StringComparison.Ordinal))
+                    displaced.Add((sheet.Name, cell, formula));
+            }
+        }
+
+        return displaced;
+    }
+
+    void ShiftReferences(string editedSheet, bool rows, int at, int count, bool inserting)
+    {
+        foreach (var sheet in this.sheets)
+        {
+            var host = sheet.Name;
+            sheet.RewriteFormulas(text => Shift(text, host));
+        }
+
+        foreach (var defined in this.workbookElement.DefinedNames?.Elements<DefinedName>() ?? Enumerable.Empty<DefinedName>())
+        {
+            // A defined name is always sheet-qualified in the file, so there is no host sheet for an
+            // unqualified reference to fall back to; passing the edited sheet leaves a bare reference
+            // — which the file should not contain — shifting rather than being silently skipped.
+            if (defined.Text is { Length: > 0 } text)
+            {
+                var rewritten = Shift(text, editedSheet);
+                if (!string.Equals(rewritten, text, StringComparison.Ordinal))
+                    defined.Text = rewritten;
+            }
+        }
+
+        string Shift(string text, string host) => (rows, inserting) switch
+        {
+            (true, true) => FormulaReferenceShifter.ForInsertedRows(text, host, editedSheet, at, count),
+            (true, false) => FormulaReferenceShifter.ForDeletedRows(text, host, editedSheet, at, count),
+            (false, true) => FormulaReferenceShifter.ForInsertedColumns(text, host, editedSheet, at, count),
+            _ => FormulaReferenceShifter.ForDeletedColumns(text, host, editedSheet, at, count)
+        };
+    }
+
+    /// <summary>
+    /// Puts the workbook back in a consistent state after cells changed address.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="AfterStructuralChange"/>: the sheet <em>list</em> did not change,
+    /// and raising <see cref="SheetsChanged"/> would have every host rebuilding its tab strip over an
+    /// edit that added no tab. The calculation chain still has to go — it names cells by position,
+    /// and Excel calls a stale one corruption rather than rebuilding it.
+    /// </remarks>
+    void AfterCellsMoved()
+    {
+        this.DropCalculationChain();
+        this.RebuildCalc();
+        this.OnContentChanged();
+    }
+
     Sheets SheetsElement()
         => this.workbookElement.Sheets ?? this.workbookElement.AppendChild(new Sheets());
 

@@ -260,3 +260,12 @@ which you set yourself to cover the grid while its own data loads.
     <shiny:DataGridColumn Title="First" PropertyName="FirstName" />
 </shiny:DataGrid>
 ```
+
+## Dark mode
+
+The grid's own chrome is token-driven and needs nothing set. One MAUI-specific fix worth knowing
+about: the pager's glyph buttons no longer pick up the host app's implicit `<Style TargetType="Button">`.
+The .NET MAUI template's style sets a `Gray600` background on the `Disabled` visual state, which meant
+the first/previous buttons grew an opaque slab in dark mode exactly when they were *not* pressable.
+Internal parts now carry their own visual states and express disabled as opacity. See
+[Styling & theming](styling.md#dark-mode).

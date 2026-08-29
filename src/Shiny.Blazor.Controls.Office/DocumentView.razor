@@ -1,10 +1,11 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @using Shiny.Controls.Office.Document
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IJSRuntime Js
 
 <div class="shiny-document @Class"
+     @ref="schemeHost"
      style="@Style"
      tabindex="0"
      @onwheel="OnWheel"
@@ -36,6 +37,8 @@
     /// component, and leaves the old pixels on screen - the toggle appears to do nothing at all.
     /// </remarks>
     DocumentTheme? paintedTheme;
+    ThemeSchemeWatcher scheme = null!;
+    ElementReference schemeHost;
 
     /// <summary>
     /// Device pixel ratio, read once from the browser.
@@ -51,7 +54,13 @@
     /// <summary>The document to display. Setting it rebuilds the view.</summary>
     [Parameter] public WordDocument? Document { get; set; }
 
-    [Parameter] public DocumentTheme Theme { get; set; } = DocumentTheme.Light;
+    /// <summary>
+    /// Chrome colours. Left unset the surface follows the page's light/dark scheme;
+    /// setting it pins the choice, including to <see cref="DocumentTheme.Light"/>.
+    /// </summary>
+    [Parameter] public DocumentTheme? Theme { get; set; }
+
+    DocumentTheme EffectiveTheme => OfficeScheme.Resolve(this.scheme, this.Theme);
 
     /// <summary>Zoom factor, clamped to 0.25–4. Changing it re-lays-out.</summary>
     [Parameter] public double Zoom { get; set; } = 1.0;
@@ -73,14 +82,23 @@
     /// <summary>The live controller, so a toolbar or outline pane can drive the same state.</summary>
     public DocumentController? Controller => this.controller;
 
+    protected override void OnInitialized()
+        // The canvas only redraws when told to, so a scheme flip has to invalidate it explicitly.
+        => this.scheme = new ThemeSchemeWatcher(this.Js, () =>
+        {
+            this.canvas?.Invalidate();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+
     protected override void OnParametersSet()
     {
         // First, before any of the early returns below: SKCanvasView only repaints when Invalidate is
         // called, so a theme change that does not reach this leaves the old pixels on screen and the
         // toggle appears to do nothing.
-        if (this.paintedTheme != this.Theme)
+        if (this.paintedTheme != this.EffectiveTheme)
         {
-            this.paintedTheme = this.Theme;
+            this.paintedTheme = this.EffectiveTheme;
             this.canvas?.Invalidate();
         }
 
@@ -118,7 +136,7 @@
     void OnPaint(SKPaintSurfaceEventArgs e)
     {
         var info = e.Info;
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
 
         if (this.controller is null || this.painter is null)
         {
@@ -142,6 +160,7 @@
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
+            Watermark = this.Watermark,
             Blocks = this.controller.Blocks,
             Viewport = this.controller.Viewport,
             Theme = theme,
@@ -159,6 +178,10 @@
     {
         if (!firstRender)
             return;
+
+        // Before the DPR read: the canvas paints its first frame off this, and starting the watch
+        // second would flash a white page in a dark app.
+        await this.scheme.StartAsync(this.schemeHost);
 
         try
         {
@@ -206,12 +229,24 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (this.controller is not null)
             this.controller.Changed -= this.OnControllerChanged;
 
         this.painter?.Dispose();
         this.measurer?.Dispose();
+        await this.scheme.DisposeAsync();
     }
+
+    /// <summary>
+    /// A picture drawn behind the content - a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    [Parameter] public OfficeWatermark? Watermark { get; set; }
+
 }

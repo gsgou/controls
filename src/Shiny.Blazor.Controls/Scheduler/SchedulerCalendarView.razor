@@ -28,7 +28,7 @@
                  style="background:@(isSelected ? CalendarCellSelectedColor : CalendarCellColor);"
                  @onclick="() => OnDayTapped(capturedDate)">
                 <div class="shiny-cal-daynum @(isToday ? "today" : "")"
-                     style="@(isToday ? $"background:{CurrentDayColor};color:white;" : "")">@date.Day</div>
+                     style="@(isToday ? $"background:{CurrentDayColor};color:var(--shiny-color-on-primary, white);" : "")">@date.Day</div>
                 @if (ShowCalendarCellEventCountOnly)
                 {
                     @if (dayEvents.Count > 0)
@@ -43,7 +43,7 @@
                         {
                             var captured = evt;
                             <div class="shiny-cal-event"
-                                 style="background:@(evt.Color ?? "#3B82F6");"
+                                 style="background:@(evt.Color ?? "#3B82F6");color:@(ContrastInk.For(evt.Color ?? "#3B82F6"));"
                                  @onclick:stopPropagation
                                  @onclick="() => OnEventTapped(captured)">@evt.Title</div>
                         }
@@ -78,9 +78,11 @@
     [Parameter] public EventCallback<DateOnly> DisplayMonthChanged { get; set; }
     [Parameter] public bool ShowCalendarCellEventCountOnly { get; set; }
     [Parameter] public int MaxEventsPerCell { get; set; } = 3;
-    [Parameter] public string CalendarCellColor { get; set; } = "#FFFFFF";
-    [Parameter] public string CalendarCellSelectedColor { get; set; } = "#DBEAFE";
-    [Parameter] public string CurrentDayColor { get; set; } = "#3B82F6";
+    // These land as inline styles, which beat any stylesheet - so a literal default is not a
+    // starting point a theme can override, it is a permanent white grid. Tokens instead.
+    [Parameter] public string CalendarCellColor { get; set; } = "var(--shiny-color-surface, #FFFFFF)";
+    [Parameter] public string CalendarCellSelectedColor { get; set; } = "var(--shiny-color-primary-container, #DBEAFE)";
+    [Parameter] public string CurrentDayColor { get; set; } = "var(--shiny-color-primary, #3B82F6)";
     [Parameter] public DayOfWeek FirstDayOfWeek { get; set; } = DayOfWeek.Sunday;
     [Parameter] public DateOnly? MinDate { get; set; }
     [Parameter] public DateOnly? MaxDate { get; set; }

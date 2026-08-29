@@ -2,7 +2,7 @@
 
 [← All Shiny Controls](../../README.md)
 
-42 hand-drawn animated icons that run **on a timer, on hover, on tap, when they scroll into view, or on command** — a bell that rings from its crown, a hamburger that morphs into a cross, a tick that draws itself on. `MotionIconView` on MAUI, `<MotionIcon>` on Blazor, both in the core packages; the artwork and the motion live in `Shiny.Controls.MotionIcons.Shared` so the two hosts render the same drawing running the same curves.
+111 hand-drawn animated icons that run **on a timer, on hover, on tap, when they scroll into view, or on command** — a bell that rings from its crown, a hamburger that morphs into a cross, a tick that draws itself on, a folder tab that lifts off its crease. `MotionIconView` on MAUI, `<MotionIcon>` on Blazor, both in the core packages; the artwork and the motion live in `Shiny.Controls.MotionIcons.Shared` so the two hosts render the same drawing running the same curves.
 
 ```xml
 <!-- MAUI — the standard shiny xmlns, no extra prefix -->
@@ -23,7 +23,19 @@
 
 **Presets** work on any icon, including your own artwork — `Pulse`, `Beat`, `Spin`, `Shake`, `Wobble`, `Bounce`, `Float`, `Pop`, `Tada`, `Flip`, `Swing`, `Blink`, `Draw`, `Nudge`, `Jiggle`. `Default` plays the motion drawn for that icon and falls back to `Pulse` for artwork that has none.
 
-**Bring your own artwork** with `PathData="M12 2 3 20h18z"` for a quick glyph, a `MotionIconDefinition` for something split into moving parts, or `MotionIconLibrary.Register(...)` to replace a built-in across the whole app.
+**The set**, grouped by what each icon is for — one flat, case-insensitive namespace, so enumerate it with `MotionIconLibrary.Names`:
+
+| Group | Icons |
+|---|---|
+| Actions | `add-user`, `attach`, `check`, `close`, `copy`, `download`, `edit`, `filter`, `link`, `loader`, `logout`, `menu`, `more`, `pin`, `plus`, `power`, `print`, `redo`, `refresh`, `save`, `search`, `send`, `settings`, `share`, `sort`, `trash`, `undo`, `upload`, `zoom-in`, `zoom-out` |
+| Navigation | `arrow-down`, `arrow-left`, `arrow-right`, `arrow-up`, `chevron-down`, `chevron-left`, `chevron-right`, `chevron-up`, `collapse`, `compass`, `expand`, `external-link` |
+| Objects | `battery`, `bell`, `bookmark`, `calendar`, `camera`, `cart`, `clock`, `cloud`, `coffee`, `credit-card`, `eye`, `flag`, `gift`, `heart`, `home`, `lightbulb`, `location`, `lock`, `mail`, `message`, `rocket`, `shield`, `star`, `sun`, `tag`, `user` |
+| Media | `headphones`, `microphone`, `music`, `mute`, `pause`, `play`, `record`, `repeat`, `shuffle`, `skip-back`, `skip-forward`, `stop`, `video`, `volume` |
+| Files | `book`, `clipboard`, `database`, `file`, `file-text`, `folder`, `folder-open`, `image` |
+| Weather | `cloud-rain`, `cloud-snow`, `droplet`, `lightning`, `moon`, `thermometer`, `umbrella`, `wind` |
+| Indicators | `activity`, `bluetooth`, `chart`, `check-circle`, `help`, `hourglass`, `info`, `signal`, `thumbs-up`, `trending-up`, `warning`, `wifi`, `x-circle` |
+
+**Bring your own artwork** with `PathData="M12 2L3 20H21z"` for a quick glyph, a `MotionIconDefinition` for something split into moving parts, or `MotionIconLibrary.Register(...)` to replace a built-in across the whole app.
 
 **Notes:**
 - The two hosts run the *same* spec through different machinery: on MAUI it compiles to a `KeyframeScene` driven by the [Keyframe](keyframe.md) engine's `Player`, so motion icons and hand-written timelines share one animation engine, one clock per window and one set of easing curves. On Blazor it compiles to `@keyframes` once and the browser composites it, so no C# runs per frame and the animation keeps going while WebAssembly is busy.

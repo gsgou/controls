@@ -14,14 +14,14 @@
 .md-input label {
     font-size: 12px;
     font-weight: 600;
-    color: #6B7280;
+    color: var(--shiny-color-on-surface-variant, #6B7280);
     text-transform: uppercase;
 }
 
 .md-input textarea,
 .md-input select {
     width: 100%;
-    border: 1px solid #D1D5DB;
+    border: 1px solid var(--shiny-color-outline, #D1D5DB);
     border-radius: 8px;
     padding: 12px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -30,8 +30,8 @@
 }
 
 .md-preview {
-    background: white;
-    border: 1px solid #E5E7EB;
+    background: var(--shiny-color-surface-container-low, white);
+    border: 1px solid var(--shiny-color-outline-variant, #E5E7EB);
     border-radius: 8px;
     padding: 16px;
     min-height: 320px;

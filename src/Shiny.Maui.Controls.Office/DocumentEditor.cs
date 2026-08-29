@@ -22,7 +22,7 @@ namespace Shiny.Maui.Controls.Office;
 /// without it; caret navigation from the keyboard does not.
 /// </para>
 /// </remarks>
-public class DocumentEditor : ContentView, IDisposable
+public partial class DocumentEditor : ContentView, IDisposable
 {
     readonly SKCanvasView canvas;
     readonly Entry input;
@@ -34,6 +34,14 @@ public class DocumentEditor : ContentView, IDisposable
     bool suppressInputEvents;
     bool focused;
     double lastPanY;
+    double panOriginX;
+    double panOriginY;
+    double panScroll;
+    double panScrollX;
+    bool panMoved;
+    bool panning;
+    TextHandle? draggingHandle;
+    DocumentPosition? tapCandidate;
     bool disposed;
 
     public DocumentEditor()
@@ -56,6 +64,13 @@ public class DocumentEditor : ContentView, IDisposable
             IsTextPredictionEnabled = false
         };
 
+        // Pinch is a MAUI gesture rather than something read out of SKTouch: the canvas reports each
+        // finger separately with no notion of the pair, so recognising a pinch there would mean
+        // tracking two ids and their distance by hand - which is exactly what this recognizer is.
+        var pinch = new PinchGestureRecognizer();
+        pinch.PinchUpdated += this.OnPinch;
+        this.canvas.GestureRecognizers.Add(pinch);
+
         this.input.TextChanged += this.OnInputTextChanged;
         this.input.Completed += this.OnInputCompleted;
         this.input.Focused += this.OnInputFocused;
@@ -68,6 +83,9 @@ public class DocumentEditor : ContentView, IDisposable
         this.root.Add(this.input);
 
         this.Content = this.root;
+
+        // An unset Theme tracks the app's appearance, so a flip has to redraw.
+        this.FollowAppTheme(static v => v.Invalidate());
     }
 
     public static readonly BindableProperty DocumentProperty = BindableProperty.Create(
@@ -80,7 +98,7 @@ public class DocumentEditor : ContentView, IDisposable
         nameof(Theme),
         typeof(DocumentTheme),
         typeof(DocumentEditor),
-        DocumentTheme.Light,
+        null,
         propertyChanged: (b, _, _) => ((DocumentEditor)b).Invalidate());
 
     public static readonly BindableProperty ZoomProperty = BindableProperty.Create(
@@ -154,11 +172,17 @@ public class DocumentEditor : ContentView, IDisposable
         set => this.SetValue(DocumentProperty, value);
     }
 
-    public DocumentTheme Theme
+    /// <summary>
+    /// Chrome colours. Left unset the control follows the app's light/dark appearance; setting it
+    /// pins the choice, including to <see cref="DocumentTheme.Light"/>.
+    /// </summary>
+    public DocumentTheme? Theme
     {
-        get => (DocumentTheme)this.GetValue(ThemeProperty);
+        get => (DocumentTheme?)this.GetValue(ThemeProperty);
         set => this.SetValue(ThemeProperty, value);
     }
+
+    DocumentTheme EffectiveTheme => this.Theme ?? OfficeScheme.DefaultDocument;
 
     public double Zoom
     {
@@ -236,9 +260,32 @@ public class DocumentEditor : ContentView, IDisposable
             this.controller?.Resize(width, height);
     }
 
+    /// <summary>
+    /// A picture drawn behind the content — a logo, a DRAFT stamp, a company mark.
+    /// </summary>
+    /// <remarks>
+    /// A <b>display</b> watermark: it is drawn, not written into the file. The three Office formats
+    /// have no common notion of one, so persisting would mean three unrelated mechanisms where drawing
+    /// means one. See <see cref="OfficeWatermark"/>.
+    /// </remarks>
+    public static readonly BindableProperty WatermarkProperty = BindableProperty.Create(
+        nameof(Watermark),
+        typeof(OfficeWatermark),
+        typeof(DocumentEditor),
+        null,
+        propertyChanged: (b, _, _) => ((DocumentEditor)b).Invalidate());
+
+    /// <inheritdoc cref="WatermarkProperty"/>
+    public OfficeWatermark? Watermark
+    {
+        get => (OfficeWatermark?)this.GetValue(WatermarkProperty);
+        set => this.SetValue(WatermarkProperty, value);
+    }
+
     void OnControllerChanged(object? sender, EventArgs e)
     {
         this.PositionInput();
+        this.RefreshSpellingAccessory();
         this.Invalidate();
     }
 
@@ -246,7 +293,7 @@ public class DocumentEditor : ContentView, IDisposable
 
     void OnPaintSurface(object? sender, SKPaintSurfaceEventArgs e)
     {
-        var theme = this.Theme;
+        var theme = this.EffectiveTheme;
         if (this.controller is null)
         {
             e.Surface.Canvas.Clear(new SKColor(theme.SurroundBackground.R, theme.SurroundBackground.G, theme.SurroundBackground.B));
@@ -261,6 +308,7 @@ public class DocumentEditor : ContentView, IDisposable
 
         this.painter.Paint(e.Surface.Canvas, new DocumentPaintRequest
         {
+            Watermark = this.Watermark,
             Blocks = this.controller.Blocks,
             Viewport = this.controller.Viewport,
             Theme = theme,
@@ -276,6 +324,10 @@ public class DocumentEditor : ContentView, IDisposable
             Caret = this.focused && !this.IsReadOnly && this.controller.SelectedObject is null
                 ? this.controller.CaretRect(this.controller.Selection.Focus)
                 : null,
+
+            TouchHandles = this.controller.UsesTouch
+                ? this.controller.TouchHandleRects()
+                : [],
 
             ObjectChrome = this.BuildObjectChrome()
         });
@@ -314,6 +366,9 @@ public class DocumentEditor : ContentView, IDisposable
     double lastPressY;
     int pressCount;
 
+    /// <summary>How far a finger may travel before a press stops being a tap. See SpreadsheetController.</summary>
+    const double TapSlop = 6;
+
     /// <summary>Counts consecutive taps in the same spot: 1 places a caret, 2 a word, 3 a paragraph.</summary>
     int CountPress(double x, double y)
     {
@@ -339,12 +394,16 @@ public class DocumentEditor : ContentView, IDisposable
         var scale = this.Width > 0 ? (float)(this.canvas.CanvasSize.Width / this.Width) : 1f;
         var x = e.Location.X / scale;
         var y = e.Location.Y / scale;
+        var touch = e.DeviceType == SKTouchDeviceType.Touch;
 
         switch (e.ActionType)
         {
             case SKTouchAction.Pressed:
                 this.lastPanY = y;
                 this.CloseSpellingMenu();
+
+                if (touch)
+                    this.controller.UsesTouch = true;
 
                 // Objects first: a picture sits on top of the text it displaces, so a press inside
                 // one is always about the picture even though there is a caret position underneath.
@@ -355,6 +414,29 @@ public class DocumentEditor : ContentView, IDisposable
                 }
 
                 var taps = this.CountPress(x, y);
+
+                // A finger dragging a handle is adjusting the selection it already has; a finger
+                // anywhere else is panning. Neither may move the caret on the way down - see the
+                // Released case, which is where a touch that turned out to be a tap is resolved.
+                if (touch && taps == 1)
+                {
+                    this.draggingHandle = this.controller.TouchHandleAt(x, y);
+                    if (this.draggingHandle is not null)
+                        break;
+
+                    this.panning = true;
+                    this.panOriginX = x;
+                    this.panOriginY = y;
+                    this.panScroll = this.controller.Viewport.ScrollY;
+                    this.panScrollX = this.controller.Viewport.ScrollX;
+                    this.panMoved = false;
+                    this.tapCandidate = this.controller.PositionAt(x, y);
+
+                    if (this.tapCandidate is { } pending)
+                        this.ArmLongPress(pending, x, y);
+
+                    break;
+                }
 
                 if (this.controller.PositionAt(x, y) is { } position)
                 {
@@ -389,6 +471,34 @@ public class DocumentEditor : ContentView, IDisposable
                     break;
                 }
 
+                if (this.draggingHandle is { } grabbed)
+                {
+                    this.controller.DragTouchHandle(grabbed, x, y);
+                    break;
+                }
+
+                if (this.panning)
+                {
+                    var travelled = this.panOriginY - y;
+                    var travelledX = this.panOriginX - x;
+
+                    if (!this.panMoved && Math.Abs(travelled) <= TapSlop && Math.Abs(travelledX) <= TapSlop)
+                        break;
+
+                    this.panMoved = true;
+
+                    // Both axes. A page is a fixed width, so on a phone it is always wider than the
+                    // screen and the right-hand end of every line is off it - vertical panning alone
+                    // scrolls past a document that still cannot be read.
+                    //
+                    // travelled is in control pixels and the viewport scrolls in view units, which
+                    // differ by the zoom - the same conversion ScrollByControlPixels does.
+                    var zoomScale = this.controller.ViewScale;
+                    this.controller.ScrollToHorizontal(this.panScrollX + (travelledX / zoomScale));
+                    this.controller.ScrollTo(this.panScroll + (travelled / zoomScale));
+                    break;
+                }
+
                 // Only a single-tap drag extends. After a double tap the finger is still down over the
                 // word that was just selected, and extending from there would collapse it to a caret.
                 if (this.pressCount == 1 && this.controller.PositionAt(x, y) is { } dragged)
@@ -400,6 +510,20 @@ public class DocumentEditor : ContentView, IDisposable
             case SKTouchAction.Cancelled:
                 this.CancelLongPress();
                 this.controller.EndObjectDrag();
+
+                // A press that went nowhere was a tap, and a tap places the caret. Deferred to here
+                // rather than done on the way down because until the finger lifts there is no telling
+                // a tap from the start of a pan.
+                if (this.panning && !this.panMoved && this.tapCandidate is { } tapped)
+                {
+                    this.controller.Selection.MoveTo(tapped);
+                    this.FocusEditor();
+                }
+
+                this.panning = false;
+                this.panMoved = false;
+                this.draggingHandle = null;
+                this.tapCandidate = null;
                 break;
 
             case SKTouchAction.WheelChanged:
@@ -448,11 +572,66 @@ public class DocumentEditor : ContentView, IDisposable
         }
     }
 
+    double pinchStartZoom = 1;
+
+    /// <summary>
+    /// Pinch to zoom, which on a phone is the gesture for this and no other.
+    /// </summary>
+    /// <remarks>
+    /// The scale is applied against the zoom the pinch <i>started</i> at rather than compounded per
+    /// update: PinchGestureRecognizer reports a cumulative scale for the gesture, so multiplying it
+    /// into the current zoom on every frame squares it and the page leaps away from the fingers.
+    /// </remarks>
+    void OnPinch(object? sender, PinchGestureUpdatedEventArgs e)
+    {
+        if (this.controller is null)
+            return;
+
+        switch (e.Status)
+        {
+            case GestureStatus.Started:
+                this.pinchStartZoom = this.controller.Zoom;
+
+                // A pinch that began as a pan must not leave the page scrolling under the fingers.
+                this.panning = false;
+                this.panMoved = false;
+                this.CancelLongPress();
+                break;
+
+            case GestureStatus.Running:
+                this.controller.Zoom = this.pinchStartZoom * e.Scale;
+                break;
+        }
+    }
+
     void CancelLongPress()
     {
         this.longPress?.Cancel();
         this.longPress?.Dispose();
         this.longPress = null;
+    }
+
+    /// <summary>
+    /// Opens the spelling menu for the word the caret is in, anchored under it.
+    /// </summary>
+    /// <remarks>
+    /// The toolbar's entry point. A long press supplies its own coordinates because the finger says
+    /// where the menu goes; stepping to an error from the Review tab has no pointer, so the caret's
+    /// own rectangle is the anchor.
+    /// </remarks>
+    public Task ShowSpellingMenuForCaretAsync()
+    {
+        if (this.controller is null)
+            return Task.CompletedTask;
+
+        var caret = this.controller.CaretRect(this.controller.Selection.Focus);
+        var scale = this.controller.ViewScale;
+
+        // CaretRect is in flow coordinates; the menu is placed in the control's.
+        var x = (caret.X + this.controller.ContentX) * scale;
+        var y = (this.controller.Pagination.FlowToView(caret.Bottom) - this.controller.Viewport.ScrollY) * scale;
+
+        return this.ShowSpellingMenuAsync(this.controller.Selection.Focus, x, y);
     }
 
     async Task ShowSpellingMenuAsync(DocumentPosition position, double x, double y)
@@ -668,6 +847,7 @@ public class DocumentEditor : ContentView, IDisposable
 #if MACOS
         this.sawInputSinceFocus = false;
 #endif
+        this.RefreshSpellingAccessory();
         this.Invalidate();
     }
 
@@ -678,6 +858,7 @@ public class DocumentEditor : ContentView, IDisposable
 #if MACOS
         this.sawInputSinceFocus = false;
 #endif
+        this.RefreshSpellingAccessory();
         this.Invalidate();
     }
 
@@ -756,8 +937,24 @@ public class DocumentEditor : ContentView, IDisposable
             this.controller.Changed -= this.OnControllerChanged;
     }
 
+    /// <summary>
+    /// Hooks the keyboard once there is a platform view to measure against, and lets go when there is
+    /// not — a control moved between pages gets a new handler and must not keep observing on the old.
+    /// </summary>
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+
+        if (this.Handler is null)
+            this.UnhookKeyboard();
+        else
+            this.HookKeyboard();
+    }
+
     public void Dispose()
     {
+        this.UnhookKeyboard();
+
         if (this.disposed)
             return;
 
@@ -806,4 +1003,5 @@ public enum EditorKey
     Underline,
     Undo,
     Redo
+
 }

@@ -18,7 +18,7 @@
     <span class="counter">@(index + 1) / @(deck?.Slides.Count ?? 0)</span>
     <button class="btn" disabled="@(index >= (deck?.Slides.Count ?? 0) - 1)" @onclick="Next">›</button>
     <button class="btn" @onclick="ToggleMode">@(mode == SlideViewMode.Grid ? "Single" : "Grid")</button>
-    <button class="btn" @onclick="ToggleTheme">@(dark ? "Light" : "Dark")</button>
+    <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@(deck is null ? "" : $"{deck.SlideWidth:0}×{deck.SlideHeight:0}")</span>
 </div>
 
@@ -26,7 +26,7 @@
     <SlideView Deck="deck"
                @bind-SlideIndex="index"
                @bind-Mode="mode"
-               Theme="@(dark ? SlideTheme.Dark : SlideTheme.Light)" />
+               Theme="@(dark ? SlideTheme.Dark : null)" />
 </div>
 
 @if (Notes is { Length: > 0 })

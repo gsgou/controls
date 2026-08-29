@@ -48,6 +48,10 @@
     gap: var(--shiny-spacing-2, 8px);
     padding: 0 var(--shiny-spacing-2, 8px);
     background: var(--shiny-ribbon-header-bg);
+
+    /* Falls back to inheriting, so a header that is still a surface keeps the theme's ink and only a
+       painted one needs to say what reads on it. */
+    color: var(--shiny-ribbon-header-ink, inherit);
 }
 
 .shiny-ribbon__app {
@@ -77,6 +81,28 @@
 
 .shiny-ribbon__tabs::-webkit-scrollbar { display: none; }
 
+/*
+    Scroll hints.
+
+    A bar that scrolls looks exactly like one that does not: the last group ends flush at the edge,
+    and there is nothing to say another one follows. ribbon.js marks each scroller with which side
+    still has content off-screen and these draw a fade on that side.
+
+    An inset shadow rather than a mask or an overlay element. A mask would fade the bar's own
+    background out with the content and show the page through the edge, and an overlay would have to
+    be positioned against a scroller that moves. An inset shadow is painted on the border box, so it
+    stays put while the content runs under it, and tinting it with the surface the bar already sits on
+    is what makes it read as content fading out rather than as a shadow.
+*/
+.shiny-ribbon__tabs[data-overflow="start"] { box-shadow: inset 28px 0 14px -14px var(--shiny-ribbon-header-bg, #EFEFF2); }
+.shiny-ribbon__tabs[data-overflow="end"] { box-shadow: inset -28px 0 14px -14px var(--shiny-ribbon-header-bg, #EFEFF2); }
+
+.shiny-ribbon__tabs[data-overflow="both"] {
+    box-shadow:
+        inset 28px 0 14px -14px var(--shiny-ribbon-header-bg, #EFEFF2),
+        inset -28px 0 14px -14px var(--shiny-ribbon-header-bg, #EFEFF2);
+}
+
 .shiny-ribbon__tab {
     position: relative;
     flex: 0 0 auto;
@@ -91,6 +117,15 @@
     white-space: nowrap;
 }
 
+/*
+    The selected tab is lifted out of the header onto the body's own surface, so it takes the theme's
+    ink whatever the band behind it is. Inheriting the header's instead is white text on a near-white
+    tab in a light theme - present, and unreadable.
+*/
+.shiny-ribbon__tab[aria-selected="true"] {
+    color: var(--shiny-color-on-surface, #1B1B1F);
+}
+
 .shiny-ribbon__tab::after {
     content: "";
     position: absolute;
@@ -100,8 +135,14 @@
     background: transparent;
 }
 
+/*
+    Hovering lifts the tab off the band onto a surface tint, so the ink comes off the band with it -
+    otherwise pointing at a tab in a light theme makes its label disappear, which is the one moment the
+    user is looking straight at it.
+*/
 .shiny-ribbon__tab:hover:not(:disabled):not(.is-active) {
     background: var(--shiny-color-surface-container-high, #E4E4E8);
+    color: var(--shiny-color-on-surface, #1B1B1F);
 }
 
 .shiny-ribbon__tab.is-active {
@@ -155,6 +196,16 @@
    unregister every one of them and empty the strip above it. */
 .shiny-ribbon__body.is-hidden { display: none; }
 
+/* See the tab strip above for why this is an inset shadow. */
+.shiny-ribbon__body[data-overflow="start"] { box-shadow: inset 32px 0 16px -16px var(--shiny-color-surface-container-low, #F7F7F8); }
+.shiny-ribbon__body[data-overflow="end"] { box-shadow: inset -32px 0 16px -16px var(--shiny-color-surface-container-low, #F7F7F8); }
+
+.shiny-ribbon__body[data-overflow="both"] {
+    box-shadow:
+        inset 32px 0 16px -16px var(--shiny-color-surface-container-low, #F7F7F8),
+        inset -32px 0 16px -16px var(--shiny-color-surface-container-low, #F7F7F8);
+}
+
 ::deep .shiny-ribbon__panel {
     display: flex;
     align-items: stretch;
@@ -189,9 +240,23 @@
 ::deep .shiny-ribbon-group__items {
     display: grid;
     grid-auto-flow: column;
-    grid-template-rows: repeat(var(--shiny-ribbon-rows, 3), minmax(var(--shiny-ribbon-row-h, 24px), auto));
+
+    /*
+        Fixed rows, not `minmax(row-h, auto)`.
+
+        Every group is its own grid, so they cannot negotiate a common row height - and with `auto` the
+        tallest thing in one group grew that group's rows alone. A 30px font picker made the Font
+        group's rows 32px while every other group stayed at 24, so no two groups' buttons sat on the
+        same line and the captions underneath them landed on different baselines. A bar that hosts
+        taller content raises --shiny-ribbon-row-h for the whole ribbon instead, which keeps every
+        group in step.
+    */
+    grid-template-rows: repeat(var(--shiny-ribbon-rows, 3), var(--shiny-ribbon-row-h, 24px));
     grid-auto-columns: min-content;
     align-content: center;
+
+    /* Items stretch to the row rather than centring in it: a separator is an empty div, and centring
+       collapses it to nothing instead of drawing the full-height rule it is there to be. */
     justify-items: stretch;
     gap: 1px 2px;
 }
@@ -354,9 +419,29 @@
     background: var(--shiny-color-outline-variant, #E5E7EB);
 }
 
+/*
+    The group's columns are `min-content`, and hosted content is arbitrary markup whose width often
+    does not contribute to that — a picker laid out with flex or sized at 100% measures as narrower
+    than it draws. The column was then sized under the content and everything in it spilled sideways
+    over the next column, which on the spreadsheet bar put the font picker on top of the bold button.
+    `max-content` makes the column at least as wide as what is actually in it.
+*/
 ::deep .shiny-ribbon-content { cursor: default; padding: 1px 4px; }
 
-::deep .shiny-ribbon-content.is-large { justify-content: center; }
+/*
+    Hosted content is exempt from the large-item width clamp.
+
+    `.shiny-ribbon-item.is-large` caps at 96px, which is right for an icon over a label - a large
+    button should not stretch to the width of its caption. Hosted content is arbitrary markup that
+    sizes itself, and the cap simply truncated the column it was given: on the spreadsheet bar the
+    132px font picker was laid into a 96px column, centred, and overflowed 18px each side straight
+    over the bold button next to it. It has to be at least as wide as what is in it.
+*/
+::deep .shiny-ribbon-content.is-large {
+    justify-content: center;
+    min-width: max-content;
+    max-width: none;
+}
 
 
 /* -- split button ------------------------------------------------------------------------------ */

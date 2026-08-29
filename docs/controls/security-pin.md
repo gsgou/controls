@@ -34,3 +34,9 @@ A PIN entry control with individually rendered cells that captures input through
 Events: `Completed` fires with a `SecurityPinCompletedEventArgs` once the entered value reaches `Length`.
 
 Methods: `Focus()`, `Unfocus()`, `Clear()`.
+
+## Dark mode
+
+`CellBackgroundColor` defaults to `surface-container-low` rather than a literal white, so the cells
+follow the app's scheme. Pass your own to pin it — and pass `CellTextColor` alongside it, or the
+theme's ink may not read against your fill. See [Styling & theming](styling.md#dark-mode).

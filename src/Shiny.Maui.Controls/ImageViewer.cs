@@ -335,7 +335,7 @@ public partial class ImageViewer : ContentView, IDisposable
                 BackgroundColor = chip,
                 CornerRadius = CloseButtonSize / 2,
                 Padding = 0
-            };
+            }.Neutralize();
             text.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
             text.Clicked += (_, _) => IsOpen = false;
             btn = text;

@@ -78,7 +78,7 @@
         border-radius: 28px;
         border: 8px solid #111827;
         overflow: hidden;
-        background: #fff;
+        background: var(--shiny-color-surface-container-low, #fff);
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
     }
 
@@ -93,7 +93,7 @@
 
     .phone-body h3 {
         margin: 4px 0 8px;
-        color: #1E1B4B;
+        color: var(--shiny-color-on-surface, #1E1B4B);
     }
 
     .phone-body--photo {
@@ -105,6 +105,8 @@
         color: #fff;
     }
 
+    /* a fixed white veil over the mock phone's wallpaper, so the ink is fixed dark to match -
+       a theme token here would go light-on-light in dark mode */
     .phone-row {
         background: rgba(255, 255, 255, 0.85);
         color: #1E293B;

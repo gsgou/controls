@@ -1,4 +1,4 @@
-namespace Shiny.Maui.Controls.Desktop.Ribbons;
+namespace Shiny.Maui.Controls.Ribbons;
 
 /// <summary>
 /// One command on a <see cref="RibbonGroup"/>.

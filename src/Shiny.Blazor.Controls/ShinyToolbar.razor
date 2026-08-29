@@ -111,8 +111,10 @@
     /// </summary>
     [Parameter] public RenderFragment? EndContent { get; set; }
 
-    [Parameter] public string BackgroundColor { get; set; } = "#FFFFFF";
-    [Parameter] public string TextColor { get; set; } = "#1F2937";
+    // Theme tokens, not literals - a bar is app chrome and has to follow light/dark. A literal
+    // white default painted a white bar (with near-black text) straight through dark mode.
+    [Parameter] public string BackgroundColor { get; set; } = "var(--shiny-color-surface-container-low, #FFFFFF)";
+    [Parameter] public string TextColor { get; set; } = "var(--shiny-color-on-surface, #1F2937)";
     [Parameter] public double Height { get; set; } = 56;
     [Parameter] public double IconSize { get; set; } = 22;
     [Parameter] public bool ShowItemLabels { get; set; }
@@ -160,8 +162,10 @@
     /// <summary>Accessible label for the overflow button.</summary>
     [Parameter] public string OverflowAriaLabel { get; set; } = "More actions";
 
-    [Parameter] public string MenuBackgroundColor { get; set; } = "#FFFFFF";
-    [Parameter] public string MenuTextColor { get; set; } = "#1F2937";
+    // The dropdown is promoted into the top layer, where it inherits nothing from the bar, so it
+    // carries its own surface. Tokens for the same reason the bar's do.
+    [Parameter] public string MenuBackgroundColor { get; set; } = "var(--shiny-color-surface-container-high, #FFFFFF)";
+    [Parameter] public string MenuTextColor { get; set; } = "var(--shiny-color-on-surface, #1F2937)";
 
     /// <summary>Chevron drawn on items that open a dropdown. Set to an empty string to drop it.</summary>
     [Parameter] public string DropdownIcon { get; set; } = ChevronDownIcon;
@@ -169,7 +173,9 @@
     // frosted glass
     [Parameter] public bool Frosted { get; set; }
     [Parameter] public double BlurRadius { get; set; } = 20;
-    [Parameter] public string TintColor { get; set; } = "rgba(255, 255, 255, 0.7)";
+    // Frosted glass tints the blurred backdrop; in dark mode a white veil washes it out, so the
+    // default is the themed surface at the same 70% and only the hue changes with the scheme.
+    [Parameter] public string TintColor { get; set; } = "color-mix(in srgb, var(--shiny-color-surface-container-low, #FFFFFF) 70%, transparent)";
 
     // chrome
     [Parameter] public bool HasShadow { get; set; } = true;

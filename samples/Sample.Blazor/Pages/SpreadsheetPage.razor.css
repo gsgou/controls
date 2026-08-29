@@ -1,5 +1,5 @@
 .lead {
-    color: var(--shiny-on-surface-variant, #666);
+    color: var(--shiny-color-on-surface-variant, #666);
     max-width: 60ch;
 }
 
@@ -13,10 +13,10 @@
 
 .btn {
     padding: 6px 12px;
-    border: 1px solid var(--shiny-outline, #ccc);
+    border: 1px solid var(--shiny-color-outline, #ccc);
     border-radius: 6px;
-    background: var(--shiny-surface, #fff);
-    color: var(--shiny-on-surface, #1a1a1a);
+    background: var(--shiny-color-surface, #fff);
+    color: var(--shiny-color-on-surface, #1a1a1a);
     cursor: pointer;
 }
 
@@ -28,7 +28,7 @@
 .status {
     margin-left: auto;
     font-size: 0.85rem;
-    color: var(--shiny-on-surface-variant, #666);
+    color: var(--shiny-color-on-surface-variant, #666);
 }
 
 
@@ -36,7 +36,7 @@
 /* The grid paints to a canvas that fills its host, so the host needs an explicit height. */
 .sheet-host {
     height: 420px;
-    border: 1px solid var(--shiny-outline, #ccc);
+    border: 1px solid var(--shiny-color-outline, #ccc);
     border-radius: 0 0 6px 6px;
     overflow: hidden;
 }
@@ -44,5 +44,5 @@
 .hint {
     margin-top: 10px;
     font-size: 0.85rem;
-    color: var(--shiny-on-surface-variant, #666);
+    color: var(--shiny-color-on-surface-variant, #666);
 }

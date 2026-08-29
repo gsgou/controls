@@ -38,6 +38,10 @@ static class Emitter
 
         // Light scheme + all mode-independent tokens live in :root.
         sb.Append(":root {\n");
+        // Native widgets (select, checkbox, date input, scrollbars, the popover backdrop) are painted
+        // by the UA, not by our tokens - without this they stay in the light UA palette and a themed
+        // dark control ends up hosting a stark white dropdown.
+        sb.Append("    color-scheme: light;\n\n");
         sb.Append("    /* ===== Color (light) ===== */\n");
         foreach (var (role, hex) in t.Light)
             sb.Append($"    --shiny-color-{Tokens.Kebab(role)}: {hex};\n");
@@ -93,13 +97,24 @@ static class Emitter
         // Dark color overrides — explicit class wins; OS preference applies when unset.
         sb.Append("/* Explicit dark mode (toggle .shiny-theme-dark on <html> or a container) */\n");
         sb.Append(":root.shiny-theme-dark,\n.shiny-theme-dark {\n");
+        // color-scheme inherits, so setting it on the scope that carries the dark tokens also flips
+        // every native widget underneath it - even when that scope is a div rather than <html>.
+        sb.Append("    color-scheme: dark;\n\n");
         foreach (var (role, hex) in t.Dark)
+            sb.Append($"    --shiny-color-{Tokens.Kebab(role)}: {hex};\n");
+        sb.Append("}\n\n");
+
+        sb.Append("/* Explicit light mode has to restate the scheme: it may sit inside a dark scope */\n");
+        sb.Append(":root.shiny-theme-light,\n.shiny-theme-light {\n");
+        sb.Append("    color-scheme: light;\n\n");
+        foreach (var (role, hex) in t.Light)
             sb.Append($"    --shiny-color-{Tokens.Kebab(role)}: {hex};\n");
         sb.Append("}\n\n");
 
         sb.Append("/* Follow OS dark preference unless explicitly set to light */\n");
         sb.Append("@media (prefers-color-scheme: dark) {\n");
         sb.Append("    :root:not(.shiny-theme-light) {\n");
+        sb.Append("        color-scheme: dark;\n\n");
         foreach (var (role, hex) in t.Dark)
             sb.Append($"        --shiny-color-{Tokens.Kebab(role)}: {hex};\n");
         sb.Append("    }\n}\n");

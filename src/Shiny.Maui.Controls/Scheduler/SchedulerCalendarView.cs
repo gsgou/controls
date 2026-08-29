@@ -237,7 +237,7 @@ public class SchedulerCalendarView : ContentView
             WidthRequest = 44,
             BorderWidth = 0,
             Padding = 0
-        };
+        }.Neutralize();
         prevButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         prevButton.Clicked += (_, _) => NavigateMonth(-1);
 
@@ -250,7 +250,7 @@ public class SchedulerCalendarView : ContentView
             WidthRequest = 44,
             BorderWidth = 0,
             Padding = 0
-        };
+        }.Neutralize();
         nextButton.SetDynamicResource(Button.TextColorProperty, ShinyThemeKeys.Color.Primary);
         nextButton.Clicked += (_, _) => NavigateMonth(1);
 

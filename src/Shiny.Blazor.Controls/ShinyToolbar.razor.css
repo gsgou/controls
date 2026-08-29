@@ -197,7 +197,8 @@
 }
 
 .shiny-toolbar-menu-item:hover {
-    background-color: rgba(0, 0, 0, 0.06);
+    /* keyed off the bar's own text colour: a fixed black wash is invisible on a dark bar */
+    background-color: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .shiny-toolbar-menu-item:disabled {
@@ -269,7 +270,7 @@
 }
 
 .shiny-toolbar-item:hover {
-    background-color: rgba(0, 0, 0, 0.06);
+    background-color: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .shiny-toolbar-item:active {
