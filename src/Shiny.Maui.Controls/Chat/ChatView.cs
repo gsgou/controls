@@ -180,7 +180,13 @@ public partial class ChatView : ContentView
         this.inputBar = this.defaultInputBar;
         this.HookInputBar(this.inputBar);
 
-        this.imageViewer = new ImageViewer { OpenViewerOnTap = false };
+        // Never visible. An ImageViewer is a thumbnail *plus* a lightbox, and the chat wants only the
+        // lightbox - which is injected into the page's overlay layer, not into this control, so
+        // hiding the viewer costs nothing. Left visible, assigning Source on a tap paints that photo
+        // full-bleed across every row of the chat (this spans all three) and, because SyncSource
+        // clears InputTransparent once there is an image, swallows every touch over it - a second
+        // copy of the picture with no way to dismiss it. See issue #11.
+        this.imageViewer = new ImageViewer { OpenViewerOnTap = false, IsVisible = false };
 
         this.rootGrid = new Grid
         {
@@ -195,9 +201,9 @@ public partial class ChatView : ContentView
         this.rootGrid.Add(this.typingBubbleHost, 0, 1);
         this.rootGrid.Add(this.inputBar, 0, 2);
 
-        // image viewer overlay spans all rows
+        // In the tree, but only so the viewer has a parent chain to walk up when it looks for the
+        // page to draw its lightbox on. It paints nothing itself.
         this.rootGrid.Add(this.imageViewer, 0, 0);
-        Grid.SetRowSpan(this.imageViewer, 3);
 
         this.Content = this.rootGrid;
 

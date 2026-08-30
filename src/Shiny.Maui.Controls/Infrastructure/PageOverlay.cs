@@ -69,6 +69,14 @@ static class PageOverlay
     internal sealed class NavMenuLayer : Grid, IOverlayLayer;
 
     /// <summary>
+    /// Where an <see cref="ImageViewer"/> puts its lightbox when it is not inside an explicit
+    /// <see cref="OverlayHost"/>. Grid-based, so the overlay fills the page: the layer it replaced
+    /// was "whatever Grid happens to be the page's root content", which drops a full-screen overlay
+    /// into cell (0,0) of a grid that has more than one cell.
+    /// </summary>
+    internal sealed class ImageViewerLayer : Grid, IOverlayLayer;
+
+    /// <summary>
     /// Z-order for the layers, so the intent is stated once rather than guessed at each call site.
     /// A tooltip sits above page content, a walkthrough dims everything including tooltips, and a
     /// modal dialog wins outright.
@@ -99,6 +107,14 @@ static class PageOverlay
 
         public const int Tooltip = 9_000;
         public const int Walkthrough = 9_500;
+
+        /// <summary>
+        /// A full-screen image lightbox. Above a walkthrough, which is annotating the page rather
+        /// than replacing it, and below a dialog - a confirmation raised over an open photo is still
+        /// the thing being answered.
+        /// </summary>
+        public const int ImageViewer = 9_800;
+
         public const int Dialog = 10_000;
 
         /// <summary>Above a dialog: the quick entry popup is summoned over whatever is on screen, including one.</summary>

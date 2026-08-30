@@ -117,6 +117,8 @@ public partial class ImageViewer : ContentView, IDisposable
             Children = { backdrop, overlayImage, closeView }
         };
 
+        this.Loaded += (_, _) => this.InstallOverlayRoot();
+
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         StyleGuard.MarkReady(this, typeof(ImageViewer));
@@ -353,38 +355,69 @@ public partial class ImageViewer : ContentView, IDisposable
 
     #region Open / Close
 
+    /// <summary>
+    /// Where the lightbox is injected: an explicit <see cref="OverlayHost"/> if the viewer is inside
+    /// one, otherwise the page's own overlay layer.
+    /// </summary>
+    /// <remarks>
+    /// The page layer used to be "whatever <see cref="Grid"/> happens to be the page's root content",
+    /// which failed twice over. A page whose content is not a Grid - a bare
+    /// <c>&lt;ContentPage&gt;&lt;ChatView/&gt;&lt;/ContentPage&gt;</c>, say - had no host at all and
+    /// the viewer threw into a task nobody awaits, so opening an image silently did nothing. And a
+    /// page whose root Grid has more than one cell got a full-screen overlay dropped into cell (0,0),
+    /// covering a corner of the window instead of the window. <see cref="PageOverlay"/> is a
+    /// single-cell layer over the whole page with a z-index the other overlays are ordered against.
+    /// </remarks>
     Layout? FindOverlayParent()
     {
-        // Walk up the tree looking for an OverlayHost
-        Element? current = Parent;
+        // An OverlayHost the viewer is already inside wins: the host was placed deliberately, and
+        // some of them (a FloatingPanel's) are not the page.
+        Element? current = this.Parent;
         while (current is not null)
         {
             if (current is OverlayHost host)
                 return host;
+
+            if (current is ShinyContentPage scp)
+                return scp.OverlayHost;
+
+            if (current is Page)
+                break;
+
             current = current.Parent;
         }
 
-        // Fallback: find the page's root layout
-        current = Parent;
+        return PageOverlay.GetOrCreateLayer<PageOverlay.ImageViewerLayer>(this, PageOverlay.Layers.ImageViewer);
+    }
+
+
+    /// <summary>
+    /// Installs the page's overlay root at load rather than on the tap that opens the viewer.
+    /// </summary>
+    /// <remarks>
+    /// Creating the root re-parents the page's content, which tears down and rebuilds every native
+    /// view under it. That is free while the page is still being set up and a visible hitch - a
+    /// reset scroll position, a dropped focus - if it happens when a photo is tapped. Skipped
+    /// entirely when the viewer already sits in an <see cref="OverlayHost"/>, which needs no wrapper.
+    /// Dispatched so XAML inflation has finished assigning the page's Content first.
+    /// </remarks>
+    internal void InstallOverlayRoot()
+    {
+        Element? current = this.Parent;
         while (current is not null)
         {
-            if (current is Page page)
-            {
-                // ShinyContentPage — use its OverlayHost
-                if (page is ShinyContentPage scp)
-                    return scp.OverlayHost;
+            if (current is OverlayHost or ShinyContentPage)
+                return;
 
-                // Regular page — try to find a Grid as root content
-                if (page is ContentPage cp && cp.Content is Grid grid)
-                    return grid;
-
+            if (current is Page)
                 break;
-            }
+
             current = current.Parent;
         }
 
-        return null;
+        this.Dispatcher.Dispatch(() => PageOverlay.GetOrCreateRoot(this));
     }
+
 
     async Task OpenAsync()
     {
@@ -399,10 +432,17 @@ public partial class ImageViewer : ContentView, IDisposable
         overlayImage.Uri = Uri;
 
         // Find host and inject overlay
-        overlayParent = FindOverlayParent()
-            ?? throw new InvalidOperationException(
-                "ImageViewer could not find a suitable parent layout. " +
-                "Place it inside an OverlayHost, ShinyContentPage, or a Grid that is the root content of a ContentPage.");
+        // Null only when the viewer is not on a page at all - detached, or mid-navigation. There is
+        // nowhere to draw, so the open is abandoned rather than throwing into a task nobody awaits.
+        var host = FindOverlayParent();
+        if (host is null)
+        {
+            isAnimating = false;
+            SetValue(IsOpenProperty, false);
+            return;
+        }
+
+        overlayParent = host;
         overlayGrid.BindingContext = BindingContext;
         overlayParent.Children.Add(overlayGrid);
 

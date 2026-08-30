@@ -8,6 +8,12 @@ public partial class ChatView
 
     void OnLoaded()
     {
+        // The viewer is hidden, so its own Loaded is not something to rely on - the chat asks for the
+        // page's overlay root here instead. Installing it costs a re-parent of the page's content;
+        // done now it is invisible, done on the tap that opens a photo it resets the message list's
+        // scroll position.
+        this.imageViewer.InstallOverlayRoot();
+
         if (this.session is null && this.Provider is not null && !string.IsNullOrEmpty(this.SessionId))
             this.ReloadSession();
     }

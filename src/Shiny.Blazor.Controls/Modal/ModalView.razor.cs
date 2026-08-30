@@ -136,8 +136,9 @@ public partial class ModalView : IAsyncDisposable
     [Parameter] public bool CloseOnEscape { get; set; } = true;
 
     /// <summary>
-    /// Nudge the panel when a click on the backdrop is refused, so a blocked dismissal reads as
-    /// "not this one" rather than as a dead click.
+    /// Nudge the panel when a dismissal is refused - a click on a backdrop that does not close, or
+    /// any route <see cref="Closing"/> cancels - so a blocked dismissal reads as "not this one"
+    /// rather than as a dead click.
     /// </summary>
     [Parameter] public bool NudgeOnBlockedDismiss { get; set; } = true;
 
@@ -330,7 +331,13 @@ public partial class ModalView : IAsyncDisposable
             var args = new ModalClosingEventArgs(reason);
             await this.Closing.InvokeAsync(args);
             if (args.Cancel)
+            {
+                // A veto is a blocked dismissal like any other, and without this it is a dead click:
+                // whatever the handler wants to say about the refusal is behind the panel it just
+                // refused to move.
+                await this.NudgeAsync();
                 return false;
+            }
         }
 
         // Claimed before the binding round-trip: invoking IsOpenChanged re-renders the parent, whose
@@ -565,6 +572,13 @@ public partial class ModalView : IAsyncDisposable
             return;
         }
 
+        await this.NudgeAsync();
+    }
+
+
+    /// <summary>Shake the panel, when the modal has refused to go away.</summary>
+    async Task NudgeAsync()
+    {
         if (this.NudgeOnBlockedDismiss && this.module is not null)
             await this.module.InvokeVoidAsync("nudge", this.instanceId);
     }
