@@ -246,21 +246,40 @@
         });
     }
 
-    /// <summary>The selection frame, handles, text highlight and caret, or null when nothing is selected.</summary>
+    /// <summary>
+    /// The selection frame, handles, text highlight, find highlights and caret — or null when there is
+    /// none of it to draw.
+    /// </summary>
+    /// <remarks>
+    /// Find highlights are not editing chrome. A search marks what it turned up, which is as useful in
+    /// a deck that cannot be edited as in one that can, so they are drawn whether or not a shape is
+    /// selected and whether or not the editor is read-only. The frame, the handles and the caret say
+    /// "you can change this" and are held to the editable case.
+    /// </remarks>
     SlideEditorChrome? BuildChrome()
     {
-        if (this.controller is not { SelectedShape: >= 0 } controller || this.ReadOnly)
+        if (this.controller is not { } controller)
+            return null;
+
+        var matches = controller.FindMatchRects().Select(Tuple).ToList();
+        var editable = controller.SelectedShape >= 0 && !this.ReadOnly;
+
+        if (!editable && matches.Count == 0)
             return null;
 
         return new SlideEditorChrome
         {
-            SelectionFrame = Rect(controller.SelectionBounds()),
-            Handles = controller.SelectionHandles().Select(x => Tuple(x.Rect)).ToList(),
+            SelectionFrame = editable ? Rect(controller.SelectionBounds()) : null,
+            Handles = editable ? controller.SelectionHandles().Select(x => Tuple(x.Rect)).ToList() : [],
+
+            // Drawn even when the deck is read-only: stepping to a match selects the word, and the
+            // wash over it is the only thing saying which of the highlighted hits is the current one.
             TextSelection = controller.TextSelectionRects().Select(Tuple).ToList(),
+            FindMatches = matches,
 
             // The caret is only drawn while the editor actually has focus; one shown without it reads
             // as an editor that is accepting keystrokes when it is not.
-            Caret = this.focused ? Rect(controller.CaretRect()) : null,
+            Caret = editable && this.focused ? Rect(controller.CaretRect()) : null,
             IsEditingText = controller.IsEditingText
         };
 

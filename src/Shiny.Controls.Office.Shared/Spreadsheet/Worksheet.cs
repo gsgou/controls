@@ -61,6 +61,16 @@ public sealed class Worksheet
     /// <summary>The bounding box of every populated cell, or null for an empty sheet.</summary>
     public CellRange? UsedRange => this.editor.UsedRange();
 
+    /// <summary>
+    /// Every cell the sheet stores, in reading order — rows down, columns across.
+    /// </summary>
+    /// <remarks>
+    /// What a search walks. Rows and cells are already required to be in ascending order in the file —
+    /// Excel reports one that is not as corrupt rather than repairing it — so this is reading order
+    /// without a sort.
+    /// </remarks>
+    public IEnumerable<CellRef> PopulatedCells() => this.editor.PopulatedCells();
+
     public CellValue GetValue(CellRef reference)
     {
         var cell = this.editor.FindCell(reference);

@@ -94,6 +94,7 @@ public sealed class DocumentEditorController : DocumentController
     {
         this.document = document;
         this.Spelling = new DocumentSpellCheck(spellChecker ?? SpellCheckers.Default);
+        this.Find = new DocumentFinder(this);
 
         // A check finishes on whatever thread the platform answered on - a binder thread on Android -
         // and repainting is the host's reaction to Changed, so the hop back has to happen here rather
@@ -109,6 +110,11 @@ public sealed class DocumentEditorController : DocumentController
         document.ContentChanged += (_, _) =>
         {
             this.InvalidateLayout();
+
+            // The matches were collected from text that has just changed underneath them. Dropped
+            // rather than recollected: an edit is somebody typing, and re-running a search on every
+            // keystroke would walk the whole document per character.
+            this.Find.Invalidate();
             this.RaiseChanged();
         };
 
@@ -119,6 +125,15 @@ public sealed class DocumentEditorController : DocumentController
 
     /// <summary>Spell checking over the document. Replace <c>Spelling.Checker</c> to override it.</summary>
     public DocumentSpellCheck Spelling { get; }
+
+    /// <summary>
+    /// Text search over the document, which is what the toolbar's find box drives.
+    /// </summary>
+    /// <remarks>
+    /// Created with the controller rather than on demand, so a host can bind a find bar to it before
+    /// anything has been searched for and the bar's readout is live from the first keystroke.
+    /// </remarks>
+    public DocumentFinder Find { get; }
 
     /// <summary>
     /// The checker in use. Assigning one discards what the previous checker found and re-checks.
@@ -1718,9 +1733,60 @@ public sealed class DocumentEditorController : DocumentController
     }
 
     /// <summary>Rectangles covering the selection, for the painter to fill.</summary>
-    public IEnumerable<GridRectLike> SelectionRects()
+    public IEnumerable<GridRectLike> SelectionRects() => this.RangeRects(this.Selection.Range);
+
+    /// <summary>
+    /// Rectangles covering every find match on screen, so the painter can wash them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only the blocks currently visible are measured. A search over a long document can turn up
+    /// hundreds of hits, and laying out every one of them per frame would put the cost of the whole
+    /// document into each repaint for rectangles that are nowhere near the viewport.
+    /// </para>
+    /// <para>
+    /// The match the selection is sitting on is left out, so it is drawn in the selection's colour
+    /// alone rather than in both. Stacking the two washes made the current hit a muddy blend of them
+    /// and the hardest one on the page to pick out, which is the opposite of what it is for. The test
+    /// is what the selection actually covers rather than which match is active, so clicking away from
+    /// a hit brings its wash back instead of leaving a gap in the highlights.
+    /// </para>
+    /// </remarks>
+    public IEnumerable<GridRectLike> FindMatchRects()
     {
-        var range = this.Selection.Range;
+        if (!this.Find.IsSearching)
+            yield break;
+
+        var (first, last) = this.VisibleBlockRange();
+        var selection = this.Selection.Range;
+
+        foreach (var match in this.Find.Matches)
+        {
+            if (match.Block < first)
+                continue;
+
+            // The match list is in block order, so the first one below the fold ends the walk.
+            if (match.Block > last)
+                yield break;
+
+            if (!selection.IsEmpty && selection == match.Range)
+                continue;
+
+            foreach (var rect in this.RangeRects(match.Range))
+                yield return rect;
+        }
+    }
+
+    /// <summary>
+    /// One rectangle per line the range covers, in document coordinates.
+    /// </summary>
+    /// <remarks>
+    /// Per line rather than one box from start to end: a range that wraps would otherwise be drawn as
+    /// a rectangle spanning everything between the two points, including the text to the left of the
+    /// start and to the right of the end.
+    /// </remarks>
+    IEnumerable<GridRectLike> RangeRects(DocumentRange range)
+    {
         if (range.IsEmpty)
             yield break;
 
@@ -1745,6 +1811,26 @@ public sealed class DocumentEditorController : DocumentController
                 yield return new GridRectLike(start.X, paragraph.Y + line.Y, Math.Max(2, end.X - start.X), line.Height);
             }
         }
+    }
+
+    /// <summary>
+    /// Selects a find match and brings it on screen.
+    /// </summary>
+    /// <remarks>
+    /// Selected rather than landed beside, for the same reason stepping through misspellings selects
+    /// the word: what a person does with a hit they have found is act on it.
+    /// </remarks>
+    internal void SelectFindMatch(DocumentFindMatch match)
+    {
+        // Any object selection has to go, or the caret is drawn suppressed and the hit looks unfound.
+        this.ClearObjectSelection();
+
+        this.Selection.Select(
+            new DocumentPosition(match.Block, match.Start),
+            new DocumentPosition(match.Block, match.End));
+
+        this.ScrollCaretIntoView();
+        this.RaiseChanged();
     }
 
     // ---- touch ----
@@ -1877,6 +1963,7 @@ public sealed class DocumentEditorController : DocumentController
         this.ScheduleSpellCheck();
 
         this.InvalidateLayout();
+        this.Find.Invalidate();
         this.RefreshCaretFormat();
         this.ScrollCaretIntoView();
         this.RaiseChanged();

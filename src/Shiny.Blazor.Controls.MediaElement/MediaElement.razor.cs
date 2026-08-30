@@ -466,6 +466,11 @@ public partial class MediaElement : IAsyncDisposable
     {
         this.ShowTransportBarNow();
         await this.OnMediaEnded.InvokeAsync().ConfigureAwait(true);
+
+        // A JS callback gets no render of its own the way a UI event handler does, and the status push
+        // that arrives with `ended` rendered before this ran — so without this the bar the line above
+        // just asked for never actually appears, and a finished video is left with no controls.
+        this.StateHasChanged();
     }
 
     [JSInvokable]
@@ -583,15 +588,21 @@ public partial class MediaElement : IAsyncDisposable
         this.RestartAutoHide();
     }
 
-    void ToggleTransportBar()
+    /// <summary>
+    /// A click anywhere on the picture toggles playback and wakes the transport bar.
+    /// </summary>
+    /// <remarks>
+    /// It used to toggle the bar's visibility instead, which quietly ate the pause click. The bar hides
+    /// itself after a few seconds of play — including out from under a pointer left sitting on the
+    /// play/pause button, which is exactly where it is after starting playback — and the click aimed at
+    /// that button reached the video instead and only brought the bar back. Pausing took two clicks and
+    /// read as broken. Toggling playback here is also what every other player does with a click on the
+    /// picture, and the bar now stays mounted, so a click on a visible button is never swallowed.
+    /// </remarks>
+    async Task OnPictureClickedAsync()
     {
-        if (!this.ShowTransportBar)
-            return;
-
-        if (this.isTransportBarShown)
-            this.isTransportBarShown = false;
-        else
-            this.ShowTransportBarNow();
+        this.ShowTransportBarNow();
+        await this.TogglePlayPauseAsync().ConfigureAwait(true);
     }
 
     void ShowTransportBarNow()

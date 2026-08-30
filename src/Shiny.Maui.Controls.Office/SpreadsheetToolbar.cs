@@ -69,6 +69,7 @@ public class SpreadsheetToolbar : ContentView
     readonly RibbonButton unhideColumns;
     readonly RibbonButton clearContents;
     readonly RibbonButton clearFormat;
+    readonly OfficeFindBar findBar = new();
     readonly RibbonButton undo;
     readonly RibbonButton redo;
 
@@ -319,6 +320,10 @@ public class SpreadsheetToolbar : ContentView
             if (this.controller is not null)
                 this.controller.Changed += this.OnControllerChanged;
 
+            // A new workbook is a new controller and therefore a new finder; a bar left holding the
+            // old one would count matches in a workbook that is no longer on screen.
+            this.findBar.Find = this.controller?.Find;
+
             this.Refresh();
         }
     }
@@ -384,7 +389,13 @@ public class SpreadsheetToolbar : ContentView
         return styles.Format(CellValue.FromNumber(value), format);
     }
 
-    /// <summary>Detaches from the controller. Called by the hosting view when it is disposed.</summary>
+    /// <summary>
+    /// Detaches from the controller. Called by the hosting view when it is disposed.
+    /// </summary>
+    /// <remarks>
+    /// Setting <see cref="Controller"/> to null is what drops both subscriptions — this bar's, and the
+    /// find bar's to the finder, which outlives the view since it belongs to the workbook.
+    /// </remarks>
     public void Detach() => this.Controller = null;
 
     void BuildBar()
@@ -463,6 +474,13 @@ public class SpreadsheetToolbar : ContentView
         editing.Items.Add(this.clearContents);
         editing.Items.Add(this.clearFormat);
         home.Groups.Add(editing);
+
+        // Its own group rather than a fourth item in Editing: finding changes nothing, and the box is
+        // as wide as the three buttons beside it put together. Last on Home, which is what decides the
+        // order groups fold into the overflow in on a narrow window.
+        var finding = new RibbonGroup { Title = "Find", Priority = 65 };
+        finding.Items.Add(OfficeRibbonItems.Host(this.findBar));
+        home.Groups.Add(finding);
 
         if (this.ToolbarItems.Count > 0)
         {
@@ -789,6 +807,11 @@ public class SpreadsheetToolbar : ContentView
             this.sizePicker.IsEnabled = enabled;
 
         this.suppressPickerEvents = false;
+
+        // Finding works in a read-only workbook - it changes nothing - so it follows whether one is
+        // open rather than whether it can be edited.
+        this.findBar.IsEnabled = this.controller is not null;
+        this.findBar.SetTooltipsEnabled(this.ShowTooltips);
     }
 
     /// <summary>MAUI colours are floats in 0..1; the spreadsheet kernel stores bytes.</summary>

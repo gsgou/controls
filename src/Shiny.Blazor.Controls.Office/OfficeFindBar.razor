@@ -1,0 +1,149 @@
+@namespace Shiny.Blazor.Controls.Office
+@using Shiny.Controls.Office.Icons
+@using Shiny.Controls.Office.Text
+@implements IDisposable
+
+@*
+    The find control the three Office toolbars carry: a box to type in, a 3/12 readout, and a pair of
+    arrows that step the view onto each hit.
+
+    One component for all three editors, bound to an IFindController - the document, slide and
+    spreadsheet finders all implement it. This has no idea whether "the next one" is a paragraph below
+    the fold, a shape on slide nine or a cell three sheets over; the finder moves the view and this
+    only ever reads a count back. The MAUI OfficeFindBar is the same control on the other host.
+
+    Laid out as one hosted item rather than as four ribbon items, because a ribbon fills its small rows
+    column by column: a box and two arrows handed over separately come out stacked in a way that reads
+    as three unrelated controls, and the readout between the arrows is what makes the pair mean
+    anything.
+*@
+<div class="shiny-office-find">
+    <div class="find-box">
+        <span class="find-glass" aria-hidden="true">@OfficeToolbarIcons.Get(OfficeIcon.Find, 14)</span>
+
+        <input type="search"
+               class="find-input"
+               placeholder="Find"
+               aria-label="Find"
+               autocomplete="off"
+               spellcheck="false"
+               disabled="@Disabled"
+               value="@Query"
+               @oninput="OnInput"
+               @onkeydown="OnKeyDown" />
+    </div>
+
+    @* aria-live, so a screen reader hears the count change when an arrow moves the view. Polite: it
+       updates on every keystroke while typing, and assertive would talk over the typing itself. *@
+    <span class="find-count" aria-live="polite">@Status</span>
+
+    <OfficeToolbarButton Icon="OfficeIcon.Previous"
+                         Hint="Previous match (Shift+Enter)"
+                         ShowTooltip="ShowTooltips"
+                         Disabled="@(!HasMatches)"
+                         Clicked="() => Step(forward: false)" />
+
+    <OfficeToolbarButton Icon="OfficeIcon.Next"
+                         Hint="Next match (Enter)"
+                         ShowTooltip="ShowTooltips"
+                         Disabled="@(!HasMatches)"
+                         Clicked="() => Step(forward: true)" />
+</div>
+
+@code {
+    IFindController? attached;
+
+    /// <summary>
+    /// The finder this bar drives. Null until a document is open, which is what disables it.
+    /// </summary>
+    /// <remarks>
+    /// Re-assigned whenever the editor's controller is rebuilt - opening a second document produces a
+    /// new controller and therefore a new finder, and a bar still holding the old one would report a
+    /// count for a document that is no longer on screen.
+    /// </remarks>
+    [Parameter] public IFindController? Find { get; set; }
+
+    /// <summary>Hover tooltips on the two arrows. See <c>OfficeToolbarButton.ShowTooltip</c>.</summary>
+    [Parameter] public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>Raised after the query changes or an arrow steps, so a host can repaint its surface.</summary>
+    [Parameter] public EventCallback Moved { get; set; }
+
+    bool Disabled => this.Find is null;
+
+    bool HasMatches => this.Find is { Count: > 0 };
+
+    string Query => this.Find?.Query ?? string.Empty;
+
+    string Status => this.Find?.Status ?? string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(this.attached, this.Find))
+            return;
+
+        // The finder raises Changed for things this component did not do - an edit dropping the match
+        // list, a host setting the query in code - and the readout has to follow those too.
+        if (this.attached is not null)
+            this.attached.Changed -= this.OnFindChanged;
+
+        this.attached = this.Find;
+
+        if (this.attached is not null)
+            this.attached.Changed += this.OnFindChanged;
+    }
+
+    void OnFindChanged(object? sender, EventArgs e) => this.InvokeAsync(this.StateHasChanged);
+
+    async Task OnInput(ChangeEventArgs e)
+    {
+        if (this.Find is not { } find)
+            return;
+
+        // Find-as-you-type: the finder steps onto the first hit as the query changes, which is what
+        // makes the readout mean something before either arrow has been pressed.
+        find.Query = e.Value?.ToString() ?? string.Empty;
+        await this.Moved.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Enter steps forward, Shift+Enter back, Escape gives up on the search.
+    /// </summary>
+    /// <remarks>
+    /// The box is the only control on the bar a keyboard reaches without tabbing, and typing a word
+    /// then pressing Enter is how a find is used - reaching for the arrow with the mouse after typing
+    /// with the keyboard is the part that makes a find bar feel slow.
+    /// </remarks>
+    async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await this.Step(forward: !e.ShiftKey);
+        else if (e.Key == "Escape")
+            await this.ClearAsync();
+    }
+
+    async Task Step(bool forward)
+    {
+        if (this.Find is not { } find)
+            return;
+
+        if (forward)
+            find.FindNext();
+        else
+            find.FindPrevious();
+
+        await this.Moved.InvokeAsync();
+    }
+
+    async Task ClearAsync()
+    {
+        this.Find?.Clear();
+        await this.Moved.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        if (this.attached is not null)
+            this.attached.Changed -= this.OnFindChanged;
+    }
+}

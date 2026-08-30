@@ -182,6 +182,20 @@
                               Icon="@Ico(OfficeIcon.ClearFormat)" Disabled="Disabled" Clicked="() => Run(c => c.ClearFormatting())" />
             </RibbonGroup>
 
+            @*
+                Its own group rather than a fourth item in Editing: finding changes nothing, and the
+                box is as wide as the three buttons beside it put together. Last on Home, which is what
+                decides the order groups fold into the overflow in on a narrow window - and not gated
+                on Disabled, because a read-only workbook can still be searched.
+            *@
+            <RibbonGroup Title="Find" Priority="65">
+                <RibbonContent Size="RibbonItemSize.Small">
+                    <OfficeFindBar Find="@Controller?.Find"
+                                   ShowTooltips="ShowTooltips"
+                                   Moved="StateHasChanged" />
+                </RibbonContent>
+            </RibbonGroup>
+
             @if (ToolbarContent != null)
             {
                 @* Never folds into an overflow button: whatever the host added is theirs, and it is

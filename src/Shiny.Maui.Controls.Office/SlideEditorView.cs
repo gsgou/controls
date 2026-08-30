@@ -56,6 +56,7 @@ public class SlideEditorView : ContentView, IDisposable
     readonly RibbonButton deleteShape;
     readonly RibbonButton undo;
     readonly RibbonButton redo;
+    readonly OfficeFindBar findBar = new();
     readonly ColorPickerButton textColor;
     readonly List<RibbonItem> buttons = [];
 
@@ -400,6 +401,14 @@ public class SlideEditorView : ContentView, IDisposable
         paragraph.Items.Add(this.indent);
         tab.Groups.Add(paragraph);
 
+        // On Home rather than a tab of its own: finding a word is something you do while building the
+        // deck, and a search that costs a tab switch is one nobody uses. Last on the tab, because it is
+        // reached less often than the formatting beside it - which is what decides the order groups
+        // fold into the overflow in on a narrow window.
+        var finding = new RibbonGroup { Title = "Find", Priority = 60 };
+        finding.Items.Add(OfficeRibbonItems.Host(this.findBar));
+        tab.Groups.Add(finding);
+
         this.ribbon.Tabs.Add(tab);
 
         // Two tabs. Home is the slide you are on and the text on it; Insert is what goes on it. The
@@ -703,6 +712,10 @@ public class SlideEditorView : ContentView, IDisposable
         if (this.editor.Controller is { } controller)
             controller.Changed += this.OnControllerChanged;
 
+        // A new deck is a new controller and therefore a new finder; a bar left holding the old one
+        // would count matches in a deck that is no longer on screen.
+        this.findBar.Find = this.editor.Controller?.Find;
+
         this.RefreshBar();
     }
 
@@ -796,6 +809,11 @@ public class SlideEditorView : ContentView, IDisposable
         this.textColor.IsEnabled = hasText;
 
         this.suppressPickerEvents = false;
+
+        // Finding works in a read-only deck - it changes nothing - so it follows whether a deck is
+        // open rather than whether it can be edited.
+        this.findBar.IsEnabled = this.Deck is not null;
+        this.findBar.SetTooltipsEnabled(this.ShowToolbarTooltips);
     }
 
     public void Dispose()
@@ -817,6 +835,9 @@ public class SlideEditorView : ContentView, IDisposable
         if (this.editor.Controller is { } controller)
             controller.Changed -= this.OnControllerChanged;
 
+        // Drops the bar's subscription to the finder, which outlives this view: the finder belongs to
+        // the controller and the controller to the deck, and a host can keep both open.
+        this.findBar.Find = null;
         this.editor.Dispose();
     }
 

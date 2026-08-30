@@ -21,6 +21,7 @@ public sealed record DocumentTheme
         TableBorder = new ArgbColor(255, 0x55, 0x55, 0x55),
         Link = new ArgbColor(255, 0x6C, 0xB6, 0xFF),
         SelectionFill = new ArgbColor(80, 0x4C, 0x9A, 0xFF),
+        FindMatchFill = new ArgbColor(110, 0xFF, 0xC1, 0x07),
         Caret = new ArgbColor(255, 0xEE, 0xEE, 0xEE),
         TouchHandle = new ArgbColor(255, 0x4C, 0x9A, 0xFF),
 
@@ -44,6 +45,17 @@ public sealed record DocumentTheme
 
     /// <summary>Selection wash. Alpha matters: the text has to stay readable underneath it.</summary>
     public ArgbColor SelectionFill { get; init; } = new(70, 0x21, 0x7A, 0xD8);
+
+    /// <summary>
+    /// Wash over every find match.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not the selection's colour. The match the arrows are on is drawn as the selection
+    /// as well, so the two have to be told apart at a glance — one hit is where you are, the rest are
+    /// where you could go. Amber is what every find box has used for the other hits since browsers had
+    /// one.
+    /// </remarks>
+    public ArgbColor FindMatchFill { get; init; } = new(120, 0xFF, 0xC1, 0x07);
 
     public ArgbColor Caret { get; init; } = new(255, 0x11, 0x11, 0x11);
 
@@ -109,6 +121,15 @@ public sealed record DocumentPaintRequest
 
     /// <summary>Selection rectangles in document coordinates, painted under the text.</summary>
     public IReadOnlyList<GridRectLike> Selection { get; init; } = [];
+
+    /// <summary>
+    /// Find matches in document coordinates, washed under the text.
+    /// </summary>
+    /// <remarks>
+    /// Drawn beneath the selection rather than instead of it, so the match the arrows are sitting on
+    /// carries both washes and reads as the current one.
+    /// </remarks>
+    public IReadOnlyList<GridRectLike> FindMatches { get; init; } = [];
 
     /// <summary>The caret, or null when the view is not focused or the caret is blinking off.</summary>
     public GridRectLike? Caret { get; init; }
@@ -331,6 +352,20 @@ public sealed class DocumentPainter(SkiaTextMeasurer measurer) : IDisposable
     /// </remarks>
     void PaintFlow(SKCanvas canvas, DocumentPaintRequest request, DocumentTheme theme, double flowTop, double flowBottom)
     {
+        // Find matches go under the selection, which goes under the text: painting either over the
+        // glyphs would wash out the words they are meant to point at.
+        if (request.FindMatches.Count > 0)
+        {
+            this.fill.Color = ToSk(theme.FindMatchFill);
+            foreach (var rect in request.FindMatches)
+            {
+                if (rect.Bottom < flowTop || rect.Y > flowBottom)
+                    continue;
+
+                canvas.DrawRect(new SKRect((float)rect.X, (float)rect.Y, (float)rect.Right, (float)rect.Bottom), this.fill);
+            }
+        }
+
         // Selection goes under the text: painting it over would wash out the glyphs it is meant to
         // highlight.
         if (request.Selection.Count > 0)

@@ -320,6 +320,7 @@ public partial class DocumentEditor : ContentView, IDisposable
             Pages = this.controller.VisiblePages(),
             Setup = this.controller.Document.Page,
             Selection = this.controller.SelectionRects().ToList(),
+            FindMatches = this.controller.FindMatchRects().ToList(),
             Spelling = this.controller.SpellingRects().ToList(),
             Caret = this.focused && !this.IsReadOnly && this.controller.SelectedObject is null
                 ? this.controller.CaretRect(this.controller.Selection.Focus)

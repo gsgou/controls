@@ -133,6 +133,32 @@ deck has no Layout or Zoom tab for the same reason there is nothing to put on on
 artboard that is always scaled to fit the viewport, so unlike a document page it is never clipped and
 there is nothing to pan to or zoom in on.
 
+## Find
+
+**Home ▸ Find** — the same box, `3/12` readout and pair of arrows the document editor has, and the same
+`IFindController` behind them. See [Document Editor ▸ Find](document-editor.md#find) for the walk, the
+wrap and the keyboard.
+
+What differs is what a hit *is*. A deck search spans **every slide**, and stepping onto a match opens
+the slide it is on, selects the shape, puts the caret inside its text and selects the matched word —
+without all four the arrows look like they did nothing. A hit found while the deck is showing as a
+thumbnail grid switches back to the single-slide view first, because a thumbnail has no caret to move.
+
+Only shapes you could edit are searched. The rest come from the slide's layout and master and are
+template decoration shared by every slide using them, so a hit inside one would count the company name
+once per slide and step the user into something they cannot select. Table cells and speaker notes are
+out for the same reason the document editor skips table cells: a caret position on a slide is a shape,
+a paragraph and an offset, and neither of those has one.
+
+The amber wash is drawn on the slide being shown only. A match three slides away has no rectangle on
+screen to draw — the readout is what says how many there are elsewhere.
+
+```csharp
+var find = editor.Controller!.Find;
+find.Query = "roadmap";
+find.FindNext();
+```
+
 ## Inserting a picture
 
 Same as the document editor. On iOS and Android the button asks — **Take Photo**, **Photo Library**,

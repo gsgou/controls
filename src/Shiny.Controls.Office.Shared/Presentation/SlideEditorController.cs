@@ -54,6 +54,7 @@ public sealed class SlideEditorController : SlideController
 
         this.deck = deck;
         this.measurer = measurer;
+        this.Find = new SlideFinder(this);
 
         // Edited is raised from here rather than from each editing method: every edit reaches the
         // model through Reproject, including the ones a host drives directly (a drag executes a
@@ -61,11 +62,22 @@ public sealed class SlideEditorController : SlideController
         // fires for a command that turned out to be a no-op.
         deck.ContentChanged += (_, _) =>
         {
+            // The matches were collected from text that has just changed underneath them.
+            this.Find.Invalidate();
             this.RefreshCaretFormat();
             this.RaiseChanged();
             this.Edited?.Invoke(this, EventArgs.Empty);
         };
     }
+
+    /// <summary>
+    /// Text search across the deck, which is what the toolbar's find box drives.
+    /// </summary>
+    /// <remarks>
+    /// Created with the controller so a host can bind a find bar to it before anything is searched
+    /// for, and the bar's readout is live from the first keystroke.
+    /// </remarks>
+    public SlideFinder Find { get; }
 
     /// <summary>Size of a resize handle, in viewport pixels.</summary>
     public double HandleSize { get; set; } = 9;
@@ -984,6 +996,103 @@ public sealed class SlideEditorController : SlideController
                     rect.Height * this.Scale);
             }
         }
+    }
+
+    /// <summary>
+    /// Highlight rectangles for every find match on the slide being shown, in viewport coordinates.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The current slide only, and only in single-slide mode. A match three slides away has no
+    /// rectangle on screen to draw, and the thumbnail grid draws slides at a scale where a wash over
+    /// two characters is a smudge — the readout is what says how many there are elsewhere.
+    /// </para>
+    /// <para>
+    /// The match the text selection is sitting on is left out, so it is drawn in the selection's
+    /// colour alone rather than in both. Stacking the two washes made the current hit a muddy blend
+    /// and the hardest one on the slide to pick out. The test is what the selection actually covers
+    /// rather than which match is active, so clicking away from a hit brings its wash back instead of
+    /// leaving a gap in the highlights.
+    /// </para>
+    /// </remarks>
+    public IEnumerable<SlideRect> FindMatchRects()
+    {
+        if (!this.Find.IsSearching || this.Mode != SlideViewMode.Single || this.Current is not { } slide)
+            yield break;
+
+        var current = this.Index;
+        var selection = this.IsEditingText ? this.TextSelection.Normalized() : default;
+
+        // The matches arrive in slide order, so one shape's layout can be computed once and reused for
+        // every hit inside it rather than re-laid-out per match.
+        var laidOutShape = -1;
+        LaidOutTextBody? layout = null;
+        SlideRect bounds = default;
+
+        foreach (var match in this.Find.Matches)
+        {
+            if (match.Slide < current)
+                continue;
+
+            if (match.Slide > current)
+                yield break;
+
+            if (!selection.IsEmpty && selection == match.Range)
+                continue;
+
+            if (match.Shape != laidOutShape)
+            {
+                layout = null;
+
+                if (slide.Shapes.ElementAtOrDefault(match.Shape) is { Text: { } body } shape
+                    && this.BoundsOf(shape) is { } shapeBounds)
+                {
+                    layout = ShapeTextLayout.Layout(body, shape.Width, shape.Height, this.measurer);
+                    bounds = shapeBounds;
+                }
+
+                laidOutShape = match.Shape;
+            }
+
+            if (layout is null)
+                continue;
+
+            foreach (var rect in ShapeTextLayout.SelectionRects(layout, match.Paragraph, match.Start, match.End, this.measurer))
+            {
+                yield return new SlideRect(
+                    bounds.X + rect.X * this.Scale,
+                    bounds.Y + rect.Y * this.Scale,
+                    rect.Width * this.Scale,
+                    rect.Height * this.Scale);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Opens the slide a find match is on, selects its shape and selects the matched text.
+    /// </summary>
+    /// <remarks>
+    /// Not routed through <see cref="Select"/>, which returns early when the shape is already selected
+    /// and clears <see cref="IsEditingText"/> when it is not — either of which would leave a hit found
+    /// but not shown.
+    /// </remarks>
+    internal void SelectFindMatch(SlideFindMatch match)
+    {
+        // A hit found while looking at the thumbnail grid has no caret to move: the slide it is on has
+        // to be opened before anything can be selected on it.
+        this.Mode = SlideViewMode.Single;
+        this.Index = match.Slide;
+
+        if (this.Current?.Shapes.ElementAtOrDefault(match.Shape) is not { IsEditable: true, Text: not null })
+            return;
+
+        this.selected = match.Shape;
+        this.IsEditingText = true;
+        this.anchor = match.Position;
+        this.caret = match.Position with { Offset = match.End };
+
+        this.RefreshCaretFormat();
+        this.RaiseChanged();
     }
 
     // ---- plumbing ----

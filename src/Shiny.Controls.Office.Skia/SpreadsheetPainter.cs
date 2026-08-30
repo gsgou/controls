@@ -33,6 +33,15 @@ public sealed record SpreadsheetPaintRequest
     public CellRange? ClipboardRange { get; init; }
 
     /// <summary>
+    /// Cells holding a find match, washed so the count in the toolbar has something to point at.
+    /// </summary>
+    /// <remarks>
+    /// Comes from <c>SpreadsheetController.FindMatchCells()</c>, which has already dropped matches
+    /// belonging to another sheet — the painter draws whatever it is handed and does not check.
+    /// </remarks>
+    public IReadOnlyList<CellRef> FindMatches { get; init; } = [];
+
+    /// <summary>
     /// Draw the selection's grab handles, which are how a touch user extends a selection.
     /// </summary>
     /// <remarks>
@@ -164,6 +173,7 @@ public sealed class SpreadsheetPainter : IDisposable
 
         this.PaintCells(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
         this.PaintGridLines(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
+        this.PaintFindMatches(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
         this.PaintSelection(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
         this.PaintClipboardMarquee(canvas, request, actualColumnStart, columnEnd, actualRowStart, rowEnd);
 
@@ -276,6 +286,31 @@ public sealed class SpreadsheetPainter : IDisposable
             var bounds = viewport.CellRect(new CellRef(columnStart, Math.Min(row, CellRef.MaxRow)));
             var y = (float)Math.Floor(row > CellRef.MaxRow ? bounds.Bottom : bounds.Y) + 0.5f;
             canvas.DrawLine((float)viewport.Metrics.RowHeaderWidth, y, (float)viewport.Width, y, this.stroke);
+        }
+    }
+
+    /// <summary>
+    /// Washes the cells a search matched, whole cells rather than the matched characters.
+    /// </summary>
+    /// <remarks>
+    /// A cell is the smallest thing a spreadsheet selection can address, so highlighting three
+    /// characters inside one would mark something the arrows cannot land on. It also survives the
+    /// cell's own formatting, which can right-align, indent or reformat the text out from under a
+    /// character range measured against the raw value.
+    /// </remarks>
+    void PaintFindMatches(SKCanvas canvas, SpreadsheetPaintRequest request, int columnStart, int columnEnd, int rowStart, int rowEnd)
+    {
+        if (request.FindMatches.Count == 0)
+            return;
+
+        this.fill.Color = ToSk(request.Theme.FindMatchFill);
+
+        foreach (var cell in request.FindMatches)
+        {
+            if (cell.Column < columnStart || cell.Column > columnEnd || cell.Row < rowStart || cell.Row > rowEnd)
+                continue;
+
+            canvas.DrawRect(ToSk(request.Viewport.CellRect(cell)), this.fill);
         }
     }
 

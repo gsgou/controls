@@ -86,7 +86,27 @@ public sealed class SpreadsheetController
         this.Viewport = new GridViewport(this.Metrics);
         this.Selection = new SpreadsheetSelection();
         this.Selection.Changed += (_, _) => this.RaiseChanged();
+        this.Find = new SpreadsheetFinder(this);
+
+        // Every edit, undo and redo goes through the stack, so this is the one signal that catches all
+        // of them - a cell typed into, a range pasted, a row inserted. Hooking Changed instead would
+        // drop the cached matches on every scroll, which is the same as not caching them at all.
+        this.Workbook.Undo.Changed += (_, _) => this.Find.Invalidate();
+        this.Workbook.SheetsChanged += (_, _) => this.Find.Invalidate();
+
+        // The match list leads with the active sheet - and, unless the search spans the workbook, is
+        // only that sheet - so switching tabs makes it the wrong list rather than a stale one.
+        this.ActiveSheetChanged += (_, _) => this.Find.Invalidate();
     }
+
+    /// <summary>
+    /// Text search over the workbook, which is what the toolbar's find box drives.
+    /// </summary>
+    /// <remarks>
+    /// Created with the controller so a host can bind a find bar to it before anything is searched
+    /// for, and the bar's readout is live from the first keystroke.
+    /// </remarks>
+    public SpreadsheetFinder Find { get; }
 
     /// <summary>The sheets a tab strip should offer, in book order. Hidden sheets are left out.</summary>
     public IReadOnlyList<Worksheet> VisibleSheets => this.Workbook.Sheets.Where(x => x.IsVisible).ToList();
@@ -229,6 +249,51 @@ public sealed class SpreadsheetController
         this.Selection.MoveTo(cell.Relative());
         this.Viewport.ScrollIntoView(this.Selection.Active);
         this.RaiseChanged();
+    }
+
+    /// <summary>
+    /// The cells on the sheet being shown that hold a find match, for the painter to wash.
+    /// </summary>
+    /// <remarks>
+    /// Whole cells, and only this sheet's. Matches elsewhere in the workbook have nothing on screen to
+    /// draw — the toolbar's count is what says they are there.
+    /// </remarks>
+    public IReadOnlyList<CellRef> FindMatchCells()
+    {
+        if (!this.Find.IsSearching)
+            return [];
+
+        var name = this.sheet.Name;
+        var cells = new List<CellRef>();
+
+        foreach (var match in this.Find.Matches)
+        {
+            if (!string.Equals(match.Sheet, name, StringComparison.Ordinal))
+                continue;
+
+            // Two hits in one cell wash the same rectangle twice. The list is in cell order, so the
+            // duplicate is always the one just added.
+            if (cells.Count > 0 && cells[^1] == match.Cell)
+                continue;
+
+            cells.Add(match.Cell);
+        }
+
+        return cells;
+    }
+
+    /// <summary>
+    /// Moves the selection onto a find match, switching sheets first when the hit is on another one.
+    /// </summary>
+    internal void SelectFindMatch(SpreadsheetFindMatch match)
+    {
+        if (!string.Equals(match.Sheet, this.sheet.Name, StringComparison.Ordinal)
+            && this.Workbook.Find(match.Sheet) is { } target)
+        {
+            this.SwitchSheet(target);
+        }
+
+        this.GoTo(match.Cell);
     }
 
     /// <summary>What a cell would show in a formula bar: its formula when it has one, else its literal.</summary>

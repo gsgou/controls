@@ -377,6 +377,7 @@ public class SpreadsheetView : ContentView, IDisposable
             Scale = scale,
             EditingCell = this.controller.EditingCell,
             ClipboardRange = this.controller.ClipboardRange,
+            FindMatches = this.controller.FindMatchCells(),
             ClipboardDashPhase = this.dashPhase,
             ShowTouchHandles = this.controller.UsesTouch
         });

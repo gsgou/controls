@@ -350,6 +350,7 @@
             Pages = this.controller.VisiblePages(),
             Setup = this.controller.Document.Page,
             Selection = this.controller.SelectionRects().ToList(),
+            FindMatches = this.controller.FindMatchRects().ToList(),
             Spelling = this.controller.SpellingRects().ToList(),
 
             // The caret only belongs on screen while the editor has focus; a document showing a caret

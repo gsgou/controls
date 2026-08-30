@@ -253,6 +253,27 @@ sealed class SheetDataEditor
         return index;
     }
 
+    /// <summary>
+    /// Every cell the sheet actually stores, in reading order — rows down, columns across.
+    /// </summary>
+    /// <remarks>
+    /// Walking <see cref="UsedRange"/> instead would visit the bounding box rather than the contents:
+    /// a sheet with a value in A1 and one in Z5000 has a used range of 130,000 cells and five of them
+    /// exist. A search that read every address in the box would spend that on lookups that all miss.
+    /// </remarks>
+    public IEnumerable<CellRef> PopulatedCells()
+    {
+        foreach (var row in this.sheetData.Elements<Row>())
+        {
+            var rowIndex = (int)(row.RowIndex?.Value ?? 0) - 1;
+            if (rowIndex < 0)
+                continue;
+
+            foreach (var cell in row.Elements<Cell>())
+                yield return new CellRef(ColumnOf(cell), rowIndex);
+        }
+    }
+
     /// <summary>The bounding box of every cell present in the sheet, or null when the sheet is empty.</summary>
     public CellRange? UsedRange()
     {

@@ -227,6 +227,42 @@ dropped. Group collapsing is the wrong answer at phone width: it folds groups in
 worst-first, which is right when a window is a little too narrow, but on a phone there is room for no
 group at all and every command ends up behind a dropdown. See [Ribbon](ribbon.md).
 
+## Find
+
+**Home ▸ Find** — the same box, `3/12` readout and pair of arrows the document editor has, and the same
+`IFindController` behind them. See [Document Editor ▸ Find](document-editor.md#find) for the walk, the
+wrap and the keyboard.
+
+What is searched is the cell's text **as the formula bar shows it**: the formula when the cell has one,
+otherwise the literal. That is Excel's own default — *look in: formulas* — and the only choice under
+which searching for `SUM` finds the cells that total something. A cell's *formatted* value is
+deliberately not searched, or `1234` would miss a cell showing `1,234.00` and `1,234` would find one
+that holds no comma.
+
+The **active sheet only**, again matching Excel. A workbook-wide search moves the user between sheets
+on every press of "next", which is rarely what they meant when they typed into a box on the sheet they
+were looking at. `SearchAllSheets` opts in:
+
+```csharp
+var find = view.Controller!.Find;
+
+find.SearchAllSheets = true;
+find.Query = "Q1";
+find.FindNext();          // switches sheets when the hit is on another one
+```
+
+Matches are collected in **book order**, never with the active sheet first. Ordering the list around
+whichever sheet is showing re-orders it every time "next" crosses a sheet boundary, and stepping then
+resumes from the moved match's new index — which walks two sheets forever and never reaches the third.
+Hidden sheets stay out either way: they are not on screen, and stepping onto one would show the user a
+sheet the workbook has deliberately put away.
+
+The wash covers **whole cells** rather than the matched characters. A cell is the smallest thing a
+selection can address, so highlighting three characters inside one would mark something the arrows
+cannot land on — and the cell's own formatting can right-align, indent or reformat the text out from
+under a character range measured against the raw value. Only the showing sheet's cells are drawn; the
+readout is what says how many are on the others.
+
 ## Clipboard and structure
 
 The **Clipboard** group carries cut, copy and paste. Paste is the only one with a precondition of its

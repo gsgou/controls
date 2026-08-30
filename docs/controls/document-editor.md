@@ -268,6 +268,52 @@ what is on screen — nothing off screen can show a squiggle, so checking a long
 stall it for no benefit — which means a walk that trusted the cache would step through a document full
 of misspellings and report that it had none.
 
+## Find
+
+**Home ▸ Find** carries a box, a `3/12` readout and a pair of arrows. Type into the box and the editor
+steps onto the first hit at or after the caret and **selects** it; the arrows walk the rest.
+
+| | |
+|---|---|
+| **Typing** | Searches as you type. The first hit is the one at or after the caret, not the top of the document — a find that always restarted at the beginning takes the user away from what they were reading |
+| **Next / Previous** | Step through the hits, wrapping at either end. A "next" that stopped at the last one looks identical to one that has finished the document |
+| **`3/12`** | Which hit you are on, one-based, out of how many there are. `0/0` means the query found nothing; an empty readout means nothing is being searched for |
+| **Enter / Shift+Enter** | Next and previous, from the keyboard, without reaching for the arrow. **Escape** clears the search (Blazor) |
+
+Every hit is washed amber; the one you are on is drawn as the **selection** instead, so the current
+match is the one that looks different rather than the one that looks the same. The hit is selected
+rather than merely scrolled to, because everything a person does after finding a word — restyle it,
+delete it, type over it — operates on the word.
+
+Only **paragraphs** are searched, which is the same content the caret can reach and the same content
+the spelling pass walks. Text inside a table's cells is not counted: a document position is a block and
+an offset, and a table has neither — a count that included those hits would promise something the
+arrows could never step to.
+
+Editing the document re-counts, but never moves the view. Invalidating the match list is not the same
+as re-running the search: jumping somebody somewhere because the paragraph they are typing in gained a
+hit is the last thing a find should do.
+
+The state lives on the controller, so a host can drive it without the toolbar:
+
+```csharp
+var find = editor.Controller!.Find;
+
+find.Options = new FindOptions { MatchCase = true, WholeWord = true };
+find.Query = "revenue";
+
+Console.WriteLine(find.Status);   // "1/4"
+find.FindNext();
+find.Clear();
+```
+
+`Find` implements `IFindController`, which the slide and spreadsheet finders implement too — which is
+why one find bar per host serves all three Office editors. `MatchCase` and `WholeWord` are on the
+controller rather than on the bar; whole-word uses the same rule double-click selection does, so
+searching `don` does not match `don't`.
+
+Finding changes nothing, so it stays live in a read-only editor — where it matters more, not less.
+
 ## Inserting a picture
 
 A file browser is the right answer on a desktop, where a picture is a file in a folder. On a phone it

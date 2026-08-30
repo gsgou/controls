@@ -1,0 +1,65 @@
+/*
+    The find control on the three Office toolbars.
+
+    Declared here in markup rather than built in C#, because Blazor's scoped CSS attaches its scope id
+    to elements written in a .razor file only - a rule targeting an element a RenderTreeBuilder made
+    would compile fine and match nothing.
+*/
+.shiny-office-find {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    /* The toolbar row is a flex container and a flex item shrinks by default, so without this the box
+       squashes below its own width as soon as the bar runs out of room instead of the bar scrolling. */
+    flex: 0 0 auto;
+}
+
+.find-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 5px;
+    border: 1px solid var(--shiny-color-outline-variant, #e4e4e7);
+    background: var(--shiny-color-surface, #fff);
+}
+
+.find-box:focus-within {
+    border-color: var(--shiny-color-primary, #2f6fed);
+}
+
+.find-glass {
+    display: inline-flex;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+}
+
+.find-glass ::deep svg {
+    display: block;
+}
+
+.find-input {
+    width: 130px;
+    border: 0;
+    outline: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 13px;
+    background: transparent;
+    color: var(--shiny-color-on-surface, #1f2937);
+}
+
+.find-input:disabled {
+    opacity: 0.5;
+}
+
+.find-count {
+    /* Wide enough for "12/34" so the arrows beside it do not shuffle sideways as the count grows a
+       digit, which on a held-down arrow reads as the whole bar twitching. */
+    min-width: 44px;
+    text-align: center;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--shiny-color-on-surface-variant, #6b7280);
+}

@@ -12,7 +12,7 @@
            playsinline
            preload="metadata"
            poster="@Poster"
-           @onclick="ToggleTransportBar"></video>
+           @onclick="OnPictureClickedAsync"></video>
 
     @if (CurrentState is MediaElementState.Opening or MediaElementState.Buffering)
     {
@@ -24,9 +24,14 @@
         <div class="shiny-media-error" role="alert">@errorMessage</div>
     }
 
-    @if (ShowTransportBar && isTransportBarShown)
+    @*
+        Rendered whenever the bar is switched on and merely hidden in CSS, never unmounted: a bar that
+        leaves the DOM takes the play/pause button out from under the pointer with it, and the click that
+        was aimed at it falls through to the picture instead.
+    *@
+    @if (ShowTransportBar)
     {
-        <div class="shiny-media-bar">
+        <div class="shiny-media-bar @(isTransportBarShown ? null : "shiny-media-bar-hidden")">
             @if (ShowPlayPauseButton)
             {
                 <button type="button"

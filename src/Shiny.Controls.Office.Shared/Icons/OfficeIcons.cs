@@ -30,6 +30,9 @@ public enum OfficeIcon
     Previous,
     Next,
 
+    /// <summary>A magnifier — the find box's leading mark.</summary>
+    Find,
+
     /// <summary>The chevron on a split button, saying that pressing it opens a gallery.</summary>
     Chevron,
 
@@ -364,6 +367,15 @@ public static class OfficeIcons
 
         OfficeIcon.Previous => [OfficeIconShape.Polyline(14.5f, 4.5f, 8f, 12f, 14.5f, 19.5f)],
         OfficeIcon.Next => [OfficeIconShape.Polyline(9.5f, 4.5f, 16f, 12f, 9.5f, 19.5f)],
+
+        // The zoom pair's magnifier with neither bar in it, which is what makes those two read as
+        // zoom and this one as search - the same lens at the same size on the same grid.
+        OfficeIcon.Find =>
+        [
+            OfficeIconShape.Circle(10.5f, 10.5f, 6.5f),
+            OfficeIconShape.Line(15.5f, 15.5f, 20f, 20f)
+        ],
+
         OfficeIcon.Chevron => [OfficeIconShape.Polyline(7.5f, 10f, 12f, 14.5f, 16.5f, 10f)],
 
         // ---- the spreadsheet set ----

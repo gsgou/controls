@@ -24,6 +24,7 @@ public sealed record SpreadsheetTheme
         HeaderBorder = new ArgbColor(255, 0x45, 0x45, 0x45),
         SelectionFill = new ArgbColor(38, 0x4C, 0xAF, 0x50),
         SelectionBorder = new ArgbColor(255, 0x4C, 0xAF, 0x50),
+        FindMatchFill = new ArgbColor(64, 0xFF, 0xC1, 0x07),
         ClipboardBorder = new ArgbColor(255, 0x7E, 0xB6, 0xFF),
 
         // The ring separates a handle from the cell under it, so it takes the sheet's own ground
@@ -42,6 +43,15 @@ public sealed record SpreadsheetTheme
     public ArgbColor HeaderBorder { get; init; } = new(255, 0xC4, 0xC4, 0xC4);
 
     public ArgbColor SelectionFill { get; init; } = new(30, 0x21, 0x7A, 0x3C);
+
+    /// <summary>
+    /// Wash over a cell holding a find match.
+    /// </summary>
+    /// <remarks>
+    /// Not the selection's colour: the cell the arrows are on is the selection as well, so one hit is
+    /// where you are and the rest are where you could go, and one colour cannot say both.
+    /// </remarks>
+    public ArgbColor FindMatchFill { get; init; } = new(70, 0xFF, 0xC1, 0x07);
     public ArgbColor SelectionBorder { get; init; } = new(255, 0x21, 0x7A, 0x3C);
 
     /// <summary>

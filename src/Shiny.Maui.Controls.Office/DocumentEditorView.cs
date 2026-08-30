@@ -67,6 +67,7 @@ public class DocumentEditorView : ContentView, IDisposable
     readonly Label zoomLabel;
     readonly RibbonButton previousError;
     readonly RibbonButton nextError;
+    readonly OfficeFindBar findBar = new();
     readonly ColorPickerButton textColor;
     readonly List<RibbonItem> buttons = [];
 
@@ -483,6 +484,14 @@ public class DocumentEditorView : ContentView, IDisposable
         proofing.Items.Add(this.nextError);
         tab.Groups.Add(proofing);
 
+        // On Home, and last on it. Finding a word is something you do while writing rather than a
+        // separate pass, so it sits on the tab that opens - but it is reached less often than the
+        // formatting beside it, which is what the priority orders and what decides which group folds
+        // into the overflow first on a narrow window.
+        var finding = new RibbonGroup { Title = "Find", Priority = 60 };
+        finding.Items.Add(OfficeRibbonItems.Host(this.findBar));
+        tab.Groups.Add(finding);
+
         this.ribbon.Tabs.Add(tab);
 
         // Two tabs, not four. Home is what you do to the text under the caret; Layout is what you do
@@ -782,6 +791,10 @@ public class DocumentEditorView : ContentView, IDisposable
         if (this.editor.Controller is { } controller)
             controller.Changed += (_, _) => this.RefreshBar();
 
+        // A new document is a new controller and therefore a new finder; a bar left holding the old
+        // one would count matches in a document that is no longer on screen.
+        this.findBar.Find = this.editor.Controller?.Find;
+
         this.RefreshBar();
     }
 
@@ -990,6 +1003,11 @@ public class DocumentEditorView : ContentView, IDisposable
         this.textColor.SelectedColor = FromArgb(format.Color);
         this.textColor.IsEnabled = enabled;
 
+        // Finding works in a read-only view - it changes nothing - so it follows whether a document is
+        // open rather than whether it can be edited.
+        this.findBar.IsEnabled = this.Document is not null;
+        this.findBar.SetTooltipsEnabled(this.ShowToolbarTooltips);
+
         this.suppressPickerEvents = false;
     }
 
@@ -1000,6 +1018,10 @@ public class DocumentEditorView : ContentView, IDisposable
 
         this.disposed = true;
         this.editor.DocumentChanged -= this.OnDocumentChanged;
+
+        // Drops the bar's subscription to the finder, which outlives this view: the finder belongs to
+        // the controller and the controller to the document, and a host can keep both open.
+        this.findBar.Find = null;
         this.editor.Dispose();
 
         GC.SuppressFinalize(this);

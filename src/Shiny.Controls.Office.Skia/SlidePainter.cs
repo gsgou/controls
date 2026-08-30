@@ -75,6 +75,15 @@ public sealed record SlideEditorChrome
 
     public IReadOnlyList<(double X, double Y, double Width, double Height)> TextSelection { get; init; } = [];
 
+    /// <summary>
+    /// Find matches on the slide being shown, in viewport coordinates.
+    /// </summary>
+    /// <remarks>
+    /// Drawn under the text selection, so the hit the arrows are on carries both washes and reads as
+    /// the current one.
+    /// </remarks>
+    public IReadOnlyList<(double X, double Y, double Width, double Height)> FindMatches { get; init; } = [];
+
     public (double X, double Y, double Width, double Height)? Caret { get; init; }
 
     /// <summary>Drawn dashed when the shape is selected but its text is not being edited.</summary>
@@ -83,6 +92,15 @@ public sealed record SlideEditorChrome
     public ArgbColor Accent { get; init; } = new(255, 0x2F, 0x6F, 0xED);
 
     public ArgbColor SelectionFill { get; init; } = new(90, 0x2F, 0x6F, 0xED);
+
+    /// <summary>
+    /// Wash over every find match.
+    /// </summary>
+    /// <remarks>
+    /// Not the selection's colour, because the match the arrows are on is drawn as the selection too:
+    /// one hit is where you are and the rest are where you could go, and one colour cannot say both.
+    /// </remarks>
+    public ArgbColor FindMatchFill { get; init; } = new(120, 0xFF, 0xC1, 0x07);
 }
 
 /// <summary>
@@ -150,6 +168,11 @@ public sealed class SlidePainter(SkiaTextMeasurer measurer) : IDisposable
     {
         // Text highlight goes underneath the frame so the frame stays legible over it.
         this.fill.Shader = null;
+
+        this.fill.Color = ToSk(chrome.FindMatchFill);
+        foreach (var rect in chrome.FindMatches)
+            canvas.DrawRect(Rect(rect), this.fill);
+
         this.fill.Color = ToSk(chrome.SelectionFill);
 
         foreach (var rect in chrome.TextSelection)

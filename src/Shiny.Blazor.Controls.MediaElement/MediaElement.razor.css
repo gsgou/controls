@@ -60,6 +60,10 @@
         animation: none;
         border-top-color: rgba(255, 255, 255, 0.7);
     }
+
+    .shiny-media-bar {
+        transition: none;
+    }
 }
 
 .shiny-media-error {
@@ -93,6 +97,18 @@
     background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0));
     color: var(--shiny-media-control, #fff);
     line-height: normal;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/*
+   Auto-hiding is a CSS state, not an unmount: the bar has to keep its box so that a click aimed at the
+   play/pause button lands on the button rather than on whatever was behind it. `visibility` rather than
+   `opacity` alone, so the hidden bar is out of the tab order and out of hit-testing — a click over a
+   hidden bar falls through to the picture, which toggles playback.
+*/
+.shiny-media-bar-hidden {
+    opacity: 0;
+    visibility: hidden;
 }
 
 .shiny-media-btn {

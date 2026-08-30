@@ -147,6 +147,21 @@
                                       Disabled="@(!HasText)" Clicked="() => Run(c => c.ShiftLevel(1))" />
                     </RibbonGroup>
 
+                    @*
+                        On Home rather than a tab of its own: finding a word is something you do while
+                        building the deck, and a search that costs a tab switch is one nobody uses.
+                        Last on the tab, because it is reached less often than the formatting beside
+                        it - which is what decides the order groups fold into the overflow in on a
+                        narrow window. Not gated on HasText or ReadOnly: finding changes nothing.
+                    *@
+                    <RibbonGroup Title="Find" Priority="60">
+                        <RibbonContent Size="RibbonItemSize.Small">
+                            <OfficeFindBar Find="@Controller?.Find"
+                                           ShowTooltips="ShowToolbarTooltips"
+                                           Moved="StateHasChanged" />
+                        </RibbonContent>
+                    </RibbonGroup>
+
                     @* Whatever the host added stays on Home: it is the tab that is showing. *@
                     @if (ToolbarContent != null)
                     {
