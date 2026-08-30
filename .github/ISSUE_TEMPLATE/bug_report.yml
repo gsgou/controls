@@ -9,6 +9,8 @@ body:
         Thanks for taking the time to file a bug report! Please fill out the sections below so we can reproduce and fix the issue quickly.
 
         > 💡 Before submitting, please search [existing issues](https://github.com/shinyorg/controls/issues) to avoid duplicates.
+
+        > ⭐ **If you're using the library or filing any sort of issue/feature request - Please at least give this repository a [Star](https://github.com/shinyorg/controls)**
   - type: dropdown
     id: package
     attributes:

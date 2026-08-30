@@ -9,6 +9,8 @@ body:
         Thanks for the idea! Please describe what you'd like to see and why.
 
         > 💡 Search [existing issues](https://github.com/shinyorg/controls/issues) first — someone may have already requested it.
+
+        > ⭐ **If you're using the library or filing any sort of issue/feature request - Please at least give this repository a [Star](https://github.com/shinyorg/controls)**
   - type: dropdown
     id: host
     attributes:

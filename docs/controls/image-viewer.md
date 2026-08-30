@@ -28,6 +28,10 @@ A full-screen image overlay with pinch-to-zoom, pan, double-tap zoom, and animat
 </Grid>
 ```
 
+**MAUI: where the lightbox is drawn.** The viewer is two things — a thumbnail, which is the control you place, and a full-screen lightbox, which is injected somewhere else when `IsOpen` goes true. If the viewer sits inside an `OverlayHost` (or a `ShinyContentPage`, which has one), that host is used. Otherwise it goes into a page-wide overlay layer that `ImageViewer` installs on the `ContentPage` itself, so the lightbox covers the page no matter what the page's layout is. The wrapper is installed when the viewer loads rather than when it opens — creating it re-parents the page's content, which would reset scroll positions if it happened on the tap.
+
+> Before 1.3.0 the page fallback was "whatever `Grid` happens to be the page's root content". A page whose content was not a `Grid` had no host and opening silently did nothing; a root `Grid` with more than one cell got the full-screen lightbox dropped into cell (0,0).
+
 **MAUI: remote images.** Both the thumbnail and the full-screen overlay are a `ShinyImage`, so setting `Uri` instead of `Source` brings the whole loading pipeline with it — placeholder artwork, a loading ring that fills to a real percentage, error artwork, and `IImageService` memory + disk caching. Opening the viewer resolves off the cache the thumbnail already filled rather than downloading the picture a second time.
 
 ```xml

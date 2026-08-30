@@ -152,7 +152,7 @@ composer; the rounded outline is the edge.
 - Per-user read receipts; per-message edit/delete gated by permission + ownership
 - Optimistic send with `Sending`/`Failed`/`Rejected` states and retry
 - Markdown composition toolbar + inline bubble rendering (self-contained, no Markdown-package dependency)
-- Image attachments from gallery or camera (camera shown only where the platform supports capture); tap an image to open the ImageViewer
+- Image attachments from gallery or camera (camera shown only where the platform supports capture); tap an image to open the ImageViewer. On MAUI the lightbox is drawn on the page's own overlay layer, not inside the chat, so it works on any `ContentPage` and covers the page rather than the conversation
 - Cursor-based load-more paging (stable under live inserts)
 - Connection banner that disables input while offline/reconnecting
 - Custom message templates via `Identifier`/`Metadata` discriminator

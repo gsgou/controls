@@ -182,10 +182,13 @@ order by members desc;</pre>
     <h2>Refusing to close</h2>
     <p>
         <code>Closing</code> is raised before anything unwinds and can cancel it. Here the modal only
-        lets go once the field is empty — every dismissal route goes through the same veto.
+        lets go once the field is empty — every dismissal route goes through the same veto. Type
+        something, then try <strong>Close</strong>, Escape, the backdrop or the ✕: each one is refused
+        and shakes the panel. <strong>Discard</strong> and <strong>Save</strong> empty the field
+        first, so they are let through.
     </p>
     <div class="row">
-        <button class="btn" @onclick="() => guardOpen = true">Open guarded</button>
+        <button class="btn" @onclick="OpenGuarded">Open guarded</button>
     </div>
     <p class="state">@guardState</p>
 
@@ -197,7 +200,13 @@ order by members desc;</pre>
         <label style="display:block; font-size:13px; margin-bottom:6px;">Note</label>
         <textarea @bind="note" @bind:event="oninput" rows="3"
                   style="width:100%; padding:8px 10px; border:1px solid #E5E7EB; border-radius:8px;"></textarea>
-        <p class="state">@(String.IsNullOrWhiteSpace(note) ? "Empty — dismissal allowed." : "Dirty — dismissal refused until you discard.")</p>
+
+        @* The refusal has to be readable from inside the panel - the page's own status line is behind it. *@
+        <p class="state">
+            @(refusal ?? (String.IsNullOrWhiteSpace(note)
+                ? "Empty — dismissal allowed."
+                : "Dirty — dismissal refused until you save or discard."))
+        </p>
     </ModalView>
 </section>
 
@@ -244,6 +253,7 @@ order by members desc;</pre>
     string basicState = "not opened yet";
     string guardState = "not opened yet";
     string note = "";
+    string? refusal;
 
     ModalSize size = ModalSize.Medium;
     ModalPlacement placement = ModalPlacement.Center;
@@ -278,9 +288,13 @@ order by members desc;</pre>
 
         this.bareButtons = [new("Get started") { Type = ButtonType.Primary }];
 
+        // Close is the one that demonstrates the veto: it asks to close and changes nothing first, so
+        // a dirty note refuses it. Discard and Save empty the field on the way out, which is what
+        // gets them past the same handler.
         this.guardButtons =
         [
-            new("Discard") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Text, OnClick = this.DiscardAsync },
+            new("Close") { Type = ButtonType.Secondary, Appearance = ButtonAppearance.Text },
+            new("Discard") { Type = ButtonType.Critical, Appearance = ButtonAppearance.Tonal, OnClick = this.DiscardAsync },
             new("Save") { OnClick = this.SaveNoteAsync }
         ];
 
@@ -303,9 +317,16 @@ order by members desc;</pre>
         this.basicOpen = false;
     }
 
+    void OpenGuarded()
+    {
+        this.refusal = null;
+        this.guardOpen = true;
+    }
+
     Task DiscardAsync()
     {
         this.note = "";
+        this.refusal = null;
         return Task.CompletedTask;
     }
 
@@ -313,13 +334,17 @@ order by members desc;</pre>
     {
         this.log.Insert(0, $"saved \"{this.note}\"");
         this.note = "";
+        this.refusal = null;
         return Task.CompletedTask;
     }
 
     void OnGuardClosing(ModalClosingEventArgs e)
     {
-        // The footer's own Discard/Save empty the note first, so only the stray routes get refused.
+        // One handler, every route: the footer's Close arrives here as Button, and Discard and Save
+        // arrive here too - they just emptied the note on the way, so the same test lets them by.
         e.Cancel = !String.IsNullOrWhiteSpace(this.note);
+        this.refusal = e.Cancel ? $"Refused a {e.Reason} dismissal — the note is dirty." : null;
+
         if (e.Cancel)
             this.guardState = $"refused a {e.Reason} dismissal — the note is dirty";
     }

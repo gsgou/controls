@@ -9,68 +9,41 @@
 <h1>Document Editor</h1>
 <p class="lead">
     A <code>.docx</code> editor. Two controls: <code>DocumentEditor</code> is the bare surface,
-    <code>DocumentEditorView</code> wraps it in a <code>ShinyToolbar</code> with the formatting chrome.
+    <code>DocumentEditorView</code> wraps it in a <code>Ribbon</code> with the formatting chrome —
+    Home carries font, paragraph, lists, proofing and find; Layout carries margins, orientation,
+    print layout, watermark and zoom; Insert carries tables, pictures, header, footer, page numbers
+    and page breaks.
 </p>
 <p class="lead">
-    The toolbar's two list buttons make any paragraph a bulleted or numbered item, and typing
+    The Home tab's two list buttons make any paragraph a bulleted or numbered item, and typing
     <code>-&nbsp;</code> or <code>1.&nbsp;</code> at the start of a line does the same. <kbd>Tab</kbd>
     inside a list nests the item — the second level reads as <code>1a</code> — and
     <kbd>Shift</kbd>+<kbd>Tab</kbd> brings it back out.
 </p>
 
+@*
+    Everything the ribbon carries is driven from the ribbon. What is left here is what it does not
+    have: whether the wrapper is there at all, and the Theme parameter a host supplies.
+*@
 <div class="toolbar">
     <label class="chk"><input type="checkbox" @bind="withToolbar" /> Toolbar wrapper</label>
-    <label class="chk"><input type="checkbox" @bind="spellCheck" /> Spell check</label>
     <button class="btn" @onclick="ToggleTheme">@(dark ? "Follow page" : "Force dark")</button>
     <span class="status">@Status</span>
-</div>
-
-<div class="toolbar">
-    <label class="chk">
-        <input type="checkbox" checked="@(pageLayout == DocumentPageLayout.Print)" @onchange="TogglePageLayout" />
-        Print layout
-    </label>
-    <button class="btn" @onclick="InsertPageBreak">Insert page break</button>
-    <input class="txt" placeholder="Header text" @bind="headerText" @bind:event="oninput" />
-    <button class="btn" @onclick="ApplyHeader">Set header</button>
-    <button class="btn" @onclick="ClearHeader">Clear</button>
-    <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.Plain)">Page number</button>
-    <button class="btn" @onclick="() => AddPageNumber(PageNumberFormat.PageOfCount)">Page X of Y</button>
-    <select class="txt" value="@marginPreset" @onchange="ApplyMargins">
-        <option value="">Page margins…</option>
-        @foreach (var preset in PageMarginPresets.All)
-        {
-            <option value="@preset.Name">@preset.Name — @preset.Description</option>
-        }
-    </select>
-    <button class="btn" @onclick="() => Nudge(-0.25)">&minus;</button>
-    <span class="status">@($"{this.zoom * 100:0}%")</span>
-    <button class="btn" @onclick="() => Nudge(0.25)">+</button>
-    <span class="status">@PageStatus</span>
-    <span class="status">@MarginStatus</span>
 </div>
 
 <div class="editor-host">
     @if (withToolbar)
     {
-        <DocumentEditorView @ref="view"
-                            Document="document"
+        <DocumentEditorView Document="document"
                             Theme="@(dark ? DocumentTheme.Dark : null)"
-                            PageLayout="pageLayout"
-                            Zoom="zoom"
                             SpellChecker="checker"
-                            SpellCheckEnabled="spellCheck"
                             DocumentChanged="OnChanged" />
     }
     else
     {
-        <DocumentEditor @ref="editor"
-                        Document="document"
+        <DocumentEditor Document="document"
                         Theme="@(dark ? DocumentTheme.Dark : null)"
-                        PageLayout="pageLayout"
-                        Zoom="zoom"
                         SpellChecker="checker"
-                        SpellCheckEnabled="spellCheck"
                         DocumentChanged="OnChanged" />
     }
 </div>
@@ -93,61 +66,9 @@
     /// </remarks>
     readonly SampleSpellChecker checker = new();
 
-    DocumentEditorView? view;
-    DocumentEditor? editor;
-
-    bool spellCheck = true;
     bool withToolbar = true;
     bool dark;
     int edits;
-
-    DocumentPageLayout pageLayout = DocumentPageLayout.Print;
-    double zoom = 1.0;
-    string headerText = "Quarterly Report";
-    string marginPreset = string.Empty;
-
-    DocumentEditorController? Controller => this.withToolbar ? this.view?.Controller : this.editor?.Controller;
-
-    string PageStatus => this.Controller is { IsPaginated: true } controller
-        ? $"{controller.Pagination.Count} page(s)"
-        : "reflowed";
-
-    void TogglePageLayout(ChangeEventArgs e)
-        => this.pageLayout = (bool?)e.Value == true ? DocumentPageLayout.Print : DocumentPageLayout.Reflow;
-
-    void Nudge(double delta) => this.zoom = Math.Clamp(this.zoom + delta, 0.25, 4.0);
-
-    void InsertPageBreak() => this.Controller?.InsertPageBreak();
-
-    void ApplyHeader() => this.Controller?.SetHeaderText(this.headerText, PageNumberPosition.Center);
-
-    void ClearHeader() => this.Controller?.SetHeaderText(null);
-
-    /// <summary>
-    /// The margin presets, driven from the page rather than from the toolbar.
-    /// </summary>
-    /// <remarks>
-    /// The toolbar already carries this gallery — it is repeated here to show the controller API a
-    /// host with its own chrome would call, and because the bare <c>DocumentEditor</c> (toolbar
-    /// wrapper off) has no toolbar to carry it.
-    /// </remarks>
-    void ApplyMargins(ChangeEventArgs e)
-    {
-        this.marginPreset = e.Value as string ?? string.Empty;
-
-        if (PageMarginPresets.All.FirstOrDefault(x => x.Name == this.marginPreset) is { } preset)
-            this.Controller?.SetPageMargins(preset.Margins);
-    }
-
-    /// <summary>The margins as a reader would state them — the model keeps pixels at 96 dpi.</summary>
-    string MarginStatus => this.Controller?.PageMargins is { } margins
-        ? $"margins {Inches(margins.Left)}/{Inches(margins.Top)}/{Inches(margins.Right)}/{Inches(margins.Bottom)} in"
-        : string.Empty;
-
-    static string Inches(double pixels) => (pixels / 96).ToString("0.##");
-
-    void AddPageNumber(PageNumberFormat format)
-        => this.Controller?.InsertPageNumber(PageNumberPlacement.Footer, PageNumberPosition.Center, format);
 
     string Status => this.document is null
         ? "loading"
@@ -157,16 +78,6 @@
     {
         var bytes = SampleOfficeDocuments.BuildDocument();
         this.document = await WordDocument.OpenAsync(new MemoryStream(bytes), editable: true);
-    }
-
-    /// <remarks>
-    /// The page count comes from the editor's controller, and an <c>@ref</c> is not assigned until
-    /// after the first render — so the status line needs one more render to say anything true.
-    /// </remarks>
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (firstRender)
-            this.StateHasChanged();
     }
 
     void ToggleTheme() => this.dark = !this.dark;
