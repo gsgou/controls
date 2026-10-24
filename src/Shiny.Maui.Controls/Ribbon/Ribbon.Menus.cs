@@ -125,11 +125,10 @@ public partial class Ribbon
             Content = content,
             Padding = new Thickness(4),
             StrokeThickness = 1,
-            Stroke = this.OutlineBrush,
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Start,
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerMediumRadius)
-        };
+        }.WithBrush(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         card.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
         card.WithElevation(ShinyThemeKeys.Elevation.Level2);
 
@@ -261,14 +260,13 @@ public partial class Ribbon
             row.Children.Add(new Polyline
             {
                 Points = new PointCollection { new(0, 0), new(4, 4), new(0, 8) },
-                Stroke = this.ForegroundBrush,
                 StrokeThickness = 1.4,
                 StrokeLineCap = PenLineCap.Round,
                 StrokeLineJoin = PenLineJoin.Round,
                 WidthRequest = 5,
                 HeightRequest = 8,
                 VerticalOptions = LayoutOptions.Center
-            });
+            }.WithBrush(Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant));
         }
 
         var border = new Border

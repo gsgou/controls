@@ -455,14 +455,13 @@ class RibbonGroupView : Grid
         {
             // An arrow into the corner: down the left, along the bottom, then the diagonal back out.
             Points = new PointCollection { new(0, 0), new(0, 7), new(7, 7), new(0, 0) },
-            Stroke = this.owner.ForegroundBrush,
             StrokeThickness = 1.2,
             StrokeLineJoin = PenLineJoin.Round,
             WidthRequest = 8,
             HeightRequest = 8,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithBrush(Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant);
 
         var border = new Border
         {
@@ -535,14 +534,13 @@ class RibbonGroupView : Grid
         stack.Children.Add(new Polyline
         {
             Points = new PointCollection { new(0, 0), new(4, 4), new(8, 0) },
-            Stroke = this.owner.ForegroundBrush,
             StrokeThickness = 1.4,
             StrokeLineCap = PenLineCap.Round,
             StrokeLineJoin = PenLineJoin.Round,
             WidthRequest = 8,
             HeightRequest = 5,
             HorizontalOptions = LayoutOptions.Center
-        });
+        }.WithBrush(Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant));
 
         var border = new Border
         {

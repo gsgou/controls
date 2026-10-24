@@ -234,7 +234,6 @@ class RibbonItemView : Grid
     View BuildChevron() => new Polyline
     {
         Points = new PointCollection { new(0, 0), new(4, 4), new(8, 0) },
-        Stroke = this.owner.ForegroundBrush,
         StrokeThickness = 1.4,
         StrokeLineCap = PenLineCap.Round,
         StrokeLineJoin = PenLineJoin.Round,
@@ -242,7 +241,7 @@ class RibbonItemView : Grid
         HeightRequest = 5,
         HorizontalOptions = LayoutOptions.Center,
         VerticalOptions = LayoutOptions.Center
-    };
+    }.WithBrush(Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant);
 
 
     View? BuildIcon(double iconSize)

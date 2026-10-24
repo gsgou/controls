@@ -1306,14 +1306,14 @@ public partial class ShinyTabBar : Grid
 
         if (indicatorColor is not null)
         {
-            cell.Pill.Background = new SolidColorBrush(indicatorColor);
+            ThemeBrush.Apply(cell.Pill, VisualElement.BackgroundProperty, indicatorColor, ShinyThemeKeys.Brush.SecondaryContainer);
             cell.Line.Color = indicatorColor;
             cell.Underline.Color = indicatorColor;
             cell.Dot.Color = indicatorColor;
         }
         else
         {
-            cell.Pill.Background = ThemeTokens.TokenBrush(ShinyThemeKeys.Color.SecondaryContainer);
+            ThemeBrush.Apply(cell.Pill, VisualElement.BackgroundProperty, ShinyThemeKeys.Brush.SecondaryContainer);
 
             // BoxView on AppKit paints from Color and ignores Background/BackgroundColor entirely,
             // so the indicator bars are driven through Color on every head rather than only where it
@@ -1484,12 +1484,12 @@ public partial class ShinyTabBar : Grid
     /// <summary>Paints an indicator view, explicit colour first and the theme token otherwise.</summary>
     void ApplyIndicatorPaint(Border indicator)
     {
-        if (this.IndicatorColor is { } color)
-            indicator.Background = new SolidColorBrush(color);
-        else
-            indicator.Background = ThemeTokens.TokenBrush(this.IndicatorStyle == TabIndicatorStyle.Pill
-                ? ShinyThemeKeys.Color.SecondaryContainer
-                : ShinyThemeKeys.Color.Primary);
+        ThemeBrush.Apply(
+            indicator,
+            VisualElement.BackgroundProperty,
+            this.IndicatorColor,
+            this.IndicatorStyle == TabIndicatorStyle.Pill ? ShinyThemeKeys.Brush.SecondaryContainer : ShinyThemeKeys.Brush.Primary
+        );
     }
 
 
@@ -1677,10 +1677,7 @@ public partial class ShinyTabBar : Grid
         if (this.centerCircle.StrokeShape is RoundRectangle shape)
             shape.CornerRadius = new CornerRadius(center.Size / 2);
 
-        if (center.BackgroundColor is { } background)
-            this.centerCircle.Background = new SolidColorBrush(background);
-        else
-            this.centerCircle.Background = ThemeTokens.TokenBrush(ShinyThemeKeys.Color.Primary);
+        ThemeBrush.Apply(this.centerCircle, VisualElement.BackgroundProperty, center.BackgroundColor, ShinyThemeKeys.Brush.Primary);
 
         this.ApplyCenterAvailability();
         this.centerCircle.WithElevation(ShinyThemeKeys.Elevation.Level3);
@@ -1719,6 +1716,7 @@ public partial class ShinyTabBar : Grid
         // Everything the default look sets is cleared, or the template paints on top of a circle it
         // never asked for.
         this.centerCircle.Content = content;
+        this.centerCircle.RemoveDynamicResource(VisualElement.BackgroundProperty);
         this.centerCircle.Background = null;
         this.centerCircle.WithoutElevation();
         this.centerCircle.WidthRequest = center.Size;
@@ -2106,10 +2104,9 @@ public partial class ShinyTabBar : Grid
             VerticalOptions = LayoutOptions.End,
             MinimumWidthRequest = 200,
             Margin = new Thickness(16, 0, 16, this.BarHeight + this.BarMargin.Bottom + overhang + 12),
-            Background = ThemeTokens.TokenBrush(ShinyThemeKeys.Color.SurfaceContainerHigh),
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Content = this.BuildMenuBody()
-        };
+        }.WithBrush(VisualElement.BackgroundProperty, ShinyThemeKeys.Brush.SurfaceContainerHigh);
         card.WithElevation(ShinyThemeKeys.Elevation.Level3);
 
         // The card is painted into the page's overlay layer, not under the bar, so a test looking

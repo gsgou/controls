@@ -78,8 +78,7 @@ public partial class ShinyNavBar : Grid
     readonly Grid largeTitleHost;
     readonly Label largeTitleLabel;
     readonly BoxView separator;
-    readonly BoxView surfaceProbe;
-    readonly SolidColorBrush surfaceBrush;
+    readonly BoxView surfaceProbe = ThemeProbe.CreateProbe();
 
     View? backButton;
     View? scrollSource;
@@ -221,14 +220,12 @@ public partial class ShinyNavBar : Grid
         this.stack.Children.Add(this.barGrid);
         this.stack.Children.Add(this.largeTitleHost);
 
-        (this.surfaceBrush, this.surfaceProbe) = ThemeProbe.Create();
         this.stack.Children.Add(this.surfaceProbe);
 
         this.surface = new Border
         {
             StrokeThickness = 0,
             Stroke = null,
-            Background = this.surfaceBrush,
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerNoneRadius),
             Content = this.stack
         };
@@ -487,7 +484,19 @@ public partial class ShinyNavBar : Grid
 
         // A brush wins outright - it is the only way to say "gradient", and a colour set alongside it
         // could only ever be the one it replaces.
-        this.surface.Background = this.BarBackground ?? this.surfaceBrush;
+        //
+        // The surface takes the brush twin of the token rather than a brush bound to the probe: Windows
+        // does not repaint a brush whose colour changes under it, so the bar would keep its first colour
+        // through every theme swap. The probe is still what EffectiveBarColor reads.
+        if (this.BarBackground is { } brush)
+        {
+            this.surface.RemoveDynamicResource(VisualElement.BackgroundProperty);
+            this.surface.Background = brush;
+        }
+        else
+        {
+            ThemeBrush.Apply(this.surface, VisualElement.BackgroundProperty, this.BarBackgroundColor, ShinyThemeKeys.Brush.SurfaceContainer);
+        }
 
         // On the Border's *content*, not on the Border. The inset is applied by offsetting the view
         // that carries it, not by padding it - so putting it on the surface pushed the whole

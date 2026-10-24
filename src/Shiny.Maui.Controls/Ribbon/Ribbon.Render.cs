@@ -233,10 +233,6 @@ public partial class Ribbon
     /// <summary>Paints the frames from the theme, or from whatever the consumer set instead.</summary>
     void ApplyChrome()
     {
-        ThemeProbe.Tint(this.foregroundProbe, BoxView.ColorProperty, null, ShinyThemeKeys.Color.OnSurfaceVariant);
-        ThemeProbe.Tint(this.outlineProbe, BoxView.ColorProperty, null, ShinyThemeKeys.Color.OutlineVariant);
-        ThemeProbe.Tint(this.accentProbe, BoxView.ColorProperty, this.AccentColor, ShinyThemeKeys.Color.Primary);
-
         ThemeProbe.Tint(
             this.headerFrame,
             VisualElement.BackgroundColorProperty,
@@ -296,7 +292,6 @@ public partial class Ribbon
             Padding = new Thickness(14, 6),
             StrokeThickness = 0,
             Stroke = null,
-            Background = this.AccentBrush,
             Margin = new Thickness(0, 4),
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             GestureRecognizers =
@@ -304,6 +299,8 @@ public partial class Ribbon
                 new TapGestureRecognizer { Command = new Command(this.InvokeApplicationButton) }
             }
         };
+
+        ThemeBrush.Apply(border, VisualElement.BackgroundProperty, this.AccentColor, ShinyThemeKeys.Brush.Primary);
 
         AutomationIds.Set(border, AutomationIds.For(this, ApplicationButtonAutomationIdSuffix) ?? "RibbonApplicationButton");
         this.appButtonHost.Content = border;

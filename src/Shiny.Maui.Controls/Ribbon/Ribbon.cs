@@ -87,9 +87,6 @@ public partial class Ribbon : ContentView
     // number before two of its corners can be zeroed. See CornerRadiusProbe.
     readonly CornerRadiusProbe cornerProbe;
 
-    readonly BoxView foregroundProbe;
-    readonly BoxView outlineProbe;
-    readonly BoxView accentProbe;
     readonly BoxView onSurfaceProbe;
 
     int suppress;
@@ -99,10 +96,7 @@ public partial class Ribbon : ContentView
 
     public Ribbon()
     {
-        (this.ForegroundBrush, this.foregroundProbe) = ThemeProbe.Create();
-        (this.OutlineBrush, this.outlineProbe) = ThemeProbe.Create();
-        (this.AccentBrush, this.accentProbe) = ThemeProbe.Create();
-        (_, this.onSurfaceProbe) = ThemeProbe.Create();
+        this.onSurfaceProbe = ThemeProbe.CreateProbe();
         this.onSurfaceProbe.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         this.contextLabel = new Label
@@ -138,7 +132,6 @@ public partial class Ribbon : ContentView
 
         this.collapseGlyph = new Polyline
         {
-            Stroke = this.ForegroundBrush,
             StrokeThickness = 1.4,
             StrokeLineCap = PenLineCap.Round,
             StrokeLineJoin = PenLineJoin.Round,
@@ -146,7 +139,7 @@ public partial class Ribbon : ContentView
             HeightRequest = 6,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
-        };
+        }.WithBrush(Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant);
 
         this.collapseToggle = new Border
         {
@@ -245,9 +238,6 @@ public partial class Ribbon : ContentView
 
         // The probes resolve theme tokens, which only works for something that is in the tree. They are
         // zero-sized and hidden; see ThemeProbe.
-        this.root.Add(this.foregroundProbe, 0, 0);
-        this.root.Add(this.outlineProbe, 0, 0);
-        this.root.Add(this.accentProbe, 0, 0);
         this.root.Add(this.onSurfaceProbe, 0, 0);
         this.root.Add(this.cornerProbe.View, 0, 0);
 
@@ -320,15 +310,6 @@ public partial class Ribbon : ContentView
 
     /// <summary>Raised when the application ("File") button is pressed.</summary>
     public event EventHandler? ApplicationButtonClicked;
-
-
-    // Shared brushes. Brush-typed properties cannot take a Color token directly, so all three are
-    // bound to hidden probes that can. See ThemeProbe.
-    internal SolidColorBrush ForegroundBrush { get; }
-
-    internal SolidColorBrush OutlineBrush { get; }
-
-    internal SolidColorBrush AccentBrush { get; }
 
 
     // ---------------------------------------------------------------------------------------------

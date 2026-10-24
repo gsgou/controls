@@ -510,10 +510,9 @@ public partial class ShinyNavBar
             HorizontalOptions = this.menuSide == NavBarSide.Left ? LayoutOptions.Start : LayoutOptions.End,
             VerticalOptions = LayoutOptions.Start,
             Margin = new Thickness(8, this.BarHeight + 4, 8, 0),
-            Background = ThemeTokens.TokenBrush(ShinyThemeKeys.Color.SurfaceContainerHigh),
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerLargeRadius),
             Content = this.BuildMenuBody()
-        };
+        }.WithBrush(VisualElement.BackgroundProperty, ShinyThemeKeys.Brush.SurfaceContainerHigh);
         card.WithElevation(ShinyThemeKeys.Elevation.Level3);
 
         // Painted into the page's overlay layer rather than under the bar, so it needs a name of its own.

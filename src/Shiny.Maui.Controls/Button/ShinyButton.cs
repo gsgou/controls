@@ -121,18 +121,16 @@ public partial class ShinyButton : ContentView, ITapTarget
         this.rootGrid.Add(this.busyOverlay);
 
 
-        // A SolidColorBrush rather than Brush.Black so the shadow colour can follow the theme's own
-        // shadow token - a pack that lightens shadows should lighten these too.
-        var shadowBrush = new SolidColorBrush();
-        shadowBrush.SetDynamicResource(SolidColorBrush.ColorProperty, Themes.ShinyThemeKeys.Color.Shadow);
-
+        // The theme's shadow brush rather than Brush.Black so the shadow colour follows the theme - a
+        // pack that lightens shadows should lighten these too. The brush token, not a colour token on a
+        // brush: set on a brush that is not in the tree, a token never resolves.
         this.shadow = new Shadow
         {
-            Brush = shadowBrush,
             Opacity = 0.22f,
             Radius = 6,
             Offset = new Point(0, 2)
         };
+        ThemeBrush.Apply(this.shadow, Shadow.BrushProperty, ShinyThemeKeys.Brush.Shadow);
 
         this.border = new Border
         {

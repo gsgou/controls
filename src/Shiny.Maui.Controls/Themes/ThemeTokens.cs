@@ -67,6 +67,16 @@ static class ThemeTokens
         return element;
     }
 
+    /// <summary>
+    /// Bind a <c>Brush</c>-typed property (a stroke, a background) to a <c>ShinyThemeKeys.Brush.…</c>
+    /// token. See <see cref="ThemeBrush"/>.
+    /// </summary>
+    public static T WithBrush<T>(this T element, BindableProperty property, string brushThemeKey) where T : Element
+    {
+        ThemeBrush.Apply(element, property, brushThemeKey);
+        return element;
+    }
+
     /// <summary>Bind a corner radius to a <c>ShinyThemeKeys.Shape.…Radius</c> token.</summary>
     public static RoundRectangle WithCornerRadius(this RoundRectangle shape, string radiusThemeKey)
     {
@@ -109,13 +119,5 @@ static class ThemeTokens
         element.RemoveDynamicResource(VisualElement.ShadowProperty);
         element.Shadow = null;
         return element;
-    }
-
-    /// <summary>Drive a brush's colour from a token so theme swaps reach Stroke/Background properties.</summary>
-    public static SolidColorBrush TokenBrush(string colorThemeKey)
-    {
-        var brush = new SolidColorBrush();
-        brush.SetDynamicResource(SolidColorBrush.ColorProperty, colorThemeKey);
-        return brush;
     }
 }

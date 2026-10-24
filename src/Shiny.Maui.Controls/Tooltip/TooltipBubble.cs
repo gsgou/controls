@@ -25,17 +25,12 @@ public class TooltipBubble : Grid
     readonly Label titleLabel;
     readonly Label textLabel;
     readonly ContentView contentHost;
-    readonly SolidColorBrush fillBrush;
-    readonly BoxView fillProbe;
-    readonly SolidColorBrush strokeBrush;
-    readonly BoxView strokeProbe;
+    readonly BoxView fillProbe = ThemeProbe.CreateProbe();
+    readonly BoxView strokeProbe = ThemeProbe.CreateProbe();
     readonly Shadow shadow;
 
     public TooltipBubble()
     {
-        (this.fillBrush, this.fillProbe) = ThemeProbe.Create();
-        (this.strokeBrush, this.strokeProbe) = ThemeProbe.Create();
-
         this.titleLabel = new Label { IsVisible = false, LineBreakMode = LineBreakMode.WordWrap };
         this.titleLabel.SetDynamicResource(Label.FontSizeProperty, ShinyThemeKeys.Type.TitleSmallSize);
         this.titleLabel.FontAttributes = FontAttributes.Bold;
@@ -51,25 +46,19 @@ public class TooltipBubble : Grid
             Children = { this.titleLabel, this.textLabel, this.contentHost }
         };
 
-        // Shadow.Brush is Brush-typed, so it needs the same probe treatment as the stroke.
-        var (shadowBrush, shadowProbe) = ThemeProbe.Create();
-        shadowProbe.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Shadow);
-
         // One Shadow instance, assigned once and never swapped. Reassigning VisualElement.Shadow tears
         // the native layer down and back up, which on Android drops focus out of anything inside it —
         // so HasShadow toggles this instance's Opacity rather than the property.
         this.shadow = new Shadow
         {
-            Brush = shadowBrush,
             Opacity = 0.25f,
             Radius = 8,
             Offset = new Point(0, 3)
         };
+        ThemeBrush.Apply(this.shadow, Shadow.BrushProperty, ShinyThemeKeys.Brush.Shadow);
 
         this.card = new Border
         {
-            Background = this.fillBrush,
-            Stroke = this.strokeBrush,
             StrokeThickness = 0,
             Padding = new Thickness(12, 8),
             StrokeShape = new RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
@@ -89,9 +78,9 @@ public class TooltipBubble : Grid
         this.Add(this.tail);
         this.Add(this.fillProbe);
         this.Add(this.strokeProbe);
-        this.Add(shadowProbe);
 
-        // The tail is painted from the probes' resolved colours, and a probe resolves asynchronously —
+        // The card's fill and outline are brush tokens (see ApplyFill), but the tail is drawn, so it is
+        // painted from the probes' resolved colours instead - and a probe resolves asynchronously -
         // once when the theme dictionary first merges, and again on every ShinyThemeManager.SetTheme.
         // Without this the tail keeps whatever colour it was first drawn with while the card follows
         // the theme, which shows up as a tail in the wrong colour after a light/dark switch.
@@ -432,6 +421,13 @@ public class TooltipBubble : Grid
     void ApplyFill()
     {
         ThemeProbe.Tint(this.fillProbe, BoxView.ColorProperty, this.BubbleColor, this.fillToken);
+
+        // A brush token, not a brush bound to the probe. A theme swap replaces the dictionary, so the
+        // card is handed a new brush; recolouring the one it already holds is not enough on Windows,
+        // which keeps the native fill it was first drawn with. That left a walkthrough callout in the
+        // tooltip's dark inverse surface after it moved to a light surface container, its dark text
+        // unreadable on it.
+        ThemeBrush.Apply(this.card, VisualElement.BackgroundProperty, this.BubbleColor, this.fillToken.AsBrush());
         this.tail.Invalidate();
     }
 
@@ -439,6 +435,7 @@ public class TooltipBubble : Grid
     void ApplyStroke()
     {
         ThemeProbe.Tint(this.strokeProbe, BoxView.ColorProperty, this.BorderColor, ShinyThemeKeys.Color.OutlineVariant);
+        ThemeBrush.Apply(this.card, Border.StrokeProperty, this.BorderColor, ShinyThemeKeys.Brush.OutlineVariant);
         this.card.StrokeThickness = this.BorderThickness;
         this.tail.Invalidate();
     }

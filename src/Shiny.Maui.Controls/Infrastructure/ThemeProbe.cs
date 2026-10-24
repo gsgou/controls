@@ -1,49 +1,33 @@
 namespace Shiny.Maui.Controls.Infrastructure;
 
 /// <summary>
-/// Lets a <c>Brush</c>-typed property follow a <c>Color</c> theme token.
+/// Resolves a <c>Color</c> theme token on a hidden element in the tree, for code that needs the colour
+/// itself — something drawn, an alpha applied to it, ink chosen against it.
 /// </summary>
 /// <remarks>
-/// The theme dictionaries hold <see cref="Color"/> values, but <c>Border.Stroke</c>,
-/// <c>Border.Background</c> and <c>Shadow.Brush</c> take a <c>Brush</c>. Two things that look like they
-/// should bridge that gap silently do not:
-/// <list type="number">
-/// <item><c>border.SetDynamicResource(Border.StrokeProperty, token)</c> hands a Color to a Brush
-/// property. The types never match, so the resource is dropped and the stroke stays null — which reads
-/// as "the outline just is not drawn". It looks correct in source because <c>Stroke = someColor</c>
-/// compiles via Brush's implicit conversion, making the two forms appear equivalent.</item>
-/// <item><c>new SolidColorBrush().SetDynamicResource(SolidColorBrush.ColorProperty, token)</c> puts the
-/// lookup on an object that is not in the visual tree, so it has no resource chain to search and keeps
-/// its seed colour forever.</item>
-/// </list>
-/// What does work is resolving the token on something that <em>is</em> parented — a zero-sized hidden
-/// <see cref="BoxView"/> — and binding the brush to it. Add the probe to a layout in the control, and
-/// the brush tracks live theme swaps like everything else.
+/// A <c>Brush</c>-typed property (<c>Border.Stroke</c>, <c>Border.Background</c>, <c>Shadow.Brush</c>)
+/// does not need a probe: point it at the brush twin of the token with
+/// <see cref="Themes.ThemeBrush.Apply(Element, BindableProperty, Color?, string)"/>. Do not bind a brush's
+/// <c>Color</c> to a probe and leave that one brush on the property. Every other platform repaints when the
+/// brush's colour changes; Windows keeps the colour the native view was first drawn with, which is how a
+/// walkthrough callout stayed in the tooltip's dark inverse surface after switching to a light surface
+/// container. A brush token is replaced along with the dictionary on a theme swap, so the property is
+/// handed a new brush instead.
 /// </remarks>
 static class ThemeProbe
 {
     /// <summary>
-    /// A hidden probe plus a brush bound to its colour. Add the probe to a layout inside the control,
-    /// then drive it with <see cref="Tint"/>.
+    /// A hidden, zero-sized element that exists only to resolve a colour token. Add it to a layout
+    /// inside the control, drive it with <see cref="Tint"/>, and read or watch its <c>Color</c>.
     /// </summary>
-    public static (SolidColorBrush Brush, BoxView Probe) Create()
+    public static BoxView CreateProbe() => new()
     {
-        var probe = new BoxView
-        {
-            // Exists only to resolve a resource: it must never be measured or paint anything.
-            IsVisible = false,
-            WidthRequest = 0,
-            HeightRequest = 0,
-            InputTransparent = true
-        };
-
-        // Seeded non-null: a brush handed to a handler with a null Color throws inside MAUI's Windows
-        // stroke mapper, and a token stays unresolved until the theme dictionary merges.
-        var brush = new SolidColorBrush(Colors.Transparent);
-        brush.SetBinding(SolidColorBrush.ColorProperty, static (BoxView b) => b.Color, source: probe);
-
-        return (brush, probe);
-    }
+        // Exists only to resolve a resource: it must never be measured or paint anything.
+        IsVisible = false,
+        WidthRequest = 0,
+        HeightRequest = 0,
+        InputTransparent = true
+    };
 
 
     /// <summary>

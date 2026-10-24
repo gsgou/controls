@@ -259,9 +259,7 @@ public partial class Expander : Grid
     void ApplyAppearance()
     {
         // Border
-        this.rootBorder.Stroke = this.BorderColor == null
-            ? ThemeTokens.TokenBrush(ShinyThemeKeys.Color.OutlineVariant)
-            : new SolidColorBrush(this.BorderColor);
+        ThemeBrush.Apply(this.rootBorder, Border.StrokeProperty, this.BorderColor, ShinyThemeKeys.Brush.OutlineVariant);
         this.rootBorder.SetTokenOrValue(Border.StrokeThicknessProperty, this.BorderThickness, ShinyThemeKeys.Border.Thin);
 
         if (this.rootBorder.StrokeShape is RoundRectangle shape)

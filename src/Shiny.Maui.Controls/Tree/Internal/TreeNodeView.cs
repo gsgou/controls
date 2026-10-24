@@ -12,7 +12,6 @@ internal class TreeNodeView : Grid
     readonly Grid chevronHost;
     readonly Border? checkBox;
     readonly Label? checkGlyph;
-    readonly BoxView? checkStrokeProbe;
     readonly ContentView contentHost;
     readonly Border background;
     readonly Grid dropIndicatorAbove;
@@ -89,15 +88,12 @@ internal class TreeNodeView : Grid
             // OnPrimary never changes with selection, so it is resolved live once rather than per refresh.
             checkGlyph.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
 
-            // A colour token cannot reach Border.Stroke (a Brush), so the stroke follows a hidden probe
-            // that resolves the token in the tree - see ThemeProbe. Copying the colour out of
-            // Application.Current.Resources instead left the box in the old palette after a light/dark
-            // flip, and never saw a palette scoped over the tree at all.
-            var (strokeBrush, strokeProbe) = ThemeProbe.Create();
-            checkStrokeProbe = strokeProbe;
+            // The stroke is set in RefreshCheckBox, from a brush token: a colour token cannot reach
+            // Border.Stroke (a Brush). Copying the colour out of Application.Current.Resources instead
+            // left the box in the old palette after a light/dark flip, and never saw a palette scoped
+            // over the tree at all.
             checkBox = new Border
             {
-                Stroke = strokeBrush,
                 WidthRequest = 20,
                 HeightRequest = 20,
                 Padding = 0,
@@ -107,7 +103,6 @@ internal class TreeNodeView : Grid
                 Content = checkGlyph
             }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
             inner.Add(checkBox, 2, 0);
-            inner.Add(strokeProbe, 2, 0);
         }
 
         // Content host
@@ -307,19 +302,20 @@ internal class TreeNodeView : Grid
         }
     }
 
-    // Every colour goes through ThemeProbe.Tint, so an explicit CheckBoxColor wins and an unset one
-    // follows the theme token live - including across a light/dark flip with no selection change.
+    // Every colour goes through ThemeProbe.Tint / ThemeBrush.Apply, so an explicit CheckBoxColor wins and
+    // an unset one follows the theme token live - including across a light/dark flip with no selection
+    // change.
     void RefreshCheckBox()
     {
         if (checkBox == null)
             return;
 
         var selected = Node.IsSelected;
-        ThemeProbe.Tint(
-            checkStrokeProbe!,
-            BoxView.ColorProperty,
+        ThemeBrush.Apply(
+            checkBox,
+            Border.StrokeProperty,
             selected ? owner.CheckBoxColor : null,
-            selected ? ShinyThemeKeys.Color.Primary : ShinyThemeKeys.Color.OnSurfaceVariant
+            selected ? ShinyThemeKeys.Brush.Primary : ShinyThemeKeys.Brush.OnSurfaceVariant
         );
         ThemeProbe.Tint(
             checkBox,
