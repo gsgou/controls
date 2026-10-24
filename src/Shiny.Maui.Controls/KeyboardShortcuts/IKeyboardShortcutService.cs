@@ -17,7 +17,7 @@ public interface IKeyboardShortcutService
     /// <summary>
     /// True when a native key source exists for this platform: always on Windows, Android and iOS;
     /// on macOS (AppKit), Linux (GTK4) and Mac Catalyst only once the Desktop add-on's
-    /// <c>UseDesktopKeyboardShortcuts()</c> has been called.
+    /// <c>UseShinyDesktop()</c> has been called.
     /// </summary>
     bool IsSupported { get; }
 

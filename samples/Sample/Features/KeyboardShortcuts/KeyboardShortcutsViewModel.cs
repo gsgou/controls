@@ -36,7 +36,7 @@ public partial class KeyboardShortcutsViewModel : ObservableObject, IDisposable
         this.PlatformName = shortcuts.Platform.ToString();
         this.SupportMessage = shortcuts.IsSupported
             ? $"Listening for keys on {shortcuts.Platform}."
-            : "No key source on this platform. On macOS (AppKit), Linux and Mac Catalyst call UseDesktopKeyboardShortcuts() from Shiny.Maui.Controls.Desktop.";
+            : "No key source on this platform. On macOS (AppKit), Linux and Mac Catalyst call UseShinyDesktop() from Shiny.Maui.Controls.Desktop.";
     }
 
     public string SaveText { get; }

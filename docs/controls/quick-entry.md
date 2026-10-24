@@ -9,7 +9,7 @@ It is presented one of two ways, and the API is identical either way:
 | Presentation | What it is | Where |
 |---|---|---|
 | **In-app** | An overlay drawn over the current page | Everywhere — iOS, Android, Mac Catalyst, Windows, macOS, Linux, Blazor |
-| **Desktop** | A borderless, always-on-top OS window opening over *other applications* | Windows, macOS (AppKit), Linux — with the `Shiny.Maui.Controls.Desktop` add-on |
+| **Desktop** | A borderless, always-on-top OS window opening over *other applications* | Windows, macOS (AppKit), Linux — with the `Shiny.Maui.Controls.Desktop` add-on and `UseShinyDesktop(cfg => cfg.UseQuickEntryWindow())` |
 
 `QuickEntryOptions.Presentation` defaults to `Auto`: the native window where one is available, the overlay everywhere else. So a shared codebase configures this once, with no platform checks at the call site. `InApp` and `Desktop` force it either way; `Desktop` where it isn't available falls back to the overlay and logs why.
 

@@ -80,7 +80,7 @@ On MAUI it positions like any other view: `HorizontalOptions="Center"` and `Vert
 
 ```csharp
 #if !ANDROID && !IOS && !MACCATALYST
-builder.UseDesktopNotch(o => o.MaxWidth = 520);
+builder.UseShinyDesktop(cfg => cfg.ConfigureNotch(o => o.MaxWidth = 520));
 
 await notchWindow.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
 await notchWindow.SetContentAsync(new NowPlayingView());
@@ -89,7 +89,7 @@ await notchWindow.SetContentAsync(new NowPlayingView());
 
 **Platform notes**
 
-- macOS (AppKit), Windows and Linux (GTK4) only. The API doesn't exist on Android, iOS or Mac Catalyst, so guard it with `#if !ANDROID && !IOS && !MACCATALYST`.
+- macOS (AppKit), Windows and Linux (GTK4) only. `UseShinyDesktop()` registers `INotchWindowService` wherever it exists, with no `#if`. The service, `NotchWindowOptions` and `cfg.ConfigureNotch` don't exist on Android, iOS or Mac Catalyst, so guard the code that uses them with `#if !ANDROID && !IOS && !MACCATALYST`.
 - Only macOS has a camera notch to find. Windows and Linux always get the floating island.
 - On the AppKit head the window, not the surface, animates the resize (a native frame animation). Windows and GTK have no animated window resize, so the window is resized once per frame instead.
 - Every `SetContentAsync` animates as an open or close: the new content fades in while the window morphs to its size. On macOS the old content goes with the notch too, frozen into an image that is clipped as the window collapses (or rides along as it grows) and fades out, so closing to a smaller content (or none) collapses into it rather than leaving an empty black shape to shrink. Windows and Linux get the fade-in. The morph starts once the new content has been laid out, so heavy content doesn't eat into it. `MorphDuration = 0` swaps instantly.

@@ -4,7 +4,7 @@ namespace Shiny.Maui.Controls.Desktop.Docking;
 
 /// <summary>
 /// Resolves a panel View by its panel-type ID. Registered via
-/// <see cref="DockingMauiAppBuilderExtensions.AddDockPanel{T}"/>.
+/// <see cref="ShinyDesktopConfiguration.AddDockPanel{TView}"/>.
 /// </summary>
 public interface IDockableContentFactory
 {

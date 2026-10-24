@@ -8,7 +8,7 @@
 dotnet add package Shiny.Maui.Controls.Desktop
 ```
 
-Register in `MauiProgram.cs` — call one or both extensions depending on what you need:
+Register in `MauiProgram.cs` with one call, `UseShinyDesktop()`:
 
 ```csharp
 using Shiny;
@@ -16,15 +16,24 @@ using Shiny;
 builder
     .UseMauiApp<App>()
     .UseShinyControls()
-    .UseTrayIcon()         // tray / status-bar icon
-    .UseShinyDocking()     // docking host
-    .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
-    .AddDockPanel<OutputPanel>("output")
-    .UseDesktopQuickEntry()    // native-window quick entry + global hotkeys
-    .UseDesktopKeyboardShortcuts();   // in-app keyboard shortcuts on AppKit, GTK4 and Mac Catalyst
+    .UseShinyDesktop(cfg => cfg
+        .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
+        .AddDockPanel<OutputPanel>("output")
+        .UseQuickEntryWindow()                              // opt-in: native-window quick entry
+        .UseFileDrop(o => o.AllowedExtensions.Add(".pdf"))  // opt-in: the window accepts dropped files
+    );
 ```
 
-> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API, `using Shiny.Maui.Controls.Desktop.Docking;` for docking, and `using Shiny.Maui.Controls.Desktop.QuickEntry;` for global hotkeys (the popup's own API is in `Shiny.Maui.Controls.QuickEntry`). The extension methods themselves live in the `Shiny` namespace. There is no `UseOnScreenKeyboard` — see below.
+`UseShinyDesktop()` always registers the parts that do nothing until you use them: the tray icon factory (`ITrayIconFactory`), `IGlobalHotKeyService`, the in-app [keyboard shortcut](keyboard-shortcuts.md) key sources for macOS, Mac Catalyst and Linux, the docking registry, and the notch window service (`INotchWindowService`, macOS AppKit, Windows and Linux only). Two parts change how the app behaves just by being registered, so they are opt-in:
+
+- `cfg.UseQuickEntryWindow()` presents Quick Entry in a native always-on-top window with the whole-screen glow, and claims `QuickEntryOptions.HotKey` at startup.
+- `cfg.UseFileDrop(...)` / `cfg.UseFileDrop<TDelegate>(...)` makes the window accept dropped files. See [File Drop](file-drop.md).
+
+`cfg.ConfigureNotch(o => …)` sets the notch window options. It exists only in the macOS AppKit, Windows and Linux builds, so it is the one call that needs `#if !ANDROID && !IOS && !MACCATALYST`. Everything else compiles on every target, so shared code needs no `#if`. `UseShinyDesktop()` is safe to call more than once.
+
+> The six earlier extension methods (`UseTrayIcon()`, `UseDesktopQuickEntry()`, `UseDesktopNotch()`, `UseDesktopKeyboardShortcuts()`, `UseShinyDocking()` with `builder.AddDockPanel<T>()`, and `UseFileDrop()`) have been removed. Each one was easy to forget, and forgetting one failed silently. Use `UseShinyDesktop()` instead.
+
+> Namespaces: `using Shiny.Maui.Controls.Desktop.TrayIcon;` for the tray API, `using Shiny.Maui.Controls.Desktop.Docking;` for docking, and `using Shiny.Maui.Controls.Desktop.QuickEntry;` for global hotkeys (the popup's own API is in `Shiny.Maui.Controls.QuickEntry`). `UseShinyDesktop` itself lives in the `Shiny` namespace. There is no `UseOnScreenKeyboard` — see below.
 
 ## Tray Icon
 
@@ -150,14 +159,15 @@ builder
         o.HotKey = OperatingSystem.IsMacOS() ? "Cmd+Opt+Space" : "Ctrl+Alt+Space";
         o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
     }))
-    .UseDesktopQuickEntry();
+    .UseShinyDesktop(cfg => cfg.UseQuickEntryWindow());
 ```
 
-`UseDesktopQuickEntry()` registers three things:
+`cfg.UseQuickEntryWindow()` adds two things on top of what `UseShinyDesktop()` always registers:
 
 - a **native-window presentation** — borderless, always-on-top, opening over *other applications*. The core service picks it whenever `QuickEntryOptions.Presentation` allows, which `Auto` (the default) does on Windows, macOS AppKit and Linux
 - the **screen glow across the whole display** rather than just your page
-- **`IGlobalHotKeyService`** — system-wide shortcuts, useful on its own
+
+It also claims `QuickEntryOptions.HotKey` at startup. **`IGlobalHotKeyService`** (system-wide shortcuts, useful on its own) is registered by every `UseShinyDesktop()` call, with or without the quick entry window.
 
 It is safe to call unconditionally: on MacCatalyst (and anywhere else that isn't a desktop) the presenters report themselves unsupported and the core service quietly stays with the overlay.
 
@@ -176,7 +186,7 @@ var registration = hotKeys.Register("Ctrl+Shift+K", () => DoSomething());
 | Linux / Wayland | `org.freedesktop.portal.GlobalShortcuts` | GNOME 45+ / KDE Plasma 6+. Binding shows the user a confirmation prompt, so the hotkey starts working asynchronously, and the compositor may bind a different trigger than the one you asked for |
 | MacCatalyst | — | Not supported |
 
-> **In-app shortcuts are a different thing.** Global hotkeys fire while your app is in the background. To react to keys while your own window has focus (`Primary+S`, `?`, `Ctrl+K, Ctrl+C`), declare [Keyboard Shortcuts](keyboard-shortcuts.md) on the page instead. `UseDesktopKeyboardShortcuts()` supplies their key sources on AppKit, GTK4 and Mac Catalyst; Windows needs nothing beyond core.
+> **In-app shortcuts are a different thing.** Global hotkeys fire while your app is in the background. To react to keys while your own window has focus (`Primary+S`, `?`, `Ctrl+K, Ctrl+C`), declare [Keyboard Shortcuts](keyboard-shortcuts.md) on the page instead. `UseShinyDesktop()` supplies their key sources on AppKit, GTK4 and Mac Catalyst; Windows needs nothing beyond core.
 
 > **Wayland caveats.** A Wayland client cannot position its own toplevel or raise itself above other windows, so under Wayland the desktop popup is undecorated but the compositor decides where it appears and it is an ordinary window in the stack; the whole-display glow is unavailable and the in-app one is used instead. Under X11 everything behaves as it does on Windows and macOS.
 
@@ -190,11 +200,11 @@ On a **MacBook** it lives in the **camera notch**, above the menu bar. The empty
 #if !ANDROID && !IOS && !MACCATALYST
 builder
     .UseShinyControls()
-    .UseDesktopNotch(o =>
+    .UseShinyDesktop(cfg => cfg.ConfigureNotch(o =>
     {
         o.MaxWidth = 520;
         o.Configure = notch => notch.SurfaceColor = Colors.Black;
-    });
+    }));
 #endif
 ```
 
@@ -242,7 +252,7 @@ notch.PointerExited += (_, _) => ShowPeek();
 | Outline | Transparent window, antialiased | Window region (aliased edges) | Transparent window (needs a compositor) | Transparent window |
 | Takes focus | Never | Never (`WS_EX_NOACTIVATE`) | Not presented, so not on show | Not presented, so not on show |
 
-- **macOS, Windows and Linux only.** `INotchWindowService`, `NotchWindowOptions` and `UseDesktopNotch` exist in the `net10.0-macos`, Windows and `net10.0` (Linux GTK4) builds and not on Android, iOS or Mac Catalyst, so guard them with `#if !ANDROID && !IOS && !MACCATALYST`. There, use an in-app `NotchView`.
+- **macOS, Windows and Linux only.** `INotchWindowService`, `NotchWindowOptions` and `cfg.ConfigureNotch` exist in the `net10.0-macos`, Windows and `net10.0` (Linux GTK4) builds and not on Android, iOS or Mac Catalyst, so guard them with `#if !ANDROID && !IOS && !MACCATALYST`. `UseShinyDesktop()` itself needs no guard. It registers the notch service wherever it exists. There, use an in-app `NotchView`.
 - **Shape on Windows.** A WinUI window can't be see-through, so the window is clipped to the notch outline with a window region, re-cut on every frame, and the page behind the notch paints the surface colour. Region edges are not antialiased, and a `Stroke` is clipped away with the corners.
 - **Wayland.** A client can't place or raise its own toplevel, so the notch still morphs and reports the pointer but isn't pinned to the top. Doing better needs `wlr-layer-shell`, which GNOME doesn't implement and this package doesn't depend on — the same limit as the quick entry popup.
 - **Windows title bar.** MAUI reserves a title-bar strip across the top of every WinUI window's content, taller than the empty notch. The notch window collapses it through MAUI's internal `WindowRootView.UpdateAppTitleBar` (an `UnsafeAccessor`, so AOT-safe). If a future MAUI renames it, the content just sits lower until this is updated.
@@ -260,21 +270,22 @@ using Sample.Features.Docking;  // SolutionExplorerPanel, OutputPanel
 
 builder
     .UseMauiApp<App>()
-    .UseShinyDocking()
-    .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
-    .AddDockPanel<OutputPanel>("output");
+    .UseShinyDesktop(cfg => cfg
+        .AddDockPanel<SolutionExplorerPanel>("solution-explorer", displayName: "Explorer", icon: "📁")
+        .AddDockPanel<OutputPanel>("output"));
 ```
 
-`AddDockPanel` takes optional `displayName` (tab title, defaults to the panel ID), `icon` (emoji / unicode glyph) and `canClose` arguments. A panel view can also implement `IDockableContent` to control its own per-instance `Title`, `Icon`, `CanClose` / `CanFloat`, and receive `OnActivated` / `OnDeactivated` callbacks.
+`AddDockPanel` is on the `UseShinyDesktop` configuration, not on `MauiAppBuilder`. It takes optional `displayName` (tab title, defaults to the panel ID), `icon` (emoji / unicode glyph) and `canClose` arguments. A panel view can also implement `IDockableContent` to control its own per-instance `Title`, `Icon`, `CanClose` / `CanFloat`, and receive `OnActivated` / `OnDeactivated` callbacks.
 
 Pass `canClose: false` for a panel the surface cannot function without — a file explorer's folder tree, an editor's document area. Closing one of those leaves a layout with nothing on screen that would bring it back, unless the app has built its own reopen affordance. The flag hides the tab's close button **and** makes `HidePanelAsync` refuse the panel, so it is a rule rather than a missing button:
 
 ```csharp
-services
-    .AddShinyDocking()
+builder.UseShinyDesktop(cfg => cfg
     .AddDockPanel<FolderTreePanel>("explorer-tree", displayName: "Folders", icon: "📁", canClose: false)
-    .AddDockPanel<OutputPanel>("output");   // closable, as most panels should be
+    .AddDockPanel<OutputPanel>("output"));   // closable, as most panels should be
 ```
+
+Blazor's `services.AddShinyDocking().AddDockPanel<T>(…)` takes the same `canClose` argument.
 
 `DockHostView` attaches to any existing `ContentPage` — it does not subclass `ContentPage`, so your Shell / page architecture stays unchanged:
 
@@ -295,7 +306,7 @@ services
 | `DockSplitter` | Draggable splitter between adjacent dock children |
 | `IDockHost` | Per-window controller: `LoadAsync`, `Snapshot`, `ShowPanelAsync` / `HidePanelAsync` / `ActivatePanelAsync`, `ResetLayoutAsync`, `FloatPanelAsync`, `SetRailCollapsedAsync`, `IsLocked` |
 | `IDockableContent` | Optional interface on panel views — per-instance title/icon, close/float gating, activation callbacks, pointer-down claim for embedded editors |
-| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` + `DisplayName` / `Icon` / `CanClose` — registered via `AddDockPanel<T>` |
+| `IDockableContentFactory` | `Task<View> CreateAsync(string instanceId, ...)` + `DisplayName` / `Icon` / `CanClose` — registered via `cfg.AddDockPanel<T>` |
 | `IDockLayoutStore` | Bring-your-own persistence contract — load/save the layout tree as JSON; saves are debounced via `SaveDebounceMs` |
 | `IDockEvents` | `LayoutChanged`, `PanelActivated`, `DragStarted/Completed/Cancelled` |
 | `IDockCommandScope` | Scopes Ctrl+W / Ctrl+Tab / Ctrl+Alt+PgUp/Dn to the dock surface |

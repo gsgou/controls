@@ -27,7 +27,7 @@ namespace Shiny.Maui.Controls;
 /// Native key sources: Windows, Android (hardware keyboards) and iOS/iPadOS (hardware keyboards,
 /// observed through GameController, so the key is not swallowed) come with this package; macOS
 /// AppKit, Linux GTK4 and Mac Catalyst need <c>Shiny.Maui.Controls.Desktop</c> with
-/// <c>UseDesktopKeyboardShortcuts()</c>.
+/// <c>UseShinyDesktop()</c>.
 /// </para>
 /// </remarks>
 public class KeyboardShortcut : BindableObject

@@ -26,18 +26,15 @@ public static class MauiProgram
                     o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
                 }))
             .UseShinyShell(x => x.AddGeneratedMaps())
-            .UseTrayIcon()
-            .UseDesktopQuickEntry()
-            .UseDesktopNotch()
-            // AppKit, GTK4 and Catalyst key sources for keyboard shortcuts (Windows/iOS/Android need nothing)
-            .UseDesktopKeyboardShortcuts()
-            .UseShinyMediaElementGtk()
             // the docking page's panels, as in the shared and macOS heads; without them every panel is "Unknown panel type"
-            .UseShinyDocking()
-            .AddDockPanel<global::Sample.Features.Docking.SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "\U0001F4C1")
-            .AddDockPanel<global::Sample.Features.Docking.OutputPanel>("output", "Output", "\U0001F5A5\uFE0F")
-            .AddDockPanel<global::Sample.Features.Docking.PropertiesPanel>("properties", "Properties", "\U0001F527")
-            .AddDockPanel<global::Sample.Features.Docking.EditorPanel>("editor", icon: "\U0001F4C4")
+            .UseShinyDesktop(cfg => cfg
+                .UseQuickEntryWindow()
+                .AddDockPanel<global::Sample.Features.Docking.SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "\U0001F4C1")
+                .AddDockPanel<global::Sample.Features.Docking.OutputPanel>("output", "Output", "\U0001F5A5\uFE0F")
+                .AddDockPanel<global::Sample.Features.Docking.PropertiesPanel>("properties", "Properties", "\U0001F527")
+                .AddDockPanel<global::Sample.Features.Docking.EditorPanel>("editor", icon: "\U0001F4C4")
+            )
+            .UseShinyMediaElementGtk()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

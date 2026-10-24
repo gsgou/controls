@@ -94,7 +94,7 @@ public class TextEntrySpeechToTextTool : TextEntryTool, ITextEntryAwareTool
         if (textEntry is null)
             return;
 
-        var stt = ResolveService<ISpeechToTextService>();
+        var stt = SpeechServices.Resolve<ISpeechToTextService>();
         if (stt is null || !stt.IsSupported)
             return;
 
@@ -157,7 +157,4 @@ public class TextEntrySpeechToTextTool : TextEntryTool, ITextEntryAwareTool
             ToolColor = Color.FromArgb("#4CAF50");
         }
     }
-
-    static T? ResolveService<T>() where T : class
-        => Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
 }

@@ -15,7 +15,7 @@ public class KeyboardShortcutsTests : UITest
     {
         await OpenShortcuts();
 
-        // Every head registers one (UseDesktopKeyboardShortcuts on macOS/Linux/Catalyst), so the
+        // Every head registers one (UseShinyDesktop on macOS/Linux/Catalyst), so the
         // service never reports itself unsupported.
         var support = await Driver.GetProperty("Text", automationId: "KeyboardShortcutsSupport");
         await Assert.That(support).StartsWith("Listening for keys on ");

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
@@ -259,9 +260,26 @@ public class DockHostView : ContentView, IDockHost
         if (Handler?.MauiContext?.Services is { } services)
         {
             registry ??= services.GetService<DockableContentRegistry>();
+
+            // Without the registry no panel can be built, so the dock used to stay empty with nothing
+            // in the log to say why.
+            if (registry is null && !warnedNoRegistry)
+            {
+                warnedNoRegistry = true;
+                Logger(services)?.LogWarning(
+                    "DockHostView found no DockableContentRegistry, so it cannot load a layout. Call builder.UseShinyDesktop() " +
+                    "and register each panel with cfg.AddDockPanel<TView>(...) inside it.");
+            }
+
             TryInitialLoad();
         }
     }
+
+    bool warnedNoRegistry;
+
+    static ILogger? Logger(IServiceProvider? services)
+        => services?.GetService<ILoggerFactory>()?.CreateLogger("Shiny.Docking");
+
 
     void ShowPlaceholder()
     {
@@ -293,7 +311,12 @@ public class DockHostView : ContentView, IDockHost
         if (LayoutStore is not null)
         {
             try { stored = await LayoutStore.LoadAsync(); }
-            catch { /* fall back to InitialLayout on store failure */ }
+            catch (Exception ex)
+            {
+                // Fall back to InitialLayout, but say so: a store that throws looks exactly like a
+                // layout that was never saved.
+                Logger(Handler?.MauiContext?.Services)?.LogWarning(ex, "The dock layout store failed to load; using InitialLayout instead.");
+            }
         }
         var root = stored ?? InitialLayout;
         if (root is null)

@@ -3,7 +3,13 @@ using Microsoft.Maui.Platforms.MacOS.Handlers;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
+// Compiled into Shiny.Maui.Controls.FloorPlan as well (see its csproj), as an internal copy in its own
+// namespace, so an app referencing both packages does not get two public types of the same name.
+#if SHINY_APPKIT_SKIA_COPY
+namespace Shiny.Maui.Controls.FloorPlan;
+#else
 namespace Shiny.Maui.Controls.Office;
+#endif
 
 /// <summary>
 /// Renders an <c>SKCanvasView</c> on the macOS AppKit head, where SkiaSharp itself has no handler.
@@ -17,12 +23,17 @@ namespace Shiny.Maui.Controls.Office;
 /// page blank with nothing in the log beyond "The method or operation is not implemented."
 /// </para>
 /// <para>
-/// Registered by <see cref="MauiAppBuilderExtensions.UseShinyOffice"/> <em>after</em>
+/// Registered by <c>UseShinyOffice()</c> and <c>UseShinyFloorPlan()</c> <em>after</em>
 /// <c>UseSkiaSharp()</c>, so it replaces the stock registration rather than competing with it.
 /// Nothing here is Office-specific: any <c>SKCanvasView</c> in the app renders once this is in.
 /// </para>
 /// </remarks>
-public class MacOSSKCanvasViewHandler : MacOSViewHandler<ISKCanvasView, SkiaCanvasNSView>
+#if SHINY_APPKIT_SKIA_COPY
+internal
+#else
+public
+#endif
+class MacOSSKCanvasViewHandler : MacOSViewHandler<ISKCanvasView, SkiaCanvasNSView>
 {
     /// <summary>
     /// Chained onto <see cref="ViewHandler.ViewMapper"/> rather than onto the stock

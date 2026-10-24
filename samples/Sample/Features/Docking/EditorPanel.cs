@@ -33,7 +33,7 @@ public sealed class EditorPanel : ContentView, IDockableContent
             {
                 new Label
                 {
-                    Text = "var builder = MauiApp.CreateBuilder();\nbuilder.UseShinyDocking();",
+                    Text = "var builder = MauiApp.CreateBuilder();\nbuilder.UseShinyDesktop(cfg => cfg.AddDockPanel<ExplorerPanel>(\"explorer\"));",
                     FontFamily = "Courier",
                     FontSize = 12
                 },

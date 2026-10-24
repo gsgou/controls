@@ -261,14 +261,11 @@ clickable, and the control feels wrong for a reason nobody can point at.
 
 | | |
 | --- | --- |
-| **MAUI** | iOS, Android, Mac Catalyst, Windows |
+| **MAUI** | iOS, Android, Mac Catalyst, macOS (AppKit), Windows |
 | **Blazor** | WebAssembly, Server, Hybrid |
 
-The MAUI `net10.0-macos` (AppKit) head is **not supported yet**. `SkiaSharp.Views.Maui` ships no
-macOS asset, so that head resolves a handler whose `CreatePlatformView` throws and the page comes up
-blank. `Shiny.Maui.Controls.Office` carries a replacement handler that fixes it app-wide; until that
-moves somewhere both packages can share, a plan on AppKit needs Office referenced too. Mac Catalyst
-is the supported macOS story.
+On the `net10.0-macos` (AppKit) head, `SkiaSharp.Views.Maui` ships no macOS asset, so the stock canvas handler throws on that head;
+`UseShinyFloorPlan()` registers a replacement there, so nothing else is needed.
 
 ## Demo
 

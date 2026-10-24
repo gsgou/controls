@@ -69,7 +69,7 @@ public class TextToSpeechBubbleTool : ChatBubbleAction
         if (string.IsNullOrEmpty(message.Body))
             return;
 
-        var tts = ResolveService<ITextToSpeechService>();
+        var tts = SpeechServices.Resolve<ITextToSpeechService>();
         if (tts is null || !tts.IsSupported)
             return;
 
@@ -112,7 +112,4 @@ public class TextToSpeechBubbleTool : ChatBubbleAction
             return null;
         }
     }
-
-    static T? ResolveService<T>() where T : class
-        => Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
 }

@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Shiny.Controls.Keyboard;
 
 namespace Shiny.Maui.Controls;
@@ -94,9 +96,18 @@ static class KeyboardShortcutManager
             if (!warnedUnsupported)
             {
                 warnedUnsupported = true;
-                System.Diagnostics.Debug.WriteLine(
-                    "[Shiny.KeyboardShortcuts] No native key source on this platform. On macOS (AppKit), Linux (GTK4) and Mac Catalyst " +
-                    "add Shiny.Maui.Controls.Desktop and call builder.UseDesktopKeyboardShortcuts().");
+
+                // Through the app's logger at Warning, falling back to Trace - never Debug.WriteLine,
+                // which a Release build strips, leaving shortcuts that silently do nothing.
+                const string message =
+                    "No native key source on this platform, so keyboard shortcuts will not fire. On macOS (AppKit), " +
+                    "Linux (GTK4) and Mac Catalyst add Shiny.Maui.Controls.Desktop and call builder.UseShinyDesktop().";
+                var services = window.Handler?.MauiContext?.Services ?? Application.Current?.Handler?.MauiContext?.Services;
+                var logger = services?.GetService<ILoggerFactory>()?.CreateLogger("Shiny.KeyboardShortcuts");
+                if (logger is not null)
+                    logger.LogWarning(message);
+                else
+                    System.Diagnostics.Trace.TraceWarning("[Shiny.KeyboardShortcuts] " + message);
             }
             return;
         }

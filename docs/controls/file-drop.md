@@ -21,13 +21,15 @@ using Shiny;
 builder
     .UseMauiApp<App>()
     .UseShinyControls()
-    .UseFileDrop(o =>
+    .UseShinyDesktop(cfg => cfg.UseFileDrop(o =>
     {
         o.AllowedExtensions.Add(".pdf");   // empty = accept everything
         o.MaxFileSize = 50 * 1024 * 1024;
         o.MaxFiles = 10;
-    });
+    }));
 ```
+
+File drop is opt-in on `UseShinyDesktop()` because a registered service starts accepting drops on the window straight away. The old `builder.UseFileDrop()` extension has been removed.
 
 ```csharp
 using Shiny.Maui.Controls.Desktop.FileDrop;
@@ -81,7 +83,7 @@ The listeners go on `window` in the **capture** phase — the browser equivalent
 The events belong to a page or component. When a drop should be handled the same way whatever is on screen — with constructor-injected services rather than whatever the current page captured — register a delegate instead. It runs first, and can consume the drop.
 
 ```csharp
-builder.UseFileDrop<ImportFileDropDelegate>();      // MAUI
+builder.UseShinyDesktop(cfg => cfg.UseFileDrop<ImportFileDropDelegate>());  // MAUI
 services.AddShinyFileDrop<ImportFileDropDelegate>(); // Blazor
 
 public class ImportFileDropDelegate(IImportService imports) : IFileDropDelegate

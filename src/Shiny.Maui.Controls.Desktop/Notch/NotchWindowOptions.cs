@@ -1,7 +1,7 @@
 #if !ANDROID && !IOS && !MACCATALYST
 namespace Shiny.Maui.Controls.Desktop.Notch;
 
-/// <summary>Settings for <see cref="INotchWindowService"/>. Pass them to <c>UseDesktopNotch</c>.</summary>
+/// <summary>Settings for <see cref="INotchWindowService"/>. Set them with <c>UseShinyDesktop(cfg =&gt; cfg.ConfigureNotch(...))</c>.</summary>
 public sealed class NotchWindowOptions
 {
     /// <summary>

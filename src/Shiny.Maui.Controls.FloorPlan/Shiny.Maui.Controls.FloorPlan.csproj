@@ -2,16 +2,16 @@
 
     <PropertyGroup>
         <!--
-            One TFM, because there is no platform code here. The view is an SKCanvasView and the
-            engine is portable: iOS, Android, Mac Catalyst and Windows all resolve SkiaSharp's own
-            platform assets through the app's reference to it, not through this package.
+            The view is an SKCanvasView and the engine is portable: iOS, Android, Mac Catalyst and
+            Windows all resolve SkiaSharp's own platform assets through the app's reference to it, so
+            the plain net10.0 build serves them.
 
-            The net10.0-macos (AppKit) head is the exception, and deliberately unsupported for now -
-            SkiaSharp.Views.Maui ships no macos asset, so that head gets a handler whose
-            CreatePlatformView throws. Shiny.Maui.Controls.Office carries a replacement; until that
-            moves somewhere both packages can share, a plan on AppKit needs Office referenced too.
+            net10.0-macos (AppKit) is the exception. SkiaSharp.Views.Maui ships no macos asset, so that
+            head's SKCanvasViewHandler throws where the platform view should be and the plan came up
+            blank. The AppKit handler is compiled in from Shiny.Maui.Controls.Office (one source, an
+            internal copy here) and UseShinyFloorPlan registers it.
         -->
-        <TargetFrameworks>$(BaseTargetFramework)</TargetFrameworks>
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-macos</TargetFrameworks>
         <UseMaui>true</UseMaui>
         <IsAotCompatible>true</IsAotCompatible>
         <RootNamespace>Shiny.Maui.Controls.FloorPlan</RootNamespace>
@@ -23,6 +23,18 @@
         <PackageReference Include="Microsoft.Maui.Controls"/>
         <PackageReference Include="SkiaSharp.Views.Maui.Controls"/>
     </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'macos'">
+        <PackageReference Include="Microsoft.Maui.Platforms.MacOS"/>
+        <Compile Include="..\Shiny.Maui.Controls.Office\Platforms\AppKit\SkiaCanvasNSView.cs" Link="AppKit\SkiaCanvasNSView.cs"/>
+        <Compile Include="..\Shiny.Maui.Controls.Office\Platforms\AppKit\MacOSSKCanvasViewHandler.cs" Link="AppKit\MacOSSKCanvasViewHandler.cs"/>
+    </ItemGroup>
+
+    <!-- On the TFM, not TargetPlatformIdentifier: that is inferred after the project body, so a
+         PropertyGroup conditioned on it never applies (item conditions are evaluated later and do). -->
+    <PropertyGroup Condition="$(TargetFramework.EndsWith('-macos'))">
+        <DefineConstants>$(DefineConstants);SHINY_APPKIT_SKIA_COPY</DefineConstants>
+    </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Shiny.Controls.FloorPlan.Shared\Shiny.Controls.FloorPlan.Shared.csproj"/>

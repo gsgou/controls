@@ -1,7 +1,7 @@
 namespace Shiny.Maui.Controls.Desktop.FileDrop;
 
 /// <summary>
-/// The DI-resolved handler for drops. Register one with <c>UseFileDrop&lt;T&gt;()</c>.
+/// The DI-resolved handler for drops. Register one with <c>UseShinyDesktop(cfg =&gt; cfg.UseFileDrop&lt;T&gt;())</c>.
 /// </summary>
 /// <remarks>
 /// <para>

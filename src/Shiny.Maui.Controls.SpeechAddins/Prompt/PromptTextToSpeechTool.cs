@@ -216,7 +216,7 @@ public class PromptTextToSpeechTool : PromptTool, IPromptAwareTool
         // guaranteed to surface as one.
         this.cts?.Cancel();
 
-        var tts = ResolveService<ITextToSpeechService>();
+        var tts = SpeechServices.Resolve<ITextToSpeechService>();
         if (tts is not null)
         {
             try
@@ -235,7 +235,7 @@ public class PromptTextToSpeechTool : PromptTool, IPromptAwareTool
 
     async Task SpeakAsync(string text)
     {
-        var tts = ResolveService<ITextToSpeechService>();
+        var tts = SpeechServices.Resolve<ITextToSpeechService>();
         if (tts is null || !tts.IsSupported)
             return;
 
@@ -303,12 +303,4 @@ public class PromptTextToSpeechTool : PromptTool, IPromptAwareTool
             return null;
         }
     }
-
-    // IPlatformApplication rather than Application.Current.Handler: the alternate app heads (macOS
-    // AppKit, GTK) ship their own handler types, so the Application handler is not a MauiContext
-    // carrier there and the older lookup comes back null on exactly the desktops this package now
-    // targets. The handler path stays as a fallback.
-    static T? ResolveService<T>() where T : class
-        => IPlatformApplication.Current?.Services?.GetService<T>()
-            ?? Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
 }

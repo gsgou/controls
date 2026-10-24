@@ -214,7 +214,7 @@ sealed class QuickEntryService : IQuickEntryService, IDisposable
                 this.desktopFallbackWarned = true;
                 this.logger?.LogWarning(
                     "Quick entry was configured for a desktop window, which is not available here. Falling back to the in-app overlay. " +
-                    "A desktop window needs the Shiny.Maui.Controls.Desktop add-on registered with UseDesktopQuickEntry(), on Windows, macOS (AppKit) or Linux."
+                    "A desktop window needs the Shiny.Maui.Controls.Desktop add-on registered with UseShinyDesktop(cfg => cfg.UseQuickEntryWindow()), on Windows, macOS (AppKit) or Linux."
                 );
             }
         }

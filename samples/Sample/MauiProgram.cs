@@ -62,16 +62,16 @@ public static class MauiProgram
             // the on-screen gamepad: its iOS/Android multi-touch handler, and IGamepadManager reporting
             // on-screen and physical controllers together (use it instead of Shiny.Gamepad's AddGamepads)
             .UseShinyGamepad()
-            .UseTrayIcon()
-            .UseFileDrop()
-            .UseDesktopQuickEntry()
-            // AppKit, GTK4 and Catalyst key sources for keyboard shortcuts (Windows/iOS/Android need nothing)
-            .UseDesktopKeyboardShortcuts()
-            .UseShinyDocking()
-            .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")
-            .AddDockPanel<OutputPanel>("output", "Output", "🖥️")
-            .AddDockPanel<PropertiesPanel>("properties", "Properties", "🔧")
-            .AddDockPanel<EditorPanel>("editor", icon: "📄")
+            // tray icon, global hot keys, keyboard shortcut key sources, docking and the notch window,
+            // plus the opt-in quick entry window and window-level file drop
+            .UseShinyDesktop(cfg => cfg
+                .UseQuickEntryWindow()
+                .UseFileDrop()
+                .AddDockPanel<SolutionExplorerPanel>("solution-explorer", "Solution Explorer", "📁")
+                .AddDockPanel<OutputPanel>("output", "Output", "🖥️")
+                .AddDockPanel<PropertiesPanel>("properties", "Properties", "🔧")
+                .AddDockPanel<EditorPanel>("editor", icon: "📄")
+            )
             .UseShinyShell(x => x
                 .AddGeneratedMaps()
                 .Add<MinimizedSheetStandalonePage, MinimizedSheetViewModel>(registerRoute: false)
@@ -82,10 +82,6 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-#if WINDOWS
-        // the notch window, floating over every app at the top of the screen (macOS and Linux register it in their own heads)
-        builder.UseDesktopNotch();
-#endif
 #if IOS
         builder.ConfigureMauiHandlers(handlers =>
         {

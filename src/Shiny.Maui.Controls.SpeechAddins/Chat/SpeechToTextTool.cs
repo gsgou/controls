@@ -68,7 +68,7 @@ public class SpeechToTextTool : ChatInputAction
 
     public override async Task InvokeAsync(ChatView chatView)
     {
-        var stt = ResolveService<ISpeechToTextService>();
+        var stt = SpeechServices.Resolve<ISpeechToTextService>();
         if (stt is null || !stt.IsSupported)
             return;
 
@@ -102,7 +102,4 @@ public class SpeechToTextTool : ChatInputAction
             System.Diagnostics.Debug.WriteLine($"SpeechToTextTool: {ex.Message}");
         }
     }
-
-    static T? ResolveService<T>() where T : class
-        => Application.Current?.Handler?.MauiContext?.Services.GetService<T>();
 }

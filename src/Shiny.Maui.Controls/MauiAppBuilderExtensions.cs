@@ -39,8 +39,8 @@ public static class ControlsMauiAppBuilderExtensions
         // presenter for the native-window form and the service picks between them at open time, so
         // an app that ships to phones and desktops configures this once and nothing else.
         builder.Services.TryAddSingleton(cfg.QuickEntryOptions);
-        builder.Services.AddSingleton<IQuickEntryPresenter, InAppQuickEntryPresenter>();
-        builder.Services.AddSingleton<IScreenGlowPresenter, InAppScreenGlowPresenter>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IQuickEntryPresenter, InAppQuickEntryPresenter>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IScreenGlowPresenter, InAppScreenGlowPresenter>());
         builder.Services.TryAddSingleton<QuickEntryService>();
         builder.Services.TryAddSingleton<IQuickEntryService>(sp => sp.GetRequiredService<QuickEntryService>());
         builder.Services.TryAddSingleton<IToaster, Toaster>();
@@ -63,7 +63,7 @@ public static class ControlsMauiAppBuilderExtensions
         // the service is a facade over it. The initializer gets app-wide shortcuts registered during
         // startup a key source once the first window exists.
         builder.Services.TryAddSingleton<IKeyboardShortcutService, KeyboardShortcutService>();
-        builder.Services.AddSingleton<IMauiInitializeService, KeyboardShortcutInitializer>();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IMauiInitializeService, KeyboardShortcutInitializer>());
 
         // ShinyImage's stack. The downloader is registered separately from the service so an app can
         // swap in its own HttpClient (auth headers, pinning) without also taking over caching,
@@ -379,7 +379,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
         configure?.Invoke(builder);
 
         services.AddSingleton<IReadOnlyList<IControlFeedbackHook>>(builder.Hooks);
-        services.AddSingleton<IMauiInitializeService, MauiControlFeedbackIntegrator>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IMauiInitializeService, MauiControlFeedbackIntegrator>());
         return this;
     }
 
@@ -392,7 +392,7 @@ public class ShinyControlConfiguration(IServiceCollection services)
         configure(builder);
 
         services.AddSingleton<IReadOnlyList<IControlFeedbackHook>>(builder.Hooks);
-        services.AddSingleton<IMauiInitializeService, MauiControlFeedbackIntegrator>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IMauiInitializeService, MauiControlFeedbackIntegrator>());
         return this;
     }
 

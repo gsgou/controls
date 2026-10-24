@@ -9,6 +9,7 @@ using Shiny.Maui.Controls.Desktop.Docking;
 #if !ANDROID && !IOS && !MACCATALYST
 using Shiny.Maui.Controls.Desktop.Notch;
 #endif
+using Shiny.Maui.Controls.Desktop.FileDrop;
 using Shiny.Maui.Controls.Desktop.QuickEntry;
 using Shiny.Maui.Controls.QuickEntry;
 using Shiny.Maui.Controls.Desktop.TrayIcon;
@@ -18,156 +19,107 @@ namespace Shiny;
 public static class DesktopMauiAppBuilderExtensions
 {
     /// <summary>
-    /// Registers <see cref="ITrayIconFactory"/> for the current platform. On unsupported
-    /// platforms (Android, iOS, tvOS) this is a no-op factory that throws on use, so
-    /// guard your tray code with platform checks.
+    /// Adds the desktop features: the tray icon, global hot keys, keyboard shortcuts on macOS, Mac
+    /// Catalyst and Linux, docking, and the notch window. Opt into the native quick entry window and
+    /// window-level file drop through <paramref name="configure"/>.
     /// </summary>
-    public static MauiAppBuilder UseTrayIcon(this MauiAppBuilder builder)
+    /// <example>
+    /// <code>
+    /// builder
+    ///     .UseShinyControls()
+    ///     .UseShinyDesktop(cfg => cfg
+    ///         .UseQuickEntryWindow()
+    ///         .UseFileDrop(o => o.AllowedExtensions.Add(".pdf"))
+    ///         .AddDockPanel&lt;ExplorerPanel&gt;("explorer", "Explorer"));
+    /// </code>
+    /// </example>
+    /// <remarks>
+    /// <para>
+    /// One call because these were six, and forgetting one failed silently: keyboard shortcuts that
+    /// never fired on macOS, a dock that loaded nothing. Everything registered by default is inert
+    /// until the app uses it - a tray factory nobody asks for, a hot-key service with no keys, a
+    /// docking registry with no panels - so there is no cost to having it. The two opt-ins are the
+    /// features that change what the app does just by being registered: the quick entry window takes
+    /// over from the in-app popup, and file drop makes the window accept drops.
+    /// </para>
+    /// <para>
+    /// Safe to call unconditionally and more than once. On a platform without a feature (a phone has
+    /// no tray, and Mac Catalyst no notch window) the service still resolves and reports itself
+    /// unsupported, so shared code needs no <c>#if</c>.
+    /// </para>
+    /// </remarks>
+    public static MauiAppBuilder UseShinyDesktop(this MauiAppBuilder builder, Action<ShinyDesktopConfiguration>? configure = null)
+    {
+        var cfg = new ShinyDesktopConfiguration(builder.Services);
+        configure?.Invoke(cfg);
+
+        AddTrayIcon(builder.Services);
+        AddGlobalHotKeys(builder.Services);
+        AttachKeyboardShortcuts();
+        builder.Services.TryAddSingleton<DockableContentRegistry>();
+#if !ANDROID && !IOS && !MACCATALYST
+        builder.Services.TryAddSingleton(cfg.NotchOptions);
+        builder.Services.TryAddSingleton<INotchWindowService>(sp => new DesktopNotchWindowService(
+            sp.GetRequiredService<NotchWindowOptions>(),
+            sp.GetService<ILogger<DesktopNotchWindowService>>()
+        ));
+#endif
+        return builder;
+    }
+
+
+    static void AddTrayIcon(IServiceCollection services)
     {
 #if WINDOWS
-        builder.Services.TryAddSingleton<ITrayIconFactory, WindowsTrayIconFactory>();
+        services.TryAddSingleton<ITrayIconFactory, WindowsTrayIconFactory>();
 #elif MACCATALYST
-        builder.Services.TryAddSingleton<ITrayIconFactory, MacCatalystTrayIconFactory>();
+        services.TryAddSingleton<ITrayIconFactory, MacCatalystTrayIconFactory>();
 #elif MACOS
-        builder.Services.TryAddSingleton<ITrayIconFactory, MacTrayIconFactory>();
+        services.TryAddSingleton<ITrayIconFactory, MacTrayIconFactory>();
 #elif ANDROID || IOS
-        // Phones have no tray.
-        builder.Services.TryAddSingleton<ITrayIconFactory, UnsupportedTrayIconFactory>();
+        // Phones have no tray: the factory throws on use, so guard tray code with a platform check.
+        services.TryAddSingleton<ITrayIconFactory, UnsupportedTrayIconFactory>();
 #else
         // net10.0 fallback — Linux at runtime, otherwise unsupported.
-        builder.Services.TryAddSingleton<ITrayIconFactory>(_ =>
+        services.TryAddSingleton<ITrayIconFactory>(_ =>
         {
             if (OperatingSystem.IsLinux())
                 return new LinuxTrayIconFactory();
             return new UnsupportedTrayIconFactory();
         });
 #endif
-        return builder;
     }
 
-    /// <summary>
-    /// Adds the desktop half of Shiny's quick entry popup: a borderless, always-on-top OS window that
-    /// opens over <em>other applications</em>, the screen-edge glow drawn across the whole display,
-    /// and <see cref="IGlobalHotKeyService"/> for system-wide shortcuts.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// builder
-    ///     .UseShinyControls(cfg => cfg.ConfigureQuickEntry(o =>
-    ///     {
-    ///         o.HotKey = OperatingSystem.IsMacOS() ? "Cmd+Opt+Space" : "Ctrl+Alt+Space";
-    ///         o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
-    ///     }))
-    ///     .UseDesktopQuickEntry();
-    /// </code>
-    /// </example>
-    /// <remarks>
-    /// <para>
-    /// The popup itself, the <c>PromptView</c> control and the in-app presentation all live in
-    /// <c>Shiny.Maui.Controls</c> and are registered by <c>UseShinyControls()</c> — so a shared
-    /// codebase already has a working popup on every platform. This adds a second presentation the
-    /// core service will choose when <see cref="QuickEntryOptions.Presentation"/> allows it, which
-    /// <see cref="QuickEntryPresentation.Auto"/> (the default) does.
-    /// </para>
-    /// <para>
-    /// Safe to call unconditionally. On MacCatalyst — and on any platform that reaches this package's
-    /// <c>net10.0</c> asset without being a desktop — the presenters report themselves unsupported
-    /// and the core service quietly stays with the overlay.
-    /// </para>
-    /// </remarks>
-    public static MauiAppBuilder UseDesktopQuickEntry(this MauiAppBuilder builder)
+
+    static void AddGlobalHotKeys(IServiceCollection services)
     {
 #if WINDOWS
-        builder.Services.TryAddSingleton<IGlobalHotKeyService, WindowsGlobalHotKeyService>();
-        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new WindowsScreenGlow(sp.GetService<ILogger<WindowsScreenGlow>>()));
+        services.TryAddSingleton<IGlobalHotKeyService, WindowsGlobalHotKeyService>();
 #elif MACCATALYST
-        builder.Services.TryAddSingleton<IGlobalHotKeyService, CatalystGlobalHotKeyService>();
-        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+        services.TryAddSingleton<IGlobalHotKeyService, CatalystGlobalHotKeyService>();
 #elif MACOS
-        builder.Services.TryAddSingleton<IGlobalHotKeyService, MacGlobalHotKeyService>();
-        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+        services.TryAddSingleton<IGlobalHotKeyService, MacGlobalHotKeyService>();
 #elif ANDROID || IOS
-        // Phones have no global hotkeys; the screen glow presenter reports itself unsupported.
-        builder.Services.TryAddSingleton<IGlobalHotKeyService, UnsupportedGlobalHotKeyService>();
-        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
+        // Phones have no global hotkeys.
+        services.TryAddSingleton<IGlobalHotKeyService, UnsupportedGlobalHotKeyService>();
 #else
         // net10.0 fallback — Linux at runtime, otherwise unsupported.
-        builder.Services.TryAddSingleton<IGlobalHotKeyService>(sp =>
+        services.TryAddSingleton<IGlobalHotKeyService>(sp =>
         {
             if (OperatingSystem.IsLinux())
                 return new LinuxGlobalHotKeyService(sp.GetService<ILogger<LinuxGlobalHotKeyService>>());
             return new UnsupportedGlobalHotKeyService();
         });
-        builder.Services.AddSingleton<IScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>()));
 #endif
-
-        builder.Services.AddSingleton<IQuickEntryPresenter>(sp => new DesktopQuickEntryPresenter(sp.GetService<ILogger<DesktopQuickEntryPresenter>>()));
-        builder.Services.AddSingleton<IMauiInitializeService, DesktopQuickEntryInitializer>();
-
-        // The prompt's text field is a BorderlessEntry, polished by BorderlessEntryRegistration -
-        // which this package's module initializer installs whether or not this is called.
-        return builder;
     }
 
-#if !ANDROID && !IOS && !MACCATALYST
-    /// <summary>
-    /// Registers <see cref="INotchWindowService"/>: a <see cref="NotchView"/> at the top-centre of the
-    /// screen, above every other application, that morphs to fit its content — and on a MacBook lives
-    /// in the camera notch and grows out of it.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// builder
-    ///     .UseShinyControls()
-    ///     .UseDesktopNotch(o => o.Configure = notch => notch.SurfaceColor = Colors.Black);
-    ///
-    /// // later
-    /// await notchService.ShowAsync(new Label { Text = "Recording 0:42", TextColor = Colors.White });
-    /// </code>
-    /// </example>
-    /// <remarks>
-    /// macOS AppKit, Windows and Linux (GTK4) only; it does not exist on Android, iOS or Mac Catalyst, so
-    /// call it inside <c>#if !ANDROID &amp;&amp; !IOS &amp;&amp; !MACCATALYST</c>. Without a camera notch — every
-    /// Windows and Linux screen, and Macs without one — it floats as an island at the top of the screen.
-    /// </remarks>
-    public static MauiAppBuilder UseDesktopNotch(this MauiAppBuilder builder, Action<NotchWindowOptions>? configure = null)
-    {
-        var options = new NotchWindowOptions();
-        configure?.Invoke(options);
-        builder.Services.TryAddSingleton(options);
-        builder.Services.TryAddSingleton<INotchWindowService>(sp => new DesktopNotchWindowService(
-            sp.GetRequiredService<NotchWindowOptions>(),
-            sp.GetService<ILogger<DesktopNotchWindowService>>()
-        ));
-        return builder;
-    }
-#endif
 
     /// <summary>
-    /// Supplies the native key sources that make Shiny's keyboard shortcuts work on macOS (AppKit),
-    /// Linux (GTK4) and Mac Catalyst.
+    /// The native key sources for keyboard shortcuts on macOS (AppKit), Linux (GTK4) and Mac Catalyst.
+    /// Core listens for keys on Windows, Android and iOS itself; the AppKit and GTK4 heads ship their
+    /// own window types, so their key sources live here with the rest of the desktop interop.
     /// </summary>
-    /// <example>
-    /// <code>
-    /// builder
-    ///     .UseShinyControls()
-    ///     .UseDesktopKeyboardShortcuts();
-    /// </code>
-    /// </example>
-    /// <remarks>
-    /// <para>
-    /// <c>KeyboardShortcut</c>, <c>KeyboardShortcuts.Shortcuts</c> and <c>IKeyboardShortcutService</c>
-    /// live in <c>Shiny.Maui.Controls</c>, which already listens for keys on Windows, Android and iOS.
-    /// The AppKit and GTK4 heads ship their own window types, so their key sources live here with the
-    /// rest of the desktop interop; without this call, shortcuts there are declared but never fire.
-    /// </para>
-    /// <para>
-    /// Safe to call unconditionally: on Windows, Android and iOS core's own source stays in place.
-    /// These are in-app shortcuts that fire while your window has focus — for system-wide hotkeys see
-    /// <see cref="IGlobalHotKeyService"/>.
-    /// </para>
-    /// </remarks>
-    public static MauiAppBuilder UseDesktopKeyboardShortcuts(this MauiAppBuilder builder)
+    static void AttachKeyboardShortcuts()
     {
 #if MACOS || MACCATALYST
         Shiny.Maui.Controls.KeyboardShortcutManager.PlatformAttach = Shiny.Maui.Controls.Desktop.KeyboardShortcuts.KeyboardShortcutPlatform.Attach;
@@ -176,34 +128,119 @@ public static class DesktopMauiAppBuilderExtensions
         if (OperatingSystem.IsLinux())
             Shiny.Maui.Controls.KeyboardShortcutManager.PlatformAttach = Shiny.Maui.Controls.Desktop.KeyboardShortcuts.KeyboardShortcutPlatform.Attach;
 #endif
-        return builder;
     }
+}
+
+
+/// <summary>
+/// The options for <see cref="DesktopMauiAppBuilderExtensions.UseShinyDesktop"/>.
+/// </summary>
+public class ShinyDesktopConfiguration(IServiceCollection services)
+{
+#if !ANDROID && !IOS && !MACCATALYST
+    internal NotchWindowOptions NotchOptions { get; } = new();
 
     /// <summary>
-    /// Registers the docking infrastructure. Call once during MAUI app startup, then
-    /// register each panel with <see cref="AddDockPanel{TView}"/>.
+    /// Configures the notch window - a <see cref="NotchView"/> at the top-centre of the screen, above
+    /// every other application, that on a MacBook lives in the camera notch and grows out of it.
     /// </summary>
-    public static MauiAppBuilder UseShinyDocking(this MauiAppBuilder builder)
+    /// <remarks>
+    /// macOS AppKit, Windows and Linux (GTK4) only; it does not exist on Android, iOS or Mac Catalyst, so
+    /// call it inside <c>#if !ANDROID &amp;&amp; !IOS &amp;&amp; !MACCATALYST</c>. The service itself is always
+    /// registered on those platforms; this only changes its options.
+    /// </remarks>
+    public ShinyDesktopConfiguration ConfigureNotch(Action<NotchWindowOptions> configure)
     {
-        builder.Services.TryAddSingleton<DockableContentRegistry>();
-        return builder;
+        configure(this.NotchOptions);
+        return this;
     }
+#endif
+
 
     /// <summary>
-    /// Registers a panel type so dock layouts referencing <paramref name="panelTypeId"/>
-    /// can resolve and instantiate the View. The View is resolved through DI per request.
+    /// Opens Shiny's quick entry popup as a borderless, always-on-top OS window over <em>other
+    /// applications</em>, with the screen-edge glow drawn across the whole display, and claims
+    /// <see cref="QuickEntryOptions.HotKey"/> system-wide at startup.
+    /// </summary>
+    /// <remarks>
+    /// The popup, <c>PromptView</c> and the in-app presentation live in <c>Shiny.Maui.Controls</c> and
+    /// work without this. Opt-in because it changes what the app does: with
+    /// <see cref="QuickEntryPresentation.Auto"/> (the default) the core service picks this window over
+    /// the in-app overlay. On Mac Catalyst, and anywhere this package's <c>net10.0</c> asset runs
+    /// without being a desktop, the presenters report themselves unsupported and the overlay stays.
+    /// </remarks>
+    public ShinyDesktopConfiguration UseQuickEntryWindow()
+    {
+#if WINDOWS
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IScreenGlowPresenter, WindowsScreenGlow>(sp => new WindowsScreenGlow(sp.GetService<ILogger<WindowsScreenGlow>>())));
+#else
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IScreenGlowPresenter, DesktopScreenGlowPresenter>(sp => new DesktopScreenGlowPresenter(sp.GetService<ILogger<DesktopScreenGlowPresenter>>())));
+#endif
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IQuickEntryPresenter, DesktopQuickEntryPresenter>(sp => new DesktopQuickEntryPresenter(sp.GetService<ILogger<DesktopQuickEntryPresenter>>())));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IMauiInitializeService, DesktopQuickEntryInitializer>());
+
+        // The prompt's text field is a BorderlessEntry, polished by BorderlessEntryRegistration -
+        // which this package's module initializer installs whether or not this is called.
+        return this;
+    }
+
+
+    /// <summary>
+    /// Makes the app window accept files dragged from Finder / Explorer / Files, including over a
+    /// <c>BlazorWebView</c> or other hosted web content, and reports them through
+    /// <see cref="IFileDropService"/>.
+    /// </summary>
+    /// <remarks>
+    /// On a platform without window-level file drop (iOS, Android, and any host that reaches this
+    /// package's <c>net10.0</c> asset without being Linux) the service still resolves,
+    /// <see cref="IFileDropService.IsSupported"/> is false and nothing fires.
+    /// </remarks>
+    public ShinyDesktopConfiguration UseFileDrop(Action<FileDropOptions>? configure = null)
+    {
+        var options = new FileDropOptions();
+        configure?.Invoke(options);
+
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<IFileDropService>(sp => new FileDropService(
+            sp.GetRequiredService<FileDropOptions>(),
+            sp.GetService<IFileDropDelegate>(),
+            sp.GetService<ILogger<FileDropService>>()
+        ));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IMauiInitializeService, FileDropInitializer>());
+        return this;
+    }
+
+
+    /// <summary>
+    /// The same, plus an app-wide <see cref="IFileDropDelegate"/> that handles drops wherever they land
+    /// and whatever page is showing. It runs before <see cref="IFileDropService.Dropped"/>, which it can
+    /// suppress by setting <see cref="FileDropContext.Handled"/>.
+    /// </summary>
+    public ShinyDesktopConfiguration UseFileDrop<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDelegate>(
+        Action<FileDropOptions>? configure = null
+    )
+        where TDelegate : class, IFileDropDelegate
+    {
+        services.TryAddSingleton<IFileDropDelegate, TDelegate>();
+        return this.UseFileDrop(configure);
+    }
+
+
+    /// <summary>
+    /// Registers a panel type so dock layouts referencing <paramref name="panelTypeId"/> can resolve
+    /// and instantiate the view. The view is resolved through DI per request.
     /// </summary>
     /// <typeparam name="TView">The panel content view type.</typeparam>
-    /// <param name="builder">The MAUI app builder.</param>
     /// <param name="panelTypeId">Stable string ID stored in persisted layouts.</param>
-    public static MauiAppBuilder AddDockPanel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TView>(this MauiAppBuilder builder, string panelTypeId, string? displayName = null, string? icon = null)
+    public ShinyDesktopConfiguration AddDockPanel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TView>(string panelTypeId, string? displayName = null, string? icon = null)
         where TView : View
     {
-        builder.Services.AddTransient<TView>();
-        builder.Services.AddSingleton<IDockableContentFactory>(sp =>
+        services.AddTransient<TView>();
+        services.AddSingleton<IDockableContentFactory>(sp =>
             new ServiceProviderPanelFactory<TView>(panelTypeId, displayName, icon, sp));
-        return builder;
+        return this;
     }
+
 
     sealed class ServiceProviderPanelFactory<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TView> : IDockableContentFactory where TView : View
     {

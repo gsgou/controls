@@ -19,9 +19,23 @@ public static class ImageServiceExtensions
     /// Routes <see cref="ShinyImage"/> downloads through the registered <see cref="HttpClient"/>,
     /// so anything configured on that client - a base address, an auth handler - applies to images.
     /// </summary>
+    /// <remarks>
+    /// The WebAssembly template registers an <see cref="HttpClient"/>; Blazor Server and the Web App
+    /// template do not, and resolving one there used to fail on the first image with a bare "No service
+    /// for type HttpClient", nowhere near this call. There is deliberately no fallback client: this
+    /// exists for authenticated images, and a client the library made up would carry none of the app's
+    /// credentials, so every image would fail quietly instead of loudly.
+    /// </remarks>
     public static IServiceCollection AddShinyImages(this IServiceCollection services)
     {
-        services.TryAddScoped<IImageDownloader>(sp => new HttpImageDownloader(sp.GetRequiredService<HttpClient>()));
+        services.TryAddScoped<IImageDownloader>(sp => new HttpImageDownloader(
+            sp.GetService<HttpClient>() ?? throw new InvalidOperationException(
+                "AddShinyImages() (or UseHttpImageDownloader()) sends ShinyImage downloads through the app's HttpClient, " +
+                "and none is registered. Blazor Server and the Web App template do not register one - add it yourself, " +
+                "e.g. builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(\"https://your.api/\") }), " +
+                "or register your own downloader with AddShinyImages<T>(). Without either, leave AddShinyImages() out: " +
+                "ShinyImage loads unauthenticated images through the browser on its own.")
+        ));
         return services;
     }
 

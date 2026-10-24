@@ -1,7 +1,7 @@
 namespace Shiny.Maui.Controls.Desktop.FileDrop;
 
 /// <summary>
-/// App-wide settings for <see cref="IFileDropService"/>, set from <c>UseFileDrop</c>.
+/// App-wide settings for <see cref="IFileDropService"/>, set from <c>cfg.UseFileDrop</c> in <c>UseShinyDesktop</c>.
 /// </summary>
 public class FileDropOptions
 {

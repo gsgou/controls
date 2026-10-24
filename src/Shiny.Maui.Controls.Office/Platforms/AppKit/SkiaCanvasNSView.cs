@@ -4,11 +4,17 @@ using CoreGraphics;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
+// Compiled into Shiny.Maui.Controls.FloorPlan as well (see its csproj), as an internal copy in its own
+// namespace, so an app referencing both packages does not get two public types of the same name.
+#if SHINY_APPKIT_SKIA_COPY
+namespace Shiny.Maui.Controls.FloorPlan;
+#else
 namespace Shiny.Maui.Controls.Office;
+#endif
 
 /// <summary>
 /// An <see cref="NSView"/> that hands out a Skia surface to draw into — the AppKit half of
-/// <see cref="MacOSSKCanvasViewHandler"/>, and the reason the Office controls render on
+/// <see cref="MacOSSKCanvasViewHandler"/>, and the reason the Office controls and FloorPlanView render on
 /// <c>net10.0-macos</c> at all.
 /// </summary>
 /// <remarks>
@@ -26,7 +32,12 @@ namespace Shiny.Maui.Controls.Office;
 /// the painter, which is what keeps the rendering shared.
 /// </para>
 /// </remarks>
-public sealed class SkiaCanvasNSView : NSView
+#if SHINY_APPKIT_SKIA_COPY
+internal
+#else
+public
+#endif
+sealed class SkiaCanvasNSView : NSView
 {
     // The buffer is unmanaged and long-lived rather than a byte[] per frame: CGDataProvider wraps it
     // without copying, and CoreGraphics may hold the provider past the end of DrawRect. Reusing one
