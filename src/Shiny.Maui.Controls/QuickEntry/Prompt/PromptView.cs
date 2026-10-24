@@ -197,8 +197,8 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     );
 
     // -----------------------------------------------------------------------------------------
-    // Appearance. Defaults are app-theme bindings applied in the constructor, so they follow
-    // light/dark on their own and are replaced wholesale the moment a consumer assigns a value.
+    // Appearance. Each colour is null unless the consumer assigns one; the theme's value comes from
+    // the private Theme* twins below, so clearing a colour hands it straight back to the theme.
     // -----------------------------------------------------------------------------------------
 
     public static readonly BindableProperty AccentColorProperty = BindableProperty.Create(
@@ -208,16 +208,12 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     public static readonly BindableProperty SurfaceColorProperty = BindableProperty.Create(
         nameof(SurfaceColor), typeof(Color), typeof(PromptView), null,
-        propertyChanged: (b, _, n) => ((PromptView)b).Apply(v => v.card.BackgroundColor = (Color?)n)
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateSurface())
     );
 
     public static readonly BindableProperty OutlineColorProperty = BindableProperty.Create(
         nameof(OutlineColor), typeof(Color), typeof(PromptView), null,
-        propertyChanged: (b, _, n) => ((PromptView)b).Apply(v =>
-        {
-            v.card.Stroke = new SolidColorBrush((Color?)n ?? Colors.Transparent);
-            v.separator.Color = (Color?)n ?? Colors.Transparent;
-        })
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateOutline())
     );
 
     public static readonly BindableProperty TextColorProperty = BindableProperty.Create(
@@ -227,7 +223,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(PromptView), null,
-        propertyChanged: (b, _, n) => ((PromptView)b).Apply(v => v.entry.PlaceholderColor = (Color?)n)
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdatePlaceholder())
     );
 
     public static readonly BindableProperty SubtleTextColorProperty = BindableProperty.Create(
@@ -239,6 +235,53 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         nameof(HighlightColor), typeof(Color), typeof(PromptView), null,
         propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateHighlight())
     );
+
+    // The theme tokens behind each colour, resolved live through the view's own tree. A local value
+    // on the public property would outrank a dynamic resource there, which is how a cleared colour
+    // used to stay in the consumer's colour instead of returning to the theme.
+
+    static readonly BindableProperty ThemeAccentColorProperty = BindableProperty.Create(
+        nameof(ThemeAccentColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateAccent())
+    );
+
+    static readonly BindableProperty ThemeSurfaceColorProperty = BindableProperty.Create(
+        nameof(ThemeSurfaceColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateSurface())
+    );
+
+    static readonly BindableProperty ThemeOutlineColorProperty = BindableProperty.Create(
+        nameof(ThemeOutlineColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateOutline())
+    );
+
+    static readonly BindableProperty ThemeTextColorProperty = BindableProperty.Create(
+        nameof(ThemeTextColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateTextColors())
+    );
+
+    static readonly BindableProperty ThemePlaceholderColorProperty = BindableProperty.Create(
+        nameof(ThemePlaceholderColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdatePlaceholder())
+    );
+
+    static readonly BindableProperty ThemeSubtleTextColorProperty = BindableProperty.Create(
+        nameof(ThemeSubtleTextColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateTextColors())
+    );
+
+    static readonly BindableProperty ThemeHighlightColorProperty = BindableProperty.Create(
+        nameof(ThemeHighlightColor), typeof(Color), typeof(PromptView), null,
+        propertyChanged: (b, _, _) => ((PromptView)b).Apply(v => v.UpdateHighlight())
+    );
+
+    Color? ThemeAccentColor => (Color?)this.GetValue(ThemeAccentColorProperty);
+    Color? ThemeSurfaceColor => (Color?)this.GetValue(ThemeSurfaceColorProperty);
+    Color? ThemeOutlineColor => (Color?)this.GetValue(ThemeOutlineColorProperty);
+    Color? ThemeTextColor => (Color?)this.GetValue(ThemeTextColorProperty);
+    Color? ThemePlaceholderColor => (Color?)this.GetValue(ThemePlaceholderColorProperty);
+    Color? ThemeSubtleTextColor => (Color?)this.GetValue(ThemeSubtleTextColorProperty);
+    Color? ThemeHighlightColor => (Color?)this.GetValue(ThemeHighlightColorProperty);
 
     public static readonly BindableProperty CornerRadiusProperty = BindableProperty.Create(
         nameof(CornerRadius), typeof(double), typeof(PromptView), ThemeTokens.Unset,
@@ -281,7 +324,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
     readonly ContentView footerHost;
 
     // Used only before the theme dictionary has resolved — a control constructed outside a running
-    // app, or a pack missing the key. The tokens in ApplyThemeDefaults are the real source.
+    // app, or a pack missing the key. The tokens in TrackThemeColors are the real source.
     static readonly Color FallbackOnSurface = Color.FromArgb("#15151A");
     static readonly Color FallbackOnSurfaceVariant = Color.FromArgb("#65656F");
     static readonly Color FallbackPrimary = Color.FromArgb("#6D4AFF");
@@ -465,7 +508,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.LeadingTools = new ObservableCollection<PromptTool>();
         this.TrailingTools = new ObservableCollection<PromptTool>();
 
-        this.ApplyThemeDefaults();
+        this.TrackThemeColors();
         this.ApplyAll();
     }
 
@@ -1050,25 +1093,28 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
         this.RebuildLeading();
         this.UpdateDropdownHeight();
         this.UpdateAccent();
+        this.UpdateSurface();
+        this.UpdateOutline();
+        this.UpdatePlaceholder();
         this.UpdateTextColors();
         this.UpdateBusy();
         this.RebuildSuggestions();
     }
 
     /// <summary>
-    /// Points every colour property at a theme token, so the popup follows a theme swap and the OS
-    /// light/dark switch without the consumer doing anything. Assigning any of these properties
-    /// replaces the dynamic resource, which is what makes "themed unless you said otherwise" work.
+    /// Points every colour's theme twin at its token, so the popup follows a theme swap and the OS
+    /// light/dark switch without the consumer doing anything. A colour the consumer assigns wins over
+    /// its twin, and clearing it hands the popup back to the theme.
     /// </summary>
-    void ApplyThemeDefaults()
+    void TrackThemeColors()
     {
-        this.SetDynamicResource(SurfaceColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
-        this.SetDynamicResource(OutlineColorProperty, ShinyThemeKeys.Color.OutlineVariant);
-        this.SetDynamicResource(TextColorProperty, ShinyThemeKeys.Color.OnSurface);
-        this.SetDynamicResource(PlaceholderColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        this.SetDynamicResource(SubtleTextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        this.SetDynamicResource(HighlightColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
-        this.SetDynamicResource(AccentColorProperty, ShinyThemeKeys.Color.Primary);
+        this.SetDynamicResource(ThemeSurfaceColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+        this.SetDynamicResource(ThemeOutlineColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+        this.SetDynamicResource(ThemeTextColorProperty, ShinyThemeKeys.Color.OnSurface);
+        this.SetDynamicResource(ThemePlaceholderColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        this.SetDynamicResource(ThemeSubtleTextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        this.SetDynamicResource(ThemeHighlightColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+        this.SetDynamicResource(ThemeAccentColorProperty, ShinyThemeKeys.Color.Primary);
     }
 
     void OnTextChanged()
@@ -1092,17 +1138,31 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     void UpdateAccent()
     {
-        var accent = this.AccentColor ?? FallbackPrimary;
+        // The effective colour, so the orb paints what the prompt does even when the theme supplied it.
+        var accent = this.AccentColor ?? this.ThemeAccentColor ?? FallbackPrimary;
         this.orb.AccentColor = accent;
         this.submitGlyph.TextColor = accent;
         this.UpdateHighlight();
     }
 
+    void UpdateSurface()
+        => this.card.BackgroundColor = this.SurfaceColor ?? this.ThemeSurfaceColor;
+
+    void UpdateOutline()
+    {
+        var outline = this.OutlineColor ?? this.ThemeOutlineColor ?? Colors.Transparent;
+        this.card.Stroke = new SolidColorBrush(outline);
+        this.separator.Color = outline;
+    }
+
+    void UpdatePlaceholder()
+        => this.entry.PlaceholderColor = this.PlaceholderColor ?? this.ThemePlaceholderColor;
+
     void UpdateTextColors()
     {
-        // Null only before the theme dictionary has resolved; the token is the real source.
-        var text = this.TextColor ?? FallbackOnSurface;
-        var subtle = this.SubtleTextColor ?? FallbackOnSurfaceVariant;
+        // The fallbacks apply only before the theme dictionary has resolved; the token is the real source.
+        var text = this.TextColor ?? this.ThemeTextColor ?? FallbackOnSurface;
+        var subtle = this.SubtleTextColor ?? this.ThemeSubtleTextColor ?? FallbackOnSurfaceVariant;
 
         this.entry.TextColor = text;
         this.busyLabel.TextColor = subtle;
@@ -1209,7 +1269,7 @@ public class PromptView : ContentView, IQuickEntryKeyHandler, IQuickEntryPresent
 
     void UpdateHighlight()
     {
-        var highlight = this.HighlightColor ?? FallbackHighlight;
+        var highlight = this.HighlightColor ?? this.ThemeHighlightColor ?? FallbackHighlight;
         for (var i = 0; i < this.suggestionRows.Count; i++)
         {
             if (this.suggestionRows[i] is SuggestionRow row)

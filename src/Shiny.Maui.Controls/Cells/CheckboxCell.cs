@@ -20,6 +20,9 @@ public class CheckboxCell : CellBase
     public CheckboxCell()
     {
         AutomationIds.Link(this, checkBox, CheckBoxAutomationIdSuffix);
+        // The table re-applies this when it hosts the cell; doing it here too means a cell used on
+        // its own follows the theme from the start, not only after its accent is first changed.
+        this.ApplyAccentStyles();
         StyleGuard.MarkReady(this, typeof(CheckboxCell));
     }
 
@@ -65,21 +68,7 @@ public class CheckboxCell : CellBase
     protected override void ApplyAccentStyles() => this.UpdateCheckBoxColor();
 
     void UpdateCheckBoxColor()
-        => Tint(checkBox, CheckBox.ColorProperty, AccentColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
-
-    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
-    }
+        => ThemeProbe.Tint(checkBox, CheckBox.ColorProperty, AccentColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
 
 
     protected override void OnTapped()

@@ -26,12 +26,14 @@ public class WizardProgressBar : GraphicsView
     {
         this.Drawable = new WizardProgressDrawable(this);
 
-        this.SetDynamicResource(CompletedColorProperty, ShinyThemeKeys.Color.PrimaryContainer);
-        this.SetDynamicResource(CompletedTextColorProperty, ShinyThemeKeys.Color.OnPrimaryContainer);
-        this.SetDynamicResource(CurrentColorProperty, ShinyThemeKeys.Color.Primary);
-        this.SetDynamicResource(CurrentTextColorProperty, ShinyThemeKeys.Color.OnPrimary);
-        this.SetDynamicResource(UpcomingColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
-        this.SetDynamicResource(UpcomingTextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+        // The tokens go on private twins, not on the public colours: a consumer clearing CompletedColor
+        // would otherwise leave it null and the drawable painting with nothing.
+        this.SetDynamicResource(ThemeCompletedColorProperty, ShinyThemeKeys.Color.PrimaryContainer);
+        this.SetDynamicResource(ThemeCompletedTextColorProperty, ShinyThemeKeys.Color.OnPrimaryContainer);
+        this.SetDynamicResource(ThemeCurrentColorProperty, ShinyThemeKeys.Color.Primary);
+        this.SetDynamicResource(ThemeCurrentTextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+        this.SetDynamicResource(ThemeUpcomingColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+        this.SetDynamicResource(ThemeUpcomingTextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.SetDynamicResource(FontSizeProperty, ShinyThemeKeys.Type.LabelMediumSize);
         this.SetDynamicResource(MarkerStrokeWidthProperty, ShinyThemeKeys.Border.Medium);
 
@@ -70,6 +72,44 @@ public class WizardProgressBar : GraphicsView
 
     public static readonly BindableProperty UpcomingTextColorProperty = BindableProperty.Create(
         nameof(UpcomingTextColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    // ------- theme-following colours -------
+    //
+    // Each public colour is null unless the consumer sets one; these resolve the matching token live
+    // through the view's own tree, and the drawable paints with whichever applies.
+
+    static readonly BindableProperty ThemeCompletedColorProperty = BindableProperty.Create(
+        nameof(ThemeCompletedColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    static readonly BindableProperty ThemeCompletedTextColorProperty = BindableProperty.Create(
+        nameof(ThemeCompletedTextColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    static readonly BindableProperty ThemeCurrentColorProperty = BindableProperty.Create(
+        nameof(ThemeCurrentColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    static readonly BindableProperty ThemeCurrentTextColorProperty = BindableProperty.Create(
+        nameof(ThemeCurrentTextColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    static readonly BindableProperty ThemeUpcomingColorProperty = BindableProperty.Create(
+        nameof(ThemeUpcomingColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    static readonly BindableProperty ThemeUpcomingTextColorProperty = BindableProperty.Create(
+        nameof(ThemeUpcomingTextColor), typeof(Color), typeof(WizardProgressBar), null, propertyChanged: Redraw);
+
+    Color? ThemeCompletedColor => (Color?)this.GetValue(ThemeCompletedColorProperty);
+    Color? ThemeCompletedTextColor => (Color?)this.GetValue(ThemeCompletedTextColorProperty);
+    Color? ThemeCurrentColor => (Color?)this.GetValue(ThemeCurrentColorProperty);
+    Color? ThemeCurrentTextColor => (Color?)this.GetValue(ThemeCurrentTextColorProperty);
+    Color? ThemeUpcomingColor => (Color?)this.GetValue(ThemeUpcomingColorProperty);
+    Color? ThemeUpcomingTextColor => (Color?)this.GetValue(ThemeUpcomingTextColorProperty);
+
+    // What the drawable paints with: the consumer's colour, or the theme's.
+    internal Color? EffectiveCompletedColor => this.CompletedColor ?? this.ThemeCompletedColor;
+    internal Color? EffectiveCompletedTextColor => this.CompletedTextColor ?? this.ThemeCompletedTextColor;
+    internal Color? EffectiveCurrentColor => this.CurrentColor ?? this.ThemeCurrentColor;
+    internal Color? EffectiveCurrentTextColor => this.CurrentTextColor ?? this.ThemeCurrentTextColor;
+    internal Color? EffectiveUpcomingColor => this.UpcomingColor ?? this.ThemeUpcomingColor;
+    internal Color? EffectiveUpcomingTextColor => this.UpcomingTextColor ?? this.ThemeUpcomingTextColor;
 
     public static readonly BindableProperty FontSizeProperty = BindableProperty.Create(
         nameof(FontSize), typeof(double), typeof(WizardProgressBar), 0d, propertyChanged: Redraw);
@@ -301,7 +341,7 @@ sealed class WizardProgressDrawable(WizardProgressBar owner) : IDrawable
         {
             var from = (i + 0.5f) * slot + radius;
             var to = (i + 1.5f) * slot - radius;
-            canvas.StrokeColor = items[i].IsCompleted ? owner.CompletedColor : owner.UpcomingColor;
+            canvas.StrokeColor = items[i].IsCompleted ? owner.EffectiveCompletedColor : owner.EffectiveUpcomingColor;
             canvas.DrawLine(from, centerY, to, centerY);
         }
 
@@ -329,7 +369,7 @@ sealed class WizardProgressDrawable(WizardProgressBar owner) : IDrawable
 
             if (owner.ShowTitles && !string.IsNullOrEmpty(item.Title))
             {
-                canvas.FontColor = item.IsCurrent ? owner.CurrentColor : owner.UpcomingTextColor;
+                canvas.FontColor = item.IsCurrent ? owner.EffectiveCurrentColor : owner.EffectiveUpcomingTextColor;
                 canvas.Font = item.IsCurrent ? GraphicsFont.DefaultBold : GraphicsFont.Default;
                 canvas.DrawString(
                     item.Title,
@@ -357,19 +397,19 @@ sealed class WizardProgressDrawable(WizardProgressBar owner) : IDrawable
         var radius = track / 2f;
         var top = captionRow;
 
-        canvas.FillColor = owner.UpcomingColor;
+        canvas.FillColor = owner.EffectiveUpcomingColor;
         canvas.FillRoundedRectangle(0, top, rect.Width, track, radius);
 
         var fraction = Math.Clamp(owner.Fraction, 0d, 1d);
         if (fraction > 0)
         {
-            canvas.FillColor = owner.CurrentColor;
+            canvas.FillColor = owner.EffectiveCurrentColor;
             canvas.FillRoundedRectangle(0, top, (float)(rect.Width * fraction), track, radius);
         }
 
         if (captionRow > 0)
         {
-            canvas.FontColor = owner.UpcomingTextColor;
+            canvas.FontColor = owner.EffectiveUpcomingTextColor;
             canvas.FontSize = fontSize;
             canvas.Font = GraphicsFont.Default;
             canvas.DrawString(caption, 0, 0, rect.Width, captionRow, HorizontalAlignment.Left, VerticalAlignment.Center, TextFlow.ClipBounds);
@@ -393,12 +433,12 @@ sealed class WizardProgressDrawable(WizardProgressBar owner) : IDrawable
     }
 
     Color? Fill(WizardProgressItem item)
-        => item.IsCurrent ? owner.CurrentColor
-            : item.IsCompleted ? owner.CompletedColor
-            : owner.UpcomingColor;
+        => item.IsCurrent ? owner.EffectiveCurrentColor
+            : item.IsCompleted ? owner.EffectiveCompletedColor
+            : owner.EffectiveUpcomingColor;
 
     Color? Text(WizardProgressItem item)
-        => item.IsCurrent ? owner.CurrentTextColor
-            : item.IsCompleted ? owner.CompletedTextColor
-            : owner.UpcomingTextColor;
+        => item.IsCurrent ? owner.EffectiveCurrentTextColor
+            : item.IsCompleted ? owner.EffectiveCompletedTextColor
+            : owner.EffectiveUpcomingTextColor;
 }

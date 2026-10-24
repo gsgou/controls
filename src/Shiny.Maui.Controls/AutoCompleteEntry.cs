@@ -169,31 +169,22 @@ public class AutoCompleteEntry : ContentView
     // "unset means theme default" behaviour is defined in exactly one place.
 
     void ApplySpinnerColor()
-    {
-        if (this.SpinnerColor is Color c)
-            spinner.Color = c;
-        else
-            spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-    }
+        => ThemeProbe.Tint(spinner, ActivityIndicator.ColorProperty, this.SpinnerColor, ShinyThemeKeys.Color.OnSurfaceVariant);
 
     void ApplyDropDownBackground()
-    {
-        if (this.DropDownBackgroundColor is Color c)
-            dropDownBorder.BackgroundColor = c;
-        else
-            dropDownBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-    }
+        => ThemeProbe.Tint(dropDownBorder, VisualElement.BackgroundColorProperty, this.DropDownBackgroundColor, ShinyThemeKeys.Color.Surface);
 
     void ApplyDropDownStroke()
+        => ThemeBrush.Apply(dropDownBorder, Border.StrokeProperty, this.DropDownBorderColor, ShinyThemeKeys.Brush.Outline);
+
+    // The entry's own colours have no token here (its implicit style supplies them), so clearing
+    // means clearing the local value, not leaving the last explicit colour behind.
+    static void SetOrClear(BindableObject target, BindableProperty property, object? value)
     {
-        if (this.DropDownBorderColor is Color c)
-        {
-            dropDownBorder.Stroke = c;
-        }
+        if (value is Color c)
+            target.SetValue(property, c);
         else
-        {
-            ThemeBrush.Apply(dropDownBorder, Border.StrokeProperty, ShinyThemeKeys.Brush.Outline);
-        }
+            target.ClearValue(property);
     }
 
 
@@ -239,7 +230,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => { if (n is Color c) ctrl.entry.PlaceholderColor = c; }));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => SetOrClear(ctrl.entry, Entry.PlaceholderColorProperty, n)));
     public Color? PlaceholderColor
     {
         get => (Color?)GetValue(PlaceholderColorProperty);
@@ -365,7 +356,7 @@ public class AutoCompleteEntry : ContentView
         typeof(Color),
         typeof(AutoCompleteEntry),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => { if (n is Color c) ctrl.entry.TextColor = c; }));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<AutoCompleteEntry>(b, ctrl => SetOrClear(ctrl.entry, Entry.TextColorProperty, n)));
     public Color? TextColor
     {
         get => (Color?)GetValue(TextColorProperty);

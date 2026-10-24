@@ -101,10 +101,7 @@ public class LoadingOverlay : Overlay
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(LoadingOverlay), () =>
             {
             var lo = (LoadingOverlay)b;
-            if (n is Color c)
-                lo.spinner.Color = c;
-            else
-                lo.spinner.SetDynamicResource(ActivityIndicator.ColorProperty, ShinyThemeKeys.Color.InverseOnSurface);
+            ThemeProbe.Tint(lo.spinner, ActivityIndicator.ColorProperty, n as Color, ShinyThemeKeys.Color.InverseOnSurface);
         }));
     public Color? SpinnerColor { get => (Color?)GetValue(SpinnerColorProperty); set => SetValue(SpinnerColorProperty, value); }
 

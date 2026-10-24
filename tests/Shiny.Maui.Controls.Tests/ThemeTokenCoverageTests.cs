@@ -39,6 +39,21 @@ public class ThemeTokenCoverageTests(ITestOutputHelper output)
         ["ConfettiOptions.cs"] = "the default palette is canvas-confetti's own - the burst's colours are the effect itself, and callers pass their own Colors",
         ["ConfettiCanvas.cs"] = "emoji particles are drawn with a fixed ink (colour emoji ignore it); everything else is the particle's own colour",
         ["ScreenGlowOptions.cs"] = "the glow palette is the effect itself - a Siri-style rainbow wash whose colours are its identity, not chrome that should follow a theme pack",
+        ["NotchView.Properties.cs"] = "SurfaceColor defaults to black on every theme because the look being imitated is the hardware notch - a hole in the screen - and it is documented as such",
+
+        // Decorative effects. Their default palettes are the effect, the same way Confetti's and
+        // ScreenGlow's are: an aurora or a beam in the theme's primary would just be more chrome.
+        // Every one of these colours is a public property a caller can bind to a theme token.
+        ["ShineBorder.cs"] = "the default shine gradient is the effect's identity; ShineColors is the caller's to set",
+        ["BorderBeam.cs"] = "the default beam gradient is the effect's identity; ColorFrom/ColorTo are the caller's to set",
+        ["AuroraEffect.cs"] = "the default aurora palette is the effect itself",
+        ["BubblesEffect.cs"] = "the default bubble palette is the effect itself",
+        ["DotPatternEffect.cs"] = "the dot colour is the pattern itself",
+        ["FirefliesEffect.cs"] = "the firefly glow palette (and its yellow fallback for an empty palette) is the effect itself",
+        ["MatrixEffect.cs"] = "the green glyph rain is the effect's identity",
+        ["ParticlesEffect.cs"] = "the default particle palette is the effect itself",
+        ["RainEffect.cs"] = "the rain colour is the effect itself",
+        ["WavesEffect.cs"] = "the default wave palette is the effect itself",
         ["ImageEditor.cs"] = "toolbar chrome is a fixed dark scrim over arbitrary photos, so its separator must stay a mid grey that reads on that scrim in both schemes; only the semantic Delete/Confirm buttons are themed",
 
         // The SVG renderer. Every colour in it is either a value the artwork itself declared or the

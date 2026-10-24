@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Shiny.Maui.Controls.Tests;
 
+[Collection(ApplicationResourcesCollection.Name)]
 public class ThemeHandlerHookTests
 {
     /// <summary>

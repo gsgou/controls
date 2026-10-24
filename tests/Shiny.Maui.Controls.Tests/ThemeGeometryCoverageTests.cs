@@ -16,6 +16,7 @@ namespace Shiny.Maui.Controls.Tests;
 /// packs used to shift the hue and nothing else. These tests lock that in from both ends: a source
 /// scan that catches a literal creeping back, and a live swap proving a control actually re-renders.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class ThemeGeometryCoverageTests(ITestOutputHelper output)
 {
     /// <summary>Sizes that are exactly a role in the M3 type scale, so a literal is never justified.</summary>
@@ -37,6 +38,7 @@ public class ThemeGeometryCoverageTests(ITestOutputHelper output)
         ["ShinyButton.cs"] = "one Shadow built at construction and toggled by Opacity - reassigning one mid-interaction unfocuses the content on Android",
         ["TextEntry.cs"] = "focusGlow is animated by mutating Radius/Opacity on the instance",
         ["TooltipBubble.cs"] = "one Shadow built at construction and toggled by Opacity for HasShadow - the same reason as ShinyButton, since reassigning Shadow tears the native layer down",
+        ["NotchView.cs"] = "one Shadow built at construction and toggled by Opacity for HasShadow - reassigning Shadow on Android tears the native view down and drops focus from anything typing inside it",
         ["FlyoutPanel.cs"] = "surfaceShadow is built at construction and toggled by Opacity as the panel opens - assigning a fresh Shadow mid-interaction unfocuses whatever is inside it on Android",
     };
 

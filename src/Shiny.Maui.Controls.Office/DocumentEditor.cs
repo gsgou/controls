@@ -757,21 +757,18 @@ public partial class DocumentEditor : ContentView, IDisposable
         items.Add(MenuItem("Ignore", () => { this.controller?.IgnoreSpelling(word); this.CloseSpellingMenu(); }, secondary: true));
         items.Add(MenuItem("Add to dictionary", () => { this.controller?.LearnSpelling(word); this.CloseSpellingMenu(); }, secondary: true));
 
-        // Stroke is a Brush, and a colour token assigned straight onto it is dropped; the token has to
-        // drive the brush's own Color instead.
-        var stroke = new SolidColorBrush(Colors.Gray);
-        stroke.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
-
+        // Stroke is a Brush, so it takes the brush twin of the token. A colour token on the brush itself
+        // never resolves - the brush is not in the tree - and left the menu outlined in grey.
         this.spellingMenu = new Border
         {
             Content = items,
-            Stroke = stroke,
             StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             Padding = new Thickness(0, 4),
             MinimumWidthRequest = 160
         };
 
+        this.spellingMenu.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         this.spellingMenu.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
 
         this.root.Add(this.spellingMenu);

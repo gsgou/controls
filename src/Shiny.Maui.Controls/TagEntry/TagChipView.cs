@@ -173,23 +173,12 @@ class TagChipView : ContentView
     {
         ThemeProbe.Tint(this.border, VisualElement.BackgroundColorProperty, this.ChipBackgroundColor, ShinyThemeKeys.Color.SecondaryContainer);
 
-        if (this.ChipTextColor is Color explicitText)
-        {
-            this.label.TextColor = explicitText;
-            this.removeIcon.Color = explicitText;
-        }
-        else if (this.ChipBackgroundColor is Color fill)
-        {
-            // A caller-picked fill has no matching "on" token, so the readable ink is computed from it
-            // the way PillView computes a pill's.
-            var ink = PillView.GetContrastTextColor(fill);
-            this.label.TextColor = ink;
-            this.removeIcon.Color = ink;
-        }
-        else
-        {
-            this.label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
-            this.removeIcon.SetDynamicResource(MotionIconView.ColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
-        }
+        // A caller-picked fill has no matching "on" token, so the readable ink is computed from it
+        // the way PillView computes a pill's.
+        var ink = this.ChipTextColor
+            ?? (this.ChipBackgroundColor is Color fill ? PillView.GetContrastTextColor(fill) : null);
+
+        ThemeProbe.Tint(this.label, Label.TextColorProperty, ink, ShinyThemeKeys.Color.OnSecondaryContainer);
+        ThemeProbe.Tint(this.removeIcon, MotionIconView.ColorProperty, ink, ShinyThemeKeys.Color.OnSecondaryContainer);
     }
 }

@@ -115,10 +115,7 @@ public partial class TextEntry
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
-            if (n is Color c)
-                te.outerBorder.BackgroundColor = c;
-            else
-                te.outerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
+            ThemeProbe.Tint(te.outerBorder, VisualElement.BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.Surface);
 
             // The floating label masks the border stroke with this colour, so it has to follow.
             if (te.isPlaceholderUp)
@@ -162,10 +159,7 @@ public partial class TextEntry
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(TextEntry), () =>
             {
             var te = (TextEntry)b;
-            if (n is Color c)
-                te.entry.TextColor = c;
-            else
-                te.entry.SetDynamicResource(Entry.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+            ThemeProbe.Tint(te.entry, Entry.TextColorProperty, n as Color, ShinyThemeKeys.Color.OnSurface);
         }));
     public Color? TextColor { get => (Color?)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }
 

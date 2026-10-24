@@ -64,6 +64,9 @@ public class ButtonCell : CellBase
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
+        // The table re-applies this when it hosts the cell; doing it here too means a cell used on
+        // its own follows the theme from the start, not only after its accent is first changed.
+        this.ApplyAccentStyles();
         StyleGuard.MarkReady(this, typeof(ButtonCell));
     }
 
@@ -86,7 +89,7 @@ public class ButtonCell : CellBase
 
     void UpdateButtonColor()
     {
-        Tint(buttonLabel, Label.TextColorProperty,
+        ThemeProbe.Tint(buttonLabel, Label.TextColorProperty,
             ButtonTextColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
     }
 
@@ -99,19 +102,5 @@ public class ButtonCell : CellBase
     {
         if (Command?.CanExecute(CommandParameter) == true)
             Command.Execute(CommandParameter);
-    }
-
-    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
     }
 }

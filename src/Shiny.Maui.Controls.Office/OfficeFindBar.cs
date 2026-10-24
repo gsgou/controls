@@ -88,7 +88,7 @@ public sealed class OfficeFindBar : ContentView
         };
 
         Grid.SetColumn(this.entry, 1);
-        box.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        box.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
 
         this.count = new Label
         {

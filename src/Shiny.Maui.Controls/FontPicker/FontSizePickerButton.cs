@@ -54,7 +54,7 @@ public class FontSizePickerButton : ContentView
         }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
         buttonLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSecondaryContainer);
-        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         buttonBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SecondaryContainer);
 
         var tap = new TapGestureRecognizer();
@@ -103,7 +103,7 @@ public class FontSizePickerButton : ContentView
             IsVisible = false,
             InputTransparent = false
         };
-        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         popupBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
         backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
 

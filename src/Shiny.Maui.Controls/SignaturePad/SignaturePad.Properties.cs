@@ -212,7 +212,12 @@ public partial class SignaturePad
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(SignaturePad), () =>
             {
-                ((SignaturePad)b).floatingPanel.PanelBackgroundColor = (Color)n;
+                // Cleared rather than handed null, so the panel is left exactly as unset and follows the theme.
+                var panel = ((SignaturePad)b).floatingPanel;
+                if (n is Color c)
+                    panel.PanelBackgroundColor = c;
+                else
+                    panel.ClearValue(FloatingPanel.FloatingPanel.PanelBackgroundColorProperty);
             }));
 
     public Color PanelBackgroundColor

@@ -211,11 +211,12 @@ public partial class ChatView
 
     public static readonly BindableProperty SendButtonBackgroundColorProperty = BindableProperty.Create(
         nameof(SendButtonBackgroundColor), typeof(Color), typeof(ChatView), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
             {
-                // null => leave ChatInputBar's own themed value in place.
-                if (n is Color sendButtonBackgroundColor)
-                    ((ChatView)b).inputBar.SendButtonBackgroundColor = sendButtonBackgroundColor;
+                // Only touch the composer when this view set (or is now clearing) the colour, so a
+                // never-set property leaves a supplied ChatEntryView's own colour alone.
+                if (n is Color || o is Color)
+                    ((ChatView)b).inputBar.SendButtonBackgroundColor = n as Color;
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -227,11 +228,10 @@ public partial class ChatView
 
     public static readonly BindableProperty SendButtonTextColorProperty = BindableProperty.Create(
         nameof(SendButtonTextColor), typeof(Color), typeof(ChatView), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
             {
-                // null => leave ChatInputBar's own themed value in place.
-                if (n is Color sendButtonTextColor)
-                    ((ChatView)b).inputBar.SendButtonTextColor = sendButtonTextColor;
+                if (n is Color || o is Color)
+                    ((ChatView)b).inputBar.SendButtonTextColor = n as Color;
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -243,11 +243,10 @@ public partial class ChatView
 
     public static readonly BindableProperty InputBarBackgroundColorProperty = BindableProperty.Create(
         nameof(InputBarBackgroundColor), typeof(Color), typeof(ChatView), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
             {
-                // null => leave ChatInputBar's own themed value in place.
-                if (n is Color inputBarBackgroundColor)
-                    ((ChatView)b).inputBar.BarBackgroundColor = inputBarBackgroundColor;
+                if (n is Color || o is Color)
+                    ((ChatView)b).inputBar.BarBackgroundColor = n as Color;
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -259,11 +258,10 @@ public partial class ChatView
 
     public static readonly BindableProperty InputBarBorderColorProperty = BindableProperty.Create(
         nameof(InputBarBorderColor), typeof(Color), typeof(ChatView), null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
+        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(ChatView), () =>
             {
-                // null => leave ChatEntryView's own themed value in place.
-                if (n is Color inputBarBorderColor)
-                    ((ChatView)b).inputBar.BorderColor = inputBarBorderColor;
+                if (n is Color || o is Color)
+                    ((ChatView)b).inputBar.BorderColor = n as Color;
             }));
 
     /// <summary>

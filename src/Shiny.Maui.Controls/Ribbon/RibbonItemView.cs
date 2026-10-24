@@ -329,8 +329,11 @@ class RibbonItemView : Grid
         // for a tool palette is the whole job of the checked state.
         if (isChecked)
         {
+            // Apply, not SetDynamicResource: the unchecked branch leaves a local null in Stroke, and a
+            // local value outranks a dynamic resource - so a tool that had been put down never got its
+            // ring back when it was picked up again.
             this.face.StrokeThickness = 1;
-            this.face.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.Secondary);
+            ThemeBrush.Apply(this.face, Border.StrokeProperty, ShinyThemeKeys.Brush.Secondary);
         }
         else
         {

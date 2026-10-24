@@ -606,11 +606,7 @@ public partial class TagEntry : ContentView
         this.entry.IsReadOnly = this.IsReadOnly;
         this.entry.Placeholder = this.Placeholder;
 
-        if (this.PlaceholderColor is Color placeholder)
-            this.entry.PlaceholderColor = placeholder;
-        else
-            this.entry.SetDynamicResource(Entry.PlaceholderColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-
+        ThemeProbe.Tint(this.entry, Entry.PlaceholderColorProperty, this.PlaceholderColor, ShinyThemeKeys.Color.OnSurfaceVariant);
         ThemeProbe.Tint(this.entry, Entry.TextColorProperty, this.TextColor, ShinyThemeKeys.Color.OnSurface);
         this.entry.SetTokenOrValue(Entry.FontSizeProperty, this.FontSize, ShinyThemeKeys.Type.BodyLargeSize);
 

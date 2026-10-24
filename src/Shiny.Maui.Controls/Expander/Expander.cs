@@ -272,7 +272,7 @@ public partial class Expander : Grid
             this.rootBorder.Shadow = null!;
 
         // Header
-        SetColorOrToken(this.headerRow, BackgroundColorProperty, this.HeaderBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
+        ThemeProbe.Tint(this.headerRow, BackgroundColorProperty, this.HeaderBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
         this.headerRow.Padding = this.HeaderPadding;
 
         if (ThemeTokens.IsSet(this.HeaderHeight))
@@ -286,12 +286,12 @@ public partial class Expander : Grid
             this.headerRow.SetDynamicResource(MinimumHeightRequestProperty, ShinyThemeKeys.Density.TouchTarget);
         }
 
-        SetColorOrToken(this.headerLabel, Label.TextColorProperty, this.HeaderTextColor, ShinyThemeKeys.Color.OnSurface);
+        ThemeProbe.Tint(this.headerLabel, Label.TextColorProperty, this.HeaderTextColor, ShinyThemeKeys.Color.OnSurface);
         this.headerLabel.SetTokenOrValue(Label.FontSizeProperty, this.HeaderFontSize, ShinyThemeKeys.Type.TitleSmallSize);
         this.headerLabel.FontAttributes = this.HeaderFontAttributes;
         this.headerLabel.Text = this.HeaderText;
 
-        SetColorOrToken(this.headerDetailLabel, Label.TextColorProperty, this.HeaderDetailColor, ShinyThemeKeys.Color.OnSurfaceVariant);
+        ThemeProbe.Tint(this.headerDetailLabel, Label.TextColorProperty, this.HeaderDetailColor, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.headerDetailLabel.WithFontSize(ShinyThemeKeys.Type.BodySmallSize);
         this.headerDetailLabel.Text = this.HeaderDetail;
         this.headerDetailLabel.IsVisible = !String.IsNullOrWhiteSpace(this.HeaderDetail);
@@ -308,27 +308,18 @@ public partial class Expander : Grid
         }
 
         // Indicator
-        SetColorOrToken(this.indicatorLabel, Label.TextColorProperty, this.IndicatorColor, ShinyThemeKeys.Color.OnSurfaceVariant);
+        ThemeProbe.Tint(this.indicatorLabel, Label.TextColorProperty, this.IndicatorColor, ShinyThemeKeys.Color.OnSurfaceVariant);
         this.indicatorLabel.FontSize = this.IndicatorSize;
 
         // Separator
-        SetColorOrToken(this.separator, BoxView.ColorProperty, this.SeparatorColor, ShinyThemeKeys.Color.OutlineVariant);
+        ThemeProbe.Tint(this.separator, BoxView.ColorProperty, this.SeparatorColor, ShinyThemeKeys.Color.OutlineVariant);
         this.separator.IsVisible = this.ShowSeparator && this.contentClip.IsVisible;
 
         // Content
-        SetColorOrToken(this.contentHost, BackgroundColorProperty, this.ContentBackgroundColor, ShinyThemeKeys.Color.Surface);
+        ThemeProbe.Tint(this.contentHost, BackgroundColorProperty, this.ContentBackgroundColor, ShinyThemeKeys.Color.Surface);
         this.contentHost.Padding = this.ContentPadding;
 
         this.ApplySemantics();
-    }
-
-
-    static void SetColorOrToken(Element element, BindableProperty property, Color? color, string themeKey)
-    {
-        if (color == null)
-            element.SetDynamicResource(property, themeKey);
-        else
-            element.SetValue(property, color);
     }
 
 

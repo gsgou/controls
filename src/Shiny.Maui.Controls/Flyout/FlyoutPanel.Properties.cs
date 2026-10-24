@@ -474,7 +474,7 @@ public partial class FlyoutPanel
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FlyoutPanel), () =>
         {
             var panel = (FlyoutPanel)b;
-            Tint(panel.surface, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.SurfaceContainerLow);
+            ThemeProbe.Tint(panel.surface, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.SurfaceContainerLow);
         }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -492,7 +492,7 @@ public partial class FlyoutPanel
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FlyoutPanel), () =>
         {
             var panel = (FlyoutPanel)b;
-            Tint(panel.divider, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.OutlineVariant);
+            ThemeProbe.Tint(panel.divider, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.OutlineVariant);
         }));
 
     /// <summary>Leave unset to follow the active theme.</summary>

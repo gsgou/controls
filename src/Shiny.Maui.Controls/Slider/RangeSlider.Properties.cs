@@ -106,16 +106,8 @@ public partial class RangeSlider
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(RangeSlider), () =>
             {
             var slider = (RangeSlider)b;
-            if (n is Color c)
-            {
-                slider.lowerThumb.BackgroundColor = c;
-                slider.upperThumb.BackgroundColor = c;
-            }
-            else
-            {
-                slider.lowerThumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
-                slider.upperThumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
-            }
+            ThemeProbe.Tint(slider.lowerThumb, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.OnPrimary);
+            ThemeProbe.Tint(slider.upperThumb, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.OnPrimary);
             slider.UpdateVisuals();
         }));
     /// <summary>Thumb fill color. When null, the theme OnPrimary token is used.</summary>

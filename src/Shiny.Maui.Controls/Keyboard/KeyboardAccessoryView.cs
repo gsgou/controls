@@ -116,11 +116,7 @@ public class KeyboardAccessoryView : ContentView
         nameof(BarBackgroundColor), typeof(Color), typeof(KeyboardAccessoryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(KeyboardAccessoryView), () =>
         {
-            var bar = (KeyboardAccessoryView)b;
-            if (n is Color c)
-                bar.BackgroundColor = c;
-            else
-                bar.SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
+            ThemeProbe.Tint((KeyboardAccessoryView)b, BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.SurfaceContainerHigh);
         }));
     public Color? BarBackgroundColor
     {
@@ -132,11 +128,7 @@ public class KeyboardAccessoryView : ContentView
         nameof(BarBorderColor), typeof(Color), typeof(KeyboardAccessoryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(KeyboardAccessoryView), () =>
         {
-            var bar = (KeyboardAccessoryView)b;
-            if (n is Color c)
-                bar.topLine.Color = c;
-            else
-                bar.topLine.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
+            ThemeProbe.Tint(((KeyboardAccessoryView)b).topLine, BoxView.ColorProperty, n as Color, ShinyThemeKeys.Color.OutlineVariant);
         }));
     public Color? BarBorderColor
     {

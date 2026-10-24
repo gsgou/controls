@@ -16,6 +16,7 @@ namespace Shiny.Maui.Controls.Tests;
 /// everything posted to its sync context has finished - which a ScrollToAsync with no handler
 /// behind it never does.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class AgendaDragGestureTests
 {
     static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.Today);

@@ -52,7 +52,7 @@ class FloatingToolbarStrip : Border
         this.Content = this.items;
 
         this.SetDynamicResource(BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
-        this.SetDynamicResource(StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        this.SetDynamicResource(StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
     }
 
 
@@ -314,7 +314,7 @@ class FloatingToolbarStrip : Border
         else if (this.ForegroundColor is not null)
             shape.Stroke = this.ForegroundColor;
         else
-            shape.SetDynamicResource(Microsoft.Maui.Controls.Shapes.Shape.StrokeProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
+            shape.SetDynamicResource(Microsoft.Maui.Controls.Shapes.Shape.StrokeProperty, ShinyThemeKeys.Brush.OnSurfaceVariant);
 
         return shape;
     }

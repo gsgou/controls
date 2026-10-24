@@ -104,11 +104,14 @@ public class KeyboardDismissItem : KeyboardAccessoryItem
             Text = "Done";
 
         this.SetDynamicResource(FontSizeProperty, Themes.ShinyThemeKeys.Type.BodyLargeSize);
-        SetDynamicResource(ToolColorProperty, Themes.ShinyThemeKeys.Color.Primary);
         Clicked += OnClicked;
 
         StyleGuard.MarkReady(this, typeof(KeyboardDismissItem));
     }
+
+    // The primary action on the bar, so an unset ToolColor follows Primary instead of the muted
+    // default. ToolColor itself stays null, so a consumer clearing it lands back here.
+    private protected override string ToolColorToken => Themes.ShinyThemeKeys.Color.Primary;
 
     void OnClicked(object? sender, EventArgs e) => Owner?.DismissKeyboard();
 }

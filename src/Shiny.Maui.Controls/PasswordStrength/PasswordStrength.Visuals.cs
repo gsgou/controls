@@ -280,21 +280,11 @@ public partial class PasswordStrength
     // ---------------------------------------------------------------------------------------------
 
     void PaintTrack(VisualElement element)
-    {
-        if (this.TrackColor is { } color)
-            element.BackgroundColor = color;
-        else
-            element.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
-    }
+        => ThemeProbe.Tint(element, VisualElement.BackgroundColorProperty, this.TrackColor, ShinyThemeKeys.Color.SurfaceContainerHighest);
 
 
     void PaintRuleText(Label label)
-    {
-        if (this.RuleTextColor is { } color)
-            label.TextColor = color;
-        else
-            label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-    }
+        => ThemeProbe.Tint(label, Label.TextColorProperty, this.RuleTextColor, ShinyThemeKeys.Color.OnSurfaceVariant);
 
 
     void PaintLevel(VisualElement element, BindableProperty property, PasswordStrengthLevel level, bool dimWhenNone = false)
@@ -308,10 +298,7 @@ public partial class PasswordStrength
             _ => (dimWhenNone ? null : this.TrackColor, ShinyThemeKeys.Color.OnSurfaceVariant)
         };
 
-        if (explicitColor is { } color)
-            element.SetValue(property, color);
-        else
-            element.SetDynamicResource(property, token);
+        ThemeProbe.Tint(element, property, explicitColor, token);
     }
 
 

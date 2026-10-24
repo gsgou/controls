@@ -19,6 +19,9 @@ public class SimpleCheckCell : CellBase
     public SimpleCheckCell()
     {
         AutomationIds.Link(this, checkLabel, CheckAutomationIdSuffix);
+        // The table re-applies this when it hosts the cell; doing it here too means a cell used on
+        // its own follows the theme from the start, not only after its accent is first changed.
+        this.ApplyAccentStyles();
         StyleGuard.MarkReady(this, typeof(SimpleCheckCell));
     }
 
@@ -82,26 +85,12 @@ public class SimpleCheckCell : CellBase
 
     void UpdateCheckColor()
     {
-        Tint(checkLabel, Label.TextColorProperty,
+        ThemeProbe.Tint(checkLabel, Label.TextColorProperty,
             AccentColor ?? ParentTableView?.CellAccentColor, ShinyThemeKeys.Color.Primary);
     }
 
     protected override void OnTapped()
     {
         Checked = !Checked;
-    }
-
-    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
     }
 }

@@ -30,6 +30,18 @@ public class PromptOrbView : GraphicsView
         propertyChanged: (b, _, _) => ((PromptOrbView)b).Redraw()
     );
 
+    // The theme's primary, resolved live through the orb's own tree. Kept off AccentColor itself so a
+    // consumer clearing theirs falls back to the theme rather than to null.
+    static readonly BindableProperty ThemeAccentColorProperty = BindableProperty.Create(
+        nameof(ThemeAccentColor),
+        typeof(Color),
+        typeof(PromptOrbView),
+        null,
+        propertyChanged: (b, _, _) => ((PromptOrbView)b).Redraw()
+    );
+
+    Color? ThemeAccentColor => (Color?)this.GetValue(ThemeAccentColorProperty);
+
     readonly OrbDrawable drawable;
     IDispatcherTimer? timer;
 
@@ -43,13 +55,16 @@ public class PromptOrbView : GraphicsView
 
         // The orb's hue follows the theme's primary unless the consumer assigns one, which is what
         // keeps it in step with the rest of the prompt.
-        this.SetDynamicResource(AccentColorProperty, ShinyThemeKeys.Color.Primary);
+        this.SetDynamicResource(ThemeAccentColorProperty, ShinyThemeKeys.Color.Primary);
 
         this.Loaded += (_, _) => this.StartTicker();
         this.Unloaded += (_, _) => this.StopTicker();
     }
 
-    /// <summary>Base hue for the orb. The other two blobs are derived from it, so one colour restyles the whole mark.</summary>
+    /// <summary>
+    /// Base hue for the orb. The other two blobs are derived from it, so one colour restyles the whole
+    /// mark. Leave unset to follow the theme's primary.
+    /// </summary>
     public Color? AccentColor
     {
         get => (Color?)this.GetValue(AccentColorProperty);
@@ -112,8 +127,8 @@ public class PromptOrbView : GraphicsView
             var cy = rect.Center.Y;
             var r = size / 2f;
 
-            // Only before the theme dictionary has resolved; AccentColor is token-backed.
-            var accent = this.owner.AccentColor ?? FallbackAccent;
+            // The fallback only applies before the theme dictionary has resolved.
+            var accent = this.owner.AccentColor ?? this.owner.ThemeAccentColor ?? FallbackAccent;
             var hue = accent.GetHue();
             var sat = Math.Clamp(accent.GetSaturation(), 0.45f, 1f);
             var lum = Math.Clamp(accent.GetLuminosity(), 0.45f, 0.75f);

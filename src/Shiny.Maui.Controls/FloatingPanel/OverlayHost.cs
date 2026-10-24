@@ -26,7 +26,7 @@ public class OverlayHost : Grid
             IsVisible = false,
             InputTransparent = true
         };
-        FloatingPanel.Tint(backdrop, BoxView.ColorProperty, this.BackdropColor, ShinyThemeKeys.Color.Scrim);
+        ThemeProbe.Tint(backdrop, BoxView.ColorProperty, this.BackdropColor, ShinyThemeKeys.Color.Scrim);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnBackdropTapped;
@@ -47,7 +47,7 @@ public class OverlayHost : Grid
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(OverlayHost), () =>
             {
                 var host = (OverlayHost)b;
-                FloatingPanel.Tint(host.backdrop, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.Scrim);
+                ThemeProbe.Tint(host.backdrop, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.Scrim);
             }));
 
     /// <summary>Leave unset to follow the active theme's scrim.</summary>

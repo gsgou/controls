@@ -122,19 +122,36 @@ public partial class ProgressLine
     /// Pushes the gradient ends onto the inner bar, falling back to the theme tokens. Done here
     /// rather than with a plain binding because <see cref="ProgressBar"/>'s gradient properties are
     /// non-nullable — binding null onto them would paint the gradient transparent rather than leave
-    /// the token in place. <see cref="ShinyThemeKeys"/> is what the fallback resolves through.
+    /// the token in place.
     /// </summary>
+    /// <remarks>
+    /// The bar is always handed a concrete colour: the explicit one, or the token as resolved on this
+    /// line. Pointing the bar's own property at the token instead lost to the explicit colour left in
+    /// its local slot once a consumer cleared theirs, and did not track a light/dark swap.
+    /// </remarks>
     void ApplyGradientColors()
     {
-        if (this.GradientStartColor is Color start)
-            this.Bar.GradientStartColor = start;
-        else
-            this.Bar.SetDynamicResource(ProgressBar.GradientStartColorProperty, ShinyThemeKeys.Color.Primary);
+        this.Bar.GradientStartColor = this.GradientStartColor ?? this.ThemeGradientStartColor;
+        this.Bar.GradientEndColor = this.GradientEndColor ?? this.ThemeGradientEndColor;
+    }
 
-        if (this.GradientEndColor is Color end)
-            this.Bar.GradientEndColor = end;
-        else
-            this.Bar.SetDynamicResource(ProgressBar.GradientEndColorProperty, ShinyThemeKeys.Color.Tertiary);
+    // Resolve the gradient tokens live through the line's own tree, so an unset end follows the theme.
+    static readonly BindableProperty ThemeGradientStartColorProperty = BindableProperty.Create(
+        nameof(ThemeGradientStartColor), typeof(Color), typeof(ProgressLine), ProgressBar.GradientStartColorProperty.DefaultValue,
+        propertyChanged: static (b, _, _) => ((ProgressLine)b).ApplyGradientColors());
+
+    static readonly BindableProperty ThemeGradientEndColorProperty = BindableProperty.Create(
+        nameof(ThemeGradientEndColor), typeof(Color), typeof(ProgressLine), ProgressBar.GradientEndColorProperty.DefaultValue,
+        propertyChanged: static (b, _, _) => ((ProgressLine)b).ApplyGradientColors());
+
+    Color ThemeGradientStartColor => (Color?)this.GetValue(ThemeGradientStartColorProperty) ?? (Color)ProgressBar.GradientStartColorProperty.DefaultValue;
+
+    Color ThemeGradientEndColor => (Color?)this.GetValue(ThemeGradientEndColorProperty) ?? (Color)ProgressBar.GradientEndColorProperty.DefaultValue;
+
+    void TrackThemeGradientColors()
+    {
+        this.SetDynamicResource(ThemeGradientStartColorProperty, ShinyThemeKeys.Color.Primary);
+        this.SetDynamicResource(ThemeGradientEndColorProperty, ShinyThemeKeys.Color.Tertiary);
     }
 
     // Fill animation — forwarded to the inner bar, which owns the slide.

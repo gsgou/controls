@@ -228,7 +228,7 @@ public class DurationPicker : ContentView
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle().WithCornerRadius(ShinyThemeKeys.Shape.CornerSmallRadius),
             BackgroundColor = Colors.Transparent
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
-        tapArea.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.Outline);
+        tapArea.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.Outline);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnTapped;

@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Themes;
 using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.Chat;
@@ -102,9 +103,7 @@ public partial class ChatEntryView
         nameof(SendButtonBackgroundColor), typeof(Color), typeof(ChatEntryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatEntryView), () =>
             {
-                // null => leave the themed value in place.
-                if (n is Color color)
-                    ((ChatEntryView)b).sendButton.BackgroundColor = color;
+                ThemeProbe.Tint(((ChatEntryView)b).sendButton, Button.BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.Primary);
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -118,8 +117,7 @@ public partial class ChatEntryView
         nameof(SendButtonTextColor), typeof(Color), typeof(ChatEntryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatEntryView), () =>
             {
-                if (n is Color color)
-                    ((ChatEntryView)b).sendButton.TextColor = color;
+                ThemeProbe.Tint(((ChatEntryView)b).sendButton, Button.TextColorProperty, n as Color, ShinyThemeKeys.Color.OnPrimary);
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -135,8 +133,7 @@ public partial class ChatEntryView
         nameof(BarBackgroundColor), typeof(Color), typeof(ChatEntryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatEntryView), () =>
             {
-                if (n is Color color)
-                    ((ChatEntryView)b).rootGrid.BackgroundColor = color;
+                ThemeProbe.Tint(((ChatEntryView)b).rootGrid, VisualElement.BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.Surface);
             }));
 
     /// <summary>The area behind the composer. Leave unset to follow the active theme.</summary>
@@ -150,8 +147,7 @@ public partial class ChatEntryView
         nameof(ComposerBackgroundColor), typeof(Color), typeof(ChatEntryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatEntryView), () =>
             {
-                if (n is Color color)
-                    ((ChatEntryView)b).composerBorder.BackgroundColor = color;
+                ThemeProbe.Tint(((ChatEntryView)b).composerBorder, VisualElement.BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.SurfaceContainerLowest);
             }));
 
     /// <summary>The fill inside the rounded composer. Leave unset to follow the active theme.</summary>
@@ -165,8 +161,7 @@ public partial class ChatEntryView
         nameof(BorderColor), typeof(Color), typeof(ChatEntryView), null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ChatEntryView), () =>
             {
-                if (n is Color color)
-                    ((ChatEntryView)b).composerBorder.Stroke = color;
+                ThemeBrush.Apply(((ChatEntryView)b).composerBorder, Border.StrokeProperty, n as Color, ShinyThemeKeys.Brush.OutlineVariant);
             }));
 
     /// <summary>The rounded composer's outline. Leave unset to follow the active theme.</summary>

@@ -81,7 +81,7 @@ public partial class FlyoutView
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FlyoutView), () =>
         {
-            Tint(((FlyoutView)b).scrim, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.Scrim);
+            ThemeProbe.Tint(((FlyoutView)b).scrim, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.Scrim);
         }));
 
     /// <summary>Leave unset to follow the active theme's scrim.</summary>

@@ -98,7 +98,7 @@ public partial class FloatingPanel
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FloatingPanel), () =>
             {
                 var panel = (FloatingPanel)b;
-                Tint(panel.sheetContainer, VisualElement.BackgroundColorProperty,
+                ThemeProbe.Tint(panel.sheetContainer, VisualElement.BackgroundColorProperty,
                     (Color?)n, ShinyThemeKeys.Color.SurfaceContainerLow);
             }));
 
@@ -117,7 +117,7 @@ public partial class FloatingPanel
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FloatingPanel), () =>
             {
                 var panel = (FloatingPanel)b;
-                Tint(panel.dragHandle, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.OutlineVariant);
+                ThemeProbe.Tint(panel.dragHandle, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.OutlineVariant);
             }));
 
     /// <summary>Leave unset to follow the active theme.</summary>
@@ -139,7 +139,7 @@ public partial class FloatingPanel
             panel.dragHandleContainer.BackgroundColor = color ?? Colors.Transparent;
             panel.headerHost.BackgroundColor = color ?? Colors.Transparent;
             if (panel.safeAreaFill.IsVisible)
-                Tint(panel.safeAreaFill, BoxView.ColorProperty,
+                ThemeProbe.Tint(panel.safeAreaFill, BoxView.ColorProperty,
                     color ?? panel.PanelBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
         }));
 
@@ -319,19 +319,5 @@ public partial class FloatingPanel
         var panel = (FloatingPanel)bindable;
         panel.headerHost.Content = newValue as View;
         panel.UpdateClosedState();
-    }
-
-    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
-    internal static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
     }
 }

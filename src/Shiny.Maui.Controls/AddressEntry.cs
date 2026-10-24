@@ -219,7 +219,7 @@ public class AddressEntry : ContentView
         typeof(AddressEntry),
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
-            { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBackgroundColor = c; }));
+            ((AddressEntry)b).autoComplete.DropDownBackgroundColor = n as Color));
     public Color? DropDownBackgroundColor
     {
         get => (Color?)GetValue(DropDownBackgroundColorProperty);
@@ -232,7 +232,7 @@ public class AddressEntry : ContentView
         typeof(AddressEntry),
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
-            { if (n is Color c) ((AddressEntry)b).autoComplete.DropDownBorderColor = c; }));
+            ((AddressEntry)b).autoComplete.DropDownBorderColor = n as Color));
     public Color? DropDownBorderColor
     {
         get => (Color?)GetValue(DropDownBorderColorProperty);
@@ -245,7 +245,7 @@ public class AddressEntry : ContentView
         typeof(AddressEntry),
         null,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(AddressEntry), () =>
-            { if (n is Color c) ((AddressEntry)b).autoComplete.SpinnerColor = c; }));
+            ((AddressEntry)b).autoComplete.SpinnerColor = n as Color));
     public Color? SpinnerColor
     {
         get => (Color?)GetValue(SpinnerColorProperty);

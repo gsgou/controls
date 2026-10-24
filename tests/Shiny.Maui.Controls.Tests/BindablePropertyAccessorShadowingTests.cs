@@ -21,6 +21,7 @@ namespace Shiny.Maui.Controls.Tests;
 /// <see cref="DataGridColumn"/> shipped exactly that (its accessor is now
 /// <c>GetCellValue</c>). These tests keep it from coming back.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class BindablePropertyAccessorShadowingTests
 {
     /// <summary>Names on BindableObject whose overloads must never be shadowed by a subclass.</summary>

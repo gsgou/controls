@@ -64,7 +64,7 @@ public partial class FlyoutView : Layout
             InputTransparent = true,
             ZIndex = ZOrder.Scrim
         };
-        Tint(this.scrim, BoxView.ColorProperty, null, ShinyThemeKeys.Color.Scrim);
+        ThemeProbe.Tint(this.scrim, BoxView.ColorProperty, null, ShinyThemeKeys.Color.Scrim);
 
         var scrimTap = new TapGestureRecognizer();
         scrimTap.Tapped += (_, _) => this.OnScrimTapped();
@@ -733,19 +733,6 @@ public partial class FlyoutView : Layout
             : FlyoutPresentation.Overlay,
         var explicitly => explicitly
     };
-
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
-    }
 
     #endregion
 

@@ -14,6 +14,7 @@ namespace Shiny.Maui.Controls.Tests;
 /// walkthrough callout following a spotlight step (transparent fill) rendered its card-less text on
 /// the dim instead of coming back as a card.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class ThemeProbeTintTests
 {
     const string Token = "TintTestColor";

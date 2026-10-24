@@ -143,8 +143,8 @@ public partial class FloatingPanel : ContentView
             StrokeThickness = 0,
             Content = sheetInnerGrid
         };
-        Tint(dragHandle, BoxView.ColorProperty, this.HandleColor, ShinyThemeKeys.Color.OutlineVariant);
-        Tint(sheetContainer, VisualElement.BackgroundColorProperty, this.PanelBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
+        ThemeProbe.Tint(dragHandle, BoxView.ColorProperty, this.HandleColor, ShinyThemeKeys.Color.OutlineVariant);
+        ThemeProbe.Tint(sheetContainer, VisualElement.BackgroundColorProperty, this.PanelBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerLow);
 
         // Outer grid: Border on top, safeAreaFill below
         var outerGrid = new Grid
@@ -322,7 +322,7 @@ public partial class FloatingPanel : ContentView
             {
                 Margin = new Thickness(0, 0, 0, -bottomInset);
                 safeAreaFill.HeightRequest = bottomInset;
-                // sheetContainer.BackgroundColor already reflects PanelBackgroundColor (via Tint()),
+                // sheetContainer.BackgroundColor already reflects PanelBackgroundColor (via ThemeProbe.Tint()),
                 // with SurfaceContainerLow as its theme fallback. Transparent covers the rest.
                 safeAreaFill.Color = (IsOpen
                     ? sheetContainer.BackgroundColor

@@ -158,10 +158,7 @@ public class Fab : ContentView, ITapTarget
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
-            if (n is Color c)
-                fab.border.BackgroundColor = c;
-            else
-                fab.border.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
+            ThemeProbe.Tint(fab.border, VisualElement.BackgroundColorProperty, n as Color, ShinyThemeKeys.Color.Primary);
         }));
     public Color? FabBackgroundColor
     {
@@ -177,8 +174,11 @@ public class Fab : ContentView, ITapTarget
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
+            // No token behind the stroke: unset means no outline, so clearing restores the default.
             if (n is Color c)
                 fab.border.Stroke = c;
+            else
+                fab.border.ClearValue(Border.StrokeProperty);
         }));
     public Color? BorderColor
     {
@@ -209,10 +209,7 @@ public class Fab : ContentView, ITapTarget
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Fab), () =>
             {
             var fab = (Fab)b;
-            if (n is Color c)
-                fab.textLabel.TextColor = c;
-            else
-                fab.textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            ThemeProbe.Tint(fab.textLabel, Label.TextColorProperty, n as Color, ShinyThemeKeys.Color.OnPrimary);
         }));
     public Color? TextColor
     {
@@ -295,7 +292,11 @@ public class Fab : ContentView, ITapTarget
             {
                 var fab = (Fab)b;
                 if ((bool)n)
+                {
+                    // The local null left by turning it off would outrank the token.
+                    fab.border.ClearValue(VisualElement.ShadowProperty);
                     fab.border.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
+                }
                 else
                     fab.border.Shadow = null;
             }));

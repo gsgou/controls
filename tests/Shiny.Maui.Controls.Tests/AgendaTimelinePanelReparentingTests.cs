@@ -15,6 +15,7 @@ namespace Shiny.Maui.Controls.Tests;
 ///
 /// These assert the managed invariant behind that crash: an indicator only ever has one parent.
 /// </summary>
+[Collection(ApplicationResourcesCollection.Name)]
 public class AgendaTimelinePanelReparentingTests
 {
     static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.Today);

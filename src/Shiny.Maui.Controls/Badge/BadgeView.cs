@@ -113,28 +113,15 @@ public partial class BadgeView : Grid, IDisposable
     void ApplyBadgeVisual(bool animate)
     {
         // Colors / stroke — fall back to theme tokens when the explicit color is unset.
-        if (this.BadgeColor is Color badgeColor)
-            this.badgeBorder.BackgroundColor = badgeColor;
-        else
-            this.badgeBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Error);
+        ThemeProbe.Tint(this.badgeBorder, VisualElement.BackgroundColorProperty, this.BadgeColor, ShinyThemeKeys.Color.Error);
 
-        if (this.BadgeBorderColor is Color borderColor)
-        {
-            this.badgeBorder.Stroke = borderColor;
-        }
-        else
-        {
-            // Stroke is Brush-typed, so it takes the Brush twin of the token rather than the Color.
-            ThemeBrush.Apply(this.badgeBorder, Border.StrokeProperty, ShinyThemeKeys.Brush.Surface);
-        }
+        // Stroke is Brush-typed, so it takes the Brush twin of the token rather than the Color.
+        ThemeBrush.Apply(this.badgeBorder, Border.StrokeProperty, this.BadgeBorderColor, ShinyThemeKeys.Brush.Surface);
         this.badgeBorder.StrokeThickness = this.BadgeBorderThickness;
         this.badgeBorder.StrokeShape = new RoundRectangle { CornerRadius = this.CornerRadius };
 
         // Font / text color
-        if (this.BadgeTextColor is Color textColor)
-            this.badgeLabel.TextColor = textColor;
-        else
-            this.badgeLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnError);
+        ThemeProbe.Tint(this.badgeLabel, Label.TextColorProperty, this.BadgeTextColor, ShinyThemeKeys.Color.OnError);
         this.badgeLabel.FontSize = this.FontSize;
         this.badgeLabel.FontAttributes = this.FontAttributes;
 

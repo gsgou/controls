@@ -100,10 +100,7 @@ public class FabMenu : ContentView
     /// <summary>Explicit backdrop colour when set, otherwise the theme scrim.</summary>
     void ApplyBackdropColor()
     {
-        if (this.BackdropColor is Color c)
-            backdrop.Color = c;
-        else
-            backdrop.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Scrim);
+        ThemeProbe.Tint(backdrop, BoxView.ColorProperty, this.BackdropColor, ShinyThemeKeys.Color.Scrim);
     }
 
 
@@ -196,7 +193,7 @@ public class FabMenu : ContentView
         typeof(Color),
         typeof(FabMenu),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => { if (n is Color c) menu.mainFab.BorderColor = c; }));
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<FabMenu>(b, menu => menu.mainFab.BorderColor = n as Color));
     public Color? BorderColor
     {
         get => (Color?)GetValue(BorderColorProperty);

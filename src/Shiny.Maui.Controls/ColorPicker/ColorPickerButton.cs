@@ -51,7 +51,7 @@ public class ColorPickerButton : ContentView
             HorizontalOptions = LayoutOptions.Start
         }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
-        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        buttonBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
 
         var tap = new TapGestureRecognizer();
         tap.Tapped += OnButtonTapped;
@@ -86,7 +86,7 @@ public class ColorPickerButton : ContentView
         .WithStrokeThickness(ShinyThemeKeys.Border.Thin)
         .WithElevation(ShinyThemeKeys.Elevation.Level4);
 
-        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        popupBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         popupBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
 
         var backdrop = new BoxView

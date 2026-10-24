@@ -18,8 +18,6 @@ public class PillView : ContentView
     readonly Border border;
     readonly Label label;
 
-    bool isUpdatingFromType;
-
     // Whether the Style currently on this pill is one ApplyPillType installed. A consumer's own Style
     // is not ours to remove - see ApplyPillType.
     bool styleIsOurs;
@@ -112,7 +110,7 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(PillView), () => OnPillColorChanged(b, o, n)));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(PillView), () => ((PillView)b).ApplyColors()));
 
     public Color? PillColor
     {
@@ -125,12 +123,7 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(PillView), () =>
-            {
-            var pill = (PillView)b;
-            if (n is Color c)
-                pill.label.TextColor = c;
-        }));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(PillView), () => ((PillView)b).ApplyColors()));
 
     public Color? PillTextColor
     {
@@ -143,12 +136,7 @@ public class PillView : ContentView
         typeof(Color),
         typeof(PillView),
         null,
-        propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(PillView), () =>
-            {
-            var pill = (PillView)b;
-            if (n is Color c)
-                pill.border.Stroke = c;
-        }));
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(PillView), () => ((PillView)b).ApplyColors()));
 
     public Color? PillBorderColor
     {
@@ -215,17 +203,6 @@ public class PillView : ContentView
         pill.ApplyPillType((PillType)newValue);
     }
 
-    static void OnPillColorChanged(BindableObject bindable, object oldValue, object newValue)
-    {
-        var pill = (PillView)bindable;
-        if (pill.isUpdatingFromType) return;
-
-        if (newValue is Color baseColor)
-            pill.ApplyBaseColor(baseColor);
-    }
-
-
-
     void ApplyPillType(PillType type)
     {
         // Try to find a user-defined style for this pill type.
@@ -248,29 +225,35 @@ public class PillView : ContentView
             this.styleIsOurs = false;
         }
 
-        // Fall back to theme tokens — bound via dynamic resources so a runtime theme/appearance
-        // switch restyles the pill automatically. Explicit Pill*Color properties still win.
+        this.ApplyColors(type);
+    }
+
+
+    void ApplyColors() => this.ApplyColors(this.Type);
+
+    /// <summary>
+    /// Fall back to theme tokens — bound via dynamic resources so a runtime theme/appearance switch
+    /// restyles the pill automatically. Explicit Pill*Color properties still win, and a
+    /// <see cref="PillColor"/> derives the stroke and ink that were not set explicitly.
+    /// </summary>
+    /// <remarks>
+    /// All three are recomputed together because the derived stroke and ink depend on PillColor: when
+    /// they were written only on the way in, clearing PillColor left its darkened stroke behind as a
+    /// local value that outranked the theme outline for good.
+    /// </remarks>
+    void ApplyColors(PillType type)
+    {
         var (bgKey, textKey, borderKey) = TypeTokens[type];
+        var baseColor = this.PillColor;
 
-        isUpdatingFromType = true;
-        border.SetDynamicResource(VisualElement.BackgroundColorProperty, bgKey);
+        ThemeProbe.Tint(border, VisualElement.BackgroundColorProperty, baseColor, bgKey);
 
-        if (PillBorderColor is Color borderColor)
-        {
-            border.Stroke = borderColor;
-        }
-        else
-        {
-            // Stroke is Brush-typed, so it takes the Brush twin of the token rather than the Color.
-            ThemeBrush.Apply(border, Microsoft.Maui.Controls.Border.StrokeProperty, borderKey.AsBrush());
-        }
+        // Stroke is Brush-typed, so it takes the Brush twin of the token rather than the Color.
+        var borderColor = this.PillBorderColor ?? (baseColor is null ? null : DarkenColor(baseColor, 0.2f));
+        ThemeBrush.Apply(border, Microsoft.Maui.Controls.Border.StrokeProperty, borderColor, borderKey.AsBrush());
 
-        if (PillTextColor is Color textColor)
-            label.TextColor = textColor;
-        else
-            label.SetDynamicResource(Label.TextColorProperty, textKey);
-
-        isUpdatingFromType = false;
+        var textColor = this.PillTextColor ?? (baseColor is null ? null : GetContrastTextColor(baseColor));
+        ThemeProbe.Tint(label, Label.TextColorProperty, textColor, textKey);
     }
 
     /// <summary>
@@ -310,17 +293,6 @@ public class PillView : ContentView
 
             return false;
         }
-    }
-
-    void ApplyBaseColor(Color baseColor)
-    {
-        border.BackgroundColor = baseColor;
-
-        if (PillBorderColor is null)
-            border.Stroke = DarkenColor(baseColor, 0.2f);
-
-        if (PillTextColor is null)
-            label.TextColor = GetContrastTextColor(baseColor);
     }
 
     static Color DarkenColor(Color color, float amount)

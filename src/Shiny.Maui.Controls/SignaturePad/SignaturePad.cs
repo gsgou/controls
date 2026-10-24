@@ -246,22 +246,8 @@ public partial class SignaturePad : ContentView
     partial void SetBackGestureEnabled(bool enabled);
 
     void ApplySignButtonColor(Color? explicitColor)
-        => Tint(signButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.Primary);
+        => ThemeProbe.Tint(signButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.Primary);
 
     void ApplyCancelButtonColor(Color? explicitColor)
-        => Tint(cancelButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.SecondaryContainer);
-
-    /// <summary>Uses the explicit colour when one was supplied, otherwise binds to the theme token.</summary>
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
-    }
+        => ThemeProbe.Tint(cancelButton, Button.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.SecondaryContainer);
 }

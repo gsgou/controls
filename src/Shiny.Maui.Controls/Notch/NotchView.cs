@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Shiny.Maui.Controls.Infrastructure;
+using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls;
 
@@ -78,11 +79,11 @@ public partial class NotchView : Grid
         // tears down and rebuilds the native view, which drops focus from anything typing inside it.
         this.shadow = new Shadow
         {
-            Brush = Colors.Black,
             Offset = new Point(0, 6),
             Radius = 18,
             Opacity = 0.35f
         };
+        ThemeBrush.Apply(this.shadow, Shadow.BrushProperty, ShinyThemeKeys.Brush.Shadow);
 
         this.surface = new Border
         {

@@ -7,11 +7,13 @@ using Xunit;
 namespace Shiny.Maui.Controls.Tests;
 
 // SetCustomToaster<T>() used to register the built-in Toaster whatever T was (#29)
+[Collection(ApplicationResourcesCollection.Name)]
 public class CustomServiceRegistrationTests
 {
     [Fact]
     public void SetCustomToaster_registers_the_custom_toaster()
     {
+        using var _ = ThemeManagerState.Preserve();
         var builder = MauiApp.CreateBuilder();
         builder.UseShinyControls(c => c.SetCustomToaster<FakeToaster>());
 
@@ -24,6 +26,7 @@ public class CustomServiceRegistrationTests
     [Fact]
     public void Default_toaster_is_registered_without_a_custom_one()
     {
+        using var _ = ThemeManagerState.Preserve();
         var builder = MauiApp.CreateBuilder();
         builder.UseShinyControls();
 

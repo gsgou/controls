@@ -102,8 +102,8 @@ public partial class FlyoutPanel : ContentView
         this.rootGrid.Children.Add(this.surface);
         this.rootGrid.Children.Add(this.divider);
 
-        Tint(this.surface, VisualElement.BackgroundColorProperty, null, ShinyThemeKeys.Color.SurfaceContainerLow);
-        Tint(this.divider, BoxView.ColorProperty, null, ShinyThemeKeys.Color.OutlineVariant);
+        ThemeProbe.Tint(this.surface, VisualElement.BackgroundColorProperty, null, ShinyThemeKeys.Color.SurfaceContainerLow);
+        ThemeProbe.Tint(this.divider, BoxView.ColorProperty, null, ShinyThemeKeys.Color.OutlineVariant);
 
         base.Content = this.rootGrid;
         this.ApplySideLayout();
@@ -244,19 +244,5 @@ public partial class FlyoutPanel : ContentView
         this.bodyGrid.Children.Remove(other);
         this.contentScroll.Content = ReferenceEquals(wanted, this.contentScroll) ? this.contentHost : null;
         this.bodyGrid.Children.Insert(0, wanted);
-    }
-
-
-    static void Tint(Element target, BindableProperty property, Color? explicitColor, string themeKey)
-    {
-        if (explicitColor is null)
-        {
-            target.SetDynamicResource(property, themeKey);
-        }
-        else
-        {
-            target.RemoveDynamicResource(property);
-            target.SetValue(property, explicitColor);
-        }
     }
 }

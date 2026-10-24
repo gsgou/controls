@@ -35,7 +35,7 @@
     padding: var(--shiny-border-width, 1px);
     border-radius: inherit;
     pointer-events: none;
-    background: var(--shiny-border-track, var(--shiny-color-outline-variant, #c4c6d0));
+    background: var(--shiny-border-track, var(--shiny-color-outline-variant, #BBC7DF));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);

@@ -113,7 +113,7 @@ public class MediaPickerButton : ContentView
             Content = this.addTriggerLabel,
             HorizontalOptions = LayoutOptions.Fill
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
-        this.addTrigger.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        this.addTrigger.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
 
         this.addHost = new ContentView { Content = this.addTrigger };
         var addTap = new TapGestureRecognizer();

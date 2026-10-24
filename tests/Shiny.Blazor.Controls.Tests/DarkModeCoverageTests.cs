@@ -69,6 +69,8 @@ public class DarkModeCoverageTests(ITestOutputHelper output)
         ["ProgressLine.razor.cs"] = "the pulse sheen sits on the fill, which is already themed",
         ["TextEntrySpeechToTextButton.razor"] = "idle green and listening red are semantic",
         ["SchedulerAgendaView.razor"] = "the current-time marker is semantic red; event colours are the app's own",
+        ["BorderBeam.razor.cs"] = "the default beam gradient is the effect's identity, the same as Confetti's palette; ColorFrom/ColorTo are the caller's to set",
+        ["VideoText.razor.cs"] = "the overlay is the knockout itself - video showing through letters cut out of a sheet - and matches the MAUI default; a caller can pass a token or none",
         ["SchedulerCalendarListView.razor"] = "the default event colour is a brand accent the app overrides per event",
     };
 

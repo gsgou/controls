@@ -75,6 +75,7 @@ public partial class ProgressLine : ContentView, IDisposable
         // leaving it hit-testable would swallow taps along a whole edge of the page.
         this.InputTransparent = true;
 
+        this.TrackThemeGradientColors();
         this.ApplyGradientColors();
 
         StyleGuard.MarkReady(this, typeof(ProgressLine));

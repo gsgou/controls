@@ -134,19 +134,18 @@ public abstract class IconTextTool : ContentView, ITapTarget
     // the icon fonts everything in this repo uses; a PNG stays whatever colour it was drawn.
     private protected void ApplyToolColor()
     {
-        if (this.ToolColor is Color c)
-        {
-            this.textLabel.TextColor = c;
-            if (this.iconImage.Source is FontImageSource f)
-                f.Color = c;
-        }
-        else
-        {
-            this.textLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-            if (this.iconImage.Source is FontImageSource f)
-                f.SetDynamicResource(FontImageSource.ColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-        }
+        ThemeProbe.Tint(this.textLabel, Label.TextColorProperty, this.ToolColor, this.ToolColorToken);
+        if (this.iconImage.Source is FontImageSource f)
+            ThemeProbe.Tint(f, FontImageSource.ColorProperty, this.ToolColor, this.ToolColorToken);
     }
+
+    /// <summary>
+    /// The token an unset <see cref="ToolColor"/> follows. A tool with a different theme default
+    /// overrides this rather than binding <see cref="ToolColorProperty"/> to a token itself: that
+    /// binding is wiped the moment a consumer clears the property, and the tool stops following the
+    /// theme. Read from the base constructor, so an override must be a constant.
+    /// </summary>
+    private protected virtual string ToolColorToken => ShinyThemeKeys.Color.OnSurfaceVariant;
 
     void ITapTarget.Invoke()
     {

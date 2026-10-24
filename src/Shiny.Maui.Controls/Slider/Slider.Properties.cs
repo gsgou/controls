@@ -82,10 +82,7 @@ public partial class Slider
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(Slider), () =>
             {
             var slider = (Slider)b;
-            if (n is Color c)
-                slider.thumb.BackgroundColor = c;
-            else
-                slider.thumb.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            ThemeProbe.Tint(slider.thumb, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.OnPrimary);
             slider.UpdateVisuals();
         }));
     /// <summary>Thumb fill color. When null, the theme OnPrimary token is used.</summary>

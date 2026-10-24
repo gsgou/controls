@@ -80,7 +80,14 @@ public class EntryCell : CellBase, IKeyboardAccessoryHost
     public static readonly BindableProperty PlaceholderColorProperty = BindableProperty.Create(
         nameof(PlaceholderColor), typeof(Color), typeof(EntryCell), null,
         propertyChanged: (b, o, n) => StyleGuard.WhenReady(b, typeof(EntryCell), () =>
-            { if (n is Color c) ((EntryCell)b).entry.PlaceholderColor = c; }));
+            {
+                // Clearing returns the entry to its platform placeholder colour rather than the last explicit one.
+                var entry = ((EntryCell)b).entry;
+                if (n is Color c)
+                    entry.PlaceholderColor = c;
+                else
+                    entry.ClearValue(InputView.PlaceholderColorProperty);
+            }));
 
     public static readonly BindableProperty KeyboardProperty = BindableProperty.Create(
         nameof(Keyboard), typeof(Keyboard), typeof(EntryCell), Keyboard.Default,

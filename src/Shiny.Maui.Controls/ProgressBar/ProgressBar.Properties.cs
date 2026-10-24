@@ -39,10 +39,8 @@ public partial class ProgressBar
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
             var pb = (ProgressBar)b;
-            if (n is Color c)
-                pb.trackBackground.BackgroundColor = c;
-            else
-                pb.trackBackground.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
+            ThemeProbe.Tint(pb.trackBackground, VisualElement.BackgroundColorProperty, (Color?)n, ShinyThemeKeys.Color.SurfaceContainerHighest);
+            ThemeProbe.Tint(pb.trackBackground, BoxView.ColorProperty, (Color?)n, ShinyThemeKeys.Color.SurfaceContainerHighest);
             pb.UpdateSegmentsLayout();
         }));
     /// <summary>Track background color. When null, the theme SurfaceContainerHighest token is used.</summary>
@@ -185,10 +183,7 @@ public partial class ProgressBar
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(ProgressBar), () =>
             {
             var pb = (ProgressBar)b;
-            if (n is Color c)
-                pb.progressLabel.TextColor = c;
-            else
-                pb.progressLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnPrimary);
+            ThemeProbe.Tint(pb.progressLabel, Label.TextColorProperty, (Color?)n, ShinyThemeKeys.Color.OnPrimary);
         }));
     /// <summary>Progress text color. When null, the theme OnPrimary token is used.</summary>
     public Color? TextColor { get => (Color?)GetValue(TextColorProperty); set => SetValue(TextColorProperty, value); }

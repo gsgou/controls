@@ -379,28 +379,12 @@ public abstract partial class RangePickerBase : ContentView
         if (string.IsNullOrEmpty(text))
         {
             this.valueLabel.Text = this.Placeholder ?? this.DefaultPlaceholder;
-            if (this.PlaceholderColor is { } placeholder)
-            {
-                this.valueLabel.RemoveDynamicResource(Label.TextColorProperty);
-                this.valueLabel.TextColor = placeholder;
-            }
-            else
-            {
-                this.valueLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurfaceVariant);
-            }
+            ThemeProbe.Tint(this.valueLabel, Label.TextColorProperty, this.PlaceholderColor, ShinyThemeKeys.Color.OnSurfaceVariant);
         }
         else
         {
             this.valueLabel.Text = text;
-            if (this.TextColor is { } color)
-            {
-                this.valueLabel.RemoveDynamicResource(Label.TextColorProperty);
-                this.valueLabel.TextColor = color;
-            }
-            else
-            {
-                this.valueLabel.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
-            }
+            ThemeProbe.Tint(this.valueLabel, Label.TextColorProperty, this.TextColor, ShinyThemeKeys.Color.OnSurface);
         }
 
         this.valueLabel.SetTokenOrValue(Label.FontSizeProperty, this.FontSize, ShinyThemeKeys.Type.BodyLargeSize);

@@ -97,7 +97,7 @@ public partial class ColorPicker : ContentView
         }.WithStrokeThickness(ShinyThemeKeys.Border.Medium);
 
         // Only the swatch's frame is themed - its fill is the colour being picked.
-        previewSwatch.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        previewSwatch.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
 
         hexEntry = new Entry
         {

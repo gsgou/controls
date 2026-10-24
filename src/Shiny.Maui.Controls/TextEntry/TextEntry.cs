@@ -227,21 +227,12 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
     const string ToolAddonColorToken = ShinyThemeKeys.Color.SurfaceContainerHigh;
 
     // Applies an explicit color when set, otherwise binds the theme token, to the border stroke
-    // (a Brush, so we drive a SolidColorBrush's Color) and the tool separators.
+    // (a Brush, so it takes the token's brush twin) and the tool separators.
     void ApplyStroke(Color? explicitColor, string token)
     {
-        if (explicitColor is Color c)
-        {
-            outerBorder.Stroke = c;
-            leftSeparator.Color = c;
-            rightSeparator.Color = c;
-        }
-        else
-        {
-            ThemeBrush.Apply(outerBorder, Border.StrokeProperty, token.AsBrush());
-            leftSeparator.SetDynamicResource(BoxView.ColorProperty, token);
-            rightSeparator.SetDynamicResource(BoxView.ColorProperty, token);
-        }
+        ThemeBrush.Apply(outerBorder, Border.StrokeProperty, explicitColor, token.AsBrush());
+        ThemeProbe.Tint(leftSeparator, BoxView.ColorProperty, explicitColor, token);
+        ThemeProbe.Tint(rightSeparator, BoxView.ColorProperty, explicitColor, token);
     }
 
     // Re-applies the border/separator color for the current state (error > focused > resting).
@@ -257,36 +248,18 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 
     // Resting (down) placeholder color.
     void ApplyPlaceholderRestColor()
-    {
-        if (PlaceholderColor is Color c)
-            placeholderLabel.TextColor = c;
-        else
-            placeholderLabel.SetDynamicResource(Label.TextColorProperty, PlaceholderColorToken);
-    }
+        => ThemeProbe.Tint(placeholderLabel, Label.TextColorProperty, PlaceholderColor, PlaceholderColorToken);
 
     // Floated (up) placeholder color. M3 only accents the label while the field actually has focus -
     // a floated-but-unfocused label stays muted, otherwise every filled field on a form shouts.
     void ApplyPlaceholderFloatColor()
     {
         if (HasError)
-        {
-            if (ErrorColor is Color ec)
-                placeholderLabel.TextColor = ec;
-            else
-                placeholderLabel.SetDynamicResource(Label.TextColorProperty, ErrorColorToken);
-        }
+            ThemeProbe.Tint(placeholderLabel, Label.TextColorProperty, ErrorColor, ErrorColorToken);
         else if (!entry.IsFocused)
-        {
             ApplyPlaceholderRestColor();
-        }
-        else if (FocusedPlaceholderColor is Color fc)
-        {
-            placeholderLabel.TextColor = fc;
-        }
         else
-        {
-            placeholderLabel.SetDynamicResource(Label.TextColorProperty, FocusedPlaceholderColorToken);
-        }
+            ThemeProbe.Tint(placeholderLabel, Label.TextColorProperty, FocusedPlaceholderColor, FocusedPlaceholderColorToken);
     }
 
     void ApplyPlaceholderStateColor()
@@ -303,42 +276,24 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
     // of colour on a field that might be transparent by design.
     void ApplyNotchBackground()
     {
+        Color? fill;
         if (!isPlaceholderUp || Variant != TextEntryVariant.Floating)
-        {
-            placeholderLabel.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
-            placeholderLabel.BackgroundColor = Colors.Transparent;
-            return;
-        }
-
-        if (EntryBackgroundColor is Color c && c.Alpha > 0)
-        {
-            placeholderLabel.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
-            placeholderLabel.BackgroundColor = c;
-        }
+            fill = Colors.Transparent;
+        else if (EntryBackgroundColor is Color c && c.Alpha > 0)
+            fill = c;
         else
-        {
-            placeholderLabel.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Surface);
-        }
+            fill = null;
+
+        ThemeProbe.Tint(placeholderLabel, VisualElement.BackgroundColorProperty, fill, ShinyThemeKeys.Color.Surface);
     }
 
     // Hint label color for the current state.
     void ApplyHintColor(bool error)
     {
         if (error)
-        {
-            if (ErrorColor is Color ec)
-                hintLabel.TextColor = ec;
-            else
-                hintLabel.SetDynamicResource(Label.TextColorProperty, ErrorColorToken);
-        }
-        else if (HintColor is Color hc)
-        {
-            hintLabel.TextColor = hc;
-        }
+            ThemeProbe.Tint(hintLabel, Label.TextColorProperty, ErrorColor, ErrorColorToken);
         else
-        {
-            hintLabel.SetDynamicResource(Label.TextColorProperty, HintColorToken);
-        }
+            ThemeProbe.Tint(hintLabel, Label.TextColorProperty, HintColor, HintColorToken);
     }
 
     void ApplyVariant()
@@ -736,17 +691,9 @@ public partial class TextEntry : ContentView, IKeyboardAccessoryHost
 
         foreach (var layout in new[] { leftToolsLayout, rightToolsLayout })
         {
-            if (addon)
-            {
-                layout.SetDynamicResource(VisualElement.BackgroundColorProperty, ToolAddonColorToken);
-            }
-            else
-            {
-                // Drop the token binding as well as the colour - leaving it attached would repaint the
-                // addon surface behind inline tools the next time the theme changed.
-                layout.RemoveDynamicResource(VisualElement.BackgroundColorProperty);
-                layout.BackgroundColor = Colors.Transparent;
-            }
+            // Inline drops the token binding as well as painting transparent - leaving it attached would
+            // repaint the addon surface behind inline tools the next time the theme changed.
+            ThemeProbe.Tint(layout, VisualElement.BackgroundColorProperty, addon ? null : Colors.Transparent, ToolAddonColorToken);
         }
 
         leftSeparator.IsVisible = addon && leftToolsLayout.IsVisible;

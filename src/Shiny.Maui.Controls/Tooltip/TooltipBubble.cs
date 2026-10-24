@@ -443,18 +443,8 @@ public class TooltipBubble : Grid
 
     void ApplyTextColors()
     {
-        if (this.TextColor is null)
-        {
-            this.titleLabel.SetDynamicResource(Label.TextColorProperty, this.textToken);
-            this.textLabel.SetDynamicResource(Label.TextColorProperty, this.textToken);
-        }
-        else
-        {
-            this.titleLabel.RemoveDynamicResource(Label.TextColorProperty);
-            this.textLabel.RemoveDynamicResource(Label.TextColorProperty);
-            this.titleLabel.TextColor = this.TextColor;
-            this.textLabel.TextColor = this.TextColor;
-        }
+        ThemeProbe.Tint(this.titleLabel, Label.TextColorProperty, this.TextColor, this.textToken);
+        ThemeProbe.Tint(this.textLabel, Label.TextColorProperty, this.TextColor, this.textToken);
     }
 
 

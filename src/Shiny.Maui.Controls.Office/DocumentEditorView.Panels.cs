@@ -477,13 +477,9 @@ public partial class DocumentEditorView
     /// <summary>A panel floating over the page, in the theme's surface colours.</summary>
     Border Float(View content, LayoutOptions horizontal, LayoutOptions vertical, string automationId)
     {
-        var stroke = new SolidColorBrush(Colors.Gray);
-        stroke.SetDynamicResource(SolidColorBrush.ColorProperty, ShinyThemeKeys.Color.OutlineVariant);
-
         var panel = new Border
         {
             Content = content,
-            Stroke = stroke,
             StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
             Margin = new Thickness(12),

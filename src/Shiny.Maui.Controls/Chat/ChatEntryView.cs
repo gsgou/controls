@@ -202,7 +202,7 @@ public partial class ChatEntryView : ContentView
             Padding = new Thickness(6, 8),
             Content = this.composerGrid
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
-        this.composerBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        this.composerBorder.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         this.composerBorder.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerLowest);
 
         // Edit-mode banner

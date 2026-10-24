@@ -91,7 +91,7 @@ public class FabMenuItem : ContentView, ITapTarget
         }.WithStrokeThickness(ShinyThemeKeys.Border.Thin);
 
         // Theme defaults - overridden if the consumer sets the explicit color properties.
-        pill.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+        pill.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Brush.OutlineVariant);
         label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
 
         tap = new TapGestureRecognizer();
@@ -196,10 +196,7 @@ public class FabMenuItem : ContentView, ITapTarget
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
         {
             var item = (FabMenuItem)b;
-            if (n is Color c)
-                item.pill.Stroke = c;
-            else
-                item.pill.SetDynamicResource(Border.StrokeProperty, ShinyThemeKeys.Color.OutlineVariant);
+            ThemeBrush.Apply(item.pill, Border.StrokeProperty, n as Color, ShinyThemeKeys.Brush.OutlineVariant);
         }));
     public Color? BorderColor
     {
@@ -231,10 +228,7 @@ public class FabMenuItem : ContentView, ITapTarget
         propertyChanged: (b, _, n) => StyleGuard.WhenReady(b, typeof(FabMenuItem), () =>
         {
             var item = (FabMenuItem)b;
-            if (n is Color c)
-                item.label.TextColor = c;
-            else
-                item.label.SetDynamicResource(Label.TextColorProperty, ShinyThemeKeys.Color.OnSurface);
+            ThemeProbe.Tint(item.label, Label.TextColorProperty, n as Color, ShinyThemeKeys.Color.OnSurface);
         }));
     public Color? TextColor
     {
@@ -455,42 +449,26 @@ public class FabMenuItem : ContentView, ITapTarget
     void ApplyPillBackground()
     {
         if (label.IsVisible)
-        {
-            if (LabelBackgroundColor is Color c)
-                pill.BackgroundColor = c;
-            else
-                pill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHigh);
-        }
+            ThemeProbe.Tint(pill, VisualElement.BackgroundColorProperty, LabelBackgroundColor, ShinyThemeKeys.Color.SurfaceContainerHigh);
         else
-        {
-            if (FabBackgroundColor is Color c)
-                pill.BackgroundColor = c;
-            else
-                pill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-        }
+            ThemeProbe.Tint(pill, VisualElement.BackgroundColorProperty, FabBackgroundColor, ShinyThemeKeys.Color.Primary);
     }
 
     void ApplyChipBackground()
     {
-        if (!label.IsVisible)
-        {
-            // The pill is already the coloured circle - a second fill would just double-draw it.
-            iconChip.BackgroundColor = Colors.Transparent;
-        }
-        else if (FabBackgroundColor is Color c)
-        {
-            iconChip.BackgroundColor = c;
-        }
-        else
-        {
-            iconChip.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-        }
+        // With no label the pill is already the coloured circle - a second fill would just double-draw it.
+        var explicitColor = label.IsVisible ? FabBackgroundColor : Colors.Transparent;
+        ThemeProbe.Tint(iconChip, VisualElement.BackgroundColorProperty, explicitColor, ShinyThemeKeys.Color.Primary);
     }
 
     void ApplyShadow()
     {
         if (HasShadow)
+        {
+            // The local null left by turning it off would outrank the token.
+            pill.ClearValue(VisualElement.ShadowProperty);
             pill.SetDynamicResource(VisualElement.ShadowProperty, ShinyThemeKeys.Elevation.Level3);
+        }
         else
             pill.Shadow = null;
     }

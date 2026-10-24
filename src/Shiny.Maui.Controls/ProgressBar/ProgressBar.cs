@@ -346,16 +346,8 @@ public partial class ProgressBar : ContentView, IDisposable
             fill.HeightRequest = TrackHeight;
             fill.CornerRadius = radius;
 
-            if (TrackColor is Color trackColor)
-            {
-                track.BackgroundColor = trackColor;
-                track.Color = trackColor;
-            }
-            else
-            {
-                track.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
-                track.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.SurfaceContainerHighest);
-            }
+            ThemeProbe.Tint(track, VisualElement.BackgroundColorProperty, TrackColor, ShinyThemeKeys.Color.SurfaceContainerHighest);
+            ThemeProbe.Tint(track, BoxView.ColorProperty, TrackColor, ShinyThemeKeys.Color.SurfaceContainerHighest);
 
             if (UseGradient)
             {
@@ -363,18 +355,13 @@ public partial class ProgressBar : ContentView, IDisposable
                 // gradient without every step repeating the whole ramp. Solid, which AppKit can paint.
                 var t = (float)((i + 0.5) / segments.Count);
                 var color = LerpColor(GradientStartColor, GradientEndColor, t);
-                fill.BackgroundColor = color;
-                fill.Color = color;
-            }
-            else if (BarColor is Color barColor)
-            {
-                fill.BackgroundColor = barColor;
-                fill.Color = barColor;
+                ThemeProbe.Tint(fill, VisualElement.BackgroundColorProperty, color, ShinyThemeKeys.Color.Primary);
+                ThemeProbe.Tint(fill, BoxView.ColorProperty, color, ShinyThemeKeys.Color.Primary);
             }
             else
             {
-                fill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-                fill.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
+                ThemeProbe.Tint(fill, VisualElement.BackgroundColorProperty, BarColor, ShinyThemeKeys.Color.Primary);
+                ThemeProbe.Tint(fill, BoxView.ColorProperty, BarColor, ShinyThemeKeys.Color.Primary);
             }
         }
     }
@@ -529,16 +516,8 @@ public partial class ProgressBar : ContentView, IDisposable
         }
 
         trackFill.Background = null;
-        if (BarColor is Color barColor)
-        {
-            trackFill.BackgroundColor = barColor;
-            trackFill.Color = barColor;
-        }
-        else
-        {
-            trackFill.SetDynamicResource(VisualElement.BackgroundColorProperty, ShinyThemeKeys.Color.Primary);
-            trackFill.SetDynamicResource(BoxView.ColorProperty, ShinyThemeKeys.Color.Primary);
-        }
+        ThemeProbe.Tint(trackFill, VisualElement.BackgroundColorProperty, BarColor, ShinyThemeKeys.Color.Primary);
+        ThemeProbe.Tint(trackFill, BoxView.ColorProperty, BarColor, ShinyThemeKeys.Color.Primary);
     }
 
     // Bumped on every start/stop so a loop still awaiting its last sweep cannot carry on alongside a
