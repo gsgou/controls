@@ -61,6 +61,8 @@ public partial class ShinyTabBar : Grid
     const double IndicatorBarWidth = 28;
     const double IndicatorBarHeight = 3;
     const double DotSize = 5;
+    const double VerticalLabelSpacing = 2;
+    const double HorizontalLabelSpacing = 6;
 
     readonly ObservableCollection<ShinyTabItem> items = new();
     readonly List<ShinyTabItem> subscribed = new();
@@ -613,7 +615,20 @@ public partial class ShinyTabBar : Grid
         public required Label Label { get; init; }
         public required Grid IconArea { get; init; }
         public required VerticalStackLayout Stack { get; init; }
+
+        /// <summary>
+        /// The icon and the label, in whichever order and orientation <see cref="TabLabelPosition"/>
+        /// asks for. Inside <see cref="Stack"/> so the dot stays underneath either way.
+        /// </summary>
+        public required StackLayout Row { get; init; }
+
         public View? IconView { get; set; }
+
+        /// <summary>The template's binding context, when the cell is drawn from a template.</summary>
+        public TabHeaderContext? Header { get; init; }
+
+        /// <summary>The position <see cref="Row"/> is currently arranged for. Null until the first pass.</summary>
+        public TabLabelPosition? AppliedPosition { get; set; }
 
         /// <summary>
         /// The synthesized <b>More</b> cell rather than one of the bar's own tabs. It looks like a
@@ -671,6 +686,18 @@ public partial class ShinyTabBar : Grid
 
     /// <summary>The icon view of the cell at <paramref name="index"/>. For tests.</summary>
     internal View? IconViewAt(int index) => this.cells[index].IconView;
+
+    /// <summary>The icon/label row of the cell at <paramref name="index"/>. For tests.</summary>
+    internal StackLayout LabelRowAt(int index) => this.cells[index].Row;
+
+    /// <summary>The label of the cell at <paramref name="index"/>. For tests.</summary>
+    internal Label LabelAt(int index) => this.cells[index].Label;
+
+    /// <summary>The template context of the cell at <paramref name="index"/>, if it is templated. For tests.</summary>
+    internal TabHeaderContext? HeaderAt(int index) => this.cells[index].Header;
+
+    /// <summary>The icon area of the cell at <paramref name="index"/> - where a template's view lands. For tests.</summary>
+    internal Grid IconAreaAt(int index) => this.cells[index].IconArea;
 
     /// <summary>The centre button's own view, so a test can assert it is (or is not) there.</summary>
     internal View CenterHost => this.centerHost;
@@ -1103,7 +1130,12 @@ public partial class ShinyTabBar : Grid
             OffsetY = -6
         };
         iconArea.Children.Add(pill);
-        iconArea.Children.Add(badge);
+
+        // A template replaces the icon, label and badge, and nothing else: it sits where the icon
+        // would, over the pill, so every indicator style and the travelling indicator keep working
+        // without knowing a template is there.
+        var header = this.CreateHeader(item, isOverflow, out var headerView);
+        iconArea.Children.Add(headerView ?? badge);
 
         var label = new Label
         {
@@ -1122,13 +1154,24 @@ public partial class ShinyTabBar : Grid
             IsVisible = false
         };
 
-        var stack = new VerticalStackLayout
+        // Labels are placed by ApplyCellState, which re-orders this row when the position changes;
+        // a templated cell never gets one.
+        var row = new StackLayout
         {
-            Spacing = 2,
+            Spacing = VerticalLabelSpacing,
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center,
+            Children = { iconArea }
+        };
+
+        var stack = new VerticalStackLayout
+        {
+            Spacing = VerticalLabelSpacing,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            // Cascades, so nothing in a template can swallow the tap that selects the tab.
             InputTransparent = true,
-            Children = { iconArea, label, dot }
+            Children = { row, dot }
         };
 
         var line = new BoxView
@@ -1171,7 +1214,9 @@ public partial class ShinyTabBar : Grid
             Badge = badge,
             Label = label,
             IconArea = iconArea,
-            Stack = stack
+            Stack = stack,
+            Row = row,
+            Header = header
         };
 
         // Cheap, and the only reliable signal that geometry exists: a travelling indicator cannot be
@@ -1228,7 +1273,78 @@ public partial class ShinyTabBar : Grid
             return;
 
         cell.IconView = icon;
-        cell.Badge.Content = icon;
+
+        // A templated cell hands the icon to the template rather than placing it, so a template
+        // that binds it gets the same tint, selection animation and motion playback as a default cell.
+        if (cell.Header is { } header)
+            header.Icon = icon;
+        else
+            cell.Badge.Content = icon;
+    }
+
+
+    /// <summary>
+    /// Inflates the tab's <see cref="ShinyTabItem.HeaderTemplate"/>, or the bar's
+    /// <see cref="TabTemplate"/>, when there is one.
+    /// </summary>
+    TabHeaderContext? CreateHeader(ShinyTabItem item, bool isOverflow, out View? view)
+    {
+        view = null;
+        var template = item.HeaderTemplate ?? this.TabTemplate;
+        if (template is DataTemplateSelector selector)
+            template = selector.SelectTemplate(item, this);
+
+        if (template is null)
+            return null;
+
+        view = template.CreateContent() as View
+            ?? throw new InvalidOperationException("A tab header template must create a View.");
+
+        var header = new TabHeaderContext(item, isOverflow);
+        view.BindingContext = header;
+        view.HorizontalOptions = LayoutOptions.Center;
+        view.VerticalOptions = LayoutOptions.Center;
+        return header;
+    }
+
+
+    /// <summary>
+    /// The position a tab's label takes: the tab's own, else the bar's, and
+    /// <see cref="TabLabelPosition.Default"/> on the bar means <see cref="TabLabelPosition.Bottom"/>.
+    /// </summary>
+    internal static TabLabelPosition ResolveLabelPosition(TabLabelPosition item, TabLabelPosition bar)
+    {
+        var position = item != TabLabelPosition.Default ? item : bar;
+        return position == TabLabelPosition.Default ? TabLabelPosition.Bottom : position;
+    }
+
+
+    /// <summary>Orders and orients a default cell's icon and label for <paramref name="position"/>.</summary>
+    static void ArrangeLabel(TabCell cell, TabLabelPosition position)
+    {
+        if (cell.AppliedPosition == position)
+            return;
+
+        cell.AppliedPosition = position;
+
+        var horizontal = position is TabLabelPosition.Start or TabLabelPosition.End;
+        cell.Row.Orientation = horizontal ? StackOrientation.Horizontal : StackOrientation.Vertical;
+        cell.Row.Spacing = horizontal ? HorizontalLabelSpacing : VerticalLabelSpacing;
+        cell.Label.VerticalOptions = LayoutOptions.Center;
+
+        // Start and End rather than Left and Right because a horizontal StackLayout follows the
+        // FlowDirection - the label leads in Hebrew and Arabic exactly as it does in English.
+        cell.Row.Children.Clear();
+        if (position is TabLabelPosition.Top or TabLabelPosition.Start)
+        {
+            cell.Row.Children.Add(cell.Label);
+            cell.Row.Children.Add(cell.IconArea);
+        }
+        else
+        {
+            cell.Row.Children.Add(cell.IconArea);
+            cell.Row.Children.Add(cell.Label);
+        }
     }
 
 
@@ -1280,12 +1396,16 @@ public partial class ShinyTabBar : Grid
         if (cell.IconView is Image image)
             image.Opacity = selected ? 1 : 0.6;
 
-        cell.Label.IsVisible = this.LabelMode switch
+        var position = ResolveLabelPosition(item.LabelPosition, this.LabelPosition);
+        cell.Label.IsVisible = position != TabLabelPosition.Hidden && this.LabelMode switch
         {
             TabLabelMode.Always => !String.IsNullOrEmpty(cell.Label.Text),
             TabLabelMode.SelectedOnly => selected && !String.IsNullOrEmpty(cell.Label.Text),
             _ => false
         };
+
+        if (cell.Header is null)
+            ArrangeLabel(cell, position);
 
         // ---- indicator ----
         var style = this.IndicatorStyle;
@@ -1330,6 +1450,18 @@ public partial class ShinyTabBar : Grid
         cell.Badge.IsDot = badge is { Length: 0 };
         cell.Badge.Text = badge ?? String.Empty;
         cell.Badge.BadgeColor = badgeColor;
+
+        if (cell.Header is { } header)
+        {
+            header.Title = cell.Label.Text;
+            header.IsSelected = selected;
+            header.IsEnabled = item.IsEnabled;
+            header.IsLabelVisible = cell.Label.IsVisible;
+            header.LabelPosition = position;
+            header.Color = color;
+            header.Badge = badge;
+            header.BadgeColor = badgeColor;
+        }
 
         // ---- animation ----
         // Only on a genuine change of selected state. ApplyCellState also runs for a badge update, a
@@ -1453,7 +1585,10 @@ public partial class ShinyTabBar : Grid
 
         var style = this.IndicatorStyle;
         var size = IndicatorSizeFor(style, this.IconSize);
-        var origin = IndicatorOriginFor(style, cell.Root.Bounds, cell.Stack.Bounds, cell.IconArea.Bounds, size);
+        // The icon sits inside the label row, so its box is offset by the row's to be relative to
+        // the stack - which is what positions the pill behind the icon rather than behind the row.
+        var iconArea = cell.IconArea.Bounds.Offset(cell.Row.X, cell.Row.Y);
+        var origin = IndicatorOriginFor(style, cell.Root.Bounds, cell.Stack.Bounds, iconArea, size);
 
         this.travelIndicator.WidthRequest = size.Width;
         this.travelIndicator.HeightRequest = size.Height;

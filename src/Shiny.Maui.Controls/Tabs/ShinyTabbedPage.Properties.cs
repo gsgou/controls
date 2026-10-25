@@ -77,6 +77,16 @@ public partial class ShinyTabbedPage
         nameof(LabelMode), typeof(TabLabelMode), typeof(ShinyTabbedPage), TabLabelMode.Always,
         propertyChanged: (b, _, n) => StyleGuard.WhenReady<ShinyTabbedPage>(b, page => page.tabBar.LabelMode = (TabLabelMode)n));
 
+    /// <summary>Backing store for <see cref="LabelPosition"/>.</summary>
+    public static readonly BindableProperty LabelPositionProperty = BindableProperty.Create(
+        nameof(LabelPosition), typeof(TabLabelPosition), typeof(ShinyTabbedPage), TabLabelPosition.Bottom,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<ShinyTabbedPage>(b, page => page.tabBar.LabelPosition = (TabLabelPosition)n));
+
+    /// <summary>Backing store for <see cref="TabTemplate"/>.</summary>
+    public static readonly BindableProperty TabTemplateProperty = BindableProperty.Create(
+        nameof(TabTemplate), typeof(DataTemplate), typeof(ShinyTabbedPage), null,
+        propertyChanged: (b, _, n) => StyleGuard.WhenReady<ShinyTabbedPage>(b, page => page.tabBar.TabTemplate = n as DataTemplate));
+
     /// <summary>Backing store for <see cref="SelectedColor"/>.</summary>
     public static readonly BindableProperty SelectedColorProperty = BindableProperty.Create(
         nameof(SelectedColor), typeof(Color), typeof(ShinyTabbedPage), null,
@@ -317,6 +327,20 @@ public partial class ShinyTabbedPage
     {
         get => (TabLabelMode)this.GetValue(LabelModeProperty);
         set => this.SetValue(LabelModeProperty, value);
+    }
+
+    /// <inheritdoc cref="ShinyTabBar.LabelPosition"/>
+    public TabLabelPosition LabelPosition
+    {
+        get => (TabLabelPosition)this.GetValue(LabelPositionProperty);
+        set => this.SetValue(LabelPositionProperty, value);
+    }
+
+    /// <inheritdoc cref="ShinyTabBar.TabTemplate"/>
+    public DataTemplate? TabTemplate
+    {
+        get => (DataTemplate?)this.GetValue(TabTemplateProperty);
+        set => this.SetValue(TabTemplateProperty, value);
     }
 
     /// <inheritdoc cref="ShinyTabBar.SelectedColor"/>

@@ -70,6 +70,49 @@ public class SpinAnimator : ITabAnimator
 }
 ```
 
+**Label position.** `LabelPosition` puts the label `Bottom` (default), `Top`, `Start` or `End` of the icon. Set it on the page or bar for every tab, or on a `ShinyTabItem` to override one tab, where `Hidden` makes that tab icon-only whatever `LabelMode` says (`LabelMode` still decides *whether* labels show). `Start`/`End` follow `FlowDirection`.
+
+```xml
+<shiny:ShinyTabbedPage LabelPosition="End">
+    <shiny:ShinyTabItem Title="Home" Icon="home" />
+    <shiny:ShinyTabItem Title="Inbox" Icon="message" LabelPosition="Top" />
+    <shiny:ShinyTabItem Title="Search" Icon="search" LabelPosition="Hidden" />
+</shiny:ShinyTabbedPage>
+```
+
+**Header templates.** `TabTemplate` (page or bar) replaces each tab's icon, label and badge with your own layout, and `ShinyTabItem.HeaderTemplate` does it for one tab and wins. A `DataTemplateSelector` is handed the `ShinyTabItem`. The bar still owns the tap, selection, indicator, overflow and automation ids. The template sits where the icon would (so the pill draws behind it) and can't swallow the tap. Use `IndicatorStyle="None"` if it draws its own selection. Its `BindingContext` is a `TabHeaderContext`: `Item`, `Title`, `IsSelected`, `IsEnabled`, `IsLabelVisible`, `LabelPosition`, `Color`, `Badge`/`HasBadge`/`IsBadgeDot`/`BadgeColor`, `IsOverflow`, and `Icon`, the bar's own tinted, animated icon view. Bind that with `<ContentView Content="{Binding Icon}" />` to keep the motion icons.
+
+```xml
+<shiny:ShinyTabbedPage IndicatorStyle="None">
+    <shiny:ShinyTabbedPage.TabTemplate>
+        <DataTemplate x:DataType="shiny:TabHeaderContext">
+            <HorizontalStackLayout Spacing="6">
+                <!-- the bar's own icon: tinted, animated, motion playback included -->
+                <ContentView Content="{Binding Icon}" />
+                <Label Text="{Binding Title}" IsVisible="{Binding IsLabelVisible}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="FontAttributes" Value="Bold" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+                <Label Text="{Binding Badge}" IsVisible="{Binding HasBadge}" />
+            </HorizontalStackLayout>
+        </DataTemplate>
+    </shiny:ShinyTabbedPage.TabTemplate>
+
+    <shiny:ShinyTabItem Title="Home" Icon="home" />
+    <shiny:ShinyTabItem Title="Profile" Icon="user">
+        <!-- one tab can have its own -->
+        <shiny:ShinyTabItem.HeaderTemplate>
+            <DataTemplate x:DataType="shiny:TabHeaderContext">
+                <shiny:Avatar Initials="AR" WidthRequest="28" HeightRequest="28" />
+            </DataTemplate>
+        </shiny:ShinyTabItem.HeaderTemplate>
+    </shiny:ShinyTabItem>
+</shiny:ShinyTabbedPage>
+```
+
 Too many tabs fold themselves away. `MaxVisibleTabs` is `0` by default, which means the bar works the cap out from its own width and `MinTabWidth` (72) — so six tabs fit on a tablet and become four plus a **More** on a phone, and the split is recomputed on rotation or a window resize. The cap counts the More tab itself, the More tab draws as selected while the tab on screen is one it folded away, and a folded tab's badge moves into the menu row with it. Set `MaxVisibleTabs` to pin the count, or `OverflowTitle`/`OverflowIcon` to relabel the tab. In code: `HasOverflow`, `OverflowItems`, `OpenOverflow()` and `SelectOverflowItem(item)`; the cell's `AutomationId` is `tab-more`.
 
 The bar comes in two styles. `BarStyle` is `Docked` by default — welded to the bottom edge, square corners, background painting down through the home indicator so no strip of page shows beneath it. `BarStyle="Floating"` turns it into a capsule inset from the page edges with the content running the full height of the page underneath it, the way iOS's own tab bar now floats. Floating supplies its own margin (16 either side, 8 below) and a capsule corner radius of half the bar height; set `BarMargin` or `BarCornerRadius` explicitly and yours wins. Floating implies `ContentBehindTabBar`, so pad the bottom of anything scrollable by roughly `BarHeight` or its last row sits under the capsule.

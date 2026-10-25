@@ -76,6 +76,16 @@ public class ShinyTabItem : StateViewState, ITabIcon
         nameof(IsVisible), typeof(bool), typeof(ShinyTabItem), true,
         propertyChanged: (b, _, _) => ((ShinyTabItem)b).RaiseStructureChanged());
 
+    /// <summary>Backing store for <see cref="LabelPosition"/>.</summary>
+    public static readonly BindableProperty LabelPositionProperty = BindableProperty.Create(
+        nameof(LabelPosition), typeof(TabLabelPosition), typeof(ShinyTabItem), TabLabelPosition.Default,
+        propertyChanged: (b, _, _) => ((ShinyTabItem)b).RaiseTabChanged());
+
+    /// <summary>Backing store for <see cref="HeaderTemplate"/>.</summary>
+    public static readonly BindableProperty HeaderTemplateProperty = BindableProperty.Create(
+        nameof(HeaderTemplate), typeof(DataTemplate), typeof(ShinyTabItem), null,
+        propertyChanged: (b, _, _) => ((ShinyTabItem)b).RaiseStructureChanged());
+
     /// <summary>Backing store for <see cref="Route"/>.</summary>
     public static readonly BindableProperty RouteProperty = BindableProperty.Create(
         nameof(Route), typeof(string), typeof(ShinyTabItem), null);
@@ -167,6 +177,29 @@ public class ShinyTabItem : StateViewState, ITabIcon
     {
         get => (bool)this.GetValue(IsVisibleProperty);
         set => this.SetValue(IsVisibleProperty, value);
+    }
+
+    /// <summary>
+    /// Where this tab's label sits relative to its icon. <see cref="TabLabelPosition.Default"/>
+    /// (the default) follows <see cref="ShinyTabBar.LabelPosition"/>; <see cref="TabLabelPosition.Hidden"/>
+    /// makes this one tab icon-only whatever the bar's <see cref="ShinyTabBar.LabelMode"/> says.
+    /// </summary>
+    public TabLabelPosition LabelPosition
+    {
+        get => (TabLabelPosition)this.GetValue(LabelPositionProperty);
+        set => this.SetValue(LabelPositionProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces what is drawn inside this tab's cell, beating <see cref="ShinyTabBar.TabTemplate"/>.
+    /// A <see cref="DataTemplateSelector"/> is handed this tab. The template's
+    /// <c>BindingContext</c> is a <see cref="TabHeaderContext"/>; the bar keeps the tap, selection,
+    /// indicator and overflow.
+    /// </summary>
+    public DataTemplate? HeaderTemplate
+    {
+        get => (DataTemplate?)this.GetValue(HeaderTemplateProperty);
+        set => this.SetValue(HeaderTemplateProperty, value);
     }
 
     /// <summary>

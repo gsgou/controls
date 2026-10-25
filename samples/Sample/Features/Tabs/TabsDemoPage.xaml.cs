@@ -115,6 +115,27 @@ public partial class TabsDemoPage : ShinyTabbedPage
 
     void OnLabelsNever(object? sender, EventArgs e) => this.LabelMode = TabLabelMode.Never;
 
+    void OnLabelBottom(object? sender, EventArgs e) => this.LabelPosition = TabLabelPosition.Bottom;
+
+    void OnLabelTop(object? sender, EventArgs e) => this.LabelPosition = TabLabelPosition.Top;
+
+    void OnLabelStart(object? sender, EventArgs e) => this.LabelPosition = TabLabelPosition.Start;
+
+    void OnLabelEnd(object? sender, EventArgs e) => this.LabelPosition = TabLabelPosition.End;
+
+    void OnHeaderDefault(object? sender, EventArgs e)
+    {
+        this.TabTemplate = null;
+        this.IndicatorStyle = TabIndicatorStyle.Pill;
+    }
+
+    void OnHeaderCustom(object? sender, EventArgs e)
+    {
+        // The template draws its own selection, so the bar's indicator steps aside.
+        this.TabTemplate = (DataTemplate)this.Resources["CustomTabHeader"];
+        this.IndicatorStyle = TabIndicatorStyle.None;
+    }
+
     void OnAnimScale(object? sender, EventArgs e) => this.SetAnimation(TabSelectionAnimation.Scale);
 
     void OnAnimLift(object? sender, EventArgs e) => this.SetAnimation(TabSelectionAnimation.Lift);

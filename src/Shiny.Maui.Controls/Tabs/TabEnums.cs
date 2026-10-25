@@ -63,6 +63,40 @@ public enum TabLabelMode
 }
 
 
+/// <summary>Where a tab's label sits relative to its icon.</summary>
+/// <remarks>
+/// <see cref="TabLabelMode"/> still decides <i>whether</i> a label shows; this only decides where it
+/// goes when it does. <see cref="Hidden"/> is the exception — it removes the label from one tab
+/// whatever the mode says, which is how a single icon-only tab sits in an otherwise labelled bar.
+/// </remarks>
+public enum TabLabelPosition
+{
+    /// <summary>
+    /// Inherit. On a <see cref="ShinyTabItem"/> this means "whatever the bar says"; on the bar
+    /// itself it means <see cref="Bottom"/>.
+    /// </summary>
+    Default,
+
+    /// <summary>Under the icon. The Material and iOS look.</summary>
+    Bottom,
+
+    /// <summary>Above the icon.</summary>
+    Top,
+
+    /// <summary>
+    /// Beside the icon, on the leading side — the left in a left-to-right layout. Suits a wide bar on
+    /// a tablet or a desktop, where vertical room is the thing in short supply.
+    /// </summary>
+    Start,
+
+    /// <summary>Beside the icon, on the trailing side — the right in a left-to-right layout.</summary>
+    End,
+
+    /// <summary>No label, whatever <see cref="ShinyTabBar.LabelMode"/> says.</summary>
+    Hidden
+}
+
+
 /// <summary>What pressing <see cref="ShinyTabBar.CenterButton"/> does.</summary>
 public enum TabCenterMode
 {

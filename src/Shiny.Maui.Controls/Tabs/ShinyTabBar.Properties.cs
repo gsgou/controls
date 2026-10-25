@@ -228,6 +228,16 @@ public partial class ShinyTabBar
         nameof(LabelMode), typeof(TabLabelMode), typeof(ShinyTabBar), TabLabelMode.Always,
         propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
 
+    /// <summary>Backing store for <see cref="LabelPosition"/>.</summary>
+    public static readonly BindableProperty LabelPositionProperty = BindableProperty.Create(
+        nameof(LabelPosition), typeof(TabLabelPosition), typeof(ShinyTabBar), TabLabelPosition.Bottom,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.ApplyAllCellStates()));
+
+    /// <summary>Backing store for <see cref="TabTemplate"/>.</summary>
+    public static readonly BindableProperty TabTemplateProperty = BindableProperty.Create(
+        nameof(TabTemplate), typeof(DataTemplate), typeof(ShinyTabBar), null,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady<ShinyTabBar>(b, bar => bar.RebuildCells()));
+
     /// <summary>Backing store for <see cref="IconSize"/>.</summary>
     public static readonly BindableProperty IconSizeProperty = BindableProperty.Create(
         nameof(IconSize), typeof(double), typeof(ShinyTabBar), 24d,
@@ -457,6 +467,34 @@ public partial class ShinyTabBar
     {
         get => (TabLabelMode)this.GetValue(LabelModeProperty);
         set => this.SetValue(LabelModeProperty, value);
+    }
+
+    /// <summary>
+    /// Where labels sit relative to their icons. Defaults to <see cref="TabLabelPosition.Bottom"/>;
+    /// a tab can override it with <see cref="ShinyTabItem.LabelPosition"/>. <see cref="LabelMode"/>
+    /// still decides whether a label shows at all.
+    /// </summary>
+    public TabLabelPosition LabelPosition
+    {
+        get => (TabLabelPosition)this.GetValue(LabelPositionProperty);
+        set => this.SetValue(LabelPositionProperty, value);
+    }
+
+    /// <summary>
+    /// Replaces what is drawn inside every tab's cell — icon, label and badge — with your own layout.
+    /// A <see cref="DataTemplateSelector"/> is handed the <see cref="ShinyTabItem"/>, and a tab's own
+    /// <see cref="ShinyTabItem.HeaderTemplate"/> beats it.
+    /// </summary>
+    /// <remarks>
+    /// The template's <c>BindingContext</c> is a <see cref="TabHeaderContext"/> (title, selected
+    /// state, badge, the bar's own icon view). The bar keeps the tap, selection, the indicator, the
+    /// overflow tab and the automation ids; set <see cref="IndicatorStyle"/> to
+    /// <see cref="TabIndicatorStyle.None"/> if the template draws its own selection.
+    /// </remarks>
+    public DataTemplate? TabTemplate
+    {
+        get => (DataTemplate?)this.GetValue(TabTemplateProperty);
+        set => this.SetValue(TabTemplateProperty, value);
     }
 
     /// <summary>Icon size in the tabs. Defaults to 24, the size the motion icons are drawn for.</summary>

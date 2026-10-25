@@ -51,6 +51,8 @@ A rich, ready-to-use UI controls library for both **.NET MAUI** and **Blazor**. 
 [![MAUI Ocean Theme NuGet](https://img.shields.io/nuget/v/Shiny.Maui.Controls.Themes.Ocean.svg?label=Shiny.Maui.Controls.Themes.Ocean)](https://www.nuget.org/packages/Shiny.Maui.Controls.Themes.Ocean)
 [![Blazor Ocean Theme NuGet](https://img.shields.io/nuget/v/Shiny.Blazor.Controls.Themes.Ocean.svg?label=Shiny.Blazor.Controls.Themes.Ocean)](https://www.nuget.org/packages/Shiny.Blazor.Controls.Themes.Ocean)
 
+> ⭐ **Using Shiny Controls, or about to file a bug or feature request? Please give the repo a [Star](https://github.com/shinyorg/controls).** It costs nothing and it's how the project gets seen. Then head to [Issues](https://github.com/shinyorg/controls/issues/new/choose).
+
 ## Getting Started
 
 ### .NET MAUI

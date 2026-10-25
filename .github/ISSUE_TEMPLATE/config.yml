@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: ⭐ Star the repository
+    url: https://github.com/shinyorg/controls
+    about: Filing a bug or feature request? Please give the repo a star first. It's free, and it's how the project gets seen.
   - name: 📚 Documentation
     url: https://shinylib.net/controls
     about: Browse the Shiny Controls documentation, samples, and release notes.
