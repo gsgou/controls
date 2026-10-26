@@ -419,4 +419,22 @@ public class ShinyControlConfiguration(IServiceCollection services)
 
     /// <summary>Apply the built-in <see cref="BasicTheme"/> (the default).</summary>
     public ShinyControlConfiguration UseBasicTheme() => this.UseTheme(new BasicTheme());
+
+    /// <summary>
+    /// Make the controls fold-aware: a <see cref="Shiny.Maui.Controls.Flyout.FlyoutView"/> snaps its panel to a vertical fold,
+    /// dialogs, overlays and toasts move off it, and a <see cref="Shiny.Maui.Controls.FloatingPanel.FloatingPanel"/> gains a
+    /// detent on a tabletop fold. Without a source every control behaves exactly as it does on a phone.
+    /// </summary>
+    /// <remarks>
+    /// The <c>Shiny.Maui.Controls.Foldables</c> package's <c>UseShinyFoldables()</c> registers the
+    /// built-in Android (Jetpack WindowManager) and iOS 27.1 (iPhone Duo) sources for you; use this to
+    /// supply your own — an adapter over Shiny.Core's <c>IScreenPosture</c>, or a simulated fold for
+    /// testing on a device that does not fold. A source set here always wins over the package's
+    /// built-in one, whichever is registered first. Pass null to turn fold handling off.
+    /// </remarks>
+    public ShinyControlConfiguration UseFoldPosture(IFoldPostureSource? source)
+    {
+        FoldPosture.SetSource(source);
+        return this;
+    }
 }

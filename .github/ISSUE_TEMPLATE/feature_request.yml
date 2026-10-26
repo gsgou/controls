@@ -37,6 +37,7 @@ body:
         - Desktop — MAUI only (Shiny.Maui.Controls.Desktop)
         - Diagram (*.Controls.Diagram / Shiny.Controls.Diagram.Shared)
         - Floor Plan (*.Controls.FloorPlan / Shiny.Controls.FloorPlan.Shared)
+        - Foldables — MAUI only (Shiny.Maui.Controls.Foldables)
         - Gamepad (*.Controls.Gamepad / Shiny.Controls.Gamepad.Shared)
         - Gantt (core packages / Shiny.Controls.Gantt.Shared)
         - Keyboard Shortcuts (core packages / Shiny.Controls.Keyboard.Shared)

@@ -89,6 +89,10 @@ still tearing down (spotlight shrinking, dim fading) is queued and runs once the
 cut-out rather than one full-screen catcher — hit testing has no notion of a hole, so the hole has to be a
 gap between panels.
 
+## Foldables
+
+With a fold posture source registered (MAUI), each callout is placed inside the segment its target is in, so it never opens across the hinge from what it points at. A centred callout goes to the larger segment. See [Foldables](foldables.md).
+
 ## Automation ids (MAUI)
 
 Set `AutomationId` on the walkthrough and the callout it puts in the page's overlay layer is named after it, for UI tests:

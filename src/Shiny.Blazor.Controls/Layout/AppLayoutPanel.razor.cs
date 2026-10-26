@@ -63,6 +63,14 @@ public partial class AppLayoutPanel : IAsyncDisposable
     /// <summary>What an expanded panel collapses to under <see cref="CollapseBelow"/>.</summary>
     [Parameter] public PanelState CollapsedState { get; set; } = PanelState.Toolbar;
 
+    /// <summary>
+    /// What an expanded docked panel does on a foldable in book posture (a vertical fold splitting the
+    /// viewport). <see cref="FoldBehavior.SnapToFold"/> (the default) sizes it to the first segment and
+    /// starts the content after the hinge — pure CSS, through the Viewport Segments media features, so
+    /// it only ever applies on a browser that reports two segments (Chromium on Android foldables).
+    /// </summary>
+    [Parameter] public FoldBehavior FoldBehavior { get; set; } = FoldBehavior.SnapToFold;
+
     /// <summary>Persist state and width to localStorage under this key and restore them on load.</summary>
     [Parameter] public string? PersistKey { get; set; }
 

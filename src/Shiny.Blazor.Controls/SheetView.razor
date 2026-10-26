@@ -96,6 +96,15 @@
     [Parameter] public bool IsLocked { get; set; }
     [Parameter] public EventCallback<DetentValue> DetentChanged { get; set; }
 
+    /// <summary>
+    /// On a foldable in tabletop posture (a horizontal fold splitting the viewport into a top and a
+    /// bottom segment), add a detent whose edge sits exactly on the fold and open to it, so a bottom
+    /// sheet fills the lower segment and leaves the upper one to the page. When the posture changes the
+    /// sheet moves to (or off) that detent. Read from the Viewport Segments API, which only Chromium on
+    /// Android foldables reports; everywhere else the declared detents are used unchanged. Default true.
+    /// </summary>
+    [Parameter] public bool FoldDetent { get; set; } = true;
+
     bool IsBottom => Direction == SheetDirection.Bottom;
     string DirectionClass => IsBottom ? "is-bottom" : "is-top";
     bool CanMinimize => ShowHeaderWhenMinimized && HeaderTemplate != null;
@@ -175,7 +184,7 @@
             if (disposed) { await loaded.ReleaseLateAsync(); return; }
             module = loaded;
             selfRef = DotNetObjectReference.Create(this);
-            await module.InvokeVoidAsync("init", rootEl, sheetEl, handleEl, selfRef, GetSortedRatios(), AnimationDurationMs, IsLocked, IsBottom, CanMinimize ? headerEl : default);
+            await module.InvokeVoidAsync("init", rootEl, sheetEl, handleEl, selfRef, GetSortedRatios(), AnimationDurationMs, IsLocked, IsBottom, CanMinimize ? headerEl : default, FoldDetent);
             if (isOpen)
                 await module.InvokeVoidAsync("open", sheetEl, GetSortedRatios(), IsBottom);
             else if (CanMinimize)

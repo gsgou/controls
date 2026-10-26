@@ -229,6 +229,25 @@ public partial class FloatingPanel
         set => SetValue(FitContentProperty, value);
     }
 
+    public static readonly BindableProperty FoldDetentProperty = BindableProperty.Create(
+        nameof(FoldDetent),
+        typeof(bool),
+        typeof(FloatingPanel),
+        true,
+        propertyChanged: (b, _, _) => ((FloatingPanel)b).OnFoldChanged());
+
+    /// <summary>
+    /// On a foldable in tabletop posture (a horizontal fold across the page), add an implicit detent
+    /// whose edge sits exactly on the fold, and open to it — so a bottom sheet fills the lower half and
+    /// leaves the upper half to the content. When the posture leaves tabletop the panel returns to the
+    /// nearest declared detent. Default true; has no effect unless a fold posture source is registered.
+    /// </summary>
+    public bool FoldDetent
+    {
+        get => (bool)GetValue(FoldDetentProperty);
+        set => SetValue(FoldDetentProperty, value);
+    }
+
     public static readonly BindableProperty UseFeedbackProperty = BindableProperty.Create(
         nameof(UseFeedback),
         typeof(bool),

@@ -78,7 +78,11 @@ Method: `ReloadAsync()` re-fetches, skipping both cache tiers.
 
 On Blazor, `Source` is a URL string handed straight to `<img>` — the loading pipeline is MAUI-only for now.
 
-### Automation ids (MAUI)
+### Foldables
+
+The full-screen image is fitted into one segment: the larger half of a book, or the top half of a tabletop. On MAUI this needs a fold posture source. On Blazor it is CSS, using the first segment. See [Foldables](foldables.md).
+
+## Automation ids (MAUI)
 
 Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
 

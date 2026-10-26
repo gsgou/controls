@@ -62,7 +62,11 @@ It combines with the Shiny tab bar (`ShinyTabBarBehavior`) and a docked `Progres
 
 `CollapseBelow` drops an expanded panel to its `CollapsedState` when the flyout gets narrow and restores it when there is room again — unless the user has changed the state themselves in the meantime, which always wins. Panels take `MinExpandedWidth`/`MaxExpandedWidth` with a drag-to-resize handle (`IsResizable`), edge-swipe-to-open, tap- or drag-the-scrim-to-close, theme-following colours, and `HeaderContent`/`FooterContent` that stay pinned while the body scrolls.
 
-### Automation ids (MAUI)
+### Foldables
+
+With a fold posture source registered (the `Shiny.Maui.Controls.Foldables` package, or `UseFoldPosture`), an **expanded** panel snaps to a vertical (book) fold: it pushes regardless of `Presentation`, its inner edge sits on the fold and the content starts on the far side, narrowed into that segment even in `Shift` mode. `MinExpandedWidth`/`MaxExpandedWidth` are ignored while snapped, the resize grip hides, and the End panel mirrors. With both panels, only the one nearer the fold snaps. A horizontal (tabletop) fold changes nothing. `FoldBehavior="None"` opts a panel out. Snapping never writes `ExpandedWidth`, so opening the device flat restores the user's width. See [Foldables](foldables.md).
+
+## Automation ids (MAUI)
 
 Set `AutomationId` on a `FlyoutView` and its scrim is named after it. The panels are yours, so give them ids directly. On a `ShinyFlyoutPage`, or a page that `ShinyFlyout` installs on, the view is named after the page.
 

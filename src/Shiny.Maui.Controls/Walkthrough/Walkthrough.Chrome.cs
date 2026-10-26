@@ -344,16 +344,32 @@ public partial class Walkthrough
             : step.Display;
         var tailed = display is WalkthroughDisplay.Tooltip or WalkthroughDisplay.Popover;
 
+        // On a foldable the callout is placed inside the segment its target is in (a centred one in the
+        // larger half, or the top half of a tabletop), so it never opens across the hinge from what it
+        // points at. With no fold - or no posture source - the segment is the whole container.
+        var segment = new Rect(0, 0, container.Width, container.Height);
+        if ((view.Parent as VisualElement)?.FoldIn() is { } fold)
+        {
+            segment = anchor is { } a
+                ? FoldLayout.SegmentContaining(segment, fold, a.Center)
+                : FoldLayout.SegmentFor(segment, fold, FoldPreference.Top, ((IView)this).FlowDirection == FlowDirection.RightToLeft);
+        }
+
+        var local = anchor is { } target
+            ? new Rect(target.X - segment.X, target.Y - segment.Y, target.Width, target.Height)
+            : (Rect?)null;
+
         var layout = view.Place(
-            anchor,
-            container,
+            local,
+            segment.Size,
             anchor is null ? TooltipPlacement.Center : step.Placement,
             this.CalloutOffset,
             this.ScreenMargin,
             tailed
         );
 
-        AbsoluteLayout.SetLayoutBounds(view, layout.Bubble);
+        var bubble = layout.Bubble;
+        AbsoluteLayout.SetLayoutBounds(view, new Rect(bubble.X + segment.X, bubble.Y + segment.Y, bubble.Width, bubble.Height));
         return layout.Placement;
     }
 

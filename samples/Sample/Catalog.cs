@@ -98,6 +98,7 @@ public static class Catalog
         [
             new("flyout", "Flyout", "◧", "Side panel that collapses to a rail and pushes or floats"),
             new("flyoutdrawer", "Flyout Drawer", "◨", "A drawer installed over every page from one declaration"),
+            new("foldables", "Foldables", "◫", "Fold-aware panes, dialogs and panels on Pixel Fold and iPhone Duo, with a simulated fold"),
             new("tabbedpage", "Tabbed Page", "▤", "Tabs with motion icons, badges, transitions and a centre button"),
             new("sheet", "Floating Panel", "▣", "Bottom sheet with detents"),
             new("minimizedsheetstandalone", "Header Peek", "▤", "Collapsed sheet that peeks its header"),

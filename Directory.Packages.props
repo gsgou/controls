@@ -26,6 +26,9 @@
         <PackageVersion Include="Xamarin.AndroidX.Camera.View" Version="1.6.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Camera.Video" Version="1.6.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Camera.Effects" Version="1.6.1"/>
+        <!-- Foldables: Jetpack WindowManager's callback adapter. 1.6 deprecates the adapter, but no .NET
+             binding of 1.6 exists yet - revisit when Xamarin.AndroidX.Window 1.6.x ships. -->
+        <PackageVersion Include="Xamarin.AndroidX.Window.WindowJava" Version="1.5.1.3"/>
         <PackageVersion Include="Xamarin.AndroidX.Media3.Common" Version="1.10.1.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.10.1.1"/>
         <PackageVersion Include="Xamarin.AndroidX.Media3.ExoPlayer.Dash" Version="1.10.1.1"/>

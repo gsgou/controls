@@ -168,6 +168,25 @@ public partial class DataGrid
                 ((DataGrid)b).RebuildAll();
             }));
 
+    public static readonly BindableProperty FoldBehaviorProperty = BindableProperty.Create(
+        nameof(FoldBehavior), typeof(FoldBehavior), typeof(DataGrid), FoldBehavior.SnapToFold,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(DataGrid), () =>
+            {
+                ((DataGrid)b).RebuildAll();
+            }));
+
+    /// <summary>
+    /// On a foldable in book posture, keep each pinned run (<see cref="FrozenColumns"/>,
+    /// <see cref="FrozenEndColumns"/>) whole on one side of the fold: columns that would cross it scroll
+    /// with the body until the device is opened flat. Default <see cref="FoldBehavior.SnapToFold"/>; no
+    /// effect without a fold posture source.
+    /// </summary>
+    public FoldBehavior FoldBehavior
+    {
+        get => (FoldBehavior)this.GetValue(FoldBehaviorProperty);
+        set => this.SetValue(FoldBehaviorProperty, value);
+    }
+
     public static readonly BindableProperty SelectionChangedCommandProperty = BindableProperty.Create(
         nameof(SelectionChangedCommand), typeof(ICommand), typeof(DataGrid), null);
 

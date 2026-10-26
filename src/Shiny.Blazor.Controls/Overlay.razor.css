@@ -38,3 +38,28 @@
     opacity: 1;
     pointer-events: all;
 }
+
+/* ---- Foldables -------------------------------------------------------------------------------
+   The centred content moves off the fold: into the first segment of a book, the top segment of a
+   tabletop. The backdrop is a separate element and keeps covering the whole screen. */
+@media (horizontal-viewport-segments: 2) {
+    .shiny-overlay-content {
+        right: calc(100vw - env(viewport-segment-right 0 0));
+    }
+}
+
+@media (vertical-viewport-segments: 2) {
+    .shiny-overlay-content {
+        bottom: calc(100dvh - env(viewport-segment-bottom 0 0));
+    }
+}
+/* Simulation (for testing on a device that does not fold): the same rules keyed on a class on <html>
+   - shiny-fold-sim-book with --shiny-fold-sim-left/-right (the fold's edges, px from the viewport's
+   left), or shiny-fold-sim-tabletop with --shiny-fold-sim-top/-bottom. */
+.shiny-fold-sim-book .shiny-overlay-content {
+    right: calc(100vw - var(--shiny-fold-sim-left));
+}
+
+.shiny-fold-sim-tabletop .shiny-overlay-content {
+    bottom: calc(100dvh - var(--shiny-fold-sim-top));
+}

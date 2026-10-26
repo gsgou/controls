@@ -24,6 +24,7 @@ sealed class DialogView : ContentView
     readonly View card;
     bool isDismissing;
     Action? onDismissed;
+    readonly FoldTracker? foldTracker;
 
     public DialogView(DialogConfig config, DialogOptions options)
     {
@@ -72,6 +73,12 @@ sealed class DialogView : ContentView
         this.backdrop.Margin = new Thickness(-24);
 
         this.Content = root;
+
+        // A fold must never cut the card in half: it moves into one segment - the larger half of a
+        // book, the top half of a tabletop (the bottom for an action sheet, which belongs under the
+        // thumb). Null with no posture source, and then the card is centred exactly as before.
+        this.foldTracker = FoldTracker.Attach(this, this.ApplyFold);
+
         AutomationProperties.SetName(this, string.IsNullOrEmpty(config.Title) ? config.Message : config.Title);
 
         // While the dialog is up, the page behind it must not react to its keyboard shortcuts — and
@@ -89,6 +96,13 @@ sealed class DialogView : ContentView
     }
 
     public DialogOutcome Outcome { get; private set; }
+
+    void ApplyFold(FoldTracker tracker)
+    {
+        var preference = this.config.Kind == DialogKind.ActionSheet ? FoldPreference.Bottom : FoldPreference.Top;
+        var rtl = ((IView)this).FlowDirection == FlowDirection.RightToLeft;
+        this.card.Margin = FoldLayout.SegmentMargin(tracker.Size, tracker.Fold, preference, rtl);
+    }
 
     public void SetOnDismissed(Action callback) => this.onDismissed = callback;
 

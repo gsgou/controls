@@ -74,6 +74,10 @@ await ToastService.SuccessAsync("File saved");
 - `MultiLine` — wraps text to multiple lines
 - `Marquee` — scrolling ticker animation (configure speed via `MarqueeSpeedPixelsPerSecond`)
 
+## Foldables
+
+With a fold posture source registered, toasts sit in the larger segment of a book. In tabletop posture, `Bottom` toasts go below the fold and `Top` toasts above it. Blazor `ToastHost` does the book case in CSS, using the first segment. See [Foldables](foldables.md).
+
 ## Automation ids (MAUI)
 
 A toast has no element of its own to find it under, so name it through the config. The id goes on the toast's tappable chrome:

@@ -59,3 +59,7 @@ Layout primitives and an application shell, Blazor only — MAUI already has `Ve
 - **Responsive** — under `CollapseBelow` (measured on the shell, not the window) an expanded panel drops to `CollapsedState`, and re-expanding it there floats it over the content as a drawer with a scrim
 - **Persistence** — set `PersistKey` and the panel's state and width are saved to localStorage and restored on load
 - **`HeaderSpan`/`FooterSpan`** — `LayoutSpan.Full` runs the header/footer the full width, `LayoutSpan.Content` insets it between the panels so they run the full height
+
+## Foldables
+
+`AppLayoutPanel.FoldBehavior` (default `SnapToFold`): on Chromium on an Android foldable in book posture, an expanded, docked panel is sized to its viewport segment and the content starts after the hinge. This is pure CSS, through the viewport-segment media queries. The left panel takes segment 0, and the right panel snaps only when no left panel is shown. It assumes the `AppLayout` spans the viewport. See [Foldables](foldables.md).

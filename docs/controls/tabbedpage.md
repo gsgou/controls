@@ -143,7 +143,11 @@ The bar respects the bottom safe area by default (`RespectSafeArea`): docked, th
 
 Every tab cell carries an `AutomationId` of `tab-<route>`, with `tab-center` on the centre button and `tab-more` on the overflow tab, so UI tests address tabs by name.
 
-### Automation ids (MAUI)
+### Foldables
+
+With a fold posture source registered, a vertical fold across the bar deals the tabs to the two segments in proportion to their widths, with a gap column exactly over the fold. The raised centre button counts as one more slot and is pinned over its own column. A tabletop fold changes nothing. The iPhone Duo's system "vertical bar" placement is not reproduced. See [Foldables](foldables.md).
+
+## Automation ids (MAUI)
 
 Set `AutomationId` on the bar, or on a `ShinyTabbedPage` (whose bar is then `<page id>_TabBar`), and its parts are named after it instead of the fixed ids above:
 

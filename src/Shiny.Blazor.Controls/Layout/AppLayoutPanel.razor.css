@@ -125,3 +125,51 @@
         transition: none;
     }
 }
+
+/* ---- Foldables -------------------------------------------------------------------------------
+   Book posture (a vertical fold splitting the viewport into two side-by-side segments; the Viewport
+   Segments API, Chromium on Android foldables): an expanded docked panel lines its inner edge up with
+   the fold and the content starts on the far side, so neither pane draws under the hinge. The left
+   panel takes segment 0; the right panel only snaps when there is no shown left panel, and then takes
+   segment 1. The hinge itself becomes the panel's margin. Assumes the layout spans the viewport, which
+   is what an app shell does. FoldBehavior="None" (the no-fold-snap class) opts out; the width is an
+   override, so Size and a drag-resized width come back when the device is opened flat. Everywhere
+   else the media query never matches and nothing here applies. */
+@media (horizontal-viewport-segments: 2) {
+    .shiny-applayout-panel--left.is-shown:not(.is-overlay):not(.no-fold-snap) {
+        width: env(viewport-segment-right 0 0) !important;
+        max-width: none !important;
+        margin-right: calc(env(viewport-segment-left 1 0) - env(viewport-segment-right 0 0));
+    }
+
+    .shiny-applayout:not(:has(> .shiny-applayout-panel--left.is-shown)) > .shiny-applayout-panel--right.is-shown:not(.is-overlay):not(.no-fold-snap) {
+        width: env(viewport-segment-width 1 0) !important;
+        max-width: none !important;
+        margin-left: calc(env(viewport-segment-left 1 0) - env(viewport-segment-right 0 0));
+    }
+
+    /* The fold decides the width while snapped; a handle the panel ignores is worse than none. */
+    .shiny-applayout-panel--left.is-shown:not(.is-overlay):not(.no-fold-snap) .shiny-applayout-panel__resizer,
+    .shiny-applayout:not(:has(> .shiny-applayout-panel--left.is-shown)) > .shiny-applayout-panel--right.is-shown:not(.is-overlay):not(.no-fold-snap) .shiny-applayout-panel__resizer {
+        display: none;
+    }
+}
+/* Simulation (for testing on a device that does not fold): the same rules keyed on a class on <html>
+   - shiny-fold-sim-book with --shiny-fold-sim-left/-right (the fold's edges, px from the viewport's
+   left), or shiny-fold-sim-tabletop with --shiny-fold-sim-top/-bottom. */
+.shiny-fold-sim-book .shiny-applayout-panel--left.is-shown:not(.is-overlay):not(.no-fold-snap) {
+    width: var(--shiny-fold-sim-left) !important;
+    max-width: none !important;
+    margin-right: calc(var(--shiny-fold-sim-right) - var(--shiny-fold-sim-left));
+}
+
+.shiny-fold-sim-book .shiny-applayout:not(:has(> .shiny-applayout-panel--left.is-shown)) > .shiny-applayout-panel--right.is-shown:not(.is-overlay):not(.no-fold-snap) {
+    width: calc(100vw - var(--shiny-fold-sim-right)) !important;
+    max-width: none !important;
+    margin-left: calc(var(--shiny-fold-sim-right) - var(--shiny-fold-sim-left));
+}
+
+.shiny-fold-sim-book .shiny-applayout-panel--left.is-shown:not(.is-overlay):not(.no-fold-snap) .shiny-applayout-panel__resizer,
+.shiny-fold-sim-book .shiny-applayout:not(:has(> .shiny-applayout-panel--left.is-shown)) > .shiny-applayout-panel--right.is-shown:not(.is-overlay):not(.no-fold-snap) .shiny-applayout-panel__resizer {
+    display: none;
+}

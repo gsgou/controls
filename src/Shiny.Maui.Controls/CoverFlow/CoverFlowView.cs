@@ -71,6 +71,7 @@ public class CoverFlowView : ContentView
     int centreVirtual = int.MinValue;
     bool syncing;
     Point stageCentre;
+    readonly FoldTracker? foldTracker;
     double blockHeight;
 
     MotionTicker? ticker;
@@ -124,6 +125,17 @@ public class CoverFlowView : ContentView
         this.GestureRecognizers.Add(tap);
 
         this.Unloaded += (_, _) => this.StopAnimation(snap: true);
+
+        // Book posture: the centre cover (and its caption) moves to the middle of the larger segment
+        // instead of standing on the hinge. Null with no posture source - the centre is then the middle.
+        this.foldTracker = FoldTracker.Attach(this.stage, tracker =>
+        {
+            var segment = this.FoldSegment(tracker);
+            this.captionHost.Margin = segment is { } s
+                ? new Thickness(s.Left, 0, Math.Max(0, tracker.Size.Width - s.Right), 0)
+                : default;
+            this.stage.InvalidateMeasure();
+        });
 
         AutomationIds.Link(this, this.captionHost, CaptionAutomationIdSuffix);
         AutomationIds.Track(this, () =>
@@ -701,9 +713,12 @@ public class CoverFlowView : ContentView
     {
         this.blockHeight = this.ItemHeight + this.ReflectionHeight;
         var top = Math.Max(0, (bounds.Height - this.blockHeight) / 2);
-        this.stageCentre = new Point(bounds.Width / 2, top + (this.ItemHeight / 2));
+        var centreX = this.foldTracker is { } tracker && this.FoldSegment(tracker) is { } segment
+            ? segment.Center.X
+            : bounds.Width / 2;
+        this.stageCentre = new Point(centreX, top + (this.ItemHeight / 2));
 
-        var box = new Rect((bounds.Width - this.ItemWidth) / 2, top, this.ItemWidth, this.blockHeight);
+        var box = new Rect(centreX - (this.ItemWidth / 2), top, this.ItemWidth, this.blockHeight);
         var anchorY = this.blockHeight > 0 ? (this.ItemHeight / 2) / this.blockHeight : 0.5;
 
         foreach (var slot in this.realized.Values)
@@ -715,6 +730,12 @@ public class CoverFlowView : ContentView
 
         return bounds.Size;
     }
+
+    /// <summary>The segment the centre cover stands in while a vertical fold crosses the stage; null without one.</summary>
+    Rect? FoldSegment(FoldTracker tracker) => tracker.Fold is { } fold && FoldLayout.IsVertical(fold)
+        ? FoldLayout.SegmentFor(new Rect(0, 0, tracker.Size.Width, tracker.Size.Height), fold, FoldPreference.Larger,
+            ((IView)this).FlowDirection == FlowDirection.RightToLeft)
+        : null;
 
     void ApplyTransforms()
     {

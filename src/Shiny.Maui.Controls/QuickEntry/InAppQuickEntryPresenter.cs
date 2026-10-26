@@ -326,6 +326,11 @@ sealed class InAppQuickEntryPresenter : IQuickEntryPresenter
         // what the host actually has. The content carries its own WidthRequest (the service sets it
         // when it builds the view), so both have to come down or the inner view overflows anyway.
         var hostWidth = this.host?.Width ?? 0;
+
+        // Across a vertical fold the popup is confined to one segment (the overlay moves it there), so
+        // that segment is the width it has to fit.
+        if (this.host is { } foldHost && foldHost.FoldIn() is { } fold && FoldLayout.IsVertical(fold))
+            hostWidth = FoldLayout.SegmentFor(new Rect(0, 0, foldHost.Width, foldHost.Height), fold, FoldPreference.Top).Width;
         var effective = hostWidth > 0
             ? Math.Min(width, Math.Max(0, hostWidth - (SideMargin * 2)))
             : width;

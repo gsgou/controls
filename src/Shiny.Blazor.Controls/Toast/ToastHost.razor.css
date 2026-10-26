@@ -213,3 +213,28 @@
     from { transform: scaleX(1); }
     to { transform: scaleX(0); }
 }
+
+/* ---- Foldables -------------------------------------------------------------------------------
+   Book posture: toasts sit in the first segment instead of across the hinge. Tabletop needs nothing:
+   a bottom toast is already in the bottom segment and a top one in the top segment. */
+@media (horizontal-viewport-segments: 2) {
+    .shiny-toast {
+        right: calc(100vw - env(viewport-segment-right 0 0));
+    }
+
+    .shiny-toast-pill {
+        left: calc(env(viewport-segment-left 0 0) + (env(viewport-segment-width 0 0) / 2));
+        max-width: min(400px, calc(env(viewport-segment-width 0 0) - 48px));
+    }
+}
+/* Simulation (for testing on a device that does not fold): the same rules keyed on a class on <html>
+   - shiny-fold-sim-book with --shiny-fold-sim-left/-right (the fold's edges, px from the viewport's
+   left), or shiny-fold-sim-tabletop with --shiny-fold-sim-top/-bottom. */
+.shiny-fold-sim-book .shiny-toast {
+    right: calc(100vw - var(--shiny-fold-sim-left));
+}
+
+.shiny-fold-sim-book .shiny-toast-pill {
+    left: calc(var(--shiny-fold-sim-left) / 2);
+    max-width: min(400px, calc(var(--shiny-fold-sim-left) - 48px));
+}

@@ -1,0 +1,164 @@
+@page "/foldables"
+@inject IDialogService Dialogs
+@inject IToastService ToastService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Foldables</PageTitle>
+
+<h1>Foldables</h1>
+<p>
+    On a foldable (Chromium on Android) the components read the fold from CSS: the
+    <code>horizontal-viewport-segments</code> / <code>vertical-viewport-segments</code> media features and the
+    <code>env(viewport-segment-*)</code> values. In book posture an <code>AppLayout</code> panel snaps to the fold and
+    dialogs, modals, overlays, toasts and the image viewer move into the first segment; in tabletop posture a
+    <code>SheetView</code> opens to a detent on the fold. Nothing here applies on a browser that reports one segment.
+</p>
+<p>
+    <strong>Simulate</strong> applies the same rules on any browser, by putting <code>shiny-fold-sim-book</code> or
+    <code>shiny-fold-sim-tabletop</code> on <code>&lt;html&gt;</code> with the fold's edges in custom properties.
+    Chrome DevTools' dual-screen device emulation drives the real media features too.
+</p>
+
+<section class="demo-section">
+    <h2>Posture</h2>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button @onclick="@(() => SimulateAsync("none"))">Device</button>
+        <button @onclick="@(() => SimulateAsync("book"))">Simulate book</button>
+        <button @onclick="@(() => SimulateAsync("tabletop"))">Simulate tabletop</button>
+        <label style="align-self:center;"><input type="checkbox" @bind="wideHinge" @bind:after="ResimulateAsync" /> 24px hinge</label>
+    </div>
+    <div class="state">Simulation: <code>@mode</code> · @deviceSegments</div>
+</section>
+
+<section class="demo-section">
+    <h2>Try it</h2>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button @onclick="@(() => shellOpen = true)">Full-screen app shell</button>
+        <button @onclick="AlertAsync">Dialog</button>
+        <button @onclick="ActionSheetAsync">Action sheet</button>
+        <button @onclick="ToastAsync">Toast</button>
+        <button @onclick="LoadingAsync">Loading overlay</button>
+        <button @onclick="@(() => sheetOpen = true)">Bottom sheet</button>
+    </div>
+    <p style="font-size:13px;opacity:.75;">
+        The app shell opens over the whole viewport, because the fold is in viewport coordinates and an
+        <code>AppLayout</code> lines up with it when it spans the viewport, which is what an app shell does.
+    </p>
+</section>
+
+@if (shellOpen)
+{
+    <div style="position:fixed;inset:0;z-index:900;display:flex;background:var(--shiny-color-surface);">
+        <AppLayout Background="var(--shiny-color-surface)" style="flex:1;height:100%;">
+            <AppLayoutHeader Height="52" Background="var(--shiny-color-surface-container-high)"
+                             style="display:flex;align-items:center;gap:12px;padding:0 12px;">
+                <strong>Inbox</strong>
+                <span style="flex:1;"></span>
+                <button @onclick="@(() => shellOpen = false)">Close</button>
+            </AppLayoutHeader>
+            <AppLayoutPanel Side="PanelSide.Left" Size="260" Background="var(--shiny-color-surface-container)">
+                <VStack Spacing="2" Padding="8">
+                    @foreach (var item in mail)
+                    {
+                        <div style="padding:10px 12px;">@item</div>
+                    }
+                </VStack>
+            </AppLayoutPanel>
+            <AppLayoutContent Padding="20">
+                <h2 style="margin-top:0;">Quarterly plan</h2>
+                <p>
+                    In book posture the list ends at the fold and this pane starts after the hinge. Open flat
+                    (or choose Device) and the panel goes back to its own 260px and its resize handle returns.
+                </p>
+            </AppLayoutContent>
+        </AppLayout>
+    </div>
+}
+
+<SheetView @bind-IsOpen="sheetOpen" SheetCornerRadius="20">
+    <SheetContent>
+        <h2>Controls</h2>
+        <p>In tabletop posture this sheet opens to a detent whose top edge sits on the fold.</p>
+        <button @onclick="@(() => sheetOpen = false)">Close</button>
+    </SheetContent>
+</SheetView>
+
+<LoadingOverlay IsShown="@loading" Message="Working…" />
+
+@code {
+    readonly string[] mail = ["Quarterly plan", "Design review notes", "Travel booking", "Release checklist", "Team offsite"];
+    string mode = "none";
+    bool wideHinge;
+    bool shellOpen;
+    bool sheetOpen;
+    bool loading;
+    string deviceSegments = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        var count = await JS.InvokeAsync<int>("eval", "(window.viewport && window.viewport.segments) ? window.viewport.segments.length : 1");
+        deviceSegments = count > 1 ? $"the browser reports {count} viewport segments" : "the browser reports one viewport segment (no fold)";
+        StateHasChanged();
+    }
+
+    async Task SimulateAsync(string next)
+    {
+        mode = next;
+        await ResimulateAsync();
+    }
+
+    // The fold in the middle of the viewport, hinge-wide; the class and custom properties go on <html>,
+    // and the sheet is told to re-read the posture, since a simulation resizes nothing.
+    async Task ResimulateAsync()
+    {
+        var hinge = wideHinge ? 24 : 0;
+        await JS.InvokeVoidAsync("eval", $$"""
+            (() => {
+                const html = document.documentElement;
+                html.classList.remove('shiny-fold-sim-book', 'shiny-fold-sim-tabletop');
+                const mode = '{{mode}}', hinge = {{hinge}};
+                if (mode === 'book') {
+                    const left = (innerWidth - hinge) / 2;
+                    html.style.setProperty('--shiny-fold-sim-left', left + 'px');
+                    html.style.setProperty('--shiny-fold-sim-right', (left + hinge) + 'px');
+                    html.classList.add('shiny-fold-sim-book');
+                } else if (mode === 'tabletop') {
+                    const top = (innerHeight - hinge) / 2;
+                    html.style.setProperty('--shiny-fold-sim-top', top + 'px');
+                    html.style.setProperty('--shiny-fold-sim-bottom', (top + hinge) + 'px');
+                    html.classList.add('shiny-fold-sim-tabletop');
+                }
+                window.dispatchEvent(new Event('shiny-foldchange'));
+            })()
+            """);
+    }
+
+    Task AlertAsync() => Dialogs.Alert("On one side", "A dialog never sits across the fold.");
+
+    Task ActionSheetAsync() => Dialogs.ActionSheet("Share to", ["Messages", "Mail", "Notes"]);
+
+    Task ToastAsync() => ToastService.InfoAsync("Toasts keep to one segment too");
+
+    async Task LoadingAsync()
+    {
+        loading = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        loading = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Leave the rest of the gallery unfolded.
+        try
+        {
+            mode = "none";
+            await ResimulateAsync();
+        }
+        catch (JSDisconnectedException) { }
+    }
+}

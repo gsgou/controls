@@ -65,7 +65,32 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         // the bottom; iOS centres the item vertically in the full height, and so does the decoration.
         var density = Context?.Resources?.DisplayMetrics?.Density ?? 1f;
         var insets = VirtualView.PeekAreaInsets;
-        PlatformView.SetPadding((int)(insets.Left * density), 0, (int)(insets.Right * density), 0);
+        double left = insets.Left;
+        double right = insets.Right;
+
+        // Folded: pad the other segment out of the snap area, so the snap helper (which centres in the
+        // padded area) lands the focused item in the middle of one segment instead of on the hinge.
+        if (VirtualView.FoldSegment is { } segment)
+        {
+            left += segment.Left;
+            right += Math.Max(0, VirtualView.Width - segment.Right);
+        }
+
+        PlatformView.SetPadding((int)(left * density), 0, (int)(right * density), 0);
+    }
+
+    /// <summary>
+    /// The x the focused item centres on: the middle of the view, or - folded - the middle of the padded
+    /// area, which is the segment the snap helper centres in.
+    /// </summary>
+    float FocusMidX()
+    {
+        if (PlatformView is null)
+            return 0;
+
+        return VirtualView?.FoldSegment is null
+            ? PlatformView.Width / 2f
+            : (PlatformView.PaddingLeft + PlatformView.Width - PlatformView.PaddingRight) / 2f;
     }
 
     void UpdateSnapMode()
@@ -89,7 +114,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         if (layoutManager is null || PlatformView is null)
             return;
 
-        var midX = PlatformView.Width / 2f;
+        var midX = FocusMidX();
 
         for (var i = 0; i < PlatformView.ChildCount; i++)
         {
@@ -127,7 +152,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
 
         var density = Context?.Resources?.DisplayMetrics?.Density ?? 1f;
         var itemWidth = (int)(VirtualView.ItemWidth * density);
-        var offset = (PlatformView.Width - itemWidth) / 2 - PlatformView.PaddingLeft;
+        var offset = (int)(FocusMidX() - (itemWidth / 2f)) - PlatformView.PaddingLeft;
         layoutManager.ScrollToPositionWithOffset(position, offset);
     }
 
@@ -147,7 +172,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, Recyc
         else
         {
             // Free scroll: find closest item to center
-            var midX = PlatformView.Width / 2f;
+            var midX = FocusMidX();
             var closestPosition = RecyclerView.NoPosition;
             var minDistance = float.MaxValue;
 

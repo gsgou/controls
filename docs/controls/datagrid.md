@@ -289,7 +289,11 @@ the first/previous buttons grew an opaque slab in dark mode exactly when they we
 Internal parts now carry their own visual states and express disabled as opacity. See
 [Styling & theming](styling.md#dark-mode).
 
-### Automation ids (MAUI)
+### Foldables
+
+`FoldBehavior` (MAUI, default `SnapToFold`): in book posture each pinned run (`FrozenColumns`, `FrozenEndColumns`) keeps only the columns that fit on its own side of the fold. The rest scroll with the body until the device is opened flat. This needs `HorizontalScroll` and a fold posture source. See [Foldables](foldables.md).
+
+## Automation ids (MAUI)
 
 Set `AutomationId` on the grid and its parts are named after it, for UI tests. Columns are counted in
 visible order; rows by their position on the current page. Rows and cells are recycled, so they are

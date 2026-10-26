@@ -38,6 +38,8 @@ public partial class FloatingPanel : ContentView
     int detentIndexBeforeKeyboard = -1;
     bool isKeyboardVisible;
     DetentValue? fitContentDetent;
+    readonly FoldTracker? foldTracker;
+    bool atFoldDetent;
 
     bool IsBottom => Position is FloatingPanelPosition.Bottom or FloatingPanelPosition.BottomTabs;
 
@@ -175,6 +177,10 @@ public partial class FloatingPanel : ContentView
             DetentValue.Half,
             DetentValue.Full
         };
+
+        // Tabletop: the fold is measured against the OverlayHost, which is what the detents are ratios
+        // of. Null with no posture source, and then the detents are exactly the declared ones.
+        foldTracker = FoldTracker.Attach(this, _ => OnFoldChanged(), () => GetOverlayHost());
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -398,6 +404,7 @@ public partial class FloatingPanel : ContentView
         dragHandleContainer.IsVisible = ShowHandle;
 
         var available = GetAvailableHeight();
+        foldTracker?.Refresh(raise: false);
 
         // Compute fit-content detent if enabled
         if (FitContent && contentHost.Content is View fitView)
@@ -414,9 +421,16 @@ public partial class FloatingPanel : ContentView
             fitContentDetent = null;
         }
 
-        // Animate to first detent
+        // Animate to first detent - or, in tabletop posture, to the one on the fold
         currentDetentIndex = 0;
         var sortedDetents = GetSortedDetents();
+        if (FoldDetentRatio() is { } foldRatio)
+        {
+            var foldIndex = sortedDetents.FindIndex(d => Math.Abs(d.Ratio - foldRatio) < 0.001);
+            if (foldIndex >= 0)
+                currentDetentIndex = foldIndex;
+        }
+        atFoldDetent = FoldDetentRatio() is { } r && Math.Abs(sortedDetents[currentDetentIndex].Ratio - r) < 0.001;
         var targetHeight = sortedDetents[currentDetentIndex].Ratio * available;
 
         // Start from current height (header-only or 0)
@@ -607,6 +621,7 @@ public partial class FloatingPanel : ContentView
         }
 
         currentDetentIndex = bestIndex;
+        atFoldDetent = FoldDetentRatio() is { } foldRatio && Math.Abs(bestDetent.Ratio - foldRatio) < 0.001;
         var targetHeight = bestDetent.Ratio * available;
 
         var animation = new Animation(v => HeightRequest = v, currentHeight, targetHeight);
@@ -633,7 +648,57 @@ public partial class FloatingPanel : ContentView
 
         var list = Detents?.OrderBy(d => d.Ratio).ToList()
             ?? new List<DetentValue> { DetentValue.Half };
+
+        if (FoldDetentRatio() is { } foldRatio && !list.Any(d => Math.Abs(d.Ratio - foldRatio) < 0.001))
+        {
+            list.Add(new DetentValue(foldRatio));
+            list.Sort((a, b) => a.Ratio.CompareTo(b.Ratio));
+        }
         return list;
+    }
+
+    /// <summary>
+    /// The tabletop detent: the ratio of the host's height that puts the panel's edge on a horizontal
+    /// fold. Null without one, with <see cref="FoldDetent"/> off, or for a fit-content panel.
+    /// </summary>
+    internal double? FoldDetentRatio()
+    {
+        if (!FoldDetent || FitContent || foldTracker is not { IsHorizontal: true } tracker)
+            return null;
+
+        return FoldLayout.TabletopDetent(tracker.Size.Height, tracker.Fold, IsBottom);
+    }
+
+    /// <summary>
+    /// Follows the posture while open: into tabletop, move to the fold detent; out of it, from the fold
+    /// detent back to the nearest declared one, so the panel never rests on a detent that no longer exists.
+    /// </summary>
+    void OnFoldChanged()
+    {
+        if (!IsOpen || foldTracker is null)
+            return;
+
+        var available = GetAvailableHeight();
+        if (FoldDetentRatio() is { } foldRatio)
+        {
+            if (!atFoldDetent || Math.Abs((HeightRequest > 0 ? HeightRequest : Height) - (foldRatio * available)) > 0.5)
+            {
+                StopAnimations();
+                atFoldDetent = true;
+                _ = AnimateToDetentAsync(new DetentValue(foldRatio));
+            }
+            return;
+        }
+
+        if (!atFoldDetent)
+            return;
+
+        atFoldDetent = false;
+        var current = HeightRequest > 0 ? HeightRequest : Height;
+        var declared = GetSortedDetents();
+        var nearest = declared.OrderBy(d => Math.Abs((d.Ratio * available) - current)).First();
+        StopAnimations();
+        _ = AnimateToDetentAsync(nearest);
     }
 
     public async Task AnimateToDetentAsync(DetentValue detent)

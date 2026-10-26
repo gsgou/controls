@@ -52,6 +52,10 @@ MAUI backdrop color/opacity are controlled by `ShinyContentPage.BackdropColor` /
 </LoadingOverlay>
 ```
 
+## Foldables
+
+With a fold posture source registered, the overlay's content moves off the fold: into the larger segment of a book, and into the top segment of a tabletop (the bottom one when `ContentAlignment` is `End`). The backdrop still covers the whole page. `LoadingOverlay` and the in-app Quick Entry popup inherit this. Blazor `Overlay` does the same in CSS. See [Foldables](foldables.md).
+
 ## Automation ids (MAUI)
 
 Set `AutomationId` on a `LoadingOverlay` and its parts are named after it, for UI tests (the backdrop belongs to the `OverlayHost`: `<host id>_Backdrop`):

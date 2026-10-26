@@ -16,6 +16,7 @@ public partial class Overlay : ContentView
     ScreenGlowView? edgeGlow;
     bool latestTarget;
     bool workerRunning;
+    readonly FoldTracker? foldTracker;
 
     public Overlay()
     {
@@ -33,6 +34,11 @@ public partial class Overlay : ContentView
         // Lets the overlay host something that is not a dialog — a prompt bar pinned near the top,
         // say — without every such caller re-implementing the backdrop, blur and show/hide worker.
         UpdateContentPlacement();
+
+        // Centred content moves off a fold into one segment: the larger half of a book, the top half
+        // of a tabletop (or the bottom one when the content is aligned to the bottom edge). Null with
+        // no posture source, which leaves the placement exactly as configured.
+        this.foldTracker = FoldTracker.Attach(this, _ => this.UpdateContentPlacement());
 
         // Last line: replays any styled property that was applied before the children
         // existed. Only fires for a plain Overlay - LoadingOverlay and friends mark
@@ -145,6 +151,16 @@ public partial class Overlay : ContentView
     {
         this.overlayContainer.VerticalOptions = this.ContentAlignment;
         this.overlayContainer.Margin = this.ContentMargin;
+
+        if (this.foldTracker is { Fold: { } fold } tracker)
+        {
+            var preference = this.ContentAlignment.Alignment == LayoutAlignment.End ? FoldPreference.Bottom : FoldPreference.Top;
+            var rtl = ((IView)this).FlowDirection == FlowDirection.RightToLeft;
+            var segment = FoldLayout.SegmentMargin(tracker.Size, fold, preference, rtl);
+            var m = this.ContentMargin;
+            this.overlayContainer.Margin = new Thickness(
+                m.Left + segment.Left, m.Top + segment.Top, m.Right + segment.Right, m.Bottom + segment.Bottom);
+        }
     }
 
     void UpdateOverlayContent()

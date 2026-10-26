@@ -6,7 +6,7 @@
     <div class="shiny-applayout-panel__scrim" @onclick="DismissOverlayAsync"></div>
 }
 
-<div class="shiny-applayout-panel shiny-applayout-panel--@SideKey @StateClass @(IsOverlay ? "is-overlay" : null) @UserClass"
+<div class="shiny-applayout-panel shiny-applayout-panel--@SideKey @StateClass @(IsOverlay ? "is-overlay" : null) @(FoldBehavior == FoldBehavior.None ? "no-fold-snap" : null) @UserClass"
      style="@PanelStyle"
      data-side="@SideKey"
      data-min="@LayoutAttributes.Num(MinSize)"

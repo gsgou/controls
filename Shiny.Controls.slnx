@@ -38,6 +38,7 @@
     <Project Path="src/Shiny.Maui.Controls.Themes.Terminal/Shiny.Maui.Controls.Themes.Terminal.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Themes.Aurora/Shiny.Maui.Controls.Themes.Aurora.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Desktop/Shiny.Maui.Controls.Desktop.csproj" />
+    <Project Path="src/Shiny.Maui.Controls.Foldables/Shiny.Maui.Controls.Foldables.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Markdown/Shiny.Maui.Controls.Markdown.csproj" />
     <Project Path="src/Shiny.Maui.Controls.MermaidDiagrams/Shiny.Maui.Controls.MermaidDiagrams.csproj" />
     <Project Path="src/Shiny.Maui.Controls.Diagram/Shiny.Maui.Controls.Diagram.csproj" />

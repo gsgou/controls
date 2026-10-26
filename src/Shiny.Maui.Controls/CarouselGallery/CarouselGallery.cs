@@ -1,10 +1,36 @@
 using System.Windows.Input;
 using Shiny.Maui.Controls.Collections;
+using Shiny.Maui.Controls.Infrastructure;
 
 namespace Shiny.Maui.Controls.CarouselGallery;
 
 public class CarouselGallery : CollectionControlBase
 {
+    readonly FoldTracker? foldTracker;
+
+    public CarouselGallery()
+    {
+        // On a foldable in book posture the focused item centres in the larger segment rather than on
+        // the hinge. Null with no posture source: the focus point is then the middle, as always.
+        foldTracker = FoldTracker.Attach(this, _ =>
+        {
+            Handler?.UpdateValue(nameof(PeekAreaInsets));
+            Handler?.UpdateValue(nameof(CurrentPosition));
+        });
+    }
+
+    /// <summary>
+    /// The segment the focused item centres in while a vertical fold crosses the carousel, in its own
+    /// coordinates; null without one.
+    /// </summary>
+    internal Rect? FoldSegment => foldTracker is { Fold: { } fold } tracker && FoldLayout.IsVertical(fold)
+        ? FoldLayout.SegmentFor(new Rect(0, 0, tracker.Size.Width, tracker.Size.Height), fold, FoldPreference.Larger,
+            ((IView)this).FlowDirection == FlowDirection.RightToLeft)
+        : null;
+
+    /// <summary>Where along the viewport the focused item's centre sits: the middle, or the fold segment's middle.</summary>
+    internal double FocusCentre(double viewportWidth) => FoldSegment?.Center.X ?? viewportWidth / 2;
+
     public static readonly BindableProperty FocusedItemScaleProperty = BindableProperty.Create(
         nameof(FocusedItemScale),
         typeof(double),

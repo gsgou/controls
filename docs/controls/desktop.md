@@ -339,6 +339,10 @@ builder.Services
 
 The component itself implements `IDockHost` — grab it with `@ref` to call `ShowPanelAsync` / `ResetLayoutAsync` / `Snapshot` and subscribe to `Events`. CSS custom properties (e.g. `--shiny-dock-host-bg`) provide theming hooks without recompiling. The left and right rails are each capped at 30% of the host's width, so on a phone two side rails never overrun the document area or lie on top of each other's tabs and resize strips.
 
+### Foldables
+
+`DockSplitter.FoldBehavior` (default `SnapToFold`): with a fold posture source registered, a splitter whose split runs the same way as the fold (side by side for a book, stacked for a tabletop) lines up with the fold. It is display-only: `Ratio` and the saved layout keep the user's ratio, and dragging pauses while snapped. Locked splitters do not snap. See [Foldables](foldables.md).
+
 ## On-Screen Keyboard
 
 > [!IMPORTANT]

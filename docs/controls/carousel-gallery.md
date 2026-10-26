@@ -45,3 +45,7 @@ A Netflix-style horizontal carousel with snap-to-center behavior, configurable s
 - Two-way position binding
 - Infinite loop mode (MAUI)
 - Dot indicators (Blazor)
+
+## Foldables
+
+With a fold posture source registered (MAUI), the focused item snaps to the centre of the larger segment in book posture instead of sitting on the hinge. See [Foldables](foldables.md).

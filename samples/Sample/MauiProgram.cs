@@ -51,6 +51,12 @@ public static class MauiProgram
                     o.ScreenGlow = ScreenGlowTrigger.WhileBusy;
                 });
 
+                // Fold-aware controls. The sample wraps the Foldables package's provider in a source with a
+                // debug "simulate a fold" switch (Foldables page); UseFoldPosture always wins over the
+                // provider UseShinyFoldables registers, in either order.
+                cfg.UseFoldPosture(Sample.Features.Foldables.SampleFoldSource.Instance
+                    .Wrap(Shiny.Maui.Controls.Foldables.FoldPostureProvider.Instance));
+
             })
             .UseShinyCamera(media =>
             {
@@ -58,6 +64,8 @@ public static class MauiProgram
                 media.CompressionQuality = 85;
                 media.MaxDimension = 2048;
             })
+            // Jetpack WindowManager on Android foldables, UIHinge on iPhone Duo (iOS 27.1 build only)
+            .UseShinyFoldables()
             .UseShinyMediaElement()
             // the on-screen gamepad: its iOS/Android multi-touch handler, and IGamepadManager reporting
             // on-screen and physical controllers together (use it instead of Shiny.Gamepad's AddGamepads)

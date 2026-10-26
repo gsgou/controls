@@ -30,6 +30,7 @@ body:
         - Shiny.Maui.Controls.Desktop (tray icon / docking / quick entry window / hotkeys)
         - Shiny.Maui.Controls.Diagram
         - Shiny.Maui.Controls.FloorPlan
+        - Shiny.Maui.Controls.Foldables
         - Shiny.Maui.Controls.Gamepad
         - Shiny.Maui.Controls.Keyframe
         - Shiny.Maui.Controls.Keyframe.Export

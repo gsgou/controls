@@ -48,6 +48,10 @@ public partial class FlyoutView : Layout
     bool applyingResponsive;
     double scrimProgress;
 
+    // Null unless a fold posture source is registered - then nothing below ever snaps.
+    readonly FoldTracker? foldTracker;
+    FoldSnap? snap;
+
     public FlyoutView()
     {
         // A hidden panel is parked outside the view's bounds; without clipping it paints over
@@ -80,6 +84,7 @@ public partial class FlyoutView : Layout
         this.InitSide(this.end);
 
         FlyoutRegistry.Register(this);
+        this.foldTracker = FoldTracker.Attach(this, _ => this.OnFoldChanged());
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
@@ -95,6 +100,10 @@ public partial class FlyoutView : Layout
         public const int Panel = 30;
         public const int Grip = 40;
     }
+
+
+    /// <summary>A panel lined up with a vertical fold: its width, and what the content beside it is inset by.</summary>
+    readonly record struct FoldSnap(SideRuntime Side, double Width, double Inset);
 
 
     /// <summary>Everything the host tracks for one side. Widths are live values, not targets.</summary>
@@ -285,7 +294,7 @@ public partial class FlyoutView : Layout
         // Shift measures at the FULL width. That is the whole difference: the content is asked for
         // the same size it would take with no panel open, so nothing inside it reflows as the panel
         // moves - it is the measure pass, not the arrange, that rewraps text and collapses columns.
-        var contentWidth = this.PushMode == FlyoutPushMode.Shift
+        var contentWidth = this.PushMode == FlyoutPushMode.Shift && this.snap is null
             ? Math.Max(0, availableWidth)
             : Math.Max(0, availableWidth - leftInset - rightInset);
 
@@ -328,7 +337,9 @@ public partial class FlyoutView : Layout
         // Shift keeps the content its full width and slides it by the net of the two insets, so a
         // panel on each side cancels out rather than crushing what is between them. The far edge
         // travels out of the view's bounds, which is why the view clips.
-        var contentBounds = this.PushMode == FlyoutPushMode.Shift
+        // A panel snapped to a fold always narrows the content: the detail pane has to fill the far
+        // segment exactly, and a shifted full-width content would run past the window's edge.
+        var contentBounds = this.PushMode == FlyoutPushMode.Shift && this.snap is null
             ? new Rect(x + leftInset - rightInset, y, width, height)
             : new Rect(x + leftInset, y, Math.Max(0, width - leftInset - rightInset), height);
 
@@ -473,6 +484,8 @@ public partial class FlyoutView : Layout
 
     void Retarget(bool animate)
     {
+        this.snap = this.ComputeFoldSnap();
+
         foreach (var side in this.Sides)
             this.ComputeTargets(side);
 
@@ -515,6 +528,20 @@ public partial class FlyoutView : Layout
         if (panel is null)
         {
             side.TargetPanelWidth = side.TargetVisible = side.TargetInset = 0;
+            return;
+        }
+
+        // Snapped to a fold: an arrange-time override, never a write to ExpandedWidth, so opening the
+        // device flat again puts back exactly the width the user had.
+        if (this.snap is { } snapped && ReferenceEquals(snapped.Side, side))
+        {
+            panel.ApplyEffectivePresentation(FlyoutPresentation.Push, floating: false);
+            side.TargetVisible = snapped.Width;
+            side.TargetPanelWidth = snapped.Width;
+            side.TargetInset = snapped.Inset;
+
+            if (side.Visible <= 0.5 && !side.IsDragging)
+                side.PanelWidth = snapped.Width;
             return;
         }
 
@@ -646,9 +673,12 @@ public partial class FlyoutView : Layout
                 && panel.EdgeSwipeWidth > 0
                 && panel.State != FlyoutPanelState.Expanded;
 
+            // No grip while snapped: the fold decides the width, and a drag the panel ignores is worse
+            // than no handle at all.
             side.Grip.IsVisible = !floating
                 && panel.IsResizable
-                && panel.State == FlyoutPanelState.Expanded;
+                && panel.State == FlyoutPanelState.Expanded
+                && !this.IsSnapped(side);
         }
 
         this.scrim.Opacity = this.scrimProgress * this.ScrimOpacity;
@@ -726,13 +756,87 @@ public partial class FlyoutView : Layout
     /// <summary>A panel can never be wider than the flyout it lives in.</summary>
     double ClampWidth(double width) => this.hostWidth > 0 ? Math.Min(width, this.hostWidth) : width;
 
-    FlyoutPresentation ResolvePresentation(FlyoutPanel panel) => panel.Presentation switch
+    FlyoutPresentation ResolvePresentation(FlyoutPanel panel)
+    {
+        // A panel lined up with a fold pushes whatever CompactWidth says: two panes either side of a
+        // hinge is the whole point, and a scrim across both would cover the half the user is reading.
+        if (this.snap is { } snapped && ReferenceEquals(snapped.Side.Panel, panel))
+            return FlyoutPresentation.Push;
+
+        return this.ResolveConfiguredPresentation(panel);
+    }
+
+    FlyoutPresentation ResolveConfiguredPresentation(FlyoutPanel panel) => panel.Presentation switch
     {
         FlyoutPresentation.Auto => this.hostWidth > 0 && this.hostWidth >= panel.CompactWidth
             ? FlyoutPresentation.Push
             : FlyoutPresentation.Overlay,
         var explicitly => explicitly
     };
+
+    #endregion
+
+
+    #region fold
+
+    /// <summary>Whether a side is currently lined up with a fold. Test seam.</summary>
+    internal bool IsSnappedToFold(FlyoutSide side) => this.IsSnapped(this.Runtime(side));
+
+    bool IsSnapped(SideRuntime side) => this.snap is { } s && ReferenceEquals(s.Side, side);
+
+
+    void OnFoldChanged()
+    {
+        var next = this.ComputeFoldSnap();
+        if (Nullable.Equals(next, this.snap))
+            return;
+
+        // Measure as well as arrange: snapping switches the content from shifted to narrowed.
+        this.InvalidateMeasure();
+        this.RetargetAfterLayout();
+    }
+
+
+    /// <summary>
+    /// Which panel, if any, lines up with the fold. Only a vertical fold that crosses this view counts,
+    /// and only an expanded panel set to <see cref="FoldBehavior.SnapToFold"/> snaps. With a panel on
+    /// each side the one nearer the fold gets it; the far one only when the near side has nothing
+    /// showing, because a panel cannot reach the fold across another one.
+    /// </summary>
+    FoldSnap? ComputeFoldSnap()
+    {
+        if (this.foldTracker?.Fold is not { } fold || this.hostWidth <= 0)
+            return null;
+
+        // The tracker reports in the view's own coordinates; the arrange works inside the padding.
+        var padding = this.Padding;
+        var local = new Rect(fold.X - padding.Left, fold.Y - padding.Top, fold.Width, fold.Height);
+        if (!FoldLayout.IsVertical(local))
+            return null;
+
+        var (left, right) = this.PhysicalSides();
+        var nearerLeft = FoldLayout.FoldIsNearerLeft(this.hostWidth, local);
+        var candidates = nearerLeft
+            ? new[] { (Side: left, OnLeft: true), (Side: right, OnLeft: false) }
+            : new[] { (Side: right, OnLeft: false), (Side: left, OnLeft: true) };
+
+        foreach (var (side, onLeft) in candidates)
+        {
+            if (side?.Panel is not { } panel)
+                continue;
+
+            if (panel.FoldBehavior == FoldBehavior.SnapToFold && panel.State == FlyoutPanelState.Expanded
+                && FoldLayout.FlyoutSnap(this.hostWidth, local, onLeft) is { } result)
+            {
+                return new FoldSnap(side, result.PanelWidth, result.Inset);
+            }
+
+            if (panel.State != FlyoutPanelState.Hidden)
+                break;
+        }
+
+        return null;
+    }
 
     #endregion
 
@@ -835,7 +939,7 @@ public partial class FlyoutView : Layout
     /// <summary>The inner-edge handle on a pushing panel: a live resize of <see cref="FlyoutPanel.ExpandedWidth"/>.</summary>
     void OnGripPan(SideRuntime side, PanUpdatedEventArgs e)
     {
-        if (side.Panel is not { } panel || !panel.IsResizable)
+        if (side.Panel is not { } panel || !panel.IsResizable || this.IsSnapped(side))
             return;
 
         if (panel.State != FlyoutPanelState.Expanded || this.ResolvePresentation(panel) != FlyoutPresentation.Push)

@@ -6,6 +6,7 @@
                   xmlns:home="clr-namespace:Sample.Features.Home"
                   xmlns:fp="clr-namespace:Sample.Features.FloatingPanel"
                   xmlns:flyout="clr-namespace:Sample.Features.Flyout"
+                  xmlns:foldables="clr-namespace:Sample.Features.Foldables"
                   xmlns:tabs="clr-namespace:Sample.Features.Tabs"
                   xmlns:navpage="clr-namespace:Sample.Features.Navigation"
                   xmlns:pills="clr-namespace:Sample.Features.Pills"
@@ -600,6 +601,14 @@
                              Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
         </FlyoutItem.FlyoutIcon>
         <ShellContent ContentTemplate="{DataTemplate flyout:FlyoutDrawerPage}" Route="flyoutdrawer" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Foldables">
+        <FlyoutItem.FlyoutIcon>
+            <FontImageSource Glyph="&#x25EB;" Size="20"
+                             Color="{AppThemeBinding Light=#0891B2, Dark=#22D3EE}" />
+        </FlyoutItem.FlyoutIcon>
+        <ShellContent ContentTemplate="{DataTemplate foldables:FoldablesPage}" Route="foldables" />
     </FlyoutItem>
 
     <FlyoutItem Title="Tabbed Page">

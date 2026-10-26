@@ -88,7 +88,11 @@ On MAUI it is drawn with plain MAUI transforms (`TranslationX`, `RotationY`, `Sc
 - Item templates are for display. The control handles every tap itself, so a button inside a cover does not get the tap.
 - With `ShowReflection` on MAUI, the template is created twice per cover. The reflection fades into the theme's Surface colour, so place the control on a Surface-coloured background.
 
-### Automation ids (MAUI)
+### Foldables
+
+With a fold posture source registered (MAUI), the centre cover and its caption stand in the larger segment in book posture. See [Foldables](foldables.md).
+
+## Automation ids (MAUI)
 
 Set `AutomationId` on the control and its parts are named after it, for UI tests (Appium, UI Automation, DevFlow). Without an id the parts get none.
 

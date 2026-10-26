@@ -340,3 +340,39 @@
         border-bottom-right-radius: 0;
     }
 }
+
+/* ---- Foldables -------------------------------------------------------------------------------
+   Book posture: the panel is confined to the first segment. Tabletop: centred and top-placed panels
+   go in the top segment, bottom-placed ones in the bottom segment. The backdrop is absolutely
+   positioned against the root's border box, so it still covers the whole screen. */
+@media (horizontal-viewport-segments: 2) {
+    .shiny-modal-root {
+        padding-right: calc(100vw - env(viewport-segment-right 0 0) + 24px);
+    }
+}
+
+@media (vertical-viewport-segments: 2) {
+    .shiny-modal-root {
+        padding-bottom: calc(100dvh - env(viewport-segment-bottom 0 0) + 24px);
+    }
+
+    .shiny-modal-root.place-bottom {
+        padding-top: calc(env(viewport-segment-top 0 1) + 24px);
+        padding-bottom: 24px;
+    }
+}
+/* Simulation (for testing on a device that does not fold): the same rules keyed on a class on <html>
+   - shiny-fold-sim-book with --shiny-fold-sim-left/-right (the fold's edges, px from the viewport's
+   left), or shiny-fold-sim-tabletop with --shiny-fold-sim-top/-bottom. */
+.shiny-fold-sim-book .shiny-modal-root {
+    padding-right: calc(100vw - var(--shiny-fold-sim-left) + 24px);
+}
+
+.shiny-fold-sim-tabletop .shiny-modal-root {
+    padding-bottom: calc(100dvh - var(--shiny-fold-sim-top) + 24px);
+}
+
+.shiny-fold-sim-tabletop .shiny-modal-root.place-bottom {
+    padding-top: calc(var(--shiny-fold-sim-bottom) + 24px);
+    padding-bottom: 24px;
+}

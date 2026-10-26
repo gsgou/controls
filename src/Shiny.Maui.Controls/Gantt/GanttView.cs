@@ -83,6 +83,8 @@ public partial class GanttView : ContentView, IDisposable
     IDispatcherTimer? nowTimer;
     bool syncingScroll;
     bool disposed;
+    readonly FoldTracker? foldTracker;
+    (double PaneWidth, double SplitterWidth)? foldSplit;
 
     public GanttView()
     {
@@ -195,6 +197,9 @@ public partial class GanttView : ContentView, IDisposable
         ((INotifyCollectionChanged)this.Columns).CollectionChanged += (_, _) => this.RelayoutTimeline();
         ((INotifyCollectionChanged)this.HighlightRanges).CollectionChanged += (_, _) => this.Repaint();
         ((INotifyCollectionChanged)this.SelectedTasks).CollectionChanged += (_, _) => this.Repaint();
+
+        // Null with no fold posture source: the task pane is then exactly TaskPaneWidth, always.
+        this.foldTracker = FoldTracker.Attach(this, this.OnFoldChanged);
 
         StyleGuard.MarkReady(this, typeof(GanttView));
 
@@ -433,8 +438,9 @@ public partial class GanttView : ContentView, IDisposable
         this.UpdateHeaderClip();
 
         this.taskPaneHeader.HeightRequest = this.HeaderHeight;
-        this.taskPaneBorder.WidthRequest = this.ShowTaskPane ? this.TaskPaneWidth : 0;
-        this.taskPaneHeader.WidthRequest = this.ShowTaskPane ? this.TaskPaneWidth : 0;
+        if (this.foldTracker is { } tracker)
+            this.OnFoldChanged(tracker);
+        this.ApplyTaskPaneWidth();
         this.taskPaneBorder.IsVisible = this.ShowTaskPane;
         this.taskPaneHeader.IsVisible = this.ShowTaskPane;
         this.splitter.IsVisible = this.ShowTaskPane;
@@ -672,6 +678,44 @@ public partial class GanttView : ContentView, IDisposable
     // =============================================================================================
     // Theme chrome
     // =============================================================================================
+
+    /// <summary>The task pane's width as laid out: <see cref="TaskPaneWidth"/>, or the fold's position while snapped.</summary>
+    internal double EffectiveTaskPaneWidth => this.foldSplit?.PaneWidth ?? this.TaskPaneWidth;
+
+    internal bool IsSnappedToFold => this.foldSplit is not null;
+
+    void ApplyTaskPaneWidth()
+    {
+        var width = this.ShowTaskPane ? this.EffectiveTaskPaneWidth : 0;
+        this.taskPaneBorder.WidthRequest = width;
+        this.taskPaneHeader.WidthRequest = width;
+        this.splitter.WidthRequest = this.foldSplit?.SplitterWidth ?? 6;
+    }
+
+    /// <summary>
+    /// Book posture: the splitter is widened to the hinge (never narrower than its own 6) and centred
+    /// on it, so the task list ends before the fold and the chart starts after it.
+    /// </summary>
+    void OnFoldChanged(FoldTracker tracker)
+    {
+        (double, double)? next = null;
+        if (this.FoldBehavior == FoldBehavior.SnapToFold && this.ShowTaskPane
+            && tracker.Fold is { } fold && FoldLayout.IsVertical(fold) && tracker.Size.Width > 0)
+        {
+            var splitterWidth = Math.Max(6, fold.Width);
+            var rtl = ((IView)this).FlowDirection == FlowDirection.RightToLeft;
+            var centre = rtl ? tracker.Size.Width - fold.Center.X : fold.Center.X;
+            var pane = centre - (splitterWidth / 2);
+            if (pane >= 40 && tracker.Size.Width - pane - splitterWidth >= 40)
+                next = (pane, splitterWidth);
+        }
+
+        if (Nullable.Equals(next, this.foldSplit))
+            return;
+
+        this.foldSplit = next;
+        this.ApplyTaskPaneWidth();
+    }
 
     void UpdateHeaderClip()
     {

@@ -54,6 +54,8 @@ public partial class ImageViewer : ContentView, IDisposable
     bool isAnimating;
     bool isDisposed;
 
+    readonly FoldTracker? foldTracker;
+
     // Track where the overlay is hosted
     Layout? overlayParent;
 
@@ -131,6 +133,13 @@ public partial class ImageViewer : ContentView, IDisposable
         AutomationIds.Track(this, () => AutomationIds.Set(closeView, AutomationIds.For(this, CloseAutomationIdSuffix)));
 
         this.Loaded += (_, _) => this.InstallOverlayRoot();
+
+        // On a foldable the full-screen image is fitted into one segment - the larger half of a book,
+        // the upper half of a tabletop - instead of being split by the hinge. Null with no posture
+        // source, which leaves the image filling the overlay as before.
+        foldTracker = FoldTracker.Attach(overlayGrid, tracker =>
+            overlayImage.Margin = FoldLayout.SegmentMargin(tracker.Size, tracker.Fold, FoldPreference.Top,
+                ((IView)this).FlowDirection == FlowDirection.RightToLeft));
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.

@@ -213,8 +213,39 @@ sealed class ToastManager
                 : new Thickness(currentMargin.Left, currentMargin.Top + stackOffset, currentMargin.Right, currentMargin.Bottom);
         }
 
-        GetOrCreateOverlay().Children.Add(toastView);
+        // A fold moves the toast into one segment: the larger half of a book, and the half matching
+        // its position on a tabletop (bottom toasts below the fold, top toasts above it). Zero - and
+        // so no change at all - unless a posture source is registered and a fold crosses the page.
+        var layer = GetOrCreateOverlay();
+        var foldInset = FoldInset(layer, config.Position);
+        this.foldInsets.AddOrUpdate(toastView, new StrongBox<Thickness>(foldInset));
+        toastView.Margin = Add(toastView.Margin, foldInset);
+
+        layer.Children.Add(toastView);
     }
+
+    readonly ConditionalWeakTable<ToastView, StrongBox<Thickness>> foldInsets = new();
+
+    static Thickness FoldInset(VisualElement layer, ToastPosition position)
+    {
+        // A layer created for this very toast has not been laid out yet; it fills its overlay root,
+        // which fills the page, so the nearest ancestor that has a size stands in for it.
+        Element? sized = layer;
+        while (sized is VisualElement { Width: <= 0 } && sized.Parent is not null)
+            sized = sized.Parent;
+        if (sized is VisualElement measured)
+            layer = measured;
+
+        if (layer.FoldIn() is not { } fold)
+            return default;
+
+        var preference = position == ToastPosition.Bottom ? FoldPreference.Bottom : FoldPreference.Top;
+        var rtl = ((IView)layer).FlowDirection == FlowDirection.RightToLeft;
+        return FoldLayout.SegmentMargin(new Size(layer.Width, layer.Height), fold, preference, rtl);
+    }
+
+    static Thickness Add(Thickness a, Thickness b)
+        => new(a.Left + b.Left, a.Top + b.Top, a.Right + b.Right, a.Bottom + b.Bottom);
 
     void ReflowStackedToasts(ToastPosition position)
     {
@@ -226,13 +257,15 @@ sealed class ToastManager
             var safeTop = GetTopSafeAreaInset();
             var baseOffset = 12d; // default offset
 
+            var fold = this.foldInsets.TryGetValue(toast, out var box) ? box.Value : default;
+
             if (position == ToastPosition.Bottom)
             {
-                toast.Margin = new Thickness(current.Left, current.Top, current.Right, baseOffset + safeBottom + offset);
+                toast.Margin = new Thickness(current.Left, current.Top, current.Right, baseOffset + safeBottom + offset + fold.Bottom);
             }
             else
             {
-                toast.Margin = new Thickness(current.Left, baseOffset + safeTop + offset, current.Right, current.Bottom);
+                toast.Margin = new Thickness(current.Left, baseOffset + safeTop + offset + fold.Top, current.Right, current.Bottom);
             }
 
             offset += (toast.Height > 0 ? toast.Height : 50) + 8;

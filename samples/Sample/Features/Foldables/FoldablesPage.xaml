@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shiny:ShinyContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                        xmlns:shiny="http://shiny.net/maui/controls"
+                        x:Class="Sample.Features.Foldables.FoldablesPage"
+                        Title="Foldables"
+                        AutomationId="FoldablesPage">
+
+    <!--
+        One page, every fold-aware piece at once. On a foldable in book posture the Start panel snaps to
+        the fold (the list on one side, the detail on the other); the dialog, the toast and the loading
+        overlay move into a segment; in tabletop posture the panel opens to a detent on the fold.
+
+        The Simulate row overrides what the device reports (SampleFoldSource), so the same behaviour can
+        be seen on a phone, a tablet or a simulator that does not fold.
+    -->
+    <shiny:ShinyContentPage.PageContent>
+        <shiny:FlyoutView x:Name="Flyout" PushMode="Resize" AutomationId="FoldFlyout">
+            <shiny:FlyoutView.Start>
+                <shiny:FlyoutPanel x:Name="ListPanel"
+                                   AutomationId="FoldListPanel"
+                                   State="Expanded"
+                                   CollapsedState="Hidden"
+                                   Presentation="Auto"
+                                   ExpandedWidth="260"
+                                   IsResizable="True">
+                    <shiny:FlyoutPanel.HeaderContent>
+                        <Label Text="Inbox" FontSize="17" FontAttributes="Bold" Padding="16,14" />
+                    </shiny:FlyoutPanel.HeaderContent>
+
+                    <VerticalStackLayout Padding="8,0,8,8" Spacing="2">
+                        <Label Text="Quarterly plan" Padding="12,10" />
+                        <Label Text="Design review notes" Padding="12,10" />
+                        <Label Text="Travel booking" Padding="12,10" />
+                        <Label Text="Release checklist" Padding="12,10" />
+                        <Label Text="Team offsite" Padding="12,10" />
+                    </VerticalStackLayout>
+                </shiny:FlyoutPanel>
+            </shiny:FlyoutView.Start>
+
+            <ScrollView>
+                <VerticalStackLayout Padding="20" Spacing="16" MaximumWidthRequest="560">
+
+                    <Label Text="Posture" FontSize="20" FontAttributes="Bold" />
+                    <Border Padding="14" StrokeThickness="1" Stroke="{AppThemeBinding Light=#D7DCE5, Dark=#3A4150}"
+                            StrokeShape="RoundRectangle 12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label x:Name="SourceLabel" AutomationId="FoldSource" FontSize="13" Opacity="0.75" />
+                            <Label x:Name="StateLabel" AutomationId="FoldState" FontSize="15" FontAttributes="Bold" />
+                            <Label x:Name="RectLabel" AutomationId="FoldRect" FontSize="13" />
+                            <Label x:Name="FlyoutLabel" AutomationId="FoldFlyoutState" FontSize="13" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Label Text="Simulate" FontSize="20" FontAttributes="Bold" />
+                    <Label Text="Overrides the device so the behaviour can be seen anywhere. Device passes the real posture through."
+                           FontSize="13" Opacity="0.75" />
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start">
+                        <Button Text="Device" Clicked="OnSimulateDevice" AutomationId="SimDevice" Margin="0,0,8,8" />
+                        <Button Text="Book" Clicked="OnSimulateBook" AutomationId="SimBook" Margin="0,0,8,8" />
+                        <Button Text="Tabletop" Clicked="OnSimulateTabletop" AutomationId="SimTabletop" Margin="0,0,8,8" />
+                        <Button Text="Flat" Clicked="OnSimulateFlat" AutomationId="SimFlat" Margin="0,0,8,8" />
+                    </FlexLayout>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <Switch x:Name="HingeSwitch" Toggled="OnHingeToggled" AutomationId="SimHinge" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="Simulated hinge is 24 wide (off: a zero-width fold, as on a Pixel Fold)"
+                               FontSize="13" VerticalOptions="Center" />
+                    </Grid>
+
+                    <Label Text="Try it" FontSize="20" FontAttributes="Bold" />
+                    <FlexLayout Wrap="Wrap" JustifyContent="Start">
+                        <Button Text="Dialog" Clicked="OnDialog" AutomationId="FoldDialog" Margin="0,0,8,8" />
+                        <Button Text="Action sheet" Clicked="OnActionSheet" AutomationId="FoldActionSheet" Margin="0,0,8,8" />
+                        <Button Text="Toast" Clicked="OnToast" AutomationId="FoldToast" Margin="0,0,8,8" />
+                        <Button Text="Loading" Clicked="OnLoading" AutomationId="FoldLoading" Margin="0,0,8,8" />
+                        <Button Text="Bottom panel" Clicked="OnPanel" AutomationId="FoldPanelButton" Margin="0,0,8,8" />
+                        <Button Text="Toggle list" Clicked="OnToggleList" AutomationId="FoldToggleList" Margin="0,0,8,8" />
+                    </FlexLayout>
+
+                    <Label FontSize="13" Opacity="0.75"
+                           Text="Book: the list snaps to the fold and the resize grip hides; dialogs, toasts and the loading overlay sit in one segment. Tabletop: the bottom panel opens to a detent on the fold; dialogs go to the top half. Device or Flat: everything behaves exactly as on a phone." />
+                </VerticalStackLayout>
+            </ScrollView>
+        </shiny:FlyoutView>
+    </shiny:ShinyContentPage.PageContent>
+
+    <shiny:ShinyContentPage.Panels>
+        <shiny:FloatingPanel x:Name="Panel" AutomationId="FoldPanel" HasBackdrop="True" CloseOnBackdropTap="True">
+            <VerticalStackLayout Padding="20" Spacing="12">
+                <Label Text="Controls" FontSize="20" FontAttributes="Bold" />
+                <Label FontSize="14"
+                       Text="In tabletop posture this panel opens to a detent whose top edge sits on the fold, so it fills the lower half and leaves the upper half to the content. Drag the handle to the other detents as usual." />
+                <Slider Minimum="0" Maximum="100" Value="40" />
+                <Button Text="Close" Clicked="OnClosePanel" />
+            </VerticalStackLayout>
+        </shiny:FloatingPanel>
+
+        <shiny:LoadingOverlay x:Name="Loading" AutomationId="FoldLoadingOverlay" Message="Working…" />
+    </shiny:ShinyContentPage.Panels>
+</shiny:ShinyContentPage>

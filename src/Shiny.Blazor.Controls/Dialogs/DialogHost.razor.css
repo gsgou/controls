@@ -279,3 +279,39 @@
 @keyframes shiny-dialog-zoom-out { from { transform: scale(1); opacity: 1; } to { transform: scale(0.92); opacity: 0; } }
 
 @keyframes shiny-dialog-pop-in { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---- Foldables -------------------------------------------------------------------------------
+   A fold must never cut a dialog in half. Book posture: the dialog is confined to the first segment.
+   Tabletop: to the top segment (an action sheet, which belongs under the thumb, to the bottom one).
+   The backdrop still dims the whole screen - only the padding that places the card changes. */
+@media (horizontal-viewport-segments: 2) {
+    .shiny-dialog-backdrop {
+        padding-right: calc(100vw - env(viewport-segment-right 0 0) + var(--shiny-spacing-5, 24px));
+    }
+}
+
+@media (vertical-viewport-segments: 2) {
+    .shiny-dialog-backdrop {
+        padding-bottom: calc(100dvh - env(viewport-segment-bottom 0 0) + var(--shiny-spacing-5, 24px));
+    }
+
+    .shiny-dialog-backdrop:has(> .shiny-dialog-actionsheet) {
+        padding-top: calc(env(viewport-segment-top 0 1) + var(--shiny-spacing-5, 24px));
+        padding-bottom: var(--shiny-spacing-5, 24px);
+    }
+}
+/* Simulation (for testing on a device that does not fold): the same rules keyed on a class on <html>
+   - shiny-fold-sim-book with --shiny-fold-sim-left/-right (the fold's edges, px from the viewport's
+   left), or shiny-fold-sim-tabletop with --shiny-fold-sim-top/-bottom. */
+.shiny-fold-sim-book .shiny-dialog-backdrop {
+    padding-right: calc(100vw - var(--shiny-fold-sim-left) + var(--shiny-spacing-5, 24px));
+}
+
+.shiny-fold-sim-tabletop .shiny-dialog-backdrop {
+    padding-bottom: calc(100dvh - var(--shiny-fold-sim-top) + var(--shiny-spacing-5, 24px));
+}
+
+.shiny-fold-sim-tabletop .shiny-dialog-backdrop:has(> .shiny-dialog-actionsheet) {
+    padding-top: calc(var(--shiny-fold-sim-bottom) + var(--shiny-spacing-5, 24px));
+    padding-bottom: var(--shiny-spacing-5, 24px);
+}

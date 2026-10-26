@@ -176,6 +176,22 @@ public partial class GanttView
     public static readonly BindableProperty ShowTaskPaneProperty = Layout(nameof(ShowTaskPane), true);
     public static readonly BindableProperty IsTaskPaneResizableProperty = Layout(nameof(IsTaskPaneResizable), true);
 
+    public static readonly BindableProperty FoldBehaviorProperty = BindableProperty.Create(
+        nameof(FoldBehavior), typeof(FoldBehavior), typeof(GanttView), FoldBehavior.SnapToFold,
+        propertyChanged: (b, _, _) => ((GanttView)b).foldTracker?.Refresh());
+
+    /// <summary>
+    /// On a foldable in book posture, size the task pane so the splitter sits on the fold: the task
+    /// list on one side, the chart on the other, nothing under the hinge. Display-only —
+    /// <see cref="TaskPaneWidth"/> keeps its value and the splitter cannot be dragged while snapped.
+    /// No effect without a fold posture source.
+    /// </summary>
+    public FoldBehavior FoldBehavior
+    {
+        get => (FoldBehavior)this.GetValue(FoldBehaviorProperty);
+        set => this.SetValue(FoldBehaviorProperty, value);
+    }
+
     public double RowHeight
     {
         get => (double)this.GetValue(RowHeightProperty);

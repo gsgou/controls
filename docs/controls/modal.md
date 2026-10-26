@@ -56,3 +56,7 @@ A footer button's `OnClick` is awaited before the modal closes and is invoked li
 **The modal contract is not optional** — focus moves into the panel (the first focusable, or whatever carries `data-shiny-autofocus`) and is trapped there, the page behind stops scrolling without lurching sideways, Escape and the backdrop dismiss, focus goes back where it came from, and the panel is announced as `role="dialog" aria-modal="true"` labelled by its own title. Modals stack: the newest sits on top, Escape only reaches the topmost, and the scrollbar returns only when the last one closes. A refused dismissal nudges the panel instead of doing nothing — both a backdrop click that does not close and any route `Closing` cancels.
 
 Keep it at page level, out of any ancestor carrying `transform`, `filter` or `contain` — those create a containing block for `position: fixed` and would trap the panel inside that element.
+
+## Foldables
+
+On Chromium on an Android foldable the modal panel is confined to the first segment in book posture. In tabletop posture it goes to the top segment, and `place-bottom` modals go to the bottom one. This is pure CSS, and the backdrop still covers the whole screen. See [Foldables](foldables.md).

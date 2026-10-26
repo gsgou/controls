@@ -121,6 +121,9 @@ public partial class DataGrid : ContentView
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
         this.ObserveDefaultHighlights();
+        // Null with no fold posture source, which leaves the pinned runs exactly as configured.
+        this.foldTracker = FoldTracker.Attach(this, this.OnFoldChanged);
+
         StyleGuard.MarkReady(this, typeof(DataGrid));
     }
 

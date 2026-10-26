@@ -69,7 +69,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, UICol
         if (PlatformView is null)
             return;
 
-        var midX = PlatformView.ContentOffset.X + PlatformView.Bounds.Width / 2;
+        var midX = PlatformView.ContentOffset.X + VirtualView.FocusCentre(PlatformView.Bounds.Width);
 
         foreach (var cell in PlatformView.VisibleCells)
         {
@@ -91,7 +91,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, UICol
             return;
 
         var centerPoint = new CGPoint(
-            PlatformView.ContentOffset.X + PlatformView.Bounds.Width / 2,
+            PlatformView.ContentOffset.X + VirtualView.FocusCentre(PlatformView.Bounds.Width),
             PlatformView.Bounds.Height / 2);
 
         var indexPath = PlatformView.IndexPathForItemAtPoint(centerPoint);
@@ -114,8 +114,20 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, UICol
         if (handler.isUpdatingPosition || handler.PlatformView is null)
             return;
 
+        var indexPath = NSIndexPath.FromRowSection(view.CurrentPosition, 0);
+
+        // Folded: centre on the segment rather than on the hinge, which CenteredHorizontally would do.
+        if (view.FoldSegment is not null
+            && handler.flowLayout?.LayoutAttributesForItem(indexPath) is { } attributes)
+        {
+            var focus = view.FocusCentre(handler.PlatformView.Bounds.Width);
+            handler.PlatformView.SetContentOffset(
+                new CGPoint(attributes.Center.X - (nfloat)focus, handler.PlatformView.ContentOffset.Y), true);
+            return;
+        }
+
         handler.PlatformView.ScrollToItem(
-            NSIndexPath.FromRowSection(view.CurrentPosition, 0),
+            indexPath,
             UICollectionViewScrollPosition.CenteredHorizontally,
             true);
     }
@@ -179,7 +191,7 @@ public partial class CarouselGalleryHandler : ViewHandler<CarouselGallery, UICol
                 return proposedContentOffset;
 
             var cvBounds = CollectionView.Bounds;
-            var halfWidth = cvBounds.Width / 2;
+            var halfWidth = (nfloat)gallery.FocusCentre(cvBounds.Width);
             var proposedCenterX = proposedContentOffset.X + halfWidth;
 
             var attrs = LayoutAttributesForElementsInRect(new CGRect(

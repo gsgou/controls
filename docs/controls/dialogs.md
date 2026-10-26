@@ -62,6 +62,10 @@ await dialogs.Confirm("Delete?", "This cannot be undone.", configure: c =>
 
 Tapping the backdrop or pressing `Escape` cancels (`Confirm` → `false`, `Prompt` → `Cancelled`); `Enter` confirms on Blazor. On MAUI, `Escape` comes from a hardware keyboard and works whenever the dialog has a Cancel button or `DismissOnBackdrop` is on. While a MAUI dialog is open it is a modal [keyboard-shortcut](keyboard-shortcuts.md) scope, so the page behind it ignores its shortcuts. Colors follow the theme tokens (`--shiny-color-surface` / `Shiny.Color.Surface`, `Primary`, …) so dialogs match light/dark and the active theme pack automatically, and restyle live on a theme switch; any colour set in `DialogConfig` wins over its token. ActionSheet options take `ActionSheetButtonColor`, `ActionSheetButtonTextColor` and `DestructiveButtonTextColor`.
 
+## Foldables
+
+A fold never cuts a dialog in half. In book posture the card is centred in the larger segment. In tabletop posture it goes to the top segment, and action sheets go to the bottom one. On MAUI this needs a fold posture source (the `Shiny.Maui.Controls.Foldables` package). On Blazor, `DialogHost` does it in CSS through viewport-segment media queries, using the first segment for book posture. See [Foldables](foldables.md).
+
 ## Automation ids (MAUI)
 
 Name a dialog through its config and its parts are named after it, for UI tests:

@@ -53,6 +53,9 @@
 		<!-- ThemedIconView, so the Office ribbons' drawn icons follow the theme token the same way the
 		     ImageEditor ribbon's do instead of each package keeping its own copy. -->
 		<InternalsVisibleTo Include="Shiny.Maui.Controls.Office" />
+		<!-- FoldPosture.SetSource(isDefault: true), so the Foldables add-on's built-in providers fill the
+		     posture slot without overriding a source the app registered itself. -->
+		<InternalsVisibleTo Include="Shiny.Maui.Controls.Foldables" />
 	</ItemGroup>
 
 	<ItemGroup>

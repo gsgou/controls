@@ -342,6 +342,31 @@ public partial class FlyoutPanel
         set => this.SetValue(CompactWidthProperty, value);
     }
 
+    public static readonly BindableProperty FoldBehaviorProperty = BindableProperty.Create(
+        nameof(FoldBehavior),
+        typeof(FoldBehavior),
+        typeof(FlyoutPanel),
+        FoldBehavior.SnapToFold,
+        propertyChanged: (b, _, _) => StyleGuard.WhenReady(b, typeof(FlyoutPanel), () =>
+        {
+            var panel = (FlyoutPanel)b;
+            panel.Host?.OnPanelInvalidated(panel, animate: true);
+        }));
+
+    /// <summary>
+    /// What an expanded panel does when a vertical fold (a foldable in book posture) crosses the
+    /// flyout. <see cref="FoldBehavior.SnapToFold"/> (the default) pushes and sizes the panel so
+    /// its inner edge sits on the fold and the content starts on the far side of it, ignoring
+    /// <see cref="MinExpandedWidth"/>/<see cref="MaxExpandedWidth"/> and hiding the resize grip while
+    /// snapped. Has no effect unless a fold posture source is registered (the
+    /// <c>Shiny.Maui.Controls.Foldables</c> package, or <c>UseFoldPosture</c>).
+    /// </summary>
+    public FoldBehavior FoldBehavior
+    {
+        get => (FoldBehavior)this.GetValue(FoldBehaviorProperty);
+        set => this.SetValue(FoldBehaviorProperty, value);
+    }
+
     public static readonly BindableProperty CollapseBelowProperty = BindableProperty.Create(
         nameof(CollapseBelow),
         typeof(double),

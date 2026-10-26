@@ -258,6 +258,11 @@ public partial class ShinyTabBar : Grid
 
         // Last line: replays any styled property that was applied before the
         // children existed. See StyleGuard.
+        // On a foldable in book posture no tab sits across the hinge: the tabs are dealt out to the two
+        // segments and a gap column covers the fold. Null with no posture source - the bar is then laid
+        // out exactly as it always was.
+        this.foldTracker = FoldTracker.Attach(this.barGrid, _ => this.RebuildCells());
+
         StyleGuard.MarkReady(this, typeof(ShinyTabBar));
     }
 
@@ -654,6 +659,146 @@ public partial class ShinyTabBar : Grid
     /// is equal. An odd number of tabs splits unevenly, and without a spacer the button drifts by
     /// half a tab - which nobody notices until they build a five-tab bar.
     /// </remarks>
+    readonly FoldTracker? foldTracker;
+
+    /// <summary>The bar's columns while a vertical fold crosses it. See <see cref="FoldColumns"/>.</summary>
+    /// <param name="ColumnWidths">Every column, absolute, the fold's gap column included.</param>
+    /// <param name="CellColumns">The column each tab cell goes in, by index among the drawn tabs.</param>
+    /// <param name="CenterColumn">The centre button's column, or -1 without one.</param>
+    /// <param name="CenterStart">Where the centre button's column starts, in the bar grid's coordinates.</param>
+    /// <param name="CenterWidth">The centre button's column width.</param>
+    internal readonly record struct TabFoldLayout(
+        double[] ColumnWidths, int[] CellColumns, int CenterColumn, double CenterStart, double CenterWidth);
+
+
+    /// <summary>
+    /// Deals the tabs (and the centre button, which counts as one more slot in its usual place) out to
+    /// the two segments of a vertical fold, in proportion to each segment's width, with a gap column
+    /// exactly covering the fold. Each side's tabs share that side's width equally; the centre button
+    /// keeps its fixed column. Null when there is no vertical fold, so the caller lays out as usual.
+    /// </summary>
+    internal static TabFoldLayout? FoldColumns(double width, Rect? fold, int cellCount, double? centerWidth)
+    {
+        if (fold is not { } f || !FoldLayout.IsVertical(f) || width <= 0 || cellCount <= 0)
+            return null;
+
+        // -1 stands for the centre button, everything else is a cell index.
+        var slots = new List<int>();
+        var hasCenter = centerWidth is not null;
+        var (left, _, _) = SplitColumns(cellCount, hasCenter);
+        for (var i = 0; i < cellCount; i++)
+        {
+            if (hasCenter && i == left)
+                slots.Add(-1);
+            slots.Add(i);
+        }
+        if (hasCenter && left >= cellCount)
+            slots.Add(-1);
+
+        var n = slots.Count;
+        var before = FoldLayout.ItemsBeforeFold(width, f, n) ?? 0;
+        if (n >= 2)
+            before = Math.Clamp(before, 1, n - 1);
+
+        var leftRoom = Math.Max(0, f.Left);
+        var rightRoom = Math.Max(0, width - f.Right);
+
+        var widths = new List<double>();
+        var cellColumns = new int[cellCount];
+        var centerColumn = -1;
+        double centerStart = 0;
+        double x = 0;
+
+        void AddSide(int from, int to, double room)
+        {
+            if (to <= from)
+            {
+                // Nothing on this side: a filler keeps the other side's columns where they belong.
+                widths.Add(room);
+                x += room;
+                return;
+            }
+
+            var fixedWidth = 0d;
+            var stars = 0;
+            for (var i = from; i < to; i++)
+            {
+                if (slots[i] == -1)
+                    fixedWidth += centerWidth!.Value;
+                else
+                    stars++;
+            }
+
+            var star = stars > 0 ? Math.Max(0, room - fixedWidth) / stars : 0;
+            for (var i = from; i < to; i++)
+            {
+                var w = slots[i] == -1 ? centerWidth!.Value : star;
+                if (slots[i] == -1)
+                {
+                    centerColumn = widths.Count;
+                    centerStart = x;
+                }
+                else
+                {
+                    cellColumns[slots[i]] = widths.Count;
+                }
+
+                widths.Add(w);
+                x += w;
+            }
+
+            // A side holding only the centre button still has to fill its segment.
+            if (stars == 0 && room > fixedWidth)
+            {
+                widths.Add(room - fixedWidth);
+                x += room - fixedWidth;
+            }
+        }
+
+        AddSide(0, before, leftRoom);
+        widths.Add(Math.Max(0, f.Right - Math.Max(0, f.Left)));
+        x = Math.Max(0, f.Right);
+        AddSide(before, n, rightRoom);
+
+        return new TabFoldLayout(widths.ToArray(), cellColumns, centerColumn, centerStart, centerWidth ?? 0);
+    }
+
+
+    Thickness centerHostMargin;
+    bool centerHostMoved;
+
+    /// <summary>
+    /// The centre button is drawn over the whole bar, centred - which on a symmetric fold is the hinge.
+    /// Folded, it is pinned over its own column instead; unfolded, it goes back.
+    /// </summary>
+    void PlaceCenterHost(TabFoldLayout? folded)
+    {
+        if (folded is { CenterColumn: >= 0 } f)
+        {
+            if (!this.centerHostMoved)
+            {
+                this.centerHostMargin = this.centerHost.Margin;
+                this.centerHostMoved = true;
+            }
+
+            var padding = this.BarPadding;
+            this.centerHost.HorizontalOptions = LayoutOptions.Start;
+            this.centerHost.WidthRequest = f.CenterWidth;
+            this.centerHost.Margin = new Thickness(
+                padding.Left + f.CenterStart, this.centerHostMargin.Top, 0, this.centerHostMargin.Bottom);
+            return;
+        }
+
+        if (!this.centerHostMoved)
+            return;
+
+        this.centerHostMoved = false;
+        this.centerHost.HorizontalOptions = LayoutOptions.Center;
+        this.centerHost.WidthRequest = -1;
+        this.centerHost.Margin = this.centerHostMargin;
+    }
+
+
     internal static (int Left, int Right, int Spacers) SplitColumns(int visibleCount, bool hasCenter)
     {
         if (!hasCenter)
@@ -922,20 +1067,37 @@ public partial class ShinyTabBar : Grid
         var visible = overflowed.Count == 0 ? shown : shown.Append(this.OverflowItem).ToList();
         var (left, _, spacers) = SplitColumns(visible.Count, center is not null);
 
-        var totalColumns = visible.Count + (center is null ? 0 : 1) + spacers;
-        for (var i = 0; i < totalColumns; i++)
-            this.barGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        var folded = this.foldTracker is { Fold: { } fold } tracker
+            ? FoldColumns(tracker.Size.Width, fold, visible.Count, center is null ? null : center.Size + 16)
+            : null;
 
-        if (center is not null)
+        int totalColumns;
+        if (folded is { } split)
         {
-            var centerColumn = this.barGrid.ColumnDefinitions[left];
-            centerColumn.Width = new GridLength(center.Size + 16);
+            totalColumns = split.ColumnWidths.Length;
+            foreach (var width in split.ColumnWidths)
+                this.barGrid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(width)));
         }
+        else
+        {
+            totalColumns = visible.Count + (center is null ? 0 : 1) + spacers;
+            for (var i = 0; i < totalColumns; i++)
+                this.barGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+            if (center is not null)
+            {
+                var centerColumn = this.barGrid.ColumnDefinitions[left];
+                centerColumn.Width = new GridLength(center.Size + 16);
+            }
+        }
+        this.PlaceCenterHost(folded);
 
         for (var i = 0; i < visible.Count; i++)
         {
             var cell = this.BuildCell(visible[i], ReferenceEquals(visible[i], this.overflowItem));
-            var column = center is null || i < left ? i : i + 1;
+            var column = folded is { } f
+                ? f.CellColumns[i]
+                : center is null || i < left ? i : i + 1;
             Grid.SetColumn(cell.Root, column);
             this.barGrid.Children.Add(cell.Root);
             this.cells.Add(cell);

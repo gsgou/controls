@@ -732,7 +732,7 @@ public partial class GanttView
 
     void OnSplitterPan(object? sender, PanUpdatedEventArgs e)
     {
-        if (!this.IsTaskPaneResizable || !this.ShowTaskPane)
+        if (!this.IsTaskPaneResizable || !this.ShowTaskPane || this.IsSnappedToFold)
             return;
 
         switch (e.StatusType)

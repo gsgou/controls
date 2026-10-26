@@ -32,6 +32,7 @@ public static class Catalog
             new("yoga", "Yoga Layout", "▥", "React Native's flexbox model: absolute insets, percentages, aspect ratio"),
             new("expander", "Expander", "▾", "Animated disclosure panels and accordion lists"),
             new("applayout", "App Layout", "◫", "Application shell with collapsible, resizable panels"),
+            new("foldables", "Foldables", "◫", "Panels snap to the fold, overlays move off it — with a simulated fold"),
             new("carousel", "Carousel Gallery", "◀", "Swipeable image gallery with indicators"),
             new("carousel-advanced", "Carousel", "▶", "Templated carousel with looping and autoplay"),
             new("coverflow", "Cover Flow", "◫", "3D album-art carousel with tilted, stacked side items"),

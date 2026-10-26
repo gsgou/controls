@@ -106,6 +106,10 @@ Every `ShinyContentPage` also has a **built-in `LoadingOverlay`** — no need to
 
 `Overlay` also gained `CloseOnBackdropTap` (default `true`) — set `false` to keep an overlay up until dismissed in code.
 
+## Foldables
+
+`FoldDetent` (default `true`): on a foldable in tabletop posture the panel gains an implicit detent whose edge sits exactly on the fold, and opens to it, so a bottom panel fills the lower half. When the posture leaves tabletop it returns to the nearest declared detent. Book posture changes nothing. This needs a fold posture source (the `Shiny.Maui.Controls.Foldables` package). On Blazor, `SheetView` has the same `FoldDetent` parameter, driven by the Viewport Segments API. See [Foldables](foldables.md).
+
 ## Automation ids (MAUI)
 
 Set `AutomationId` on the panel (or the host) and its parts are named after it, for UI tests:

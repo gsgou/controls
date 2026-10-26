@@ -1,3 +1,4 @@
+using Shiny.Maui.Controls.Infrastructure;
 using Shiny.Maui.Controls.Themes;
 
 namespace Shiny.Maui.Controls.DataGrid;
@@ -50,8 +51,59 @@ public partial class DataGrid
             end++;
         end = Math.Clamp(Math.Max(end, this.FrozenEndColumns), 0, cols.Count - start);
 
-        this.frozenStart = start;
-        this.frozenEnd = end;
+        (this.frozenStart, this.frozenEnd) = this.FitFrozenToFold(cols, start, end);
+    }
+
+    FoldTracker? foldTracker;
+
+    /// <summary>
+    /// A pinned run never straddles a fold. In book posture the leading run keeps only the columns that
+    /// end before the fold (and the trailing run only those that start after it); the rest scroll with
+    /// the body, so the pinned pane always sits whole on one side of the hinge. No effect with
+    /// <see cref="FoldBehavior.None"/>, without horizontal scrolling, or with no fold posture source.
+    /// </summary>
+    internal (int Start, int End) FitFrozenToFold(IReadOnlyList<DataGridColumn> cols, int start, int end)
+    {
+        if (this.FoldBehavior != FoldBehavior.SnapToFold || !this.HorizontalScroll
+            || this.foldTracker is not { Fold: { } fold } tracker || !FoldLayout.IsVertical(fold)
+            || (start == 0 && end == 0))
+        {
+            return (start, end);
+        }
+
+        var rtl = ((IView)this).FlowDirection == FlowDirection.RightToLeft;
+        var width = tracker.Size.Width;
+        var lead = (this.HasMultiSelect ? CheckboxColumnWidth : 0) + (this.HasExpanderColumn ? ExpanderColumnWidth : 0);
+
+        // Measured from each run's own edge: the leading run from the start edge to the near side of
+        // the fold, the trailing one from the end edge to the far side.
+        var room = rtl ? width - fold.Right : fold.Left;
+        var used = lead;
+        var fitStart = 0;
+        while (fitStart < start && used + this.ResolveWidth(cols[fitStart]).Value <= room + 0.5)
+        {
+            used += this.ResolveWidth(cols[fitStart]).Value;
+            fitStart++;
+        }
+
+        var endRoom = rtl ? fold.Left : width - fold.Right;
+        var endUsed = 0d;
+        var fitEnd = 0;
+        while (fitEnd < end && endUsed + this.ResolveWidth(cols[cols.Count - 1 - fitEnd]).Value <= endRoom + 0.5)
+        {
+            endUsed += this.ResolveWidth(cols[cols.Count - 1 - fitEnd]).Value;
+            fitEnd++;
+        }
+
+        return (fitStart, fitEnd);
+    }
+
+    void OnFoldChanged(FoldTracker tracker)
+    {
+        var before = (this.frozenStart, this.frozenEnd);
+        this.RefreshFrozenCounts();
+        if ((this.frozenStart, this.frozenEnd) != before)
+            this.RebuildAll();
     }
 
     /// <summary>

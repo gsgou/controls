@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!--
+            Two iOS builds on purpose. UIHinge, UIHingeInteraction and UIView.GetReservedRegions only
+            exist in the iOS 27.1 SDK bindings (Microsoft.iOS.Ref 27.1), so the iPhone Duo provider is
+            compiled into the net10.0-ios27.1 build. The plain net10.0-ios build (whatever the installed
+            workload defaults to) reports no fold, which keeps the package restorable for every app -
+            NuGet hands an app the build nearest its own TFM, so an app targeting net10.0-ios27.1 gets
+            the real provider and everything older gets the no-op instead of a restore error.
+        -->
+        <TargetFrameworks>$(BaseTargetFramework);$(BaseTargetFramework)-ios;$(BaseTargetFramework)-ios27.1;$(BaseTargetFramework)-android</TargetFrameworks>
+        <UseMaui>true</UseMaui>
+        <IsAotCompatible>true</IsAotCompatible>
+        <SingleProject>true</SingleProject>
+        <RootNamespace>Shiny.Maui.Controls.Foldables</RootNamespace>
+        <!-- Jetpack WindowManager's Java adapter (androidx.window:window-java) needs API 23+. -->
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+        <Description>Fold and hinge posture for Shiny.Maui.Controls: built-in providers for Android foldables (Jetpack WindowManager) and iPhone Duo (iOS 27.1 UIHinge and reserved regions), so FlyoutView snaps to the fold, dialogs, overlays and toasts move off it, and FloatingPanel gains a tabletop detent.</Description>
+        <PackageTags>maui foldable fold hinge posture tabletop book dual-screen iphone-duo pixel-fold windowmanager controls</PackageTags>
+    </PropertyGroup>
+
+    <!-- The iPhone Duo provider: only the iOS 27.1 bindings have UIHinge and reserved regions. -->
+    <PropertyGroup Condition="'$(TargetFramework)' == '$(BaseTargetFramework)-ios27.1'">
+        <DefineConstants>$(DefineConstants);SHINY_UIHINGE</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Shiny.Maui.Controls\Shiny.Maui.Controls.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'android'">
+        <PackageReference Include="Xamarin.AndroidX.Window.WindowJava" />
+    </ItemGroup>
+</Project>
