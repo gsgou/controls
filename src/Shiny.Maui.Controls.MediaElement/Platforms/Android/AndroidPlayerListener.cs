@@ -6,9 +6,9 @@ namespace Shiny.Maui.Controls.Media;
 /// Bridges the Media3 <c>Player.Listener</c> callbacks we care about onto plain delegates.
 /// </summary>
 /// <remarks>
-/// Every member of <see cref="IPlayerListener"/> is a Java default method, but the binding does not
-/// forward them to Media3's defaults (see the no-ops below), so all of them are implemented here; only
-/// the first four do anything.
+/// Every member of <see cref="IPlayerListener"/> is a Java default method, and an unimplemented one
+/// throws AbstractMethodError on Android (see the no-ops below), so all of them are implemented here;
+/// only the first four do anything.
 /// </remarks>
 class AndroidPlayerListener : Java.Lang.Object, IPlayerListener
 {
@@ -39,10 +39,12 @@ class AndroidPlayerListener : Java.Lang.Object, IPlayerListener
 
     // ---- the rest: no-ops, but every one has to exist ----
     //
-    // The binding's default-interface-method forwarding is broken for this listener: the Java callable
-    // wrapper sends every callback to managed code, and one with no managed body throws
-    // AbstractMethodError (onSurfaceSizeChanged, then onEvents, killed the app the moment a video
-    // started). So each member is spelled out, even though none of them does anything.
+    // Every Player.Listener method is a Java default method. The generated Java wrapper overrides all of
+    // them and calls into .NET, and with minSdk < 24 D8 strips the default bodies out of the interface,
+    // so one left to the binding's default body throws AbstractMethodError (onSurfaceSizeChanged, then
+    // onEvents, killed the app the moment a video started). This applies to any library interface, not
+    // just this one (see FrameAnalyzerBridge, CameraIdFilter). So each member is spelled out, even though
+    // none of them does anything.
 
     public void OnAudioAttributesChanged(AudioAttributes? audioAttributes) { }
     public void OnAudioSessionIdChanged(int audioSessionId) { }
